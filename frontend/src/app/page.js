@@ -1,8 +1,12 @@
-export default function HomePage() {
+import React from 'react'
+import AdvDashboardView from '@/pages/UI/AdvDashboard/AdvDashboardView'
+
+const page = () => {
   return (
     <div>
-      <h1>Legal Tech Dashboard</h1>
-      <p>Welcome to the application.</p>
+       <AdvDashboardView />
     </div>
-  );
+  )
 }
+
+export default page

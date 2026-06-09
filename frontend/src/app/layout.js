@@ -6,13 +6,13 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <div className="flex min-h-screen">
+        <div className="flex min-h-screen bg-[#f8fafc]">
           <Sidebar />
 
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col md:pl-64 min-h-screen">
             <Navbar />
 
-            <main className="p-6">
+            <main className="flex-1 p-4 md:p-6 lg:p-8">
               {children}
             </main>
           </div>
@@ -20,4 +20,4 @@ export default function RootLayout({ children }) {
       </body>
     </html>
   );
-}
+}
