@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 
@@ -8,8 +8,16 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
+  // Automatically close sidebar when route changes on mobile
+  useEffect(() => {
+    if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsOpen(false);
+    }
+  }, [pathname, isOpen]);
+
   const menuItems = [
-    { name: "Profile Management", path: "/profile-management" },
+    { name: "Dashboard", path: "/" },
     { name: "Law Firm Management", path: "/lawfirm-management" },
     { name: "Client Management", path: "/client-management" },
     { name: "Case Management", path: "/case-management" },
@@ -19,6 +27,7 @@ export default function Sidebar() {
     { name: "Billing", path: "/billing" },
     { name: "Notifications", path: "/notifications" },
     { name: "Permissions", path: "/permissions" },
+    { name: "Profile Management", path: "/profile-management" },
     { name: "Logout", path: "/logout" },
   ];
 
@@ -27,9 +36,10 @@ export default function Sidebar() {
       {/* Hamburger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-4 left-4 z-50 p-2 bg-black rounded-md shadow-lg md:hidden"
+        className="fixed top-3 left-3 z-[60] flex items-center justify-center w-10 h-10 bg-black text-white rounded-md shadow-lg md:hidden hover:bg-gray-900 transition-colors cursor-pointer"
+        aria-label={isOpen ? "Close Menu" : "Open Menu"}
       >
-        ☰
+        <span className="text-xl leading-none">{isOpen ? "✕" : "☰"}</span>
       </button>
 
       {/* Overlay */}
@@ -43,7 +53,7 @@ export default function Sidebar() {
       {/* Sidebar */}
       <aside
         className={`
-          fixed md:static
+          fixed
           top-0 left-0
           h-screen
           w-64
@@ -76,7 +86,7 @@ export default function Sidebar() {
                     href={item.path}
                     onClick={() => setIsOpen(false)}
                     className={`
-                      block px-4 py-3 rounded-lg transition-all duration-200
+                      block px-4 py-3 rounded-lg font-bold transition-all duration-200
                       ${
                         active
                           ? "bg-blue-500 text-white"
