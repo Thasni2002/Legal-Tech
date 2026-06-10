@@ -87,25 +87,25 @@ export default function ClientView() {
             onClick={() => setShowAddForm(true)}
           />
 
-          <TopCard
+          {/* <TopCard
             title="Communication (WhatsApp)"
             desc="Chat with clients"
             button="Open WhatsApp"
             color="bg-green-500"
-          />
+          /> */}
 
           <TopCard
             title="Case Tracking"
             desc="Track all cases"
             button="Track Cases"
-            color="bg-blue-600"
+            color="bg-green-600"
           />
 
           <TopCard
             title="View History"
             desc="Communication history"
             button="View History"
-            color="bg-purple-600"
+            color="bg-green-600"
           />
         </div>
 
@@ -269,7 +269,7 @@ export default function ClientView() {
             />
           </div>
 
-          <div className="bg-white rounded-xl border p-5">
+          {/* <div className="bg-white rounded-xl border p-5">
             <h3 className="font-semibold mb-4">
               WhatsApp Chat
             </h3>
@@ -294,7 +294,7 @@ export default function ClientView() {
                 <MessageCircle size={18} />
               </button>
             </div>
-          </div>
+          </div> */}
         </div>
       </main>
     </div>
