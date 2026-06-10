@@ -5,6 +5,7 @@ export default function InputField({
   type = "text",
   placeholder,
   name,
+  ...props
 }) {
   return (
     <div>
@@ -16,21 +17,8 @@ export default function InputField({
         type={type}
         name={name}
         placeholder={placeholder}
-        className="
-          w-full
-          rounded-xl
-          border
-          border-gray-300
-          bg-white
-          px-4
-          py-3
-          text-black
-          placeholder:text-black
-          focus:ring-4
-          focus:ring-blue-100
-          focus:border-blue-500
-          outline-none
-        "
+        className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-black placeholder:text-black focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none"
+        {...props}
       />
     </div>
   );

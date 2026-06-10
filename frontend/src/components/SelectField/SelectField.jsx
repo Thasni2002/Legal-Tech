@@ -4,6 +4,7 @@ export default function SelectField({
   label,
   options,
   name,
+  ...props
 }) {
   return (
     <div>
@@ -13,20 +14,8 @@ export default function SelectField({
 
       <select
         name={name}
-        className="
-          w-full
-          rounded-xl
-          border
-          border-gray-300
-          bg-white
-          px-4
-          py-3
-          text-black
-          focus:ring-4
-          focus:ring-blue-100
-          focus:border-blue-500
-          outline-none
-        "
+        className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-black focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none"
+        {...props}
       >
         <option value="">Select {label}</option>
 
