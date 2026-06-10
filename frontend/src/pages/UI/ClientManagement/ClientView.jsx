@@ -1,6 +1,6 @@
-
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -12,9 +12,61 @@ import {
   MessageCircle,
   Clock,
   Wallet,
+  User,
+  Building,
+  Users,
+  Briefcase,
 } from "lucide-react";
+import ClientAdd from "./ClientAdd";
+import ClientEdit from "./ClientEdit";
 
 export default function ClientView() {
+  const [client, setClient] = useState(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+
+  useEffect(() => {
+    const data = localStorage.getItem("clientData");
+    if (data) {
+      try {
+        setClient(JSON.parse(data));
+      } catch (err) {
+        console.error("Failed to parse client data:", err);
+      }
+    }
+  }, []);
+
+  const handleRemoveClient = () => {
+    if (confirm("Are you sure you want to remove this client? All details will be deleted.")) {
+      localStorage.removeItem("clientData");
+      setClient(null);
+    }
+  };
+
+  if (showAddForm) {
+    return (
+      <ClientAdd
+        onSave={(newClient) => {
+          setClient(newClient);
+          setShowAddForm(false);
+        }}
+        onCancel={() => setShowAddForm(false)}
+      />
+    );
+  }
+
+  if (showEditForm) {
+    return (
+      <ClientEdit
+        onSave={(updatedClient) => {
+          setClient(updatedClient);
+          setShowEditForm(false);
+        }}
+        onCancel={() => setShowEditForm(false)}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -22,40 +74,6 @@ export default function ClientView() {
         <h1 className="text-2xl font-bold text-slate-800">
           Client Management
         </h1>
-
-        {/* <div className="flex items-center gap-6">
-          <div className="relative hidden md:block">
-            <Search
-              size={18}
-              className="absolute left-3 top-3 text-gray-400"
-            />
-
-            <input
-              type="text"
-              placeholder="Search anything..."
-              className="w-72 border rounded-lg pl-10 pr-4 py-2"
-            />
-          </div>
-
-          <Bell size={20} />
-
-          <div className="flex items-center gap-3">
-            <img
-              src="https://i.pravatar.cc/150?img=12"
-              alt="user"
-              className="w-10 h-10 rounded-full"
-            />
-
-            <div>
-              <h4 className="font-semibold text-sm">
-                Adv. Rahul Sharma
-              </h4>
-              <p className="text-xs text-gray-500">
-                Advocate
-              </p>
-            </div>
-          </div>
-        </div> */}
       </header>
 
       <main className="p-6">
@@ -66,7 +84,7 @@ export default function ClientView() {
             desc="Add new client or manage existing clients"
             button="Add / Manage Client"
             color="bg-green-600"
-            link="/client-management/add-client"
+            onClick={() => setShowAddForm(true)}
           />
 
           <TopCard
@@ -93,38 +111,142 @@ export default function ClientView() {
 
         {/* Client Overview */}
         <div className="grid lg:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl border p-5">
-            <h2 className="font-bold text-xl mb-4">
-              Client Overview
-            </h2>
+          
+          {client ? (
+            <div className="bg-white rounded-xl border p-5 shadow-sm flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-start mb-4">
+                  <h2 className="font-bold text-xl text-slate-800">
+                    Client Overview
+                  </h2>
+                  <span className="text-xs bg-slate-100 text-slate-600 font-mono px-2 py-1 rounded">
+                    ID: {client.clientId}
+                  </span>
+                </div>
 
-            <div className="space-y-4">
-              <InfoItem
-                icon={<Phone size={16} />}
-                text="+91 9876543210"
-              />
+                {/* Profile Summary */}
+                <div className="flex items-center gap-3 pb-4 mb-4 border-b">
+                  <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-lg select-none">
+                    {client.fullName ? client.fullName.charAt(0).toUpperCase() : "?"}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-lg leading-tight">
+                      {client.fullName}
+                    </h3>
+                    <span className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full mt-1.5 ${
+                      client.caseStatus === "Active" || client.caseStatus === "In Progress"
+                        ? "bg-green-100 text-green-700"
+                        : client.caseStatus === "Pending"
+                        ? "bg-yellow-100 text-yellow-700"
+                        : "bg-slate-100 text-slate-700"
+                    }`}>
+                      Status: {client.caseStatus || "Unknown"}
+                    </span>
+                  </div>
+                </div>
 
-              <InfoItem
-                icon={<Mail size={16} />}
-                text="amit@gmail.com"
-              />
+                {/* Details Section */}
+                <div className="space-y-3 mb-6">
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Contact Details</div>
+                  
+                  <div className="flex items-center gap-3 text-slate-600 text-sm">
+                    <Phone size={16} className="text-slate-400 shrink-0" />
+                    <span>{client.phone}</span>
+                  </div>
 
-              <InfoItem
-                icon={<MapPin size={16} />}
-                text="Kerala, India"
-              />
+                  {client.email && (
+                    <div className="flex items-center gap-3 text-slate-600 text-sm min-w-0">
+                      <Mail size={16} className="text-slate-400 shrink-0" />
+                      <span className="truncate">{client.email}</span>
+                    </div>
+                  )}
 
-              <InfoItem
-                icon={<FileText size={16} />}
-                text="15 Cases"
-              />
+                  {client.whatsapp && (
+                    <div className="flex items-center gap-3 text-slate-600 text-sm">
+                      <MessageCircle size={16} className="text-slate-400 shrink-0" />
+                      <span>{client.whatsapp} (WhatsApp)</span>
+                    </div>
+                  )}
 
-              <InfoItem
-                icon={<Wallet size={16} />}
-                text="₹45,000 Outstanding"
-              />
+                  {client.address && (
+                    <div className="flex items-start gap-3 text-slate-600 text-sm">
+                      <MapPin size={16} className="text-slate-400 mt-0.5 shrink-0" />
+                      <span>{client.address}, {client.city}, {client.state} - {client.pincode}</span>
+                    </div>
+                  )}
+
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-400 pt-3">Case Information</div>
+
+                  <div className="flex items-center gap-3 text-slate-600 text-sm">
+                    <Briefcase size={16} className="text-slate-400 shrink-0" />
+                    <span className="font-semibold text-slate-800">{client.caseTitle || "No case title"} ({client.caseType})</span>
+                  </div>
+
+                  {client.caseNumber && (
+                    <div className="flex items-center gap-3 text-slate-600 text-sm pl-7">
+                      <span className="text-slate-400 font-mono text-xs">No:</span>
+                      <span>{client.caseNumber}</span>
+                    </div>
+                  )}
+
+                  {client.courtName && (
+                    <div className="flex items-center gap-3 text-slate-600 text-sm">
+                      <Building size={16} className="text-slate-400 shrink-0" />
+                      <span>{client.courtName}</span>
+                    </div>
+                  )}
+
+                  {client.assignedAdvocate && (
+                    <div className="flex items-center gap-3 text-slate-600 text-sm">
+                      <User size={16} className="text-slate-400 shrink-0" />
+                      <span>{client.assignedAdvocate}</span>
+                    </div>
+                  )}
+
+                  {client.nextHearing && (
+                    <div className="flex items-center gap-3 text-slate-600 text-sm">
+                      <Clock size={16} className="text-slate-400 shrink-0" />
+                      <span>Next Hearing: <strong className="text-slate-800">{client.nextHearing}</strong></span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-3 border-t">
+                <button
+                  onClick={() => setShowEditForm(true)}
+                  className="flex-1 py-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 font-semibold text-sm transition-colors cursor-pointer text-center"
+                >
+                  Edit Profile
+                </button>
+                <button
+                  onClick={handleRemoveClient}
+                  className="py-2 px-3 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-sm transition-colors cursor-pointer text-center"
+                >
+                  Remove
+                </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-white rounded-xl border p-6 text-center shadow-sm flex flex-col justify-center items-center min-h-[350px]">
+              <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mb-4">
+                <Users size={32} />
+              </div>
+              <h2 className="font-bold text-lg text-slate-800 mb-2">
+                No Client Registered
+              </h2>
+              <p className="text-sm text-gray-500 max-w-xs mb-6">
+                No client details have been recorded yet. Click below to add a new client and setup their profile.
+              </p>
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm transition-colors cursor-pointer shadow-sm"
+              >
+                Add Client Profile
+              </button>
+            </div>
+          )}
 
           <div className="bg-white rounded-xl border p-5">
             <h3 className="font-semibold mb-4">
@@ -185,6 +307,7 @@ function TopCard({
   button,
   color,
   link,
+  onClick,
 }) {
   return (
     <div className="bg-white border rounded-xl p-5">
@@ -194,17 +317,24 @@ function TopCard({
         {desc}
       </p>
 
-      {link ? (
+      {onClick ? (
+        <button
+          onClick={onClick}
+          className={`w-full py-2 rounded-lg text-white ${color} cursor-pointer hover:opacity-95 transition-opacity`}
+        >
+          {button}
+        </button>
+      ) : link ? (
         <Link href={link}>
           <button
-            className={`w-full py-2 rounded-lg text-white ${color}`}
+            className={`w-full py-2 rounded-lg text-white ${color} cursor-pointer hover:opacity-95 transition-opacity`}
           >
             {button}
           </button>
         </Link>
       ) : (
         <button
-          className={`w-full py-2 rounded-lg text-white ${color}`}
+          className={`w-full py-2 rounded-lg text-white ${color} cursor-pointer hover:opacity-95 transition-opacity`}
         >
           {button}
         </button>
@@ -236,120 +366,3 @@ function ActivityItem({ title, time }) {
     </div>
   );
 }
-
-
-// "use client";
-
-// import { useEffect, useState } from "react";
-// import { useRouter } from "next/navigation";
-
-// export default function ClientView() {
-//   const [client, setClient] = useState(null);
-//   const router = useRouter();
-
-//   useEffect(() => {
-//     const data = localStorage.getItem("clientData");
-
-//     if (data) {
-//       setClient(JSON.parse(data));
-//     }
-//   }, []);
-
-//   if (!client) {
-//     return (
-//       <div className="p-8">
-//         <div className="bg-white rounded-lg shadow p-6">
-//           <h2 className="text-xl font-bold text-red-500">
-//             No Client Found
-//           </h2>
-//         </div>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="p-8">
-//       <div className="bg-white rounded-lg shadow p-6">
-//         <h1 className="text-2xl font-bold mb-6">
-//           Client Details
-//         </h1>
-
-//         <div className="grid md:grid-cols-2 gap-4">
-//           <p>
-//             <strong>Client ID:</strong> {client.clientId}
-//           </p>
-
-//           <p>
-//             <strong>Full Name:</strong> {client.fullName}
-//           </p>
-
-//           <p>
-//             <strong>Email:</strong> {client.email}
-//           </p>
-
-//           <p>
-//             <strong>Phone:</strong> {client.phone}
-//           </p>
-
-//           <p>
-//             <strong>WhatsApp:</strong> {client.whatsapp}
-//           </p>
-
-//           <p>
-//             <strong>Address:</strong> {client.address}
-//           </p>
-
-//           <p>
-//             <strong>City:</strong> {client.city}
-//           </p>
-
-//           <p>
-//             <strong>State:</strong> {client.state}
-//           </p>
-
-//           <p>
-//             <strong>Pincode:</strong> {client.pincode}
-//           </p>
-
-//           <p>
-//             <strong>Assigned Advocate:</strong>{" "}
-//             {client.assignedAdvocate}
-//           </p>
-
-//           <p>
-//             <strong>Case Title:</strong> {client.caseTitle}
-//           </p>
-
-//           <p>
-//             <strong>Case Type:</strong> {client.caseType}
-//           </p>
-
-//           <p>
-//             <strong>Case Number:</strong> {client.caseNumber}
-//           </p>
-
-//           <p>
-//             <strong>Court Name:</strong> {client.courtName}
-//           </p>
-
-//           <p>
-//             <strong>Next Hearing:</strong> {client.nextHearing}
-//           </p>
-
-//           <p>
-//             <strong>Case Status:</strong> {client.caseStatus}
-//           </p>
-//         </div>
-
-//         <button
-//           onClick={() =>
-//             router.push("/client-management/edit-client")
-//           }
-//           className="mt-6 bg-blue-600 text-white px-6 py-3 rounded-lg"
-//         >
-//           Edit Client
-//         </button>
-//       </div>
-//     </div>
-//   );
-// }

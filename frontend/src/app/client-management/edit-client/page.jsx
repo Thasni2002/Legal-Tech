@@ -1,4 +1,4 @@
-import ClientEdit from "@/pages/ui/ClientManagement/ClientEdit";
+import ClientEdit from "@/pages/UI/ClientManagement/ClientEdit";
 import React from 'react'
 
 const page = () => {
