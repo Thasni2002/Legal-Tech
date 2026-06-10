@@ -10,27 +10,64 @@ export default function Sidebar() {
 
   // Automatically close sidebar when route changes on mobile
   useEffect(() => {
-    if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsOpen(false);
-    }
-  }, [pathname, isOpen]);
+    setIsOpen(false);
+  }, [pathname]);
 
+  // const menuItems = [
+  //   { name: "Dashboard", path: "/" },
+  //   { name: "Law Firm Management", path: "/lawfirm-management" },
+  //   { name: "Client Management", path: "/client-management" },
+  //   { name: "Case Management", path: "/case-management" },
+  //   { name: "Consultations", path: "/consultations" },
+  //   { name: "Calendar", path: "/calendar" },
+  //   { name: "Finance Management", path: "/finance-management" },
+  //   { name: "Permissions", path: "/permissions" },
+  //   { name: "Profile Management", path: "/profile-management" },
+  //   { name: "Logout", path: "/logout" },
+  // ];
   const menuItems = [
-    { name: "Dashboard", path: "/" },
-    { name: "Law Firm Management", path: "/lawfirm-management" },
-    { name: "Client Management", path: "/client-management" },
-    { name: "Case Management", path: "/case-management" },
-    { name: "Consultations", path: "/consultations" },
-    { name: "Calendar", path: "/calendar" },
-    { name: "Court Fee Calculator", path: "/court-fee-calculator" },
-    { name: "Billing", path: "/billing" },
-    { name: "Notifications", path: "/notifications" },
-    { name: "Permissions", path: "/permissions" },
-    { name: "Profile Management", path: "/profile-management" },
-    { name: "Logout", path: "/logout" },
-  ];
+    {
+      title: "Advocate Section",
+      items: [
+        { name: "Dashboard", path: "/" },
+        { name: "Law Firm Management", path: "/lawfirm-management" },
+        { name: "Client Management", path: "/client-management" },
+        { name: "Case Management", path: "/case-management" },
+        { name: "Consultations", path: "/consultations" },
+        { name: "Calendar", path: "/calendar" },
+        { name: "Finance Management", path: "/finance-management" },
+        { name: "Permissions", path: "/permissions" },
+        { name: "Profile Management", path: "/profile-management" },
+        { name: "Logout", path: "/logout" },
+      ],
+    },
+    {
+      title: "Client Section",
+      items: [
+        { name: "Dashboard", path: "/client-management" },
+        { name: "Consutation", path: "/consutation" },
+        { name: "Case Tracking", path: "/case-tracking" },
+        { name: "Upload Document", path: "/upload-documents" },
+        { name: "Chatbot", path: "/chatbot" },
+        { name: "Whatsapp", path: "/whatsapp" },
+        { name: "Email", path: "/email" },
+        { name: "Notifications", path: "/notifications" },
+        { name: "Payment", path: "/payment" },
+        { name: "Profile", path: "/profile" },
+        { name: "Logout", path: "/logout" },
 
+
+
+
+
+
+
+
+
+      ],
+    },
+  
+  ];
   return (
     <>
       {/* Hamburger Button */}
@@ -64,42 +101,50 @@ export default function Sidebar() {
           transform
           transition-transform
           duration-300
-          ${
-            isOpen
-              ? "translate-x-0"
-              : "-translate-x-full md:translate-x-0"
+          ${isOpen
+            ? "translate-x-0"
+            : "-translate-x-full md:translate-x-0"
           }
         `}
       >
-        <div className="p-5">
-          <h2 className="text-2xl font-bold text-black mb-6">
-            Legal Tech
-          </h2>
+        <div className="flex flex-col h-full pt-14 md:pt-0 overflow-y-auto">
+          <div className="p-5 flex-shrink-0">
+            <h2 className="text-2xl font-bold text-black mb-6">
+              Legal Tech
+            </h2>
+          </div>
 
-          <ul className="space-y-2">
-            {menuItems.map((item) => {
-              const active = pathname === item.path;
+          <div className="px-5 pb-6 space-y-6 overflow-y-auto flex-1">
+            {menuItems.map((section) => (
+              <div key={section.title}>
+                <h3 className="px-4 mb-2 text-xs font-bold text-gray-500 uppercase">
+                  {section.title}
+                </h3>
 
-              return (
-                <li key={item.path}>
-                  <Link
-                    href={item.path}
-                    onClick={() => setIsOpen(false)}
-                    className={`
-                      block px-4 py-3 rounded-lg font-bold transition-all duration-200
-                      ${
-                        active
-                          ? "bg-blue-500 text-white"
-                          : "text-black hover:bg-blue-500 hover:text-white hover:pl-6"
-                      }
-                    `}
-                  >
-                    {item.name}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+                <ul className="space-y-2">
+                  {section.items.map((item) => {
+                    const active = pathname === item.path;
+
+                    return (
+                      <li key={item.path}>
+                        <Link
+                          href={item.path}
+                          onClick={() => setIsOpen(false)}
+                          className={`block px-4 py-3 rounded-lg font-bold transition-all duration-200 ${
+                            active
+                              ? "bg-blue-500 text-white"
+                              : "text-black hover:bg-blue-500 hover:text-white hover:pl-6"
+                          }`}
+                        >
+                          {item.name}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
       </aside>
     </>
