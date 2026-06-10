@@ -84,7 +84,7 @@ export default function ClientView() {
             desc="Add new client or manage existing clients"
             button="Add / Manage Client"
             color="bg-green-600"
-            onClick={() => setShowAddForm(true)}
+            link="/client-management/client-add"
           />
 
           {/* <TopCard
@@ -99,6 +99,7 @@ export default function ClientView() {
             desc="Track all cases"
             button="Track Cases"
             color="bg-green-600"
+            link="/client-management/case-tracking"
           />
 
           <TopCard
@@ -239,12 +240,12 @@ export default function ClientView() {
               <p className="text-sm text-gray-500 max-w-xs mb-6">
                 No client details have been recorded yet. Click below to add a new client and setup their profile.
               </p>
-              <button
-                onClick={() => setShowAddForm(true)}
-                className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm transition-colors cursor-pointer shadow-sm"
+              <Link
+                href="/client-management/client-add"
+                className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm transition-colors cursor-pointer shadow-sm text-center"
               >
                 Add Client Profile
-              </button>
+              </Link>
             </div>
           )}
 
