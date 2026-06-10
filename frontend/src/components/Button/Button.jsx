@@ -4,6 +4,8 @@ export default function Button({
   title,
   type = "button",
   variant = "primary",
+  onClick,
+  ...props
 }) {
   const styles = {
     primary:
@@ -19,6 +21,7 @@ export default function Button({
   return (
     <button
       type={type}
+      onClick={onClick}
       className={`
         px-6
         py-3
@@ -27,6 +30,7 @@ export default function Button({
         transition
         ${styles[variant]}
       `}
+      {...props}
     >
       {title}
     </button>
