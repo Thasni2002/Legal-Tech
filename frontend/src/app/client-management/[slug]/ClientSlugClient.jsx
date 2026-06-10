@@ -7,6 +7,7 @@ import Link from "next/link";
 import ClientAdd from "@/pages/UI/ClientManagement/ClientAdd";
 import ClientEdit from "@/pages/UI/ClientManagement/ClientEdit";
 
+
 export default function ClientSlugClient({ slug }) {
   const router = useRouter();
   const [client, setClient] = useState(null);

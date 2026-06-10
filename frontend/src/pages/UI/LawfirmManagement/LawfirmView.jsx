@@ -51,9 +51,9 @@ export default function LawfirmView() {
           Law Firm Management
         </h1>
 
-        <p className="text-sm text-gray-500">
+        {/* <p className="text-sm text-gray-500">
           Dashboard / Law Firm Management
-        </p>
+        </p> */}
       </div>
 
       {/* Action Cards */}

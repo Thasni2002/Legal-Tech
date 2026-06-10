@@ -10,40 +10,40 @@ export default function ClientAdd({ onSave, onCancel }) {
     fullName: "",
     email: "",
     phone: "",
-    whatsapp: "",
-    address: "",
-    city: "",
-    state: "",
-    pincode: "",
-    assignedAdvocate: "",
-    caseTitle: "",
-    caseType: "",
-    caseNumber: "",
-    courtName: "",
-    nextHearing: "",
-    caseStatus: "",
+    // whatsapp: "",
+    // address: "",
+    // city: "",
+    // state: "",
+    // pincode: "",
+    // assignedAdvocate: "",
+    // caseTitle: "",
+    // caseType: "",
+    // caseNumber: "",
+    // courtName: "",
+    // nextHearing: "",
+    // caseStatus: "",
     // totalFee: "",
     // amountPaid: "",
     // outstandingAmount: "",
     // notes: "",
   });
 
-  const courts = [
-  "Supreme Court",
-  "High Court",
-  "District Court",
-  "Family Court",
-  "Consumer Court",
-  "Labour Court",
-  "Sessions Court",
-  "Magistrate Court",
-];
+//   const courts = [
+//   "Supreme Court",
+//   "High Court",
+//   "District Court",
+//   "Family Court",
+//   "Consumer Court",
+//   "Labour Court",
+//   "Sessions Court",
+//   "Magistrate Court",
+// ];
 
-const advocates = [
-  "Adv. Arjun Menon",
-  "Adv. Priya Nair",
-  "Adv. Rahul Krishnan",
-];
+// const advocates = [
+//   "Adv. Arjun Menon",
+//   "Adv. Priya Nair",
+//   "Adv. Rahul Krishnan",
+// ];
 
   const handleChange = (e) => {
     setFormData({
@@ -65,9 +65,9 @@ const advocates = [
     !formData.clientId ||
     !formData.fullName ||
     !formData.email ||
-    !formData.phone ||
-    !formData.caseType ||
-    !formData.courtName
+    !formData.phone 
+    // !formData.caseType ||
+    // !formData.courtName
   ) {
     alert("Please fill all required fields");
     return;
@@ -132,50 +132,50 @@ const advocates = [
               className="border p-3 rounded-lg"
             />
 
-            <input
+            {/* <input
               type="text"
               name="whatsapp"
               placeholder="WhatsApp Number"
               value={formData.whatsapp}
               onChange={handleChange}
               className="border p-3 rounded-lg"
-            />
+            /> */}
 
-            <input
+            {/* <input
               type="text"
               name="address"
               placeholder="Address"
               value={formData.address}
               onChange={handleChange}
               className="border p-3 rounded-lg"
-            />
+            /> */}
 
-            <input
+            {/* <input
               type="text"
               name="city"
               placeholder="City"
               value={formData.city}
               onChange={handleChange}
               className="border p-3 rounded-lg"
-            />
+            /> */}
 
-            <input
+            {/* <input
               type="text"
               name="state"
               placeholder="State"
               value={formData.state}
               onChange={handleChange}
               className="border p-3 rounded-lg"
-            />
+            /> */}
 
-            <input
+            {/* <input
               type="text"
               name="pincode"
               placeholder="Pincode"
               value={formData.pincode}
               onChange={handleChange}
               className="border p-3 rounded-lg"
-            />
+            /> */}
 
             {/* <input
               type="text"
@@ -186,7 +186,7 @@ const advocates = [
               className="border p-3 rounded-lg"
             /> */}
 
-            <select
+            {/* <select
   name="assignedAdvocate"
   value={formData.assignedAdvocate}
   onChange={handleChange}
@@ -196,18 +196,18 @@ const advocates = [
   <option value="Adv. Arjun Menon">Adv. Arjun Menon</option>
   <option value="Adv. Priya Nair">Adv. Priya Nair</option>
   <option value="Adv. Rahul Krishnan">Adv. Rahul Krishnan</option>
-</select>
+</select> */}
 
-            <input
+            {/* <input
               type="text"
               name="caseTitle"
               placeholder="Case Title"
               value={formData.caseTitle}
               onChange={handleChange}
               className="border p-3 rounded-lg"
-            />
+            /> */}
 
-            <select
+            {/* <select
               name="caseType"
               value={formData.caseType}
               onChange={handleChange}
@@ -218,16 +218,16 @@ const advocates = [
               <option value="Criminal">Criminal</option>
               <option value="Family">Family</option>
               <option value="Corporate">Corporate</option>
-            </select>
+            </select> */}
 
-            <input
+            {/* <input
               type="text"
               name="caseNumber"
               placeholder="Case Number"
               value={formData.caseNumber}
               onChange={handleChange}
               className="border p-3 rounded-lg"
-            />
+            /> */}
 
             {/* <input
               type="text"
@@ -238,7 +238,7 @@ const advocates = [
               className="border p-3 rounded-lg"
             /> */}
 
-            <select
+            {/* <select
   name="courtName"
   value={formData.courtName}
   onChange={handleChange}
@@ -253,7 +253,7 @@ const advocates = [
   <option value="Labour Court">Labour Court</option>
   <option value="Sessions Court">Sessions Court</option>
   <option value="Magistrate Court">Magistrate Court</option>
-</select>
+</select> */}
 
             <input
               type="date"
@@ -263,7 +263,7 @@ const advocates = [
               className="border p-3 rounded-lg w-full text-gray-500"
             />
 
-            <select
+            {/* <select
               name="caseStatus"
               value={formData.caseStatus}
               onChange={handleChange}
@@ -273,7 +273,7 @@ const advocates = [
               <option value="Pending">Pending</option>
               <option value="In Progress">In Progress</option>
               <option value="Closed">Closed</option>
-            </select>
+            </select> */}
 
             {/* <input
               type="number"
