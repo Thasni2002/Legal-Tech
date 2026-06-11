@@ -6,7 +6,8 @@ export function generateStaticParams() {
     { slug: "client-add" },
     { slug: "case-tracking" },
     { slug: "edit-client" },
-    { slug: "view-history" }
+    { slug: "client-history" },
+  
   ];
 }
 
