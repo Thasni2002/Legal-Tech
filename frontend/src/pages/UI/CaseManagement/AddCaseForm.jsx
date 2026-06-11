@@ -3,6 +3,8 @@
 import { useState } from "react";
 
 export default function AddCaseForm() {
+  const [documents, setDocuments] = useState([]);
+
   const [formData, setFormData] = useState({
     caseTitle: "",
     caseNo: "",
@@ -18,14 +20,23 @@ export default function AddCaseForm() {
     courtType: "",
 
     status: "Active",
+
+    documentType: "",
+    advocate: "",
+    documentFile: null,
+
+
+    
   });
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+  const { name, value, files } = e.target;
+
+  setFormData({
+    ...formData,
+    [name]: files ? files[0] : value,
+  });
+};
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -33,6 +44,37 @@ export default function AddCaseForm() {
     const newCase = {
       ...formData,
     };
+
+
+    const handleDocumentUpload = () => {
+
+  if (
+    !formData.documentType ||
+    !formData.advocate ||
+    !formData.documentFile
+  ) {
+    alert("Please fill all document fields");
+    return;
+  }
+
+  const newDocument = {
+    documentType: formData.documentType,
+    fileName: formData.documentFile.name,
+    advocate: formData.advocate,
+    uploadDate: new Date().toLocaleDateString(),
+  };
+
+  setDocuments([...documents, newDocument]);
+
+  setFormData({
+    ...formData,
+    documentType: "",
+    advocate: "",
+    documentFile: null,
+  });
+
+  alert("Document Uploaded Successfully");
+};
 
     const existingCases =
       JSON.parse(localStorage.getItem("cases")) || [];
@@ -65,7 +107,7 @@ export default function AddCaseForm() {
   };
 
   return (
-    <div className="bg-white p-6 rounded-xl border shadow max-w-4xl mx-auto">
+    <div className="w-full max-w-7xl mx-auto bg-white p-8 rounded-xl border shadow">
 
       {/* Add New Case */}
       <h2 className="text-2xl font-bold mb-6">
@@ -78,6 +120,16 @@ export default function AddCaseForm() {
       >
         {/* Case Information */}
         <div className="space-y-4">
+
+          <input
+            type="text"
+            name="caseId"
+            placeholder="Case ID"
+            value={formData.caseId}
+            onChange={handleChange}
+            className="w-full border p-3 rounded-lg"
+            required
+          />
 
           <input
             type="text"
@@ -99,26 +151,56 @@ export default function AddCaseForm() {
             required
           />
 
-          <input
-            type="text"
-            name="caseType"
-            placeholder="Case Type"
-            value={formData.caseType}
-            onChange={handleChange}
-            className="w-full border p-3 rounded-lg"
-            required
-          />
+          <select
+  name="caseType"
+  value={formData.caseType}
+  onChange={handleChange}
+  className="w-full border p-3 rounded-lg"
+  required
+>
+  <option value="">Select Case Type</option>
 
-          <input
-            type="text"
-            name="caseCat"
-            placeholder="Case Category"
-            value={formData.caseCat}
-            onChange={handleChange}
-            className="w-full border p-3 rounded-lg"
-            required
-          />
+  <option value="Civil">
+    Civil
+  </option>
 
+  <option value="Criminal">
+    Criminal
+  </option>
+
+  <option value="Family">
+    Family
+  </option>
+
+  <option value="Consumer">
+    Consumer
+  </option>
+
+  <option value="Corporate">
+    Corporate
+  </option>
+
+  <option value="Labour">
+    Labour
+  </option>
+
+  <option value="Property">
+    Property
+  </option>
+
+  <option value="Motor Accident">
+    Motor Accident
+  </option>
+
+  <option value="Cyber Crime">
+    Cyber Crime
+  </option>
+
+  <option value="Tax">
+    Tax
+  </option>
+</select>
+          
           <textarea
             name="caseDes"
             placeholder="Case Description"
@@ -253,6 +335,164 @@ export default function AddCaseForm() {
             </select>
           </div>
         </div>
+
+        {/* Document Upload */}
+<div>
+
+  <h2 className="text-2xl font-bold mb-4">
+    Document Upload
+  </h2>
+
+  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+
+    <select
+      name="documentType"
+      value={formData.documentType}
+      onChange={handleChange}
+      className="border p-3 rounded-lg"
+    >
+      <option value="">
+        Select Document Type
+      </option>
+
+      <option value="Petition">
+        Petition
+      </option>
+
+      <option value="Evidence">
+        Evidence
+      </option>
+
+      <option value="Affidavit">
+        Affidavit
+      </option>
+
+      <option value="Judgment">
+        Judgment
+      </option>
+
+      <option value="Notice">
+        Notice
+      </option>
+
+    </select>
+
+    <input
+      type="file"
+      name="documentFile"
+      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+      onChange={handleChange}
+      className="border p-3 rounded-lg"
+    />
+
+    <select
+      name="advocate"
+      value={formData.advocate}
+      onChange={handleChange}
+      className="border p-3 rounded-lg"
+    >
+      <option value="">
+        Uploaded By
+      </option>
+
+      <option value="Adv. Rahul Sharma">
+        Adv. Rahul Sharma
+      </option>
+
+      <option value="Adv. Priya Verma">
+        Adv. Priya Verma
+      </option>
+
+      <option value="Adv. Arjun Nair">
+        Adv. Arjun Nair
+      </option>
+
+    </select>
+
+    <input
+      type="text"
+      value={new Date().toLocaleDateString()}
+      readOnly
+      className="border p-3 rounded-lg bg-gray-100"
+    />
+
+    {/* <button
+      type="button"
+      onClick={handleDocumentUpload}
+      className="bg-green-600 text-white rounded-lg px-4 py-3"
+    >
+      Upload
+    </button> */}
+
+  </div>
+
+  {documents.length > 0 && (
+
+    <div className="mt-6 overflow-x-auto">
+
+      <table className="w-full border">
+
+        <thead>
+
+          <tr className="bg-gray-100">
+
+            <th className="border p-3">
+              Document Type
+            </th>
+
+            <th className="border p-3">
+              File Name
+            </th>
+
+            <th className="border p-3">
+              Uploaded By
+            </th>
+
+            <th className="border p-3">
+              Upload Date
+            </th>
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          {documents.map((doc, index) => (
+
+            <tr key={index}>
+
+              <td className="border p-3">
+                {doc.documentType}
+              </td>
+
+              <td className="border p-3">
+                {doc.fileName}
+              </td>
+
+              <td className="border p-3">
+                {doc.advocate}
+              </td>
+
+              <td className="border p-3">
+                {doc.uploadDate}
+              </td>
+
+            </tr>
+
+          ))}
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  )}
+
+</div>
+
+
 
         {/* Status */}
         <div>
