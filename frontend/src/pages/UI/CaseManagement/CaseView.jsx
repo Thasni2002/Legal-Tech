@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import {
   Menu,
   Bell,
@@ -46,39 +48,11 @@ const cases = [
 ];
 
 export default function CaseView() {
+  const router = useRouter();
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Menu className="w-6 h-6 cursor-pointer" />
-        </div>
-
-        <div className="flex items-center gap-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search cases, documents..."
-              className="pl-10 pr-4 py-2 border rounded-lg w-80 focus:outline-none"
-            />
-          </div>
-
-          <Bell className="w-5 h-5" />
-
-          <div className="flex items-center gap-3">
-            <img
-              src="https://i.pravatar.cc/150?img=12"
-              alt="user"
-              className="w-10 h-10 rounded-full"
-            />
-            <div>
-              <h4 className="font-semibold">Adv. Rahul Sharma</h4>
-              <p className="text-sm text-gray-500">Senior Advocate</p>
-            </div>
-          </div>
-        </div>
-      </header>
+      
+      
 
       <div className="p-6">
         {/* Title */}
@@ -91,18 +65,20 @@ export default function CaseView() {
 
         {/* Top Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-          <Card
-            title="AI Legal Assistant"
-            description="Get intelligent legal answers and recommendations."
-            buttonText="Open Assistant"
-            color="bg-purple-600"
-          />
+           <Card
+             title="AI Legal Assistant"
+             description="Get intelligent legal answers and recommendations."
+             buttonText="Open Assistant"
+             color="bg-purple-600"
+             onClick={() => router.push("/ai-assistant")}
+           />
 
           <Card
             title="Judgment Summary"
             description="Summarize judgments and extract key points."
             buttonText="Explore Judgments"
             color="bg-green-600"
+            onClick={() => router.push("/judgment-summary")}
           />
 
           <Card
@@ -110,6 +86,7 @@ export default function CaseView() {
             description="Search laws, acts and legal provisions."
             buttonText="Start Research"
             color="bg-blue-600"
+            onClick={() => router.push("/legal-research")}
           />
 
           <Card
@@ -117,6 +94,7 @@ export default function CaseView() {
             description="Generate legal documents with AI."
             buttonText="Generate Document"
             color="bg-orange-500"
+            onClick={() => router.push("/document-generation")}
           />
         </div>
 
@@ -126,7 +104,12 @@ export default function CaseView() {
             <div className="flex justify-between items-center mb-5">
               <h2 className="font-bold text-lg">My Cases</h2>
 
-              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+              
+
+              <button
+              onClick={() => router.push("/case-management/case-add")}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+              >
                 <Plus size={16} />
                 Add Case
               </button>
@@ -187,31 +170,8 @@ export default function CaseView() {
             </div>
           </div>
 
-          {/* Right Sidebar */}
-          <div className="col-span-12 lg:col-span-4 space-y-5">
-            <div className="bg-white rounded-xl border p-5">
-              <h3 className="font-bold mb-4">Quick Actions</h3>
-
-              <div className="space-y-3">
-                <QuickAction text="Ask AI Legal Assistant" />
-                <QuickAction text="Summarize Judgment" />
-                <QuickAction text="Legal Research" />
-                <QuickAction text="Generate Document" />
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl border p-5">
-              <h3 className="font-bold mb-4">Recent Documents</h3>
-
-              <div className="space-y-3">
-                <DocumentItem name="Charge Sheet.pdf" />
-                <DocumentItem name="Bail Application.docx" />
-                <DocumentItem name="Affidavit.pdf" />
-                <DocumentItem name="Vakalatnama.pdf" />
-              </div>
-            </div>
           </div>
-        </div>
+       
       </div>
     </div>
   );
