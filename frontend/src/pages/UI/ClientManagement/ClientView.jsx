@@ -74,9 +74,9 @@ export default function ClientView() {
         <h1 className="text-2xl font-bold text-slate-800">
           Client Management
         </h1>
-        <p className="text-sm text-gray-500">
+        {/* <p className="text-sm text-gray-500">
           Dashboard / Client Management
-        </p>
+        </p> */}
       </header>
 
       <main className="p-6">
@@ -207,42 +207,7 @@ export default function ClientView() {
   </div>
 </div>
 
-{/* Recent Activity */}
-<div className="mt-6">
-  <div className="bg-white rounded-xl shadow-sm border p-5">
-    <h3 className="font-bold text-lg mb-5">
-      Recent Activity
-    </h3>
 
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead>
-          <tr className="border-b text-left text-gray-500">
-            <th className="pb-3">Activity</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr className="border-b">
-            <td className="py-4">Case Updated</td>
-            <td>10 May 2024</td>
-          </tr>
-
-          <tr className="border-b">
-            <td className="py-4">Document Uploaded</td>
-            <td>09 May 2024</td>
-          </tr>
-
-          <tr>
-            <td className="py-4">Payment Received</td>
-            <td>05 May 2024</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
       </main>
     </div>
   );
