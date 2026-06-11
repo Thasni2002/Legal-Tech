@@ -5,6 +5,7 @@ import Link from "next/link";
 import ClientAdd from "@/pages/UI/ClientManagement/ClientAdd";
 import ClientEdit from "@/pages/UI/ClientManagement/ClientEdit";
 import CaseTracking from "@/pages/UI/ClientManagement/CaseTracking";
+import ClientHistory from "@/pages/UI/ClientManagement/ClientHistory";
 
 
 export default function ClientSlugClient({ slug }) {

@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 export default function ClientEdit({ onSave, onCancel }) {
   const router = useRouter();
@@ -66,9 +68,17 @@ export default function ClientEdit({ onSave, onCancel }) {
   return (
     <div className="min-h-screen bg-slate-100 p-6">
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-8">
-        <h1 className="text-2xl font-bold mb-6">
-          Edit Client Details
-        </h1>
+        <div className="flex items-center gap-4 mb-6">
+          <Link
+            href="/client-management"
+            className="flex items-center justify-center w-10 h-10 bg-white border border-slate-200 rounded-lg shadow-sm text-slate-600 hover:text-blue-600 hover:border-blue-200 transition-colors"
+          >
+            <ArrowLeft size={20} />
+          </Link>
+          <h1 className="text-2xl font-bold">
+            Edit Client Details
+          </h1>
+        </div>
 
         <form onSubmit={handleSubmit}>
           <div className="grid md:grid-cols-2 gap-4">

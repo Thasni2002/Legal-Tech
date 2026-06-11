@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 export default function CaseTracking() {
   const router = useRouter();
@@ -50,9 +52,17 @@ export default function CaseTracking() {
   return (
     <div className="max-w-3xl mx-auto p-6">
       <div className="bg-white rounded-xl shadow border p-6">
-        <h2 className="text-2xl font-bold mb-6">
-          Update Case Status
-        </h2>
+        <div className="flex items-center gap-4 mb-6">
+          <Link
+            href="/client-management"
+            className="flex items-center justify-center w-10 h-10 bg-white border border-slate-200 rounded-lg shadow-sm text-slate-600 hover:text-blue-600 hover:border-blue-200 transition-colors"
+          >
+            <ArrowLeft size={20} />
+          </Link>
+          <h2 className="text-2xl font-bold">
+            Update Case Status
+          </h2>
+        </div>
 
         {/* Case Dropdown */}
         <div className="mb-4">
