@@ -1,12 +1,7 @@
-import LawFirmManagement from '@/pages/UI/LawfirmManagement/LawfirmView'
-import React from 'react'
+"use client";
 
-const page = () => {
-  return (
-    <div>
-      <LawFirmManagement/>
-    </div>
-  )
+import LawfirmView from "@/pages/UI/LawfirmManagement/LawfirmView";
+
+export default function Page() {
+  return <LawfirmView />;
 }
-
-export default page

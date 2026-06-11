@@ -22,14 +22,51 @@ export default function AddCaseForm({ onSave }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    onSave({
+    const newCase = {
       title: formData.caseTitle,
       caseNo: formData.caseNo,
       client: formData.client,
       court: formData.court,
       hearing: formData.nextHearing,
       status: formData.status,
-    });
+    };
+
+    // Call onSave only if it exists
+
+    
+
+    const existingCases =
+    JSON.parse(localStorage.getItem("cases")) || [];
+
+  existingCases.push(newCase);
+
+  localStorage.setItem(
+    "cases",
+    JSON.stringify(existingCases)
+  );
+
+  alert("Case Saved Successfully");
+
+
+
+
+
+
+
+
+
+    // if (onSave) {
+    //   onSave(newCase);
+    // }
+
+    // console.log("Case Saved:", newCase);
+    // alert("Case Saved Successfully!");
+
+
+
+
+
+
 
     setFormData({
       caseTitle: "",
@@ -42,13 +79,12 @@ export default function AddCaseForm({ onSave }) {
   };
 
   return (
-    <div className="bg-white p-6 rounded-xl border shadow">
+    <div className="max-w-3xl mx-auto bg-white p-6 rounded-xl border shadow">
       <h2 className="text-2xl font-bold mb-6">
         Add New Case
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-
         <input
           type="text"
           name="caseTitle"
@@ -104,18 +140,17 @@ export default function AddCaseForm({ onSave }) {
           onChange={handleChange}
           className="w-full border p-3 rounded-lg"
         >
-          <option>Active</option>
-          <option>Pending</option>
-          <option>Closed</option>
+          <option value="Active">Active</option>
+          <option value="Pending">Pending</option>
+          <option value="Closed">Closed</option>
         </select>
 
         <button
           type="submit"
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg"
+          className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
         >
           Save Case
         </button>
-
       </form>
     </div>
   );

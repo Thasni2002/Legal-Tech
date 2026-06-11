@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function ClientAdd() {
+export default function ClientAdd({ onSave, onCancel }) {
   const router = useRouter();
   const [formData, setFormData] = useState({
     clientId: "",
@@ -80,7 +80,11 @@ const advocates = [
 
   alert("Client Saved Successfully");
 
-  router.push("/client-management");
+  if (onSave) {
+    onSave(formData);
+  } else {
+    router.push("/client-management");
+  }
 };
 
   return (
@@ -183,8 +187,8 @@ const advocates = [
             /> */}
 
             <select
-  name="advocate"
-  value={formData.advocate}
+  name="assignedAdvocate"
+  value={formData.assignedAdvocate}
   onChange={handleChange}
   className="border p-3 rounded-lg w-full text-gray-500"
 >
@@ -311,16 +315,30 @@ const advocates = [
           <div className="flex gap-4 mt-6">
             <button
               type="submit"
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors cursor-pointer"
             >
               Save Client
             </button>
 
             <button
               type="reset"
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg"
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium transition-colors cursor-pointer"
             >
               Reset
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (onCancel) {
+                  onCancel();
+                } else {
+                  router.push("/client-management");
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors cursor-pointer"
+            >
+              Cancel
             </button>
           </div>
         </form>
