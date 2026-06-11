@@ -276,7 +276,7 @@ export default function ClientHistory() {
                 Client History Logs
               </span>
               <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                <Activity size={24} className="text-blue-500" />
+                {/* <Activity size={24} className="text-blue-500" /> */}
                 View Client History
               </h1>
             </div>
