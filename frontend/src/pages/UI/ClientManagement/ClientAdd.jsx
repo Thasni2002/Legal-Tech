@@ -317,12 +317,12 @@ const advocates = [
               type="submit"
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors cursor-pointer"
             >
-              Save Client
+              Save 
             </button>
 
             <button
               type="reset"
-              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium transition-colors cursor-pointer"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors cursor-pointer"
             >
               Reset
             </button>

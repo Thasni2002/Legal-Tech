@@ -46,7 +46,7 @@ export default function Sidebar() {
       items: [
         { name: "Dashboard", path: "/client-management" },
         { name: "Consutation", path: "/consutation" },
-        { name: "Case Tracking", path: "/case-tracking" },
+        { name: "Case Tracking", path: "/client-management/case-tracking" },
         { name: "Upload Document", path: "/upload-documents" },
         { name: "Chatbot", path: "/chatbot" },
         { name: "Whatsapp", path: "/whatsapp" },

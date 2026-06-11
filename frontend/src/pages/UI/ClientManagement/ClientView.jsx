@@ -84,28 +84,29 @@ export default function ClientView() {
             desc="Add new client or manage existing clients"
             button="Add / Manage Client"
             color="bg-green-600"
-            onClick={() => setShowAddForm(true)}
+            link="/client-management/client-add"
           />
 
-          <TopCard
+          {/* <TopCard
             title="Communication (WhatsApp)"
             desc="Chat with clients"
             button="Open WhatsApp"
             color="bg-green-500"
-          />
+          /> */}
 
           <TopCard
             title="Case Tracking"
             desc="Track all cases"
             button="Track Cases"
-            color="bg-blue-600"
+            color="bg-green-600"
+            link="/client-management/case-tracking"
           />
 
           <TopCard
             title="View History"
             desc="Communication history"
             button="View History"
-            color="bg-purple-600"
+            color="bg-green-600"
           />
         </div>
 
@@ -239,12 +240,12 @@ export default function ClientView() {
               <p className="text-sm text-gray-500 max-w-xs mb-6">
                 No client details have been recorded yet. Click below to add a new client and setup their profile.
               </p>
-              <button
-                onClick={() => setShowAddForm(true)}
-                className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm transition-colors cursor-pointer shadow-sm"
+              <Link
+                href="/client-management/client-add"
+                className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm transition-colors cursor-pointer shadow-sm text-center"
               >
                 Add Client Profile
-              </button>
+              </Link>
             </div>
           )}
 
@@ -269,7 +270,7 @@ export default function ClientView() {
             />
           </div>
 
-          <div className="bg-white rounded-xl border p-5">
+          {/* <div className="bg-white rounded-xl border p-5">
             <h3 className="font-semibold mb-4">
               WhatsApp Chat
             </h3>
@@ -294,7 +295,7 @@ export default function ClientView() {
                 <MessageCircle size={18} />
               </button>
             </div>
-          </div>
+          </div> */}
         </div>
       </main>
     </div>
