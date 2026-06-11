@@ -6,6 +6,7 @@ import { ArrowLeft, Clock, CheckCircle2, AlertCircle, Calendar, Briefcase, FileT
 import Link from "next/link";
 import ClientAdd from "@/pages/UI/ClientManagement/ClientAdd";
 import ClientEdit from "@/pages/UI/ClientManagement/ClientEdit";
+import ClientHistory from "@/pages/UI/ClientManagement/ClientHistory";
 
 export default function ClientSlugClient({ slug }) {
   const router = useRouter();
@@ -43,7 +44,12 @@ export default function ClientSlugClient({ slug }) {
     return <ClientEdit />;
   }
 
-  // 3. Render Case Tracking
+  // 3. Render Client History
+  if (slug === "view-history") {
+    return <ClientHistory />;
+  }
+
+  // 4. Render Case Tracking
   if (slug === "case-tracking") {
     const displayClient = client || {
       clientId: "C-9874",

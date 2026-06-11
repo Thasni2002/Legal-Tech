@@ -104,9 +104,10 @@ export default function ClientView() {
 
           <TopCard
             title="View History"
-            desc="Communication history"
+            desc="Communication and activity history"
             button="View History"
             color="bg-green-600"
+            link="/client-management/view-history"
           />
         </div>
 
