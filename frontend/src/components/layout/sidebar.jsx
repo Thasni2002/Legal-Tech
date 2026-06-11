@@ -41,7 +41,7 @@ export default function Sidebar() {
       title: "Client Section",
       items: [
         { name: "Dashboard", path: "/client-management" },
-        { name: "Consutation", path: "/client-consutation" },
+        { name: "Consultation", path: "/client-consultation" },
         { name: "Case Tracking", path: "/client-case-tracking" },
         { name: "Profile", path: "/client-profile" },
         { name: "Logout", path: "/logout" },
