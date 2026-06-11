@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { Shield, ChevronDown, ChevronUp } from "lucide-react";
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [userRolesOpen, setUserRolesOpen] = useState(false);
   const pathname = usePathname();
 
   // Automatically close sidebar when route changes on mobile
@@ -13,18 +15,13 @@ export default function Sidebar() {
     setIsOpen(false);
   }, [pathname]);
 
-  // const menuItems = [
-  //   { name: "Dashboard", path: "/" },
-  //   { name: "Law Firm Management", path: "/lawfirm-management" },
-  //   { name: "Client Management", path: "/client-management" },
-  //   { name: "Case Management", path: "/case-management" },
-  //   { name: "Consultations", path: "/consultations" },
-  //   { name: "Calendar", path: "/calendar" },
-  //   { name: "Finance Management", path: "/finance-management" },
-  //   { name: "Permissions", path: "/permissions" },
-  //   { name: "Profile Management", path: "/profile-management" },
-  //   { name: "Logout", path: "/logout" },
-  // ];
+  // Automatically expand the permissions dropdown if we are on a permissions sub-page
+  useEffect(() => {
+    if (pathname && pathname.startsWith("/permissions")) {
+      setUserRolesOpen(true);
+    }
+  }, [pathname]);
+
   const menuItems = [
     {
       title: "Advocate Section",
@@ -34,10 +31,9 @@ export default function Sidebar() {
         { name: "Client Management", path: "/client-management" },
         { name: "Case Management", path: "/case-management" },
         { name: "Consultations", path: "/consultations" },
-        { name: "Calendar", path: "/calendar" },
         { name: "Finance Management", path: "/finance-management" },
-        { name: "Permissions", path: "/permissions" },
-        { name: "Profile Management", path: "/profile-management" },
+        { name: "Calendar", path: "/calendar" },
+        { name: "Profile", path: "/profile-management" },
         { name: "Logout", path: "/logout" },
       ],
     },
@@ -45,27 +41,28 @@ export default function Sidebar() {
       title: "Client Section",
       items: [
         { name: "Dashboard", path: "/client-management" },
-        { name: "Consutation", path: "/client-consutation" },
+        { name: "Consultation", path: "/client-consultation" },
         { name: "Case Tracking", path: "/client-case-tracking" },
-        { name: "Chatbot", path: "/chatbot" },
-        { name: "Whatsapp", path: "/whatsapp" },
-        { name: "Email", path: "/email" },
-        { name: "Payment", path: "/payment" },
         { name: "Profile", path: "/client-profile" },
         { name: "Logout", path: "/logout" },
-
-
-
-
-
-
-
-
-
       ],
     },
-  
+    {
+      title: "SYSTEM",
+      items: [
+        {
+          name: "User Roles",
+          isDropdown: true,
+          submenu: [
+            { name: "Roles", path: "/permissions/roles" },
+            { name: "Users", path: "/permissions/users" },
+            { name: "Permissions", path: "/permissions" },
+          ],
+        },
+      ],
+    },
   ];
+
   return (
     <>
       {/* Hamburger Button */}
@@ -121,6 +118,60 @@ export default function Sidebar() {
 
                 <ul className="space-y-2">
                   {section.items.map((item) => {
+                    if (item.isDropdown) {
+                      const isAnySubActive = item.submenu.some(
+                        (sub) => pathname === sub.path
+                      );
+                      const isDropdownOpen = userRolesOpen;
+
+                      return (
+                        <li key={item.name} className="space-y-1">
+                          <button
+                            onClick={() => setUserRolesOpen(!userRolesOpen)}
+                            className={`flex items-center justify-between w-full px-4 py-3 rounded-lg font-bold transition-all duration-200 cursor-pointer ${
+                              isAnySubActive
+                                ? "bg-[#0d6e53] text-white shadow-sm"
+                                : "text-black hover:bg-gray-100"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <Shield size={18} className="text-current" />
+                              <span>{item.name}</span>
+                            </div>
+                            {isDropdownOpen ? (
+                              <ChevronUp size={16} />
+                            ) : (
+                              <ChevronDown size={16} />
+                            )}
+                          </button>
+
+                          {isDropdownOpen && (
+                            <ul className="pl-4 space-y-1 mt-1 border-l-2 border-emerald-100 ml-6">
+                              {item.submenu.map((sub) => {
+                                const active = pathname === sub.path;
+
+                                return (
+                                  <li key={sub.path}>
+                                    <Link
+                                      href={sub.path}
+                                      onClick={() => setIsOpen(false)}
+                                      className={`block px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                                        active
+                                          ? "text-[#0d6e53] bg-emerald-50/70 font-bold"
+                                          : "text-gray-600 hover:text-[#0d6e53] hover:bg-gray-50"
+                                      }`}
+                                    >
+                                      {sub.name}
+                                    </Link>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </li>
+                      );
+                    }
+
                     const active = pathname === item.path;
 
                     return (

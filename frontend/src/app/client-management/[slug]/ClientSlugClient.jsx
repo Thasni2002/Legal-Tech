@@ -18,7 +18,12 @@ export default function ClientSlugClient({ slug }) {
     return <ClientEdit />;
   }
 
-  // 3. Render Case Tracking
+  // 3. Render Client History
+  if (slug === "view-history") {
+    return <ClientHistory />;
+  }
+
+  // 4. Render Case Tracking
   if (slug === "case-tracking") {
     return <CaseTracking />;
   }

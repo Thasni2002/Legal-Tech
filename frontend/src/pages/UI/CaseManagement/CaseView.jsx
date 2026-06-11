@@ -100,7 +100,7 @@ export default function CaseView() {
 
         <div className="grid grid-cols-12 gap-6">
           {/* Cases Section */}
-          <div className="col-span-12 lg:col-span-8 bg-white rounded-xl shadow-sm border p-5">
+          <div className="col-span-12 lg:col-span-30 bg-white rounded-xl shadow-sm border p-5">
             <div className="flex justify-between items-center mb-5">
               <h2 className="font-bold text-lg">My Cases</h2>
 
