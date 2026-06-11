@@ -45,15 +45,13 @@ export default function Sidebar() {
       title: "Client Section",
       items: [
         { name: "Dashboard", path: "/client-management" },
-        { name: "Consutation", path: "/consutation" },
-        { name: "Case Tracking", path: "/case-tracking" },
-        { name: "Upload Document", path: "/upload-documents" },
+        { name: "Consutation", path: "/client-consutation" },
+        { name: "Case Tracking", path: "/client-case-tracking" },
         { name: "Chatbot", path: "/chatbot" },
         { name: "Whatsapp", path: "/whatsapp" },
         { name: "Email", path: "/email" },
-        { name: "Notifications", path: "/notifications" },
         { name: "Payment", path: "/payment" },
-        { name: "Profile", path: "/profile" },
+        { name: "Profile", path: "/client-profile" },
         { name: "Logout", path: "/logout" },
 
 
