@@ -49,11 +49,14 @@ const handleDocumentUpload = () => {
   }
 
   const newDocument = {
-    documentType: formData.documentType,
-    fileName: formData.documentFile.name,
-    advocate: formData.advocate,
-    uploadDate: new Date().toLocaleDateString(),
-  };
+  documentType: formData.documentType,
+  fileName: formData.documentFile.name,
+  fileUrl: URL.createObjectURL(formData.documentFile),
+  advocate: formData.advocate,
+  uploadDate: new Date().toLocaleDateString(),
+};
+
+  
 
   setDocuments([...documents, newDocument]);
 
@@ -503,8 +506,15 @@ const handleDocumentUpload = () => {
               </td>
 
               <td className="border p-3">
-                {doc.fileName}
-              </td>
+  <a
+    href={doc.fileUrl}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-blue-600 underline"
+  >
+    {doc.fileName}
+  </a>
+</td>
 
               <td className="border p-3">
                 {doc.advocate}
