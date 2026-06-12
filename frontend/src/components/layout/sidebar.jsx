@@ -16,15 +16,13 @@ export default function Sidebar() {
     pathname?.startsWith("/permissions") || false
   );
 
-  // Sync state during render when pathname changes
-  const [lastPathname, setLastPathname] = useState(pathname);
-  if (pathname !== lastPathname) {
-    setLastPathname(pathname);
+  useEffect(() => {
     setIsOpen(false);
+
     if (pathname?.startsWith("/permissions")) {
       setUserRolesOpen(true);
     }
-  }
+  }, [pathname]);
 
   // Later replace with JWT/localStorage
   const role = "senior"; // senior | junior | client
@@ -64,27 +62,7 @@ export default function Sidebar() {
           name: "Profile",
           path: "/profile-management",
         },
-
-        {
-          name: "User Roles",
-          isDropdown: true,
-          submenu: [
-            {
-              name: "Roles",
-              path: "/permissions/roles",
-            },
-            {
-              name: "Users",
-              path: "/permissions/users",
-            },
-            {
-              name: "Permissions",
-              path: "/permissions",
-            },
-          ],
-        },
-
-        { name: "Logout", path: "/logout" },
+        
       ],
     },
   ];
@@ -102,13 +80,10 @@ export default function Sidebar() {
           name: "Assigned Cases",
           path: "/assigned-cases",
         },
-        
         {
           name: "Calendar",
           path: "/junior-calendar",
         },
-     
-    
       ],
     },
   ];
@@ -138,13 +113,39 @@ export default function Sidebar() {
           name: "Payments",
           path: "/client-payments",
         },
-       
-       
       ],
     },
   ];
 
-  const menuItems = [...seniorMenu, ...juniorMenu, ...clientMenu];
+  // Full menu (User Roles at bottom)
+  const menuItems = [
+    ...seniorMenu,
+    ...juniorMenu,
+    ...clientMenu,
+    {
+      title: "User Roles",
+      items: [
+        {
+          name: "User Roles",
+          isDropdown: true,
+          submenu: [
+            {
+              name: "Roles",
+              path: "/permissions/roles",
+            },
+            {
+              name: "Users",
+              path: "/permissions/users",
+            },
+            {
+              name: "Permissions",
+              path: "/permissions",
+            },
+          ],
+        },
+      ],
+    },
+  ];
 
   return (
     <>
@@ -183,7 +184,7 @@ export default function Sidebar() {
           </div>
 
           {/* Menu */}
-          <div className="px-5 py-6 flex-1 overflow-y-auto">
+          <div className="px-5 py-6">
             {menuItems.map((section) => (
               <div
                 key={section.title}

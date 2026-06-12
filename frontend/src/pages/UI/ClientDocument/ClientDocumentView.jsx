@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Upload, Eye, Pencil } from "lucide-react";
+import {
+  Upload,
+  Eye,
+  Pencil,
+  Trash,
+} from "lucide-react";
 
 export default function ClientDocuments() {
   const [documentName, setDocumentName] = useState("");
@@ -15,6 +20,7 @@ export default function ClientDocuments() {
       name: "Property Agreement",
       type: "Agreement",
       fileName: "agreement.pdf",
+      fileUrl: "/agreement.pdf",
       date: "12 June 2026",
       status: "Submitted",
     },
@@ -31,18 +37,22 @@ export default function ClientDocuments() {
       name: documentName,
       type: documentType,
       fileName: file.name,
+      fileUrl: URL.createObjectURL(file), // real preview URL
       date: new Date().toLocaleDateString(),
       status: "Submitted",
     };
 
-    setDocuments((prev) => [
-      newDocument,
-      ...prev,
-    ]);
+    setDocuments((prev) => [newDocument, ...prev]);
 
     setDocumentName("");
     setDocumentType("");
     setFile(null);
+  };
+
+  const handleDelete = (id) => {
+    setDocuments(
+      documents.filter((doc) => doc.id !== id)
+    );
   };
 
   return (
@@ -121,24 +131,12 @@ export default function ClientDocuments() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-gray-50">
-              <th className="text-left p-3">
-                Title
-              </th>
-              <th className="text-left p-3">
-                Type
-              </th>
-              <th className="text-left p-3">
-                File Name
-              </th>
-              <th className="text-left p-3">
-                Uploaded Date
-              </th>
-              <th className="text-left p-3">
-                Status
-              </th>
-              <th className="text-left p-3">
-                Actions
-              </th>
+              <th className="text-left p-3">Title</th>
+              <th className="text-left p-3">Type</th>
+              <th className="text-left p-3">File Name</th>
+              <th className="text-left p-3">Uploaded Date</th>
+              <th className="text-left p-3">Status</th>
+              <th className="text-left p-3">Actions</th>
             </tr>
           </thead>
 
@@ -158,26 +156,34 @@ export default function ClientDocuments() {
 
                 <td className="p-3 flex gap-3">
 
-                  {/* View Page */}
-                  <Link
-                    href={`/client-documents/view/${doc.id}`}
+                  {/* View Real File */}
+                  <a
+                    href={doc.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="text-blue-600 hover:text-blue-800"
                   >
                     <Eye size={18} />
-                  </Link>
+                  </a>
 
-                  {/* Edit Page */}
-                  <Link
-                    href={`/client-documents/edit/${doc.id}`}
-                    className="text-orange-600 hover:text-orange-800"
+                 
+                 
+
+                  {/* Delete */}
+                  <button
+                    onClick={() =>
+                      handleDelete(doc.id)
+                    }
+                    className="text-red-600 hover:text-red-800"
                   >
-                    <Pencil size={18} />
-                  </Link>
+                    <Trash size={18} />
+                  </button>
 
                 </td>
               </tr>
             ))}
           </tbody>
+
         </table>
       </div>
 
