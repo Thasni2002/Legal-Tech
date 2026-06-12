@@ -48,7 +48,7 @@ const assignedCases = [
     client: "Neha Singh",
     court: "Motor Accident Tribunal",
     hearing: "12 Jun 2026",
-    status: "Pending",
+    status: "To Do",
     documents: [
       { name: "FIR_Accident_Report.pdf", size: "1.2 MB", type: "pdf", content: "FIRST INFORMATION REPORT\n\nFIR No: 442/2023\nDate of Incident: 03/11/2023\nTime: 14:30 Hours\nLocation: Sector 62 Crossing\n\nDetails:\nA collision was reported between a private hatchback (RTO registration DL-3C-XX-XXXX) driven by Neha Singh and a public bus. Eye-witness accounts indicate that the bus ran a red light. Immediate transport of the driver to City Hospital was arranged." },
       { name: "Medical_Certificate.pdf", size: "900 KB", type: "pdf", content: "MEDICAL CERTIFICATE & EVALUATION REPORT\n\nPatient Name: Neha Singh\nDate of Admission: 03/11/2023\nHospital: City Emergency Care\n\nInjuries Found:\n1. Fracture of left humerus requiring orthopedic intervention.\n2. Lacerations on face and shoulder.\n3. Mild concussion.\nDisability index: assessed at 15% temporary physical impairment." }
@@ -57,13 +57,50 @@ const assignedCases = [
   },
 ];
 
+const getStatusSelectClass = (status) => {
+  switch (status) {
+    case "Completed":
+      return "bg-green-100 text-green-700 border-green-200";
+    case "Closed":
+      return "bg-red-100 text-red-700 border-red-200";
+    case "In Progress":
+      return "bg-blue-100 text-blue-700 border-blue-200";
+    case "Active":
+      return "bg-emerald-100 text-emerald-700 border-emerald-200";
+    case "To Do":
+      return "bg-slate-100 text-slate-700 border-slate-200";
+    default:
+      return "bg-gray-100 text-gray-700 border-gray-200";
+  }
+};
+
+const getStatusBadgeClass = (status) => {
+  switch (status) {
+    case "Completed":
+      return "bg-green-50 text-green-700 border border-green-100";
+    case "Closed":
+      return "bg-red-50 text-red-700 border border-red-100";
+    case "In Progress":
+      return "bg-blue-50 text-blue-700 border border-blue-100";
+    case "Active":
+      return "bg-emerald-50 text-emerald-700 border border-emerald-100";
+    case "To Do":
+      return "bg-slate-50 text-slate-700 border border-slate-100";
+    default:
+      return "bg-slate-50 text-slate-700 border border-slate-100";
+  }
+};
+
 export default function AssignedCasesView() {
+  const [cases, setCases] = useState(assignedCases);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCase, setSelectedCase] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
+  const [modalViewMode, setModalViewMode] = useState("full"); // "full" or "document"
 
-  const handleOpenDetails = (caseItem) => {
+  const handleOpenDetails = (caseItem, viewMode = "full") => {
     setSelectedCase(caseItem);
+    setModalViewMode(viewMode);
     setSelectedDocument(caseItem.documents && caseItem.documents.length > 0 ? caseItem.documents[0] : null);
   };
 
@@ -72,7 +109,18 @@ export default function AssignedCasesView() {
     setSelectedDocument(null);
   };
 
-  const filteredCases = assignedCases.filter((item) => {
+  const handleStatusChange = (caseNo, newStatus) => {
+    setCases((prevCases) =>
+      prevCases.map((c) =>
+        c.caseNo === caseNo ? { ...c, status: newStatus } : c
+      )
+    );
+    if (selectedCase && selectedCase.caseNo === caseNo) {
+      setSelectedCase((prev) => ({ ...prev, status: newStatus }));
+    }
+  };
+
+  const filteredCases = cases.filter((item) => {
     const query = searchQuery.toLowerCase();
     return (
       item.title.toLowerCase().includes(query) ||
@@ -216,21 +264,25 @@ export default function AssignedCasesView() {
                       </td>
 
                       <td className="p-4">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            item.status === "Active"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-yellow-100 text-yellow-700"
-                          }`}
+                        <select
+                          value={item.status}
+                          onChange={(e) => handleStatusChange(item.caseNo, e.target.value)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors ${getStatusSelectClass(
+                            item.status
+                          )}`}
                         >
-                          {item.status}
-                        </span>
+                          <option value="Completed" className="bg-white text-slate-800">Completed</option>
+                          <option value="Closed" className="bg-white text-slate-800">Closed</option>
+                          <option value="In Progress" className="bg-white text-slate-800">In Progress</option>
+                          <option value="Active" className="bg-white text-slate-800">Active</option>
+                          <option value="To Do" className="bg-white text-slate-800">To Do</option>
+                        </select>
                       </td>
 
                       <td className="p-4">
                         <div className="flex gap-4">
                           <button
-                            onClick={() => handleOpenDetails(item)}
+                            onClick={() => handleOpenDetails(item, "full")}
                             className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                             title="See Case Details"
                           >
@@ -238,18 +290,11 @@ export default function AssignedCasesView() {
                           </button>
 
                           <button
-                            onClick={() => handleOpenDetails(item)}
+                            onClick={() => handleOpenDetails(item, "document")}
                             className="p-1 text-slate-500 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
                             title="Case Documents"
                           >
                             <FileText size={18} />
-                          </button>
-
-                          <button
-                            className="p-1 text-slate-500 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
-                            title="Calendar Link"
-                          >
-                            <Calendar size={18} />
                           </button>
                         </div>
                       </td>
@@ -308,64 +353,64 @@ export default function AssignedCasesView() {
             {/* Body: Split Layout */}
             <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-5 gap-6 p-6 min-h-0 bg-white">
               
-              {/* Left Column: Details & Documents (col-span-3) */}
-              <div className="lg:col-span-3 overflow-y-auto pr-2 space-y-6 flex flex-col h-full">
+              {/* Left Column: Details & Documents (col-span-3 in full mode, col-span-2 in document mode) */}
+              <div className={`${modalViewMode === "full" ? "lg:col-span-3" : "lg:col-span-2"} overflow-y-auto pr-2 space-y-6 flex flex-col h-full`}>
                 
-                {/* Metadata Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/70 p-5 rounded-2xl border border-slate-100">
-                  <div className="space-y-1">
-                    <span className="text-xxs font-bold text-slate-400 uppercase tracking-wider block">Client</span>
-                    <div className="flex items-center gap-2">
-                      <User size={15} className="text-slate-500" />
-                      <span className="text-sm font-bold text-slate-800">{selectedCase.client}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <span className="text-xxs font-bold text-slate-400 uppercase tracking-wider block">Court / Forum</span>
-                    <div className="flex items-center gap-2">
-                      <Building2 size={15} className="text-slate-500" />
-                      <span className="text-sm font-semibold text-slate-800">{selectedCase.court}</span>
-                    </div>
-                  </div>
+                {modalViewMode === "full" && (
+                  <>
+                    {/* Metadata Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/70 p-5 rounded-2xl border border-slate-100">
+                      <div className="space-y-1">
+                        <span className="text-xxs font-bold text-slate-400 uppercase tracking-wider block">Client</span>
+                        <div className="flex items-center gap-2">
+                          <User size={15} className="text-slate-500" />
+                          <span className="text-sm font-bold text-slate-800">{selectedCase.client}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <span className="text-xxs font-bold text-slate-400 uppercase tracking-wider block">Court / Forum</span>
+                        <div className="flex items-center gap-2">
+                          <Building2 size={15} className="text-slate-500" />
+                          <span className="text-sm font-semibold text-slate-800">{selectedCase.court}</span>
+                        </div>
+                      </div>
 
-                  <div className="space-y-1">
-                    <span className="text-xxs font-bold text-slate-400 uppercase tracking-wider block">Next Hearing</span>
-                    <div className="flex items-center gap-2">
-                      <Calendar size={15} className="text-blue-500" />
-                      <span className="text-sm font-semibold text-slate-800">{selectedCase.hearing}</span>
+                      <div className="space-y-1">
+                        <span className="text-xxs font-bold text-slate-400 uppercase tracking-wider block">Next Hearing</span>
+                        <div className="flex items-center gap-2">
+                          <Calendar size={15} className="text-blue-500" />
+                          <span className="text-sm font-semibold text-slate-800">{selectedCase.hearing}</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <span className="text-xxs font-bold text-slate-400 uppercase tracking-wider block">Case Status</span>
+                        <span className={`inline-block px-2.5 py-0.5 mt-0.5 rounded-full text-xxs font-bold uppercase tracking-wider ${getStatusBadgeClass(selectedCase.status)}`}>
+                          {selectedCase.status}
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="space-y-1">
-                    <span className="text-xxs font-bold text-slate-400 uppercase tracking-wider block">Case Status</span>
-                    <span className={`inline-block px-2.5 py-0.5 mt-0.5 rounded-full text-xxs font-bold uppercase tracking-wider ${
-                      selectedCase.status === "Active"
-                        ? "bg-green-50 text-green-700 border border-green-100"
-                        : "bg-yellow-50 text-yellow-700 border border-yellow-100"
-                    }`}>
-                      {selectedCase.status}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Notes Section */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <Briefcase size={14} className="text-slate-400" />
-                    <span>Case Strategy & Advocate Notes</span>
-                  </h4>
-                  <div className="bg-amber-50/30 border border-amber-200/40 p-4 rounded-2xl text-slate-700 text-sm font-medium leading-relaxed italic">
-                    "{selectedCase.notes}"
-                  </div>
-                </div>
+                    {/* Notes Section */}
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <Briefcase size={14} className="text-slate-400" />
+                        <span>Case Strategy & Advocate Notes</span>
+                      </h4>
+                      <div className="bg-amber-50/30 border border-amber-200/40 p-4 rounded-2xl text-slate-700 text-sm font-medium leading-relaxed italic">
+                        "{selectedCase.notes}"
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Documents Section */}
                 <div className="flex-1 flex flex-col min-h-0 space-y-2">
                   <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                     Assigned Documents ({selectedCase.documents?.length || 0})
                   </h4>
-                  <div className="space-y-2 overflow-y-auto flex-1 pr-1 max-h-[220px]">
+                  <div className={`space-y-2 overflow-y-auto flex-1 pr-1 ${modalViewMode === "full" ? "max-h-[220px]" : ""}`}>
                     {selectedCase.documents?.map((doc, idx) => {
                       const isSelected = selectedDocument?.name === doc.name;
                       return (
@@ -405,8 +450,8 @@ export default function AssignedCasesView() {
 
               </div>
 
-              {/* Right Column: Document Viewer (col-span-2) */}
-              <div className="lg:col-span-2 bg-slate-50 rounded-3xl border border-slate-200/50 flex flex-col overflow-hidden h-full min-h-[300px]">
+              {/* Right Column: Document Viewer (col-span-2 in full mode, col-span-3 in document mode) */}
+              <div className={`${modalViewMode === "full" ? "lg:col-span-2" : "lg:col-span-3"} bg-slate-50 rounded-3xl border border-slate-200/50 flex flex-col overflow-hidden h-full min-h-[300px]`}>
                 
                 {selectedDocument ? (
                   <div className="flex flex-col h-full">
