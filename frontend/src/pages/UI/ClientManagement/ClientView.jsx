@@ -111,7 +111,7 @@ export default function ClientView() {
             desc="Communication and activity history"
             button="View History"
             color="bg-green-600"
-            // link="/client-management/client-history"
+            link="/client-management/view-history"
           />
         </div>
 
