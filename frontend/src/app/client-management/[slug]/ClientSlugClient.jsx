@@ -8,6 +8,7 @@ import CaseTracking from "@/pages/UI/ClientManagement/CaseTracking";
 import ClientHistory from "@/pages/UI/ClientManagement/ClientHistory";
 
 
+
 export default function ClientSlugClient({ slug }) {
   // 1. Render Client Add
   if (slug === "client-add") {
@@ -26,7 +27,7 @@ export default function ClientSlugClient({ slug }) {
 
   // 4. Render Case Tracking
   if (slug === "case-tracking") {
-    
+
     return <CaseTracking />;
   }
 

@@ -119,7 +119,7 @@ export default function ClientView() {
         {/* Client Overview */}
 <div className="mt-8">
   <div className="bg-white rounded-xl shadow-sm border p-5">
-    <div className="flex justify-between items-center mb-5">
+    {/* <div className="flex justify-between items-center mb-5">
       <h2 className="font-bold text-lg">Client Overview</h2>
 
       {client && (
@@ -139,49 +139,51 @@ export default function ClientView() {
           </button>
         </div>
       )}
-    </div>
-
+    </div> */}
+<div className="flex justify-between items-center mb-5">
+  <h2 className="font-bold text-lg">Client Overview</h2>
+</div>
     {client ? (
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b text-left text-gray-500">
-              <th className="pb-3">Client ID</th>
-              <th>Name</th>
-              <th>Phone</th>
-              <th>Email</th>
-              {/* <th>Case Title</th>
-              <th>Case No</th>
-              <th>Status</th> */}
-            </tr>
-          </thead>
+     <div className="overflow-x-auto">
+  <table className="w-full">
+    <thead>
+      <tr className="border-b text-left text-gray-500">
+        <th className="pb-3">Client ID</th>
+        <th>Name</th>
+        <th>Phone</th>
+        <th>Email</th>
+        <th className="text-center">Actions</th>
+      </tr>
+    </thead>
 
-          <tbody>
-            <tr className="border-b">
-              <td className="py-4">{client.clientId}</td>
-              <td>{client.fullName}</td>
-              <td>{client.phone}</td>
-              <td>{client.email}</td>
-              {/* <td>{client.caseTitle}</td>
-              <td>{client.caseNumber}</td> */}
+    <tbody>
+      <tr className="border-b">
+        <td className="py-4">{client.clientId}</td>
+        <td>{client.fullName}</td>
+        <td>{client.phone}</td>
+        <td>{client.email}</td>
 
-              {/* <td>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs ${
-                    client.caseStatus === "Active"
-                      ? "bg-green-100 text-green-700"
-                      : client.caseStatus === "Pending"
-                      ? "bg-yellow-100 text-yellow-700"
-                      : "bg-gray-100 text-gray-700"
-                  }`}
-                >
-                  {client.caseStatus || "Unknown"}
-                </span>
-              </td> */}
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <td>
+          <div className="flex justify-center gap-2">
+            <button
+              onClick={() => setShowEditForm(true)}
+              className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+            >
+              Edit
+            </button>
+
+            <button
+              onClick={handleRemoveClient}
+              className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+            >
+              Remove
+            </button>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
     ) : (
       <div className="text-center py-10">
         <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
