@@ -38,6 +38,42 @@ export default function AddCaseForm() {
   });
 };
 
+const handleDocumentUpload = () => {
+  if (
+    !formData.documentType ||
+    !formData.advocate ||
+    !formData.documentFile
+  ) {
+    alert("Please fill all document fields");
+    return;
+  }
+
+  const newDocument = {
+    documentType: formData.documentType,
+    fileName: formData.documentFile.name,
+    advocate: formData.advocate,
+    uploadDate: new Date().toLocaleDateString(),
+  };
+
+  setDocuments([...documents, newDocument]);
+
+  setFormData({
+    ...formData,
+    documentType: "",
+    advocate: "",
+    documentFile: null,
+  });
+
+  alert("Document Saved Successfully");
+};
+
+
+
+
+
+
+
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -416,13 +452,13 @@ export default function AddCaseForm() {
       className="border p-3 rounded-lg bg-gray-100"
     />
 
-    {/* <button
+    <button
       type="button"
       onClick={handleDocumentUpload}
       className="bg-green-600 text-white rounded-lg px-4 py-3"
     >
       Upload
-    </button> */}
+    </button>
 
   </div>
 
