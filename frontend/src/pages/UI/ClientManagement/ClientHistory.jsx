@@ -272,9 +272,9 @@ export default function ClientHistory() {
               <ArrowLeft size={20} />
             </Link>
             <div>
-              <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
+              {/* <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
                 Client History Logs
-              </span>
+              </span> */}
               <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
                 {/* <Activity size={24} className="text-blue-500" /> */}
                 View Client History

@@ -26,6 +26,7 @@ export default function ClientSlugClient({ slug }) {
 
   // 4. Render Case Tracking
   if (slug === "case-tracking") {
+    
     return <CaseTracking />;
   }
 
