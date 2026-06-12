@@ -62,7 +62,7 @@ export default function Sidebar() {
         },
         {
           name: "Profile",
-          path: "/senior-profile",
+          path: "/profile-management",
         },
 
         {
@@ -138,15 +138,8 @@ export default function Sidebar() {
           name: "Payments",
           path: "/client-payments",
         },
-        {
-          name: "Notifications",
-          path: "/client-notifications",
-        },
-        {
-          name: "Profile",
-          path: "/client-profile",
-        },
-        { name: "Logout", path: "/logout" },
+       
+       
       ],
     },
   ];
