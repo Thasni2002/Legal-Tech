@@ -1,4 +1,4 @@
-import ClientDashboard from '@/pages/UI/ClientDashboard/ClientDashboard'
+import ClientDashboard from '@/pages/UI/ClientDashboard/ClientDashboardView'
 import React from 'react'
 
 const pages = () => {

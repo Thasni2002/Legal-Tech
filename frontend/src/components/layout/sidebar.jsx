@@ -102,24 +102,13 @@ export default function Sidebar() {
           name: "Assigned Cases",
           path: "/assigned-cases",
         },
-        {
-          name: "Documents",
-          path: "/assigned-documents",
-        },
-        { name: "Tasks", path: "/tasks" },
+        
         {
           name: "Calendar",
           path: "/junior-calendar",
         },
-        {
-          name: "Notifications",
-          path: "/junior-notifications",
-        },
-        {
-          name: "Profile",
-          path: "/junior-profile",
-        },
-        { name: "Logout", path: "/logout" },
+     
+    
       ],
     },
   ];
