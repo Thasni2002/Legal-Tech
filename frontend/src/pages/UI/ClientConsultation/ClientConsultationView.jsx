@@ -12,7 +12,7 @@ export default function ClientConsultationView() {
       date: "2026-06-22",
       time: "11:00 AM",
       type: "Video Consultation",
-      status: "Scheduled",
+      status: "Rescheduled",
     },
   ]);
 
@@ -37,6 +37,15 @@ export default function ClientConsultationView() {
 
   const [rescheduleId, setRescheduleId] = useState(null);
 
+  const [successToast, setSuccessToast] = useState({ show: false, message: "" });
+
+  const triggerSuccess = (message) => {
+    setSuccessToast({ show: true, message });
+    setTimeout(() => {
+      setSuccessToast({ show: false, message: "" });
+    }, 4000);
+  };
+
   const handleBookAppointment = () => {
     if (
       !formData.name ||
@@ -59,6 +68,7 @@ export default function ClientConsultationView() {
     };
 
     setAppointments([...appointments, newAppointment]);
+    triggerSuccess("booking successfully");
 
     setShowModal(false);
 
@@ -87,6 +97,7 @@ export default function ClientConsultationView() {
 
     setRescheduleId(null);
     setShowModal(false);
+    triggerSuccess("booking successfully");
 
     setFormData({
       name: "",
@@ -95,6 +106,20 @@ export default function ClientConsultationView() {
       time: "",
       type: "",
     });
+  };
+
+  const handleApproveAppointment = (id) => {
+    setAppointments(
+      appointments.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              status: "Approved",
+            }
+          : item
+      )
+    );
+    triggerSuccess("booking successfully");
   };
 
   return (
@@ -250,13 +275,37 @@ export default function ClientConsultationView() {
                     className={`inline-block mt-3 px-3 py-1 rounded-full text-sm ${
                       item.status === "Rescheduled"
                         ? "bg-orange-100 text-orange-700"
-                        : "bg-green-100 text-green-700"
+                        : item.status === "Approved"
+                        ? "bg-green-100 text-green-700 font-semibold"
+                        : "bg-blue-100 text-blue-700"
                     }`}
                   >
                     {item.status}
                   </span>
 
+                  {item.status === "Approved" ? (
+                    <button
+                      disabled
+                      className="w-full mt-4 bg-green-100 text-green-700 border border-green-300 py-2 rounded-xl font-semibold cursor-not-allowed text-center transition"
+                    >
+                      Approved
+                    </button>
+                  ) : (
+                    <button
+                      disabled={item.status === "Rescheduled"}
+                      onClick={() => handleApproveAppointment(item.id)}
+                      className={`w-full mt-4 py-2 rounded-xl font-medium transition ${
+                        item.status === "Rescheduled"
+                          ? "bg-gray-200 text-gray-400 border border-gray-300 cursor-not-allowed text-center"
+                          : "bg-blue-600 hover:bg-blue-700 text-white"
+                      }`}
+                    >
+                      Approve
+                    </button>
+                  )}
+
                   <button
+                    disabled={item.status === "Approved"}
                     onClick={() => {
                       setRescheduleId(item.id);
 
@@ -268,7 +317,11 @@ export default function ClientConsultationView() {
 
                       setShowModal(true);
                     }}
-                    className="w-full mt-4 border border-blue-600 text-blue-600 py-2 rounded-xl"
+                    className={`w-full mt-2 border py-2 rounded-xl transition ${
+                      item.status === "Approved"
+                        ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed"
+                        : "border-blue-600 text-blue-600 hover:bg-blue-50"
+                    }`}
                   >
                     Reschedule
                   </button>
@@ -400,6 +453,23 @@ export default function ClientConsultationView() {
               </div>
 
             </div>
+          </div>
+        )}
+
+        {/* Custom Success Toast */}
+        {successToast.show && (
+          <div className="fixed top-5 right-5 z-50 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-emerald-500 transition-all duration-300 max-w-sm animate-in fade-in slide-in-from-top-4">
+            <span className="text-xl">✅</span>
+            <div className="flex-1">
+              <p className="font-bold text-sm leading-tight">Notification</p>
+              <p className="text-xs text-emerald-100 font-medium mt-0.5">{successToast.message}</p>
+            </div>
+            <button
+              onClick={() => setSuccessToast({ show: false, message: "" })}
+              className="text-emerald-200 hover:text-white font-bold ml-2 text-sm leading-none focus:outline-none"
+            >
+              ✕
+            </button>
           </div>
         )}
       </div>

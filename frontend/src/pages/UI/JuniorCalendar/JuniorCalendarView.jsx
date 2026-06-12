@@ -1,0 +1,1245 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import {
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  FileText,
+  Bookmark,
+  MapPin,
+  AlertCircle,
+  Search,
+  Filter,
+} from "lucide-react";
+
+// --- Date Utilities ---
+const WEEKDAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEKDAYS_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS_LONG = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+const parseLocalDate = (dateStr) => {
+  if (!dateStr) return new Date();
+  if (dateStr instanceof Date) return dateStr;
+  const parts = String(dateStr).split("-");
+  if (parts.length === 3) {
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1; // 0-indexed
+    const d = parseInt(parts[2], 10);
+    return new Date(y, m, d);
+  }
+  return new Date(dateStr);
+};
+
+const formatMonthDay = (dateObjOrStr) => {
+  const date = parseLocalDate(dateObjOrStr);
+  return `${MONTHS_SHORT[date.getMonth()]} ${date.getDate()}`;
+};
+
+const formatMonthYear = (dateObjOrStr) => {
+  const date = parseLocalDate(dateObjOrStr);
+  return `${MONTHS_LONG[date.getMonth()]} ${date.getFullYear()}`;
+};
+
+const formatFullDate = (dateObjOrStr) => {
+  const date = parseLocalDate(dateObjOrStr);
+  return `${WEEKDAYS_LONG[date.getDay()]}, ${MONTHS_LONG[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+};
+
+const formatWeekdayMonthDay = (dateObjOrStr) => {
+  const date = parseLocalDate(dateObjOrStr);
+  return `${WEEKDAYS_SHORT[date.getDay()]}, ${MONTHS_SHORT[date.getMonth()]} ${date.getDate()}`;
+};
+
+const formatWeekdayMonthDayYear = (dateObjOrStr) => {
+  const date = parseLocalDate(dateObjOrStr);
+  return `${WEEKDAYS_SHORT[date.getDay()]}, ${MONTHS_SHORT[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+};
+
+const formatMonthDayYear = (dateObjOrStr) => {
+  const date = parseLocalDate(dateObjOrStr);
+  return `${MONTHS_SHORT[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+};
+
+const getWeekdayShortName = (dateObjOrStr) => {
+  const date = parseLocalDate(dateObjOrStr);
+  return WEEKDAYS_SHORT[date.getDay()];
+};
+
+const getWeekdayLongName = (dateObjOrStr) => {
+  const date = parseLocalDate(dateObjOrStr);
+  return WEEKDAYS_LONG[date.getDay()];
+};
+
+const pad = (n) => String(n).padStart(2, "0");
+
+const getDateString = (date) => {
+  const y = date.getFullYear();
+  const m = pad(date.getMonth() + 1);
+  const d = pad(date.getDate());
+  return `${y}-${m}-${d}`;
+};
+
+const formatTime = (timeStr) => {
+  if (!timeStr) return "";
+  const [hoursStr, minutesStr] = timeStr.split(":");
+  const hours = parseInt(hoursStr, 10);
+  const ampm = hours >= 12 ? "PM" : "AM";
+  const displayHours = hours % 12 || 12;
+  return `${displayHours}:${minutesStr} ${ampm}`;
+};
+
+const getStartOfWeek = (date) => {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day; // adjust to Sunday
+  return new Date(d.setDate(diff));
+};
+
+const getDaysOfWeek = (date) => {
+  const start = getStartOfWeek(date);
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const nextDay = new Date(start);
+    nextDay.setDate(start.getDate() + i);
+    days.push(nextDay);
+  }
+  return days;
+};
+
+const getWeekRangeLabel = (date) => {
+  const start = getStartOfWeek(date);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+
+  const startMonth = MONTHS_SHORT[start.getMonth()];
+  const endMonth = MONTHS_SHORT[end.getMonth()];
+  const startYear = start.getFullYear();
+  const endYear = end.getFullYear();
+
+  if (startYear !== endYear) {
+    return `${startMonth} ${start.getDate()}, ${startYear} – ${endMonth} ${end.getDate()}, ${endYear}`;
+  } else if (startMonth !== endMonth) {
+    return `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}, ${startYear}`;
+  } else {
+    return `${startMonth} ${start.getDate()} – ${end.getDate()}, ${startYear}`;
+  }
+};
+
+const getTypeColor = (type) => {
+  switch (type) {
+    case "Civil":
+      return "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100";
+    case "Criminal":
+      return "bg-red-50 border-red-200 text-red-700 hover:bg-red-100";
+    case "Corporate":
+      return "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100";
+    case "Family":
+      return "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100";
+    case "Consumer":
+      return "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100";
+    default:
+      return "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100";
+  }
+};
+
+const getStatusColor = (status) => {
+  switch (status) {
+    case "Completed":
+      return "bg-emerald-100 text-emerald-800";
+    case "In Progress":
+      return "bg-blue-100 text-blue-800";
+    case "Pending":
+    default:
+      return "bg-amber-100 text-amber-800";
+  }
+};
+
+export default function JuniorCalendarView() {
+  // --- Hearings State (Assigned cases/hearings for Junior lawyer) ---
+  const hearings = useMemo(() => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth(); // 0-indexed
+
+    const pad = (n) => String(n).padStart(2, "0");
+    const formatDateStr = (day) =>
+      `${currentYear}-${pad(currentMonth + 1)}-${pad(day)}`;
+
+    return [
+      {
+        id: "1",
+        title: "Property Dispute",
+        date: formatDateStr(22),
+        time: "10:30",
+        type: "Civil",
+        caseNo: "CS/890/2023",
+        court: "Civil Court, Prayagraj",
+        senior: "Adv. Rahul Sharma",
+        status: "In Progress",
+        notes: "Hearing for property division and injunction request.",
+      },
+      {
+        id: "2",
+        title: "Bail Application",
+        date: formatDateStr(24),
+        time: "14:00",
+        type: "Criminal",
+        caseNo: "CR/456/2023",
+        court: "High Court, Lucknow",
+        senior: "Adv. Rahul Sharma",
+        status: "Pending",
+        notes: "Arguments on regular bail application.",
+      },
+      {
+        id: "3",
+        title: "Family Settlement",
+        date: formatDateStr(25),
+        time: "11:00",
+        type: "Family",
+        caseNo: "FA/890/2024",
+        court: "Family Court, Kanpur",
+        senior: "Adv. Rahul Sharma",
+        status: "Completed",
+        notes: "Family settlement partition cross examination of the main witness.",
+      },
+    ];
+  }, []);
+
+  // --- States ---
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState("month"); // "month" | "week" | "day" | "agenda"
+  const [selectedEventId, setSelectedEventId] = useState(null);
+
+  // Search & Filter state for Agenda View
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterType, setFilterType] = useState("");
+
+  // --- Stats Calculation ---
+  const stats = useMemo(() => {
+    const today = new Date();
+    const startOfWeek = getStartOfWeek(today);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    
+    // Reset times for comparison
+    startOfWeek.setHours(0, 0, 0, 0);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    let upcomingThisWeekCount = 0;
+    let activeCasesCount = 0;
+
+    hearings.forEach((h) => {
+      const hDate = parseLocalDate(h.date);
+      hDate.setHours(12, 0, 0, 0);
+      if (hDate >= startOfWeek && hDate <= endOfWeek) {
+        upcomingThisWeekCount++;
+      }
+      if (h.status !== "Completed") {
+        activeCasesCount++;
+      }
+    });
+
+    return {
+      assigned: hearings.length,
+      upcomingThisWeek: upcomingThisWeekCount,
+      active: activeCasesCount,
+    };
+  }, [hearings]);
+
+  // --- Navigation Controls ---
+  const handlePrev = () => {
+    if (viewMode === "month") {
+      setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1));
+    } else if (viewMode === "week") {
+      const prevWeek = new Date(selectedDate);
+      prevWeek.setDate(selectedDate.getDate() - 7);
+      setSelectedDate(prevWeek);
+    } else if (viewMode === "day") {
+      const prevDay = new Date(selectedDate);
+      prevDay.setDate(selectedDate.getDate() - 1);
+      setSelectedDate(prevDay);
+    }
+  };
+
+  const handleNext = () => {
+    if (viewMode === "month") {
+      setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1));
+    } else if (viewMode === "week") {
+      const nextWeek = new Date(selectedDate);
+      nextWeek.setDate(selectedDate.getDate() + 7);
+      setSelectedDate(nextWeek);
+    } else if (viewMode === "day") {
+      const nextDay = new Date(selectedDate);
+      nextDay.setDate(selectedDate.getDate() + 1);
+      setSelectedDate(nextDay);
+    }
+  };
+
+  const getDateLabel = () => {
+    if (viewMode === "month") {
+      return formatMonthYear(selectedDate);
+    } else if (viewMode === "week") {
+      return getWeekRangeLabel(selectedDate);
+    } else if (viewMode === "day") {
+      return formatFullDate(selectedDate);
+    } else {
+      return "All Agenda Items";
+    }
+  };
+
+  // --- Month Grid Calculations ---
+  const monthDays = useMemo(() => {
+    const year = selectedDate.getFullYear();
+    const month = selectedDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    const days = [];
+
+    // Padding days from the previous month
+    const startDayOfWeek = firstDay.getDay(); // 0 for Sunday
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
+    for (let i = startDayOfWeek - 1; i >= 0; i--) {
+      const d = new Date(year, month - 1, prevMonthLastDay - i);
+      days.push({
+        date: d,
+        isCurrentMonth: false,
+        key: `prev-${d.getDate()}`,
+      });
+    }
+
+    // Days of the current month
+    const totalDays = lastDay.getDate();
+    for (let i = 1; i <= totalDays; i++) {
+      const d = new Date(year, month, i);
+      days.push({
+        date: d,
+        isCurrentMonth: true,
+        key: `curr-${i}`,
+      });
+    }
+
+    // Padding days from the next month to fill the 42 cells grid (6 rows)
+    const totalGridCells = 42;
+    const remainingCells = totalGridCells - days.length;
+    for (let i = 1; i <= remainingCells; i++) {
+      const d = new Date(year, month + 1, i);
+      days.push({
+        date: d,
+        isCurrentMonth: false,
+        key: `next-${i}`,
+      });
+    }
+
+    return days;
+  }, [selectedDate]);
+
+  // --- Filtering Hearings ---
+  const activeEvents = useMemo(() => {
+    return hearings.filter((e) => {
+      if (viewMode === "day") {
+        return e.date === getDateString(selectedDate);
+      } else if (viewMode === "week") {
+        const start = getStartOfWeek(selectedDate);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        const eventDate = parseLocalDate(e.date);
+        
+        // Reset times for date comparison
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        eventDate.setHours(12, 0, 0, 0);
+        
+        return eventDate >= start && eventDate <= end;
+      } else if (viewMode === "month") {
+        const eventDate = parseLocalDate(e.date);
+        return (
+          eventDate.getMonth() === selectedDate.getMonth() &&
+          eventDate.getFullYear() === selectedDate.getFullYear()
+        );
+      }
+      return true;
+    });
+  }, [hearings, selectedDate, viewMode]);
+
+  // Agenda list (includes search & filter type filtering)
+  const filteredAgendaEvents = useMemo(() => {
+    return hearings
+      .filter((e) => {
+        const matchesSearch =
+          e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (e.notes && e.notes.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (e.caseNo && e.caseNo.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (e.court && e.court.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (e.senior && e.senior.toLowerCase().includes(searchQuery.toLowerCase()));
+
+        const matchesType = filterType ? e.type === filterType : true;
+        return matchesSearch && matchesType;
+      })
+      .sort((a, b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
+  }, [hearings, searchQuery, filterType]);
+
+  // Upcoming Hearings (sorted chronologically, today or future)
+  const upcomingHearings = useMemo(() => {
+    const todayStr = getDateString(new Date());
+    return hearings
+      .filter((e) => e.date >= todayStr)
+      .sort((a, b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`))
+      .slice(0, 3);
+  }, [hearings]);
+
+  // Selected case details logic
+  const selectedEventDetails = useMemo(() => {
+    if (selectedEventId) {
+      return hearings.find((e) => e.id === selectedEventId);
+    }
+    return upcomingHearings[0] || hearings[0] || null;
+  }, [hearings, selectedEventId, upcomingHearings]);
+
+  return (
+    <div className="min-h-screen bg-slate-50/50 py-6 px-4 sm:px-6 lg:px-8 font-sans">
+      <div className="max-w-7xl mx-auto space-y-6">
+        
+        {/* --- Header Section --- */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                <IconCalendar className="h-6 w-6 animate-pulse" />
+              </div>
+              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight">
+                My Calendar
+              </h1>
+            </div>
+            <p className="text-slate-500 mt-1 text-sm md:text-base">
+              Assigned hearings and schedules
+            </p>
+          </div>
+        </div>
+
+        {/* --- Stats Cards --- */}
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition">
+            <h3 className="text-slate-400 font-bold text-sm uppercase tracking-wider">
+              Assigned Hearings
+            </h3>
+            <p className="text-4xl font-black text-slate-800 mt-2">
+              {stats.assigned}
+            </p>
+          </div>
+
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition">
+            <h3 className="text-slate-400 font-bold text-sm uppercase tracking-wider">
+              Upcoming This Week
+            </h3>
+            <p className="text-4xl font-black text-blue-600 mt-2">
+              {stats.upcomingThisWeek}
+            </p>
+          </div>
+
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition">
+            <h3 className="text-slate-400 font-bold text-sm uppercase tracking-wider">
+              Active Cases
+            </h3>
+            <p className="text-4xl font-black text-green-600 mt-2">
+              {stats.active}
+            </p>
+          </div>
+        </div>
+
+        {/* --- Top Control Bar --- */}
+        <div className="bg-white rounded-3xl border border-slate-100 p-4 md:p-5 shadow-sm">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            
+            {/* Navigation buttons */}
+            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-between md:justify-start">
+              <div className="flex items-center border border-slate-200 rounded-2xl overflow-hidden shadow-sm bg-slate-50">
+                <button
+                  onClick={handlePrev}
+                  className="p-3 hover:bg-white text-slate-600 hover:text-blue-600 transition"
+                  title="Previous"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <div className="h-5 w-[1px] bg-slate-200"></div>
+                <button
+                  onClick={() => setSelectedDate(new Date())}
+                  className="px-4 py-2 hover:bg-white text-sm font-semibold text-slate-700 hover:text-blue-600 transition"
+                >
+                  Today
+                </button>
+                <div className="h-5 w-[1px] bg-slate-200"></div>
+                <button
+                  onClick={handleNext}
+                  className="p-3 hover:bg-white text-slate-600 hover:text-blue-600 transition"
+                  title="Next"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </div>
+
+              <span className="px-4 py-2.5 bg-blue-50/70 border border-blue-100 text-blue-800 text-sm md:text-base font-bold rounded-2xl">
+                {getDateLabel()}
+              </span>
+            </div>
+
+            {/* View selectors */}
+            <div className="grid grid-cols-4 p-1 bg-slate-100 border border-slate-200/50 rounded-2xl w-full md:w-auto">
+              {["month", "week", "day", "agenda"].map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className={`px-2 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold capitalize transition duration-200 ${
+                    viewMode === mode
+                      ? "bg-white text-blue-600 shadow-sm"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+
+          </div>
+        </div>
+
+        {/* --- Main Views Content --- */}
+        <div className="space-y-6">
+
+          {/* 1. MONTH VIEW */}
+          {viewMode === "month" && (
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+              
+              {/* Calendar Grid Container */}
+              <div className="xl:col-span-3 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
+                
+                {/* Weekday Headers */}
+                <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-100">
+                  {WEEKDAYS_SHORT.map((day) => (
+                    <div
+                      key={day}
+                      className="py-4 text-center text-xs md:text-sm font-bold text-slate-600 tracking-wider uppercase"
+                    >
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Grid Layout */}
+                <div className="hidden md:grid grid-cols-7 divide-x divide-y divide-slate-100">
+                  {monthDays.map(({ date, isCurrentMonth, key }) => {
+                    const dateStr = getDateString(date);
+                    const isToday = dateStr === getDateString(new Date());
+                    const isSelected = dateStr === getDateString(selectedDate);
+                    const dayEvents = hearings.filter((e) => e.date === dateStr);
+
+                    return (
+                      <div
+                        key={key}
+                        onClick={() => {
+                          setSelectedDate(date);
+                          setSelectedEventId(dayEvents[0]?.id || null);
+                        }}
+                        className={`min-h-[110px] p-2 hover:bg-slate-50/50 transition cursor-pointer flex flex-col justify-between group ${
+                          isCurrentMonth ? "bg-white" : "bg-slate-50/30 text-slate-400"
+                        } ${isSelected ? "ring-2 ring-blue-500 ring-inset" : ""}`}
+                      >
+                        {/* Day indicator */}
+                        <div className="flex justify-between items-center">
+                          <span
+                            className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${
+                              isToday
+                                ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                                : isCurrentMonth
+                                ? "text-slate-800"
+                                : "text-slate-400"
+                            }`}
+                          >
+                            {date.getDate()}
+                          </span>
+                        </div>
+
+                        {/* Events list within cell */}
+                        <div className="space-y-1 mt-2 overflow-y-auto max-h-[70px] custom-scrollbar">
+                          {dayEvents.map((evt) => (
+                            <div
+                              key={evt.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedEventId(evt.id);
+                              }}
+                              className={`px-2 py-1 text-[10px] md:text-xs rounded-lg border flex items-center justify-between font-medium cursor-pointer transition ${getTypeColor(
+                                evt.type
+                              )}`}
+                            >
+                              <span className="truncate pr-1">{evt.title}</span>
+                              <span className="text-[8px] opacity-75 shrink-0">
+                                {formatTime(evt.time)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Mobile Grid Layout */}
+                <div className="md:hidden">
+                  <div className="grid grid-cols-7 divide-x divide-y divide-slate-100 border-b border-slate-100">
+                    {monthDays.map(({ date, isCurrentMonth, key }) => {
+                      const dateStr = getDateString(date);
+                      const isToday = dateStr === getDateString(new Date());
+                      const isSelected = dateStr === getDateString(selectedDate);
+                      const dayEvents = hearings.filter((e) => e.date === dateStr);
+
+                      return (
+                        <div
+                          key={key}
+                          onClick={() => {
+                            setSelectedDate(date);
+                            setSelectedEventId(dayEvents[0]?.id || null);
+                          }}
+                          className={`h-14 flex flex-col items-center justify-center relative cursor-pointer ${
+                            isCurrentMonth ? "bg-white" : "bg-slate-50/30"
+                          } ${isSelected ? "bg-blue-50/50 font-bold" : ""}`}
+                        >
+                          <span
+                            className={`w-7 h-7 flex items-center justify-center rounded-full text-xs ${
+                              isToday
+                                ? "bg-blue-600 text-white shadow-sm"
+                                : isSelected
+                                ? "text-blue-600 border border-blue-600/50"
+                                : isCurrentMonth
+                                ? "text-slate-800"
+                                : "text-slate-400"
+                            }`}
+                          >
+                            {date.getDate()}
+                          </span>
+
+                          {/* Dots */}
+                          {dayEvents.length > 0 && (
+                            <div className="flex gap-0.5 mt-1">
+                              {dayEvents.slice(0, 3).map((evt) => (
+                                <span
+                                  key={evt.id}
+                                  className={`w-1 h-1 rounded-full ${
+                                    evt.type === "Civil"
+                                      ? "bg-blue-500"
+                                      : evt.type === "Criminal"
+                                      ? "bg-red-500"
+                                      : evt.type === "Corporate"
+                                      ? "bg-purple-500"
+                                      : evt.type === "Family"
+                                      ? "bg-emerald-500"
+                                      : "bg-amber-500"
+                                  }`}
+                                ></span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Selected Date Detail List (Mobile Only) */}
+                  <div className="p-4 bg-slate-50/50 border-t border-slate-100">
+                    <h4 className="text-sm font-bold text-slate-700 mb-3">
+                      Agenda for {formatMonthDay(selectedDate)}
+                    </h4>
+
+                    {hearings.filter((e) => e.date === getDateString(selectedDate)).length === 0 ? (
+                      <p className="text-xs text-slate-400 py-3 text-center bg-white rounded-2xl border border-slate-100">
+                        No events scheduled for this day.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {hearings
+                          .filter((e) => e.date === getDateString(selectedDate))
+                          .map((evt) => (
+                            <div
+                              key={evt.id}
+                              onClick={() => setSelectedEventId(evt.id)}
+                              className="bg-white p-3 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm cursor-pointer hover:border-slate-300 transition"
+                            >
+                              <div className="flex gap-2.5 items-center min-w-0">
+                                <span className={`w-2 h-8 rounded-full ${
+                                  evt.type === "Civil"
+                                    ? "bg-blue-500"
+                                    : evt.type === "Criminal"
+                                    ? "bg-red-500"
+                                    : evt.type === "Corporate"
+                                    ? "bg-purple-500"
+                                    : evt.type === "Family"
+                                    ? "bg-emerald-500"
+                                    : "bg-amber-500"
+                                }`}></span>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-slate-800 truncate">
+                                    {evt.title}
+                                  </p>
+                                  <p className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
+                                    <Clock className="w-3 h-3 text-slate-400" />
+                                    <span>{formatTime(evt.time)} ({evt.type})</span>
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Month View Right Panel */}
+              <div className="space-y-6">
+                
+                {/* Upcoming Hearings */}
+                <div className="bg-white rounded-3xl border border-slate-100 p-5 shadow-sm space-y-4">
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                    <h2 className="font-extrabold text-slate-800 text-lg flex items-center gap-2">
+                      <Bookmark className="w-5 h-5 text-blue-600" />
+                      <span>Upcoming Hearings</span>
+                    </h2>
+                  </div>
+
+                  <div className="space-y-3">
+                    {upcomingHearings.length === 0 ? (
+                      <div className="text-center py-6 text-slate-400">
+                        <AlertCircle className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                        <p className="text-sm">No upcoming hearings scheduled.</p>
+                      </div>
+                    ) : (
+                      upcomingHearings.map((item) => (
+                        <div
+                          key={item.id}
+                          onClick={() => {
+                            setSelectedEventId(item.id);
+                            setSelectedDate(parseLocalDate(item.date));
+                          }}
+                          className={`border rounded-2xl p-3.5 cursor-pointer hover:border-blue-400 hover:bg-blue-50/20 transition ${
+                            selectedEventDetails?.id === item.id
+                              ? "border-blue-500 bg-blue-50/30"
+                              : "border-slate-100"
+                          }`}
+                        >
+                          <div className="flex justify-between items-start gap-1">
+                            <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${getStatusColor(item.status)}`}>
+                              {item.status}
+                            </span>
+                            <span className="text-xs font-bold text-blue-600">
+                              {formatMonthDay(item.date)}
+                            </span>
+                          </div>
+                          
+                          <h3 className="font-bold text-slate-800 mt-2 text-sm">
+                            {item.title}
+                          </h3>
+                          
+                          <div className="flex items-center gap-1.5 mt-2 text-slate-500 text-xs">
+                            <Clock className="w-3.5 h-3.5 shrink-0" />
+                            <span>{formatTime(item.time)}</span>
+                          </div>
+
+                          {item.court && (
+                            <div className="flex items-center gap-1.5 mt-1 text-slate-500 text-xs">
+                              <MapPin className="w-3.5 h-3.5 shrink-0" />
+                              <span className="truncate">{item.court}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Case Details */}
+                <div className="bg-white rounded-3xl border border-slate-100 p-5 shadow-sm space-y-4">
+                  <h2 className="font-extrabold text-slate-800 text-lg flex items-center gap-2 border-b border-slate-100 pb-3">
+                    <FileText className="w-5 h-5 text-indigo-600" />
+                    <span>Case Details</span>
+                  </h2>
+
+                  {selectedEventDetails ? (
+                    <div className="space-y-4">
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Case / Event Name</span>
+                        <h3 className="text-base font-bold text-slate-800 mt-0.5">{selectedEventDetails.title}</h3>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                        <div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Case Number</span>
+                          <span className="text-xs font-bold text-slate-700">{selectedEventDetails.caseNo || "N/A"}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Type</span>
+                          <span className="text-xs font-bold text-slate-700">{selectedEventDetails.type}</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 text-sm text-slate-600">
+                        <div className="flex gap-2 items-start">
+                          <MapPin className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-400 block leading-none">Court Venue</span>
+                            <span className="text-xs font-medium text-slate-700">{selectedEventDetails.court || "Not Specified"}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 items-start">
+                          <Clock className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-400 block leading-none">Schedule Time</span>
+                            <span className="text-xs font-medium text-slate-700">
+                              {formatWeekdayMonthDay(selectedEventDetails.date)} at {formatTime(selectedEventDetails.time)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-3">
+                        <span className="text-[9px] font-bold text-blue-600 uppercase tracking-wider block">Assigned By</span>
+                        <span className="text-xs font-bold text-slate-700 mt-0.5 block">{selectedEventDetails.senior}</span>
+                      </div>
+
+                      {selectedEventDetails.notes && (
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Agenda Notes</span>
+                          <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-2xl mt-1 leading-relaxed border border-slate-100">
+                            {selectedEventDetails.notes}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-slate-400">
+                      <AlertCircle className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+                      <p className="text-xs">Select any event/hearing to view full details.</p>
+                    </div>
+                  )}
+
+                </div>
+
+              </div>
+
+            </div>
+          )}
+
+          {/* 2. WEEK VIEW */}
+          {viewMode === "week" && (
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 md:p-6">
+              
+              {/* Desktop Week Grid */}
+              <div className="hidden md:grid grid-cols-7 gap-4">
+                {getDaysOfWeek(selectedDate).map((day) => {
+                  const dateStr = getDateString(day);
+                  const isToday = dateStr === getDateString(new Date());
+                  const isSelected = dateStr === getDateString(selectedDate);
+                  const dayEvents = hearings.filter((e) => e.date === dateStr);
+
+                  return (
+                    <div
+                      key={day.toString()}
+                      className={`border rounded-2xl p-4 min-h-[300px] flex flex-col justify-between transition ${
+                        isSelected ? "border-blue-500 bg-blue-50/10 shadow-sm" : "border-slate-100 bg-slate-50/30"
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                              {getWeekdayShortName(day)}
+                            </p>
+                            <h3 className={`text-lg font-black mt-0.5 leading-none ${isToday ? "text-blue-600" : "text-slate-800"}`}>
+                              {day.getDate()}
+                            </h3>
+                          </div>
+                        </div>
+
+                        {/* Event List in Week Day */}
+                        <div className="space-y-2 mt-4 max-h-[200px] overflow-y-auto custom-scrollbar">
+                          {dayEvents.length === 0 ? (
+                            <p className="text-[11px] text-slate-400 italic">No events</p>
+                          ) : (
+                            dayEvents.map((evt) => (
+                              <div
+                                key={evt.id}
+                                onClick={() => {
+                                  setSelectedEventId(evt.id);
+                                  setSelectedDate(day);
+                                }}
+                                className={`p-2.5 rounded-xl border flex flex-col font-medium cursor-pointer transition text-xs relative group ${getTypeColor(
+                                  evt.type
+                                )}`}
+                              >
+                                <div className="flex justify-between items-start gap-1">
+                                  <span className="font-bold text-slate-800 truncate max-w-[80px]">
+                                    {evt.title}
+                                  </span>
+                                  <span className="text-[9px] opacity-75 shrink-0 font-medium">
+                                    {formatTime(evt.time)}
+                                  </span>
+                                </div>
+                                <span className="text-[9px] text-slate-500 mt-1 truncate">
+                                  {evt.court || "No Court"}
+                                </span>
+                                <span className="text-[8px] text-blue-600 mt-0.5 truncate">
+                                  By: {evt.senior}
+                                </span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Select Column Action */}
+                      <button
+                        onClick={() => setSelectedDate(day)}
+                        className={`w-full py-1.5 text-[10px] font-bold rounded-xl mt-3 transition text-center uppercase tracking-wide ${
+                          isSelected
+                            ? "bg-blue-600 text-white shadow-md shadow-blue-600/10"
+                            : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                        }`}
+                      >
+                        {isSelected ? "Selected" : "Select Day"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Mobile Week Grid (Vertical Stack) */}
+              <div className="md:hidden space-y-3">
+                {getDaysOfWeek(selectedDate).map((day) => {
+                  const dateStr = getDateString(day);
+                  const isToday = dateStr === getDateString(new Date());
+                  const isSelected = dateStr === getDateString(selectedDate);
+                  const dayEvents = hearings.filter((e) => e.date === dateStr);
+
+                  return (
+                    <div
+                      key={day.toString()}
+                      className={`border rounded-2xl overflow-hidden transition ${
+                        isSelected
+                          ? "border-blue-500 bg-blue-50/5"
+                          : "border-slate-100 bg-white"
+                      }`}
+                    >
+                      {/* Mobile Column Header */}
+                      <div
+                        onClick={() => setSelectedDate(day)}
+                        className="flex items-center justify-between p-4 bg-slate-50/70 border-b border-slate-100 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                            isToday
+                              ? "bg-blue-600 text-white"
+                              : isSelected
+                              ? "text-blue-600 border border-blue-600"
+                              : "bg-slate-200 text-slate-700"
+                          }`}>
+                            {day.getDate()}
+                          </span>
+                          <div>
+                            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider leading-none">
+                              {getWeekdayLongName(day)}
+                            </p>
+                            <p className="text-[10px] text-slate-400 mt-1">
+                              {formatMonthYear(day)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Mobile Column Content */}
+                      <div className="p-3 space-y-2">
+                        {dayEvents.length === 0 ? (
+                          <p className="text-xs text-slate-400 italic py-1 pl-1">No hearings or schedules.</p>
+                        ) : (
+                          dayEvents.map((evt) => (
+                            <div
+                              key={evt.id}
+                              className={`p-3 rounded-xl border flex items-center justify-between transition ${getTypeColor(
+                                evt.type
+                              )}`}
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-bold text-slate-800 truncate">{evt.title}</p>
+                                <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px] text-slate-500 font-medium">
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3 text-slate-400" />
+                                    {formatTime(evt.time)}
+                                  </span>
+                                  {evt.court && (
+                                    <span className="flex items-center gap-0.5 truncate max-w-[120px]">
+                                      <MapPin className="w-3 h-3 text-slate-400" />
+                                      {evt.court}
+                                    </span>
+                                  )}
+                                  <span className="text-blue-600 font-semibold">
+                                    By: {evt.senior}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+            </div>
+          )}
+
+          {/* 3. DAY VIEW */}
+          {viewMode === "day" && (
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 md:p-6 max-w-4xl mx-auto">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
+                <div>
+                  <h2 className="text-xl md:text-2xl font-black text-slate-800">
+                    Daily Schedule
+                  </h2>
+                  <p className="text-sm text-slate-400 mt-1">
+                    Timeline calendar events for selected day.
+                  </p>
+                </div>
+              </div>
+
+              {activeEvents.length === 0 ? (
+                <div className="text-center py-12 bg-slate-50/30 rounded-3xl border border-dashed border-slate-200">
+                  <CalendarIcon className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+                  <h3 className="font-bold text-slate-700 text-base">Day is clear</h3>
+                  <p className="text-sm text-slate-400 mt-1 max-w-xs mx-auto">
+                    You have no scheduled court hearings, agendas, or meetings for this day.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {activeEvents
+                    .sort((a, b) => a.time.localeCompare(b.time))
+                    .map((event) => (
+                      <div
+                        key={event.id}
+                        className={`border rounded-2xl p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition shadow-sm ${getTypeColor(
+                          event.type
+                        )}`}
+                      >
+                        <div className="flex gap-4 items-start md:items-center">
+                          <div className="bg-white/90 p-3 rounded-2xl text-slate-700 border border-slate-100 text-center shrink-0 min-w-[70px] shadow-sm">
+                            <Clock className="w-4 h-4 mx-auto text-slate-400 mb-1" />
+                            <span className="text-xs font-bold">{formatTime(event.time)}</span>
+                          </div>
+
+                          <div className="space-y-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-black text-slate-800 text-base md:text-lg">
+                                {event.title}
+                              </h3>
+                              <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${getStatusColor(event.status)}`}>
+                                {event.status}
+                              </span>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+                              {event.caseNo && (
+                                <span className="font-semibold text-slate-600">
+                                  Case: {event.caseNo}
+                                </span>
+                              )}
+                              {event.court && (
+                                <span className="flex items-center gap-1 font-medium">
+                                  <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                  <span className="truncate">{event.court}</span>
+                                </span>
+                              )}
+                              <span className="text-blue-600 font-bold">
+                                Assigned By: {event.senior}
+                              </span>
+                            </div>
+
+                            {event.notes && (
+                              <p className="text-xs text-slate-600 bg-white/50 p-2.5 rounded-xl border border-slate-200/40 mt-2 max-w-xl leading-relaxed">
+                                {event.notes}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 4. AGENDA VIEW */}
+          {viewMode === "agenda" && (
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 md:p-6">
+              
+              {/* Search and Filter panel */}
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-slate-100 pb-5 mb-6">
+                <div>
+                  <h2 className="text-xl md:text-2xl font-black text-slate-800">
+                    Agenda Search
+                  </h2>
+                  <p className="text-sm text-slate-400 mt-1">
+                    Search hearings and schedules by keyword or case type.
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                    <input
+                      type="text"
+                      placeholder="Search agenda..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
+                    />
+                  </div>
+
+                  <div className="relative w-full sm:w-48">
+                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
+                    <select
+                      value={filterType}
+                      onChange={(e) => setFilterType(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition appearance-none"
+                    >
+                      <option value="">All Case Types</option>
+                      <option value="Civil">Civil</option>
+                      <option value="Criminal">Criminal</option>
+                      <option value="Corporate">Corporate</option>
+                      <option value="Family">Family</option>
+                      <option value="Consumer">Consumer</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Agenda List */}
+              {filteredAgendaEvents.length === 0 ? (
+                <div className="text-center py-12 text-slate-400">
+                  <AlertCircle className="w-12 h-12 mx-auto text-slate-300 mb-2" />
+                  <p className="text-base font-bold text-slate-700">No matching agenda items</p>
+                  <p className="text-sm mt-1">Try clearing filters or search terms.</p>
+                </div>
+              ) : (
+                <div className="space-y-6 relative border-l border-slate-200/70 ml-4 md:ml-8 pl-6 md:pl-10">
+                  {filteredAgendaEvents.map((evt) => {
+                    const evtDate = new Date(evt.date);
+                    return (
+                      <div key={evt.id} className="relative group">
+                        
+                        {/* Timeline Node Point */}
+                        <span className="absolute -left-[31px] md:-left-[47px] top-1 bg-white border-4 border-blue-500 w-4.5 h-4.5 rounded-full z-10"></span>
+                        
+                        <div className="bg-slate-50/40 hover:bg-slate-50 border border-slate-100 rounded-3xl p-4 md:p-5 transition shadow-sm hover:shadow-md hover:border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          
+                          <div className="space-y-2">
+                            {/* Date & Type metadata */}
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-bold text-blue-600">
+                                {formatWeekdayMonthDayYear(evtDate)}
+                              </span>
+                              <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                              <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
+                                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                {formatTime(evt.time)}
+                              </span>
+                              <span className={`px-2 py-0.5 text-[9px] font-extrabold rounded-full tracking-wider uppercase border ${getTypeColor(
+                                evt.type
+                              )}`}>
+                                {evt.type}
+                              </span>
+                            </div>
+
+                            <h3 className="text-base md:text-lg font-black text-slate-800">
+                              {evt.title}
+                            </h3>
+
+                            {/* Court & Case Info */}
+                            {(evt.caseNo || evt.court) && (
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+                                {evt.caseNo && (
+                                  <span className="font-bold text-slate-600">
+                                    Case No: {evt.caseNo}
+                                  </span>
+                                )}
+                                {evt.court && (
+                                  <span className="flex items-center gap-1 font-medium">
+                                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                    {evt.court}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            <div className="text-xs text-blue-600 font-bold">
+                              Assigned By: {evt.senior}
+                            </div>
+
+                            {evt.notes && (
+                              <p className="text-xs text-slate-600 bg-white p-3 rounded-2xl border border-slate-100 mt-2 max-w-xl leading-relaxed">
+                                {evt.notes}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 border-t md:border-t-0 border-slate-100 pt-3 md:pt-0 justify-end">
+                            <span className={`px-3 py-1 rounded-xl text-xs font-bold mr-2 ${getStatusColor(evt.status)}`}>
+                              {evt.status}
+                            </span>
+                          </div>
+
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+            </div>
+          )}
+
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// Small helper for header
+function IconCalendar(props) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M8 2v4" />
+      <path d="M16 2v4" />
+      <rect width="18" height="18" x="3" y="4" rx="2" />
+      <path d="M3 10h18" />
+    </svg>
+  );
+}
