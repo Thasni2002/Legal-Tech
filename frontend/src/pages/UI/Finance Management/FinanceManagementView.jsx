@@ -52,13 +52,13 @@ const actions = [
   title: "Invoice History",
   icon: History,
   button: "View Invoices",
-  color: "bg-cyan-600",
+  color: "bg-[#0891B2]",
 },
 {
   title: "Client Due Payments",
   icon: CreditCard,
   button: "View Due Payments",
-  color: "bg-red-600",
+  color: "bg-[#DC2626]",
 },
 ];
 
@@ -103,17 +103,17 @@ const clients = [
 
   return (
     <div className="w-full space-y-6">
-      {/* Header */}
-      <div className="bg-white border rounded-xl p-5">
-        <h1 className="text-2xl font-bold text-gray-800">
-          Court Fee Calculator
+      {/* Page Header */}
+      <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm p-6">
+        <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
+          Finance Management
         </h1>
-        <p className="text-sm text-gray-500">
-          Calculate Court Fee, Stamp Duty, Advocate Fee & Paper Expenses
+        <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
+          Monitor revenue, invoices and financial records
         </p>
       </div>
 {/* Client Details */}
-<div className="bg-white border rounded-xl p-5">
+<div className="bg-white border border-[#E2E8F0] rounded-xl p-5">
   <h3 className="font-bold text-lg mb-4">
     Client Details
   </h3>
@@ -134,7 +134,7 @@ const clients = [
           setEmail(selectedClient.email);
         }
       }}
-      className="border rounded-lg p-2"
+      className="border border-[#E2E8F0] rounded-lg p-2"
     >
       <option value="">Select Client</option>
 
@@ -153,7 +153,7 @@ const clients = [
       placeholder="Case Number"
       value={caseNumber}
       readOnly
-      className="border rounded-lg p-2 bg-gray-100"
+      className="border border-[#E2E8F0] rounded-lg p-2 bg-[#F1F5F9]"
     />
 
     <input
@@ -161,7 +161,7 @@ const clients = [
       placeholder="Mobile Number"
       value={mobileNumber}
       readOnly
-      className="border rounded-lg p-2 bg-gray-100"
+      className="border border-[#E2E8F0] rounded-lg p-2 bg-[#F1F5F9]"
     />
 
     <input
@@ -169,7 +169,7 @@ const clients = [
       placeholder="Email Address"
       value={email}
       readOnly
-      className="border rounded-lg p-2 bg-gray-100"
+      className="border border-[#E2E8F0] rounded-lg p-2 bg-[#F1F5F9]"
     />
 
   </div>
@@ -177,8 +177,8 @@ const clients = [
       {/* Calculator Forms */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         {/* Court Fee */}
-        <div className="bg-white border rounded-xl p-5">
-          <h3 className="font-semibold text-blue-600 mb-4">
+        <div className="bg-white border border-[#E2E8F0] rounded-xl p-5">
+          <h3 className="font-semibold text-[#2563EB] mb-4">
             Court Fee Calculator
           </h3>
 
@@ -186,7 +186,7 @@ const clients = [
             <input
               type="text"
               placeholder="Case Type"
-              className="w-full border rounded-lg p-2"
+              className="w-full border border-[#E2E8F0] rounded-lg p-2"
             />
 
             <input
@@ -194,24 +194,24 @@ const clients = [
               placeholder="Court Fee Amount"
               value={courtFee}
               onChange={(e) => setCourtFee(e.target.value)}
-              className="w-full border rounded-lg p-2"
+              className="w-full border border-[#E2E8F0] rounded-lg p-2"
             />
 
             <input
               type="text"
               placeholder="Court Jurisdiction"
-              className="w-full border rounded-lg p-2"
+              className="w-full border border-[#E2E8F0] rounded-lg p-2"
             />
           </div>
 
-          <div className="mt-4 font-bold text-blue-600">
+          <div className="mt-4 font-bold text-[#2563EB]">
             Court Fee: ₹{courtFee || 0}
           </div>
         </div>
 
         {/* Stamp Duty */}
-        <div className="bg-white border rounded-xl p-5">
-          <h3 className="font-semibold text-green-600 mb-4">
+        <div className="bg-white border border-[#E2E8F0] rounded-xl p-5">
+          <h3 className="font-semibold text-[#16A34A] mb-4">
             Stamp Duty Calculator
           </h3>
 
@@ -219,7 +219,7 @@ const clients = [
             <input
               type="text"
               placeholder="Document Type"
-              className="w-full border rounded-lg p-2"
+              className="w-full border border-[#E2E8F0] rounded-lg p-2"
             />
 
             <input
@@ -227,24 +227,24 @@ const clients = [
               placeholder="Stamp Duty Amount"
               value={stampDuty}
               onChange={(e) => setStampDuty(e.target.value)}
-              className="w-full border rounded-lg p-2"
+              className="w-full border border-[#E2E8F0] rounded-lg p-2"
             />
 
             <input
               type="text"
               placeholder="State"
-              className="w-full border rounded-lg p-2"
+              className="w-full border border-[#E2E8F0] rounded-lg p-2"
             />
           </div>
 
-          <div className="mt-4 font-bold text-green-600">
+          <div className="mt-4 font-bold text-[#16A34A]">
             Stamp Duty: ₹{stampDuty || 0}
           </div>
         </div>
 
         {/* Advocate Fee */}
-        <div className="bg-white border rounded-xl p-5">
-          <h3 className="font-semibold text-purple-600 mb-4">
+        <div className="bg-white border border-[#E2E8F0] rounded-xl p-5">
+          <h3 className="font-semibold text-[#D97706] mb-4">
             Advocate Fee
           </h3>
 
@@ -252,7 +252,7 @@ const clients = [
             <input
               type="text"
               placeholder="Case Type"
-              className="w-full border rounded-lg p-2"
+              className="w-full border border-[#E2E8F0] rounded-lg p-2"
             />
 
             <input
@@ -260,24 +260,24 @@ const clients = [
               placeholder="Advocate Fee Amount"
               value={advocateFee}
               onChange={(e) => setAdvocateFee(e.target.value)}
-              className="w-full border rounded-lg p-2"
+              className="w-full border border-[#E2E8F0] rounded-lg p-2"
             />
 
             <input
               type="text"
               placeholder="Remarks"
-              className="w-full border rounded-lg p-2"
+              className="w-full border border-[#E2E8F0] rounded-lg p-2"
             />
           </div>
 
-          <div className="mt-4 font-bold text-purple-600">
+          <div className="mt-4 font-bold text-[#D97706]">
             Advocate Fee: ₹{advocateFee || 0}
           </div>
         </div>
 
         {/* Paper Filing */}
-        <div className="bg-white border rounded-xl p-5">
-          <h3 className="font-semibold text-orange-600 mb-4">
+        <div className="bg-white border border-[#E2E8F0] rounded-xl p-5">
+          <h3 className="font-semibold text-[#F59E0B] mb-4">
             Paper Filing
           </h3>
 
@@ -285,7 +285,7 @@ const clients = [
             <input
               type="number"
               placeholder="Pages"
-              className="w-full border rounded-lg p-2"
+              className="w-full border border-[#E2E8F0] rounded-lg p-2"
             />
 
             <input
@@ -293,30 +293,30 @@ const clients = [
               placeholder="Filing Cost"
               value={filingCost}
               onChange={(e) => setFilingCost(e.target.value)}
-              className="w-full border rounded-lg p-2"
+              className="w-full border border-[#E2E8F0] rounded-lg p-2"
             />
 
             <input
               type="text"
               placeholder="Notes"
-              className="w-full border rounded-lg p-2"
+              className="w-full border border-[#E2E8F0] rounded-lg p-2"
             />
           </div>
 
-          <div className="mt-4 font-bold text-orange-600">
+          <div className="mt-4 font-bold text-[#F59E0B]">
             Filing Cost: ₹{filingCost || 0}
           </div>
         </div>
       </div>
 
   {/* Billing Summary */}
-<div className="bg-green-50 border rounded-xl p-5">
+<div className="bg-[#F0FDF4] border border-[#E2E8F0] rounded-xl p-5">
   <h3 className="font-bold text-lg mb-4">
     Billing Summary
   </h3>
 
   {/* Client Information */}
-  <div className="mb-5 pb-4 border-b">
+  <div className="mb-5 pb-4 border-b border-[#E2E8F0]">
     <h4 className="font-semibold mb-3">
       Client Information
     </h4>
@@ -384,7 +384,7 @@ const clients = [
 
     <div className="flex justify-between">
       <span>Invoice Status</span>
-      <span className="font-medium text-orange-600">
+      <span className="font-medium text-[#F59E0B]">
         Pending
       </span>
     </div>
@@ -405,18 +405,18 @@ const clients = [
   <div className="mt-6 flex flex-wrap gap-3 justify-end">
   
 
-    <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+    <button className="px-4 py-2 bg-[#16A34A] text-white rounded-lg hover:bg-[#15803d]">
       Generate Invoice
     </button>
 
     <button
       onClick={handleDownloadPDF}
-      className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+      className="px-4 py-2 bg-[#F59E0B] text-white rounded-lg hover:bg-[#d97706]"
     >
       Download PDF
     </button>
 
-    <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+    <button className="px-4 py-2 bg-[#D97706] text-white rounded-lg hover:bg-[#b45309]">
       Send To Client
     </button>
   </div>
@@ -431,8 +431,8 @@ const clients = [
         key={index}
         className="bg-white rounded-xl border p-5"
       >
-        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-          <Icon className="w-6 h-6 text-gray-700" />
+        <div className="w-12 h-12 bg-[#F1F5F9] rounded-full flex items-center justify-center mb-4">
+          <Icon className="w-6 h-6 text-[#0F172A]" />
         </div>
 
         <h3 className="font-semibold mb-4">

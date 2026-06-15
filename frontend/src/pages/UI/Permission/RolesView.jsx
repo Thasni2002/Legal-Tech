@@ -149,7 +149,7 @@ export default function RolesView() {
   );
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-12">
+    <div className="w-full space-y-6 md:space-y-8">
       {/* Toast Notification */}
       {notification && (
         <div
@@ -168,13 +168,13 @@ export default function RolesView() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-extrabold text-[#0f172a] uppercase tracking-wider">
+      {/* Page Header */}
+      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6">
+        <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
           Roles Management
         </h1>
-        <p className="text-sm font-semibold text-slate-400 tracking-wider">
-          CREATE, EDIT, AND DELETE USER ROLES. ASSIGN PERMISSIONS SEPARATELY.
+        <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
+          Create, edit, and delete user roles. Assign permissions separately.
         </p>
       </div>
 
@@ -205,7 +205,7 @@ export default function RolesView() {
                 placeholder="e.g. Manager, Editor"
                 value={roleName}
                 onChange={(e) => setRoleName(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-emerald-100 focus:border-emerald-600 outline-none transition-all text-sm font-medium"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
                 required
               />
             </div>
@@ -219,7 +219,7 @@ export default function RolesView() {
                 value={roleDescription}
                 onChange={(e) => setRoleDescription(e.target.value)}
                 rows={4}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-emerald-100 focus:border-emerald-600 outline-none transition-all text-sm font-medium resize-none"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium resize-none"
               />
             </div>
 
@@ -258,7 +258,7 @@ export default function RolesView() {
                 placeholder="Search roles..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-full border border-slate-200 bg-slate-50/50 pl-11 pr-5 py-2.5 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-emerald-50 focus:border-emerald-600 outline-none transition-all"
+                className="w-full rounded-full border border-slate-200 bg-slate-50/50 pl-11 pr-5 py-2.5 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-50 focus:border-[#2563EB] outline-none transition-all"
               />
               <Search
                 size={16}

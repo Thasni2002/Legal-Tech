@@ -74,69 +74,72 @@ export default function CaseTracking() {
       )
   );
   return (
-    <div className="p-6 bg-slate-50 min-h-screen">
-      {/* <h1 className="text-3xl font-bold text-slate-800 mb-6">
-        Case Tracking
-      </h1> */}
-      <div className="flex items-center gap-4 mb-6">
-        <Link
-          href="/client-management"
-          className="flex items-center justify-center w-10 h-10 bg-white border border-slate-200 rounded-lg shadow-sm text-slate-600 hover:text-blue-600 hover:border-blue-200 transition-colors"
-        >
-          <ArrowLeft size={20} />
-        </Link>
+    <div className="w-full space-y-6 md:space-y-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Link
+            href="/client-management"
+            className="flex items-center justify-center w-9 h-9 bg-white border border-[#E2E8F0] rounded-lg shadow-sm text-[#64748B] hover:text-[#2563EB] hover:border-[#2563EB] transition-colors cursor-pointer"
+          >
+            <ArrowLeft size={18} />
+          </Link>
 
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800">
-            Case Tracking
-          </h1>
+          <div>
+            <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">
+              Case Tracking
+            </h1>
+            <p className="text-xs text-[#64748B] mt-0.5">
+              Monitor litigation milestones, document trails, and schedules.
+            </p>
+          </div>
+        </div>
 
-          {/* <p className="text-sm text-slate-500">
-      Manage client cases and hearings
-    </p> */}
+        <div className="relative w-full sm:w-80">
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <svg className="w-4 h-4 text-[#94A3B8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          </span>
+          <input
+            type="text"
+            placeholder="Search Client / Case..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 rounded-lg border border-[#E2E8F0] bg-white text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200 shadow-sm"
+          />
         </div>
       </div>
-      {/* <div className="mb-6">
-  <input
-    type="text"
-    placeholder="Search by Client Name or Case Name..."
-    value={searchTerm}
-    onChange={(e) => setSearchTerm(e.target.value)}
-    className="w-full md:w-96 border rounded-lg p-3"
-  />
-</div> */}
-      <div className="flex justify-end mb-6">
-        <input
-          type="text"
-          placeholder="Search Client / Case..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full md:w-80 border border-slate-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+
       {/* Client Cards */}
-      {/* Client Cards */}
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {filteredClients.length === 0 ? (
-          <div className="col-span-3 text-center bg-white p-8 rounded-xl border">
-            No matching case found.
+          <div className="col-span-full text-center bg-white py-12 rounded-xl border border-[#E2E8F0] text-sm text-[#64748B]">
+            No matching client or case found.
           </div>
         ) : (
           filteredClients.map((client) => (
             <div
               key={client.id}
-              className="bg-white border rounded-xl p-5 shadow-sm"
+              className="bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col justify-between"
             >
-              <h2 className="font-bold text-lg">{client.name}</h2>
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <h2 className="font-bold text-base text-[#0F172A]">{client.name}</h2>
+                  <span className="text-[10px] bg-[#F1F5F9] text-[#64748B] font-mono px-2 py-0.5 rounded border border-[#E2E8F0] font-semibold">
+                    ID: {client.id}
+                  </span>
+                </div>
 
-              <p className="text-sm text-slate-500 mt-1">
-                Client ID: {client.id}
-              </p>
-
-              <p className="text-sm mt-2">
-                <span className="font-medium">Case:</span>{" "}
-                {client.cases[0]?.name}
-              </p>
+                <div className="space-y-1.5 text-xs text-[#64748B] mt-3">
+                  <p>
+                    <span className="font-semibold text-[#1E293B]">Case:</span>{" "}
+                    {client.cases[0]?.name}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-[#1E293B]">Court:</span>{" "}
+                    {client.cases[0]?.court}
+                  </p>
+                </div>
+              </div>
 
               <button
                 onClick={() => {
@@ -144,7 +147,7 @@ export default function CaseTracking() {
                   setSelectedCase(null);
                   setEditingCase(null);
                 }}
-                className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg"
+                className="mt-5 w-full bg-[#2563EB] hover:bg-[#1d4ed8] text-white py-2 rounded-lg text-xs font-semibold shadow-sm transition-all duration-200 cursor-pointer"
               >
                 View Cases
               </button>
@@ -155,56 +158,56 @@ export default function CaseTracking() {
 
       {/* Cases Table */}
       {selectedClient && (
-        <div className="bg-white rounded-xl border p-5 mb-8">
-          <h2 className="text-xl font-bold mb-4">
+        <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm">
+          <h2 className="text-lg font-bold text-[#0F172A] mb-4">
             Cases of {selectedClient.name}
           </h2>
 
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b bg-slate-100">
-                  <th className="p-3 text-left">Case ID</th>
-                  <th className="p-3 text-left">Case Name</th>
-                  <th className="p-3 text-left">Status</th>
-                  <th className="p-3 text-left">Action</th>
+                <tr className="border-b border-[#E2E8F0] text-xs font-semibold text-[#64748B] uppercase tracking-wider bg-[#F8FAFC]">
+                  <th className="p-3 font-medium">Case ID</th>
+                  <th className="p-3 font-medium">Case Name</th>
+                  <th className="p-3 font-medium">Status</th>
+                  <th className="p-3 font-medium">Action</th>
                 </tr>
               </thead>
 
-              <tbody>
+              <tbody className="divide-y divide-[#F1F5F9]">
                 {selectedClient.cases.map((item) => (
-                  <tr key={item.id} className="border-b">
-                    <td className="p-3">{item.id}</td>
-
-                    <td className="p-3">{item.name}</td>
-
-                    <td className="p-3">
-                      <span className="px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-700">
+                  <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors duration-150">
+                    <td className="p-3 text-sm font-medium text-[#1E293B]">{item.id}</td>
+                    <td className="p-3 text-sm text-[#1E293B]">{item.name}</td>
+                    <td className="p-3 text-sm">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-blue-50 text-blue-700 border-blue-200/50">
                         {item.status}
                       </span>
                     </td>
 
-                    <td className="p-3 flex gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedCase(item);
-                          setEditingCase(null);
-                        }}
-                        className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded"
-                      >
-                        <Eye size={16} />
-                        View
-                      </button>
+                    <td className="p-3">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedCase(item);
+                            setEditingCase(null);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#16A34A] hover:bg-[#15803d] text-white text-xs font-semibold rounded-lg shadow-sm transition-colors duration-200 cursor-pointer"
+                        >
+                          <Eye size={14} />
+                          View
+                        </button>
 
-                      <button
-                        onClick={() =>
-                          setEditingCase({ ...item })
-                        }
-                        className="flex items-center gap-1 px-3 py-1 bg-orange-500 text-white rounded"
-                      >
-                        <Edit size={16} />
-                        Edit
-                      </button>
+                        <button
+                          onClick={() =>
+                            setEditingCase({ ...item })
+                          }
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-semibold rounded-lg shadow-sm transition-colors duration-200 cursor-pointer"
+                        >
+                          <Edit size={14} />
+                          Edit
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -216,53 +219,58 @@ export default function CaseTracking() {
 
       {/* Case Details */}
       {selectedCase && (
-        <div className="bg-white rounded-xl border p-6 mb-6">
-          <h2 className="text-2xl font-bold mb-6">
-            Case Details
+        <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-[#0F172A] mb-5 border-b border-[#F1F5F9] pb-3">
+            Case Details Log
           </h2>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <p>
-                <strong>Case ID:</strong> {selectedCase.id}
-              </p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-4 text-sm text-[#64748B]">
+              <div className="grid grid-cols-3 gap-2 border-b border-[#F1F5F9] pb-2">
+                <span className="font-semibold text-[#1E293B]">Case ID</span>
+                <span className="col-span-2 text-[#0F172A] font-medium">{selectedCase.id}</span>
+              </div>
 
-              <p className="mt-2">
-                <strong>Case Name:</strong>{" "}
-                {selectedCase.name}
-              </p>
+              <div className="grid grid-cols-3 gap-2 border-b border-[#F1F5F9] pb-2">
+                <span className="font-semibold text-[#1E293B]">Case Name</span>
+                <span className="col-span-2 text-[#0F172A] font-medium">{selectedCase.name}</span>
+              </div>
 
-              <p className="mt-2">
-                <strong>Status:</strong>{" "}
-                {selectedCase.status}
-              </p>
+              <div className="grid grid-cols-3 gap-2 border-b border-[#F1F5F9] pb-2">
+                <span className="font-semibold text-[#1E293B]">Status</span>
+                <span className="col-span-2">
+                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/50">
+                    {selectedCase.status}
+                  </span>
+                </span>
+              </div>
 
-              <p className="mt-2">
-                <strong>Court:</strong>{" "}
-                {selectedCase.court}
-              </p>
+              <div className="grid grid-cols-3 gap-2 border-b border-[#F1F5F9] pb-2">
+                <span className="font-semibold text-[#1E293B]">Court</span>
+                <span className="col-span-2 text-[#0F172A] font-medium">{selectedCase.court}</span>
+              </div>
 
-              <p className="mt-2">
-                <strong>Next Hearing:</strong>{" "}
-                {selectedCase.hearing}
-              </p>
+              <div className="grid grid-cols-3 gap-2 pb-2">
+                <span className="font-semibold text-[#1E293B]">Next Hearing</span>
+                <span className="col-span-2 text-[#0F172A] font-semibold">{selectedCase.hearing}</span>
+              </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               {/* Documents */}
-              <div className="border rounded-lg p-4">
-                <div className="flex items-center gap-2 font-semibold">
-                  <Briefcase size={18} />
+              <div className="border border-[#E2E8F0] rounded-lg p-4 bg-[#F8FAFC]">
+                <div className="flex items-center gap-2 font-bold text-sm text-[#0F172A] mb-3">
+                  <Briefcase size={16} className="text-[#2563EB]" />
                   Documents
                 </div>
 
-                <ul className="mt-2 text-sm space-y-2">
+                <ul className="text-xs space-y-2.5">
                   <li>
                     <a
                       href="/documents/Vakalatnama.pdf"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
+                      className="text-[#2563EB] hover:underline flex items-center gap-1.5 font-medium"
                     >
                       📄 Vakalatnama.pdf
                     </a>
@@ -273,7 +281,7 @@ export default function CaseTracking() {
                       href="/documents/Evidence.pdf"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
+                      className="text-[#2563EB] hover:underline flex items-center gap-1.5 font-medium"
                     >
                       📄 Evidence.pdf
                     </a>
@@ -284,7 +292,7 @@ export default function CaseTracking() {
                       href="/documents/CourtOrder.pdf"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
+                      className="text-[#2563EB] hover:underline flex items-center gap-1.5 font-medium"
                     >
                       📄 CourtOrder.pdf
                     </a>
@@ -293,37 +301,49 @@ export default function CaseTracking() {
               </div>
 
               {/* Timeline */}
-              <div className="border rounded-lg p-4">
-                <div className="flex items-center gap-2 font-semibold">
-                  <Clock size={18} />
+              <div className="border border-[#E2E8F0] rounded-lg p-4 bg-[#F8FAFC]">
+                <div className="flex items-center gap-2 font-bold text-sm text-[#0F172A] mb-3">
+                  <Clock size={16} className="text-[#2563EB]" />
                   Timeline
                 </div>
 
-                <ul className="mt-2 text-sm">
-                  <li>10 May 2026 - Case Filed</li>
-                  <li>15 May 2026 - Notice Issued</li>
-                  <li>25 May 2026 - Hearing Scheduled</li>
+                <ul className="text-xs space-y-2 text-[#64748B] font-medium">
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A]"></span>
+                    10 May 2026 - Case Filed
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A]"></span>
+                    15 May 2026 - Notice Issued
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB]"></span>
+                    25 May 2026 - Hearing Scheduled
+                  </li>
                 </ul>
               </div>
 
               {/* Payment */}
-              <div className="border rounded-lg p-4">
-                <div className="flex items-center gap-2 font-semibold">
-                  <CheckCircle size={18} />
+              <div className="border border-[#E2E8F0] rounded-lg p-4 bg-[#F8FAFC]">
+                <div className="flex items-center gap-2 font-bold text-sm text-[#0F172A] mb-3">
+                  <CheckCircle size={16} className="text-[#2563EB]" />
                   Payment Summary
                 </div>
 
-                <p className="mt-2 text-sm">
-                  Total Fee: ₹50,000
-                </p>
-
-                <p className="text-sm">
-                  Paid: ₹30,000
-                </p>
-
-                <p className="text-sm">
-                  Pending: ₹20,000
-                </p>
+                <div className="space-y-1.5 text-xs text-[#64748B]">
+                  <div className="flex justify-between">
+                    <span>Total Fee:</span>
+                    <span className="font-semibold text-[#0F172A]">₹50,000</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Paid:</span>
+                    <span className="font-semibold text-green-600">₹30,000</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Pending:</span>
+                    <span className="font-semibold text-red-600">₹20,000</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -332,14 +352,14 @@ export default function CaseTracking() {
 
       {/* Edit Case Form */}
       {editingCase && (
-        <div className="bg-white rounded-xl border p-6">
-          <h2 className="text-2xl font-bold mb-6">
-            Edit Case
+        <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm">
+          <h2 className="text-lg font-bold text-[#0F172A] mb-6 border-b border-[#F1F5F9] pb-3">
+            Edit Case Details
           </h2>
 
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block mb-1 font-medium">
+              <label className="block mb-2 text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 Case Name
               </label>
 
@@ -352,12 +372,12 @@ export default function CaseTracking() {
                     name: e.target.value,
                   })
                 }
-                className="w-full border rounded-lg p-2"
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
               />
             </div>
 
             <div>
-              <label className="block mb-1 font-medium">
+              <label className="block mb-2 text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 Status
               </label>
 
@@ -369,7 +389,7 @@ export default function CaseTracking() {
                     status: e.target.value,
                   })
                 }
-                className="w-full border rounded-lg p-2"
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
               >
                 <option>Active</option>
                 <option>Closed</option>
@@ -378,7 +398,7 @@ export default function CaseTracking() {
             </div>
 
             <div>
-              <label className="block mb-1 font-medium">
+              <label className="block mb-2 text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 Court Name
               </label>
 
@@ -391,12 +411,12 @@ export default function CaseTracking() {
                     court: e.target.value,
                   })
                 }
-                className="w-full border rounded-lg p-2"
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
               />
             </div>
 
             <div>
-              <label className="block mb-1 font-medium">
+              <label className="block mb-2 text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 Hearing Date
               </label>
 
@@ -409,25 +429,25 @@ export default function CaseTracking() {
                     hearing: e.target.value,
                   })
                 }
-                className="w-full border rounded-lg p-2"
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
               />
             </div>
           </div>
 
-          <div className="flex gap-3 mt-6">
+          <div className="flex gap-3 mt-6 pt-4 border-t border-[#F1F5F9]">
             <button
               onClick={() => {
                 alert("Case Updated Successfully");
                 setEditingCase(null);
               }}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-6 py-2.5 rounded-lg font-semibold text-sm shadow-sm transition-all duration-200 cursor-pointer"
             >
               Save Changes
             </button>
 
             <button
               onClick={() => setEditingCase(null)}
-              className="bg-gray-500 text-white px-4 py-2 rounded-lg"
+              className="bg-white border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F1F5F9] px-6 py-2.5 rounded-lg font-semibold text-sm shadow-sm transition-all duration-200 cursor-pointer"
             >
               Cancel
             </button>

@@ -387,7 +387,7 @@ export default function PermissionView() {
   const activeModules = getModulesForRole(effectiveRoleForModules, !!selectedUser);
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-12">
+    <div className="w-full space-y-6 md:space-y-8">
       {/* Toast Notification */}
       {notification && (
         <div
@@ -406,13 +406,13 @@ export default function PermissionView() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-extrabold text-[#0f172a] uppercase tracking-wider">
+      {/* Page Header */}
+      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6">
+        <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
           Permissions Management
         </h1>
-        <p className="text-sm font-semibold text-slate-400 tracking-wider">
-          ASSIGN DETAILED MODULE ACCESS RULES AND SECURITY LEVEL CLEARANCES PER USER ROLE OR SPECIFIC USERS.
+        <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
+          Assign detailed module access rules and security level clearances per user role or specific users.
         </p>
       </div>
 
@@ -433,14 +433,14 @@ export default function PermissionView() {
                 onClick={() => setSelectedRole(role.name)}
                 className={`flex flex-col text-left p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${
                   active
-                    ? "border-emerald-600 bg-emerald-50/25 ring-2 ring-emerald-600/10 shadow-sm"
+                    ? "border-[#2563EB] bg-blue-50/25 ring-2 ring-[#2563EB]/10 shadow-sm"
                     : "border-slate-100 hover:border-slate-200 bg-white hover:bg-slate-50/50"
                 }`}
               >
                 <div className="flex items-center justify-between w-full">
                   <div
                     className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                      active ? "bg-[#0d6e53] text-white" : "bg-slate-100 text-slate-500"
+                      active ? "bg-[#2563EB] text-white" : "bg-slate-100 text-slate-500"
                     }`}
                   >
                     <Shield size={16} />
@@ -483,7 +483,7 @@ export default function PermissionView() {
             <select
               value={selectedUser}
               onChange={(e) => setSelectedUser(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-50 outline-none w-full md:w-72"
+              className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-50 outline-none w-full md:w-72"
             >
               <option value="">Config Role Defaults (None Selected)</option>
               {roleUsers.map(user => (
@@ -513,7 +513,7 @@ export default function PermissionView() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-slate-100 pb-5">
               <div>
                 <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                  <ShieldAlert size={20} className="text-[#0d6e53]" />
+                  <ShieldAlert size={20} className="text-[#2563EB]" />
                   <span>
                     {selectedUser 
                       ? `Override Permissions: ${selectedUserObj ? `${selectedUserObj.firstName} ${selectedUserObj.lastName}` : selectedUser}` 
@@ -582,7 +582,7 @@ export default function PermissionView() {
                                 type="checkbox"
                                 checked={moduleMatrix[action] || false}
                                 onChange={() => handlePermissionToggle(key, action)}
-                                className="w-4.5 h-4.5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 focus:ring-2 accent-[#0d6e53] cursor-pointer"
+                                className="w-4.5 h-4.5 text-emerald-600 rounded border-slate-300 focus:ring-blue-500 focus:ring-2 accent-[#2563EB] cursor-pointer"
                               />
                             </label>
                           </td>
@@ -595,7 +595,7 @@ export default function PermissionView() {
                             onClick={() => handleToggleModuleAll(key)}
                             className={`text-xxs font-bold px-2 py-1 rounded transition-all cursor-pointer ${
                               allSelected
-                                ? "bg-emerald-50 text-[#0d6e53] hover:bg-emerald-100 border border-emerald-200"
+                                ? "bg-emerald-50 text-[#2563EB] hover:bg-emerald-100 border border-emerald-200"
                                 : "bg-slate-100 text-slate-500 hover:bg-slate-200 border border-slate-200"
                             }`}
                           >

@@ -58,29 +58,32 @@ export default function ClientPayments() {
   };
 
   return (
-    <div className="w-full space-y-6 p-6">
-      {/* Header */}
-      <div className="bg-white border rounded-xl p-5">
-        <h1 className="text-2xl font-bold text-gray-800">
-          Client Payment Portal
+    <div className="w-full space-y-6 md:space-y-8">
+      {/* Page Header */}
+      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6">
+        <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
+          Payments
         </h1>
+        <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
+          View and manage your legal fee payments
+        </p>
       </div>
 
       {/* Success Notification */}
       {paymentSuccess && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
+        <div className="bg-emerald-100 border border-[#16A34A] text-[#16A34A] px-4 py-3 rounded-lg">
           ✅ Payment completed successfully! Thank you for your payment.
         </div>
       )}
 
       {/* Billing Summary */}
-      <div className="bg-green-50 border rounded-xl p-5">
+      <div className="bg-[#F1F5F9] border rounded-xl p-5">
         <h3 className="font-bold text-lg mb-4">
           Billing Summary
         </h3>
 
         {/* Client Information */}
-        <div className="mb-5 pb-4 border-b">
+        <div className="mb-5 pb-4 border-b border-[#E2E8F0]">
           <h4 className="font-semibold mb-3">
             Client Information
           </h4>
@@ -147,7 +150,7 @@ export default function ClientPayments() {
             <span>Invoice Status</span>
             <span
               className={`font-medium ${
-                isPaid ? "text-green-600" : "text-orange-600"
+                isPaid ? "text-[#16A34A]" : "text-amber-600"
               }`}
             >
               {isPaid ? "Paid" : "Pending"}
@@ -168,7 +171,7 @@ export default function ClientPayments() {
           <div className="mt-6 flex justify-end">
             <button
               onClick={() => setShowPaymentModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+              className="px-4 py-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-lg"
             >
               Pay Now
             </button>
@@ -185,7 +188,7 @@ export default function ClientPayments() {
 
           <table className="w-full border-collapse border">
             <thead>
-              <tr className="bg-gray-100">
+              <tr className="bg-[#F1F5F9]">
                 <th className="border p-2">Date</th>
                 <th className="border p-2">Amount</th>
                 <th className="border p-2">Status</th>
@@ -198,7 +201,7 @@ export default function ClientPayments() {
                 <tr key={index}>
                   <td className="border p-2">{payment.date}</td>
                   <td className="border p-2">₹{payment.amount}</td>
-                  <td className="border p-2 text-green-600">
+                  <td className="border p-2 text-[#16A34A]">
                     {payment.status}
                   </td>
                   <td className="border p-2">
@@ -213,7 +216,7 @@ export default function ClientPayments() {
 
       {/* Payment Modal */}
       {showPaymentModal && (
-        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
+        <div className="fixed inset-0 bg-[#0F172A]/50 flex justify-center items-center z-50">
           <div className="bg-white rounded-xl p-6 w-[400px]">
             <h3 className="text-xl font-bold mb-4">
               Make Payment
@@ -238,7 +241,7 @@ export default function ClientPayments() {
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowPaymentModal(false)}
-                className="px-4 py-2 bg-gray-500 text-white rounded-lg"
+                className="px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white rounded-lg"
               >
                 Cancel
               </button>
@@ -246,7 +249,7 @@ export default function ClientPayments() {
               <button
                 onClick={handlePaymentSubmit}
                 disabled={!gpayNumber || !upiId}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg disabled:bg-gray-400"
+                className="px-4 py-2 bg-[#16A34A] hover:bg-[#15803d] text-white rounded-lg disabled:bg-slate-400"
               >
                 Pay ₹{grandTotal.toFixed(2)}
               </button>

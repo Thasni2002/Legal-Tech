@@ -7,19 +7,11 @@ import { notFound } from "next/navigation";
 
 export default function PermissionsSlugClient({ slug }) {
   if (slug === "roles") {
-    return (
-      <div className="p-4 md:p-6 lg:p-8">
-        <RolesView />
-      </div>
-    );
+    return <RolesView />;
   }
 
   if (slug === "users") {
-    return (
-      <div className="p-4 md:p-6 lg:p-8">
-        <UsersView />
-      </div>
-    );
+    return <UsersView />;
   }
 
   return notFound();

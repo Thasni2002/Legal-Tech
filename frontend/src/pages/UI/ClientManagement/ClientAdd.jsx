@@ -90,269 +90,120 @@ export default function ClientAdd({ onSave, onCancel }) {
 };
 
   return (
-    <div className="min-h-screen bg-slate-100 p-6">
-      <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-md p-8">
-        <div className="flex items-center gap-4 mb-6">
-          <Link
-            href="/client-management"
-            className="flex items-center justify-center w-10 h-10 bg-white border border-slate-200 rounded-lg shadow-sm text-slate-600 hover:text-blue-600 hover:border-blue-200 transition-colors"
-          >
-            <ArrowLeft size={20} />
-          </Link>
-          <h1 className="text-2xl font-bold">
+    <div className="w-full max-w-4xl mx-auto bg-white p-6 md:p-8 rounded-xl border border-[#E2E8F0] shadow-sm">
+      <div className="flex items-center gap-4 border-b border-[#F1F5F9] pb-4 mb-6">
+        <Link
+          href="/client-management"
+          className="flex items-center justify-center w-9 h-9 bg-white border border-[#E2E8F0] rounded-lg shadow-sm text-[#64748B] hover:text-[#2563EB] hover:border-[#2563EB] transition-colors cursor-pointer"
+        >
+          <ArrowLeft size={18} />
+        </Link>
+        <div>
+          <h1 className="text-xl font-bold text-[#0F172A]">
             Add / Manage Client
           </h1>
+          <p className="text-xs text-[#64748B] mt-0.5">
+            Register a client profile in the legal firm's registry.
+          </p>
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="grid md:grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Client ID</label>
             <input
               type="text"
               name="clientId"
-              placeholder="Client ID"
+              placeholder="e.g. CLI-2026-908"
               value={formData.clientId}
               onChange={handleChange}
-              className="border p-3 rounded-lg"
+              className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+              required
             />
+          </div>
 
+          <div>
+            <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Full Name</label>
             <input
               type="text"
               name="fullName"
-              placeholder="Full Name"
+              placeholder="e.g. John Doe"
               value={formData.fullName}
               onChange={handleChange}
-              className="border p-3 rounded-lg"
+              className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+              required
             />
+          </div>
 
+          <div>
+            <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Email Address</label>
             <input
               type="email"
               name="email"
-              placeholder="Email Address"
+              placeholder="e.g. client@example.com"
               value={formData.email}
               onChange={handleChange}
-              className="border p-3 rounded-lg"
+              className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+              required
             />
+          </div>
 
+          <div>
+            <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Mobile Number</label>
             <input
               type="text"
               name="phone"
-              placeholder="Mobile Number"
+              placeholder="e.g. +91 XXXXX XXXXX"
               value={formData.phone}
               onChange={handleChange}
-              className="border p-3 rounded-lg"
+              className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+              required
             />
+          </div>
 
-            {/* <input
-              type="text"
-              name="whatsapp"
-              placeholder="WhatsApp Number"
-              value={formData.whatsapp}
-              onChange={handleChange}
-              className="border p-3 rounded-lg"
-            /> */}
-
-            {/* <input
-              type="text"
-              name="address"
-              placeholder="Address"
-              value={formData.address}
-              onChange={handleChange}
-              className="border p-3 rounded-lg"
-            /> */}
-
-            {/* <input
-              type="text"
-              name="city"
-              placeholder="City"
-              value={formData.city}
-              onChange={handleChange}
-              className="border p-3 rounded-lg"
-            /> */}
-
-            {/* <input
-              type="text"
-              name="state"
-              placeholder="State"
-              value={formData.state}
-              onChange={handleChange}
-              className="border p-3 rounded-lg"
-            /> */}
-
-            {/* <input
-              type="text"
-              name="pincode"
-              placeholder="Pincode"
-              value={formData.pincode}
-              onChange={handleChange}
-              className="border p-3 rounded-lg"
-            /> */}
-
-            {/* <input
-              type="text"
-              name="assignedAdvocate"
-              placeholder="Assigned Advocate"
-              value={formData.assignedAdvocate}
-              onChange={handleChange}
-              className="border p-3 rounded-lg"
-            /> */}
-
-            {/* <select
-  name="assignedAdvocate"
-  value={formData.assignedAdvocate}
-  onChange={handleChange}
-  className="border p-3 rounded-lg w-full text-gray-500"
->
-  <option value="">Select Advocate</option>
-  <option value="Adv. Arjun Menon">Adv. Arjun Menon</option>
-  <option value="Adv. Priya Nair">Adv. Priya Nair</option>
-  <option value="Adv. Rahul Krishnan">Adv. Rahul Krishnan</option>
-</select> */}
-
-            {/* <input
-              type="text"
-              name="caseTitle"
-              placeholder="Case Title"
-              value={formData.caseTitle}
-              onChange={handleChange}
-              className="border p-3 rounded-lg"
-            /> */}
-
-            {/* <select
-              name="caseType"
-              value={formData.caseType}
-              onChange={handleChange}
-              className="border p-3 rounded-lg w-full text-gray-500"
-            >
-              <option value="">Select Case Type</option>
-              <option value="Civil">Civil</option>
-              <option value="Criminal">Criminal</option>
-              <option value="Family">Family</option>
-              <option value="Corporate">Corporate</option>
-            </select> */}
-
-            {/* <input
-              type="text"
-              name="caseNumber"
-              placeholder="Case Number"
-              value={formData.caseNumber}
-              onChange={handleChange}
-              className="border p-3 rounded-lg"
-            /> */}
-
-            {/* <input
-              type="text"
-              name="courtName"
-              placeholder="Court Name"
-              value={formData.courtName}
-              onChange={handleChange}
-              className="border p-3 rounded-lg"
-            /> */}
-
-            {/* <select
-  name="courtName"
-  value={formData.courtName}
-  onChange={handleChange}
-  className="border p-3 rounded-lg w-full text-gray-500"
->
-  <option value="">Select Court</option>
-  <option value="Supreme Court">Supreme Court</option>
-  <option value="High Court">High Court</option>
-  <option value="District Court">District Court</option>
-  <option value="Family Court">Family Court</option>
-  <option value="Consumer Court">Consumer Court</option>
-  <option value="Labour Court">Labour Court</option>
-  <option value="Sessions Court">Sessions Court</option>
-  <option value="Magistrate Court">Magistrate Court</option>
-</select> */}
-
+          <div>
+            <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Next Hearing Date (Optional)</label>
             <input
               type="date"
               name="nextHearing"
-              value={formData.nextHearing}
+              value={formData.nextHearing || ""}
               onChange={handleChange}
-              className="border p-3 rounded-lg w-full text-gray-500"
+              className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
             />
-
-            {/* <select
-              name="caseStatus"
-              value={formData.caseStatus}
-              onChange={handleChange}
-              className="border p-3 rounded-lg w-full text-gray-500"
-            >
-              <option value="">Case Status</option>
-              <option value="Pending">Pending</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Closed">Closed</option>
-            </select> */}
-
-            {/* <input
-              type="number"
-              name="totalFee"
-              placeholder="Total Fee"
-              value={formData.totalFee}
-              onChange={handleChange}
-              className="border p-3 rounded-lg"
-            /> */}
-
-            {/* <input
-              type="number"
-              name="amountPaid"
-              placeholder="Amount Paid"
-              value={formData.amountPaid}
-              onChange={handleChange}
-              className="border p-3 rounded-lg"
-            /> */}
-
-            {/* <input
-              type="number"
-              name="outstandingAmount"
-              placeholder="Outstanding Amount"
-              value={formData.outstandingAmount}
-              onChange={handleChange}
-              className="border p-3 rounded-lg"
-            /> */}
           </div>
+        </div>
 
-          {/* <textarea
-            name="notes"
-            placeholder="Notes"
-            value={formData.notes}
-            onChange={handleChange}
-            className="w-full border p-3 rounded-lg mt-4"
-            rows="4"
-          /> */}
+        <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-[#F1F5F9]">
+          <button
+            type="submit"
+            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-6 py-2.5 rounded-lg font-medium text-sm shadow-sm transition-all duration-200 cursor-pointer"
+          >
+            Save Client
+          </button>
 
-          <div className="flex gap-4 mt-6">
-            <button
-              type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors cursor-pointer"
-            >
-              Save 
-            </button>
+          <button
+            type="reset"
+            className="bg-white border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F1F5F9] px-6 py-2.5 rounded-lg font-medium text-sm shadow-sm transition-all duration-200 cursor-pointer"
+          >
+            Reset
+          </button>
 
-            <button
-              type="reset"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors cursor-pointer"
-            >
-              Reset
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (onCancel) {
-                  onCancel();
-                } else {
-                  router.push("/client-management");
-                }
-              }}
-              className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (onCancel) {
+                onCancel();
+              } else {
+                router.push("/client-management");
+              }
+            }}
+            className="bg-[#DC2626]/90 hover:bg-[#DC2626] text-white px-6 py-2.5 rounded-lg font-medium text-sm shadow-sm transition-all duration-200 cursor-pointer ml-auto"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

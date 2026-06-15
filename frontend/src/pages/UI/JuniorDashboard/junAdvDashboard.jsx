@@ -39,48 +39,39 @@ export default function JunAdvDashView() {
   ];
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="w-full space-y-6 md:space-y-8">
 
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">
+      {/* Page Header */}
+      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6">
+        <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
           Junior Advocate Dashboard
         </h1>
-
-        <p className="text-gray-500">
-          Welcome Back
+        <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
+          Welcome back, view and manage your assigned tasks and cases.
         </p>
       </div>
 
       {/* Stats */}
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
-
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         <StatCard
           title="Assigned Cases"
           value="12"
           icon={<Briefcase size={22} />}
-          color="bg-blue-500"
+          color="bg-[#2563EB]"
         />
 
         <StatCard
           title="Hearings"
           value="5"
           icon={<Calendar size={22} />}
-          color="bg-green-500"
+          color="bg-[#16A34A]"
         />
-
-        {/* <StatCard
-          title="Tasks"
-          value="8"
-          icon={<CheckCircle size={22} />}
-          color="bg-orange-500"
-        /> */}
 
         <StatCard
           title="Documents"
           value="25"
           icon={<FileText size={22} />}
-          color="bg-purple-500"
+          color="bg-[#7C3AED]"
         />
       </div>
 
@@ -88,9 +79,9 @@ export default function JunAdvDashView() {
       <div className="grid lg:grid-cols-12 gap-6">
 
         {/* Cases */}
-        <div className="lg:col-span-12 bg-white p-5 rounded-xl shadow border">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="font-bold text-lg">
+        <div className="lg:col-span-12 bg-white p-6 rounded-xl border border-[#E2E8F0] shadow-sm">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="font-bold text-lg text-[#0F172A]">
               Assigned Cases
             </h2>
 
@@ -98,80 +89,57 @@ export default function JunAdvDashView() {
               onClick={() =>
                 router.push("/assigned-cases")
               }
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 shadow-sm cursor-pointer"
             >
               View All
             </button>
           </div>
 
-          <table className="w-full">
-            <thead>
-              <tr className="border-b text-left text-gray-500">
-                <th className="pb-3">Case</th>
-                <th>Hearing</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {cases.map((item, index) => (
-                <tr key={index} className="border-b">
-                  <td className="py-4">
-                    {item.title}
-                  </td>
-
-                  <td>{item.hearing}</td>
-
-                  <td>
-                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs">
-                      {item.status}
-                    </span>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-[#E2E8F0] text-xs font-semibold text-[#64748B] uppercase tracking-wider">
+                  <th className="pb-3 font-medium">Case</th>
+                  <th className="pb-3 font-medium">Hearing</th>
+                  <th className="pb-3 font-medium">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
 
-        {/* Quick Actions */}
-        {/* <div className="bg-white p-5 rounded-xl shadow border">
-          <h2 className="font-bold text-lg mb-4">
-            Quick Actions
-          </h2>
+              <tbody className="divide-y divide-[#F1F5F9]">
+                {cases.map((item, index) => (
+                  <tr key={index} className="hover:bg-[#F8FAFC] transition-colors duration-150">
+                    <td className="py-4 text-sm font-medium text-[#1E293B]">
+                      {item.title}
+                    </td>
 
-          <div className="space-y-3">
+                    <td className="py-4 text-sm text-[#64748B]">
+                      {item.hearing}
+                    </td>
 
-            <ActionButton
-              text="Add Notes"
-              icon={<Plus size={16} />}
-            />
-
-            <ActionButton
-              text="Upload Document"
-              icon={<FileText size={16} />}
-            />
-
-            <ActionButton
-              text="View Hearings"
-              icon={<Calendar size={16} />}
-            />
-
-            <ActionButton
-              text="Messages"
-              icon={<MessageSquare size={16} />}
-            />
-
+                    <td className="py-4 text-sm">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
+                        item.status === 'Active'
+                          ? 'bg-green-50 text-green-700 border-green-200/50'
+                          : 'bg-amber-50 text-amber-700 border-amber-200/50'
+                      }`}>
+                        {item.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div> */}
+        </div>
 
       </div>
 
       {/* Bottom Section */}
-      <div className="grid md:grid-cols-2 gap-6 mt-6">
+      <div className="grid md:grid-cols-2 gap-6">
 
         {/* Pending Tasks */}
-         <div className="col-span-12 bg-white p-5 rounded-xl shadow border">
-          <h2 className="font-bold text-lg mb-4">
+        <div className="bg-white p-6 rounded-xl border border-[#E2E8F0] shadow-sm">
+          <h2 className="font-bold text-lg text-[#0F172A] mb-4">
             Pending Tasks
           </h2>
 
@@ -179,7 +147,7 @@ export default function JunAdvDashView() {
             {tasks.map((task, index) => (
               <div
                 key={index}
-                className="border rounded-lg p-3"
+                className="border border-[#E2E8F0] rounded-lg p-4 text-sm text-[#1E293B] hover:bg-[#F8FAFC] transition-colors duration-150"
               >
                 {task}
               </div>
@@ -188,8 +156,8 @@ export default function JunAdvDashView() {
         </div>
 
         {/* Recent Documents */}
-        <div className="col-span-12 bg-white p-5 rounded-xl shadow border">
-          <h2 className="font-bold text-lg mb-4">
+        <div className="bg-white p-6 rounded-xl border border-[#E2E8F0] shadow-sm">
+          <h2 className="font-bold text-lg text-[#0F172A] mb-4">
             Recent Documents
           </h2>
 
@@ -197,11 +165,11 @@ export default function JunAdvDashView() {
             {documents.map((doc, index) => (
               <div
                 key={index}
-                className="border rounded-lg p-3 flex justify-between"
+                className="border border-[#E2E8F0] rounded-lg p-4 flex justify-between items-center text-sm text-[#1E293B] hover:bg-[#F8FAFC] transition-colors duration-150"
               >
-                <span>{doc}</span>
+                <span className="font-medium">{doc}</span>
 
-                <button className="text-blue-600">
+                <button className="text-[#2563EB] hover:text-[#1d4ed8] font-medium text-sm transition-colors cursor-pointer">
                   View
                 </button>
               </div>
@@ -222,33 +190,22 @@ function StatCard({
   color,
 }) {
   return (
-    <div className="bg-white p-5 rounded-xl shadow border">
+    <div className="bg-white p-6 rounded-xl border border-[#E2E8F0] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
       <div className="flex justify-between items-center">
         <div>
-          <p className="text-gray-500 text-sm">
+          <p className="text-[#64748B] text-sm font-medium">
             {title}
           </p>
 
-          <h2 className="text-3xl font-bold mt-2">
+          <h2 className="text-3xl font-bold mt-2 text-[#0F172A]">
             {value}
           </h2>
         </div>
 
-        <div
-          className={`${color} text-white p-3 rounded-lg`}
-        >
+        <div className={`${color} text-white p-3 rounded-lg shadow-sm`}>
           {icon}
         </div>
       </div>
     </div>
   );
-}
-
-function ActionButton({ text, icon }) {
-  return (
-    <button className="w-full flex items-center gap-3 border rounded-lg p-3 hover:bg-gray-50">
-      {icon}
-      {text}
-    </button>
-  );
-}
+}

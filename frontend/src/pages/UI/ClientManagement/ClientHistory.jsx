@@ -260,257 +260,254 @@ export default function ClientHistory() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Back and Page Title Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/client-management"
-              className="flex items-center justify-center w-10 h-10 bg-white border border-slate-200 rounded-lg shadow-xs text-slate-600 hover:text-blue-600 hover:border-blue-200 transition-colors"
-            >
-              <ArrowLeft size={20} />
-            </Link>
-            <div>
-              {/* <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
-                Client History Logs
-              </span> */}
-              <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                {/* <Activity size={24} className="text-blue-500" /> */}
-                View Client History
-              </h1>
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm transition-colors shadow-sm cursor-pointer"
-            >
-              <Plus size={16} />
-              Add Activity Log
-            </button>
-            <button
-              onClick={handleResetHistory}
-              className="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold text-sm transition-colors border border-slate-200 cursor-pointer"
-            >
-              Reset to Defaults
-            </button>
+    <div className="w-full space-y-6 md:space-y-8">
+      {/* Back and Page Title Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Link
+            href="/client-management"
+            className="flex items-center justify-center w-9 h-9 bg-white border border-[#E2E8F0] rounded-lg shadow-sm text-[#64748B] hover:text-[#2563EB] hover:border-[#2563EB] transition-colors cursor-pointer"
+          >
+            <ArrowLeft size={18} />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">
+              View Client History
+            </h1>
+            <p className="text-[#64748B] text-xs mt-0.5">
+              Activity log and correspondence audit trail.
+            </p>
           </div>
         </div>
 
-        {/* Info Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-          {/* Client Overview Card */}
-          <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
-            <div>
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="font-bold text-slate-800 text-base">Client Details</h3>
-                <span className="text-[10px] bg-slate-100 text-slate-600 font-mono px-2 py-0.5 rounded font-semibold">
-                  ID: {displayClient.clientId}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-lg font-semibold text-sm transition-all duration-200 shadow-sm cursor-pointer"
+          >
+            <Plus size={16} />
+            Add Activity Log
+          </button>
+          <button
+            onClick={handleResetHistory}
+            className="px-4 py-2.5 bg-white hover:bg-[#F1F5F9] text-[#0F172A] rounded-lg font-semibold text-sm transition-all border border-[#E2E8F0] shadow-sm cursor-pointer"
+          >
+            Reset to Defaults
+          </button>
+        </div>
+      </div>
+
+      {/* Info Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Client Overview Card */}
+        <div className="lg:col-span-1 bg-white rounded-xl border border-[#E2E8F0] p-5 shadow-sm flex flex-col justify-between h-fit space-y-5">
+          <div>
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="font-bold text-[#0F172A] text-sm">Client Details</h3>
+              <span className="text-[10px] bg-[#F1F5F9] text-[#64748B] font-mono px-2 py-0.5 rounded font-semibold border border-[#E2E8F0]">
+                ID: {displayClient.clientId}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 pb-4 mb-4 border-b border-[#F1F5F9]">
+              <div className="w-10 h-10 bg-blue-50 text-[#2563EB] rounded-full flex items-center justify-center font-bold text-base select-none border border-blue-100">
+                {displayClient.fullName ? displayClient.fullName.charAt(0).toUpperCase() : "?"}
+              </div>
+              <div>
+                <h4 className="font-bold text-[#0F172A] text-sm leading-tight">
+                  {displayClient.fullName}
+                </h4>
+                <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1 border ${
+                  displayClient.caseStatus === "Active" || displayClient.caseStatus === "In Progress"
+                    ? "bg-green-50 text-green-700 border-green-200/50"
+                    : "bg-amber-50 text-amber-700 border-amber-200/50"
+                }`}>
+                  {displayClient.caseStatus || "In Progress"}
                 </span>
               </div>
-
-              <div className="flex items-center gap-3 pb-4 mb-4 border-b border-slate-100">
-                <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center font-bold text-base select-none">
-                  {displayClient.fullName ? displayClient.fullName.charAt(0).toUpperCase() : "?"}
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-800 text-sm leading-tight">
-                    {displayClient.fullName}
-                  </h4>
-                  <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1 ${
-                    displayClient.caseStatus === "Active" || displayClient.caseStatus === "In Progress"
-                      ? "bg-green-50 text-green-700 border border-green-200"
-                      : "bg-amber-50 text-amber-700 border border-amber-200"
-                  }`}>
-                    {displayClient.caseStatus || "In Progress"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-3 text-xs text-slate-600">
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Contact Info</span>
-                  <p className="font-medium text-slate-700">{displayClient.phone}</p>
-                  <p className="font-medium text-slate-700 break-all">{displayClient.email}</p>
-                </div>
-                
-                {displayClient.caseTitle && (
-                  <div className="pt-2 border-t border-slate-100">
-                    <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Active Case</span>
-                    <p className="font-bold text-slate-800 leading-tight">{displayClient.caseTitle}</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">{displayClient.caseNumber} &bull; {displayClient.courtName}</p>
-                  </div>
-                )}
-
-                {displayClient.assignedAdvocate && (
-                  <div>
-                    <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Counsel</span>
-                    <p className="font-semibold text-slate-700">{displayClient.assignedAdvocate}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <div className="mt-4 pt-4 border-t border-slate-100 text-center">
-              <Link
-                href="/client-management"
-                className="inline-block text-xs font-semibold text-blue-600 hover:text-blue-700"
-              >
-                Manage Profile &rarr;
-              </Link>
-            </div>
-          </div>
-
-          {/* Timeline & Filters Area */}
-          <div className="lg:col-span-3 flex flex-col gap-6">
-            {/* Search and Filters Bar */}
-            <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                {/* Tabs */}
-                <div className="flex flex-wrap gap-1.5 bg-slate-100 p-1 rounded-lg self-start">
-                  <button
-                    onClick={() => setActiveTab("all")}
-                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                      activeTab === "all"
-                        ? "bg-white text-slate-800 shadow-xs"
-                        : "text-slate-500 hover:text-slate-800"
-                    }`}
-                  >
-                    All Activities
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("case")}
-                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                      activeTab === "case"
-                        ? "bg-white text-slate-800 shadow-xs"
-                        : "text-slate-500 hover:text-slate-800"
-                    }`}
-                  >
-                    Case Updates
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("document")}
-                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                      activeTab === "document"
-                        ? "bg-white text-slate-800 shadow-xs"
-                        : "text-slate-500 hover:text-slate-800"
-                    }`}
-                  >
-                    Documents
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("payment")}
-                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                      activeTab === "payment"
-                        ? "bg-white text-slate-800 shadow-xs"
-                        : "text-slate-500 hover:text-slate-800"
-                    }`}
-                  >
-                    Payments
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("consultation")}
-                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                      activeTab === "consultation"
-                        ? "bg-white text-slate-800 shadow-xs"
-                        : "text-slate-500 hover:text-slate-800"
-                    }`}
-                  >
-                    Consultations
-                  </button>
-                </div>
-
-                {/* Search Input */}
-                <div className="relative w-full md:w-64">
-                  <Search size={16} className="absolute left-3 top-2.5 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search history logs..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500 focus:outline-hidden"
-                  />
-                </div>
-              </div>
             </div>
 
-            {/* Timeline */}
-            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs relative">
-              <h3 className="font-bold text-slate-800 text-base mb-6 flex items-center gap-2">
-                <TrendingUp size={18} className="text-blue-500" />
-                History Timeline Log
-              </h3>
-
-              {filteredItems.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="w-12 h-12 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mb-3">
-                    <Filter size={20} />
-                  </div>
-                  <h4 className="font-bold text-slate-800 text-sm mb-1">No activities found</h4>
-                  <p className="text-xs text-slate-500 max-w-xs">
-                    No history log entries matched your current filter or search criteria.
-                  </p>
+            <div className="space-y-4 text-xs text-[#64748B]">
+              <div>
+                <span className="text-[10px] text-[#94A3B8] block font-semibold uppercase tracking-wider mb-1">Contact Info</span>
+                <p className="font-medium text-[#1E293B]">{displayClient.phone}</p>
+                <p className="font-medium text-[#1E293B] break-all">{displayClient.email}</p>
+              </div>
+              
+              {displayClient.caseTitle && (
+                <div className="pt-3 border-t border-[#F1F5F9]">
+                  <span className="text-[10px] text-[#94A3B8] block font-semibold uppercase tracking-wider mb-1">Active Case</span>
+                  <p className="font-semibold text-[#1E293B] leading-tight">{displayClient.caseTitle}</p>
+                  <p className="text-[10px] text-[#64748B] mt-0.5">{displayClient.caseNumber} &bull; {displayClient.courtName}</p>
                 </div>
-              ) : (
-                <div className="relative border-l border-slate-200 ml-4 pl-6 space-y-6">
-                  {filteredItems.map((item) => {
-                    const config = getTypeConfig(item.type);
-                    return (
-                      <div key={item.id} className="relative group">
-                        {/* Timeline Icon Node */}
-                        <span className={`absolute -left-[37px] top-1 flex items-center justify-center w-8 h-8 rounded-full border-4 border-white ${config.iconBg} shadow-xs transition-transform group-hover:scale-105 select-none`}>
-                          {config.icon}
-                        </span>
+              )}
 
-                        {/* Content Card */}
-                        <div className={`p-4 rounded-xl border transition-all hover:shadow-sm ${config.bg}`}>
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h4 className="font-bold text-slate-800 text-sm leading-tight">
-                                {item.title}
-                              </h4>
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${config.badgeBg}`}>
-                                {item.badge || config.label}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                              <Calendar size={13} className="shrink-0" />
-                              <span>{formatDate(item.date)}</span>
-                              <span className="text-slate-300">&bull;</span>
-                              <Clock size={13} className="shrink-0" />
-                              <span>{formatTime(item.time)}</span>
-                            </div>
-                          </div>
-
-                          <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                            {item.desc}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
+              {displayClient.assignedAdvocate && (
+                <div className="pt-3 border-t border-[#F1F5F9]">
+                  <span className="text-[10px] text-[#94A3B8] block font-semibold uppercase tracking-wider mb-1">Counsel</span>
+                  <p className="font-semibold text-[#1E293B]">{displayClient.assignedAdvocate}</p>
                 </div>
               )}
             </div>
+          </div>
+          
+          <div className="pt-4 border-t border-[#F1F5F9] text-center">
+            <Link
+              href="/client-management"
+              className="inline-block text-xs font-semibold text-[#2563EB] hover:text-[#1d4ed8]"
+            >
+              Manage Profile &rarr;
+            </Link>
+          </div>
+        </div>
+
+        {/* Timeline & Filters Area */}
+        <div className="lg:col-span-3 flex flex-col gap-6">
+          {/* Search and Filters Bar */}
+          <div className="bg-white rounded-xl border border-[#E2E8F0] p-4 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              {/* Tabs */}
+              <div className="flex flex-wrap gap-1 bg-[#F1F5F9] p-1 rounded-lg self-start">
+                <button
+                  onClick={() => setActiveTab("all")}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    activeTab === "all"
+                      ? "bg-white text-[#0F172A] shadow-sm"
+                      : "text-[#64748B] hover:text-[#0F172A]"
+                  }`}
+                >
+                  All Activities
+                </button>
+                <button
+                  onClick={() => setActiveTab("case")}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    activeTab === "case"
+                      ? "bg-white text-[#0F172A] shadow-sm"
+                      : "text-[#64748B] hover:text-[#0F172A]"
+                  }`}
+                >
+                  Case Updates
+                </button>
+                <button
+                  onClick={() => setActiveTab("document")}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    activeTab === "document"
+                      ? "bg-white text-[#0F172A] shadow-sm"
+                      : "text-[#64748B] hover:text-[#0F172A]"
+                  }`}
+                >
+                  Documents
+                </button>
+                <button
+                  onClick={() => setActiveTab("payment")}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    activeTab === "payment"
+                      ? "bg-white text-[#0F172A] shadow-sm"
+                      : "text-[#64748B] hover:text-[#0F172A]"
+                  }`}
+                >
+                  Payments
+                </button>
+                <button
+                  onClick={() => setActiveTab("consultation")}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    activeTab === "consultation"
+                      ? "bg-white text-[#0F172A] shadow-sm"
+                      : "text-[#64748B] hover:text-[#0F172A]"
+                  }`}
+                >
+                  Consultations
+                </button>
+              </div>
+
+              {/* Search Input */}
+              <div className="relative w-full md:w-64">
+                <Search size={16} className="absolute left-3 top-2.5 text-[#94A3B8]" />
+                <input
+                  type="text"
+                  placeholder="Search history logs..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 rounded-lg border border-[#E2E8F0] bg-white text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Timeline */}
+          <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm relative">
+            <h3 className="font-bold text-[#0F172A] text-base mb-6 flex items-center gap-2">
+              <TrendingUp size={18} className="text-[#2563EB]" />
+              History Timeline Log
+            </h3>
+
+            {filteredItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-12 h-12 bg-[#F1F5F9] text-[#64748B] rounded-full flex items-center justify-center mb-3">
+                  <Filter size={20} />
+                </div>
+                <h4 className="font-bold text-[#0F172A] text-sm mb-1">No activities found</h4>
+                <p className="text-xs text-[#64748B] max-w-xs">
+                  No history log entries matched your current filter or search criteria.
+                </p>
+              </div>
+            ) : (
+              <div className="relative border-l border-[#E2E8F0] ml-4 pl-6 space-y-6">
+                {filteredItems.map((item) => {
+                  const config = getTypeConfig(item.type);
+                  return (
+                    <div key={item.id} className="relative group">
+                      {/* Timeline Icon Node */}
+                      <span className={`absolute -left-[37px] top-1 flex items-center justify-center w-8 h-8 rounded-full border-4 border-white ${config.iconBg} shadow-sm transition-transform group-hover:scale-105 select-none`}>
+                        {config.icon}
+                      </span>
+
+                      {/* Content Card */}
+                      <div className="p-5 rounded-xl border border-[#E2E8F0] shadow-sm hover:shadow-md bg-white transition-all duration-200">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h4 className="font-bold text-[#0F172A] text-sm leading-tight">
+                              {item.title}
+                            </h4>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border ${config.badgeBg}`}>
+                              {item.badge || config.label}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 text-xs text-[#64748B] font-medium">
+                            <Calendar size={13} className="shrink-0 text-[#94A3B8]" />
+                            <span>{formatDate(item.date)}</span>
+                            <span className="text-[#E2E8F0]">&bull;</span>
+                            <Clock size={13} className="shrink-0 text-[#94A3B8]" />
+                            <span>{formatTime(item.time)}</span>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-[#64748B] leading-relaxed font-medium">
+                          {item.desc}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Add Custom Log Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-xl shadow-xl border w-full max-w-md overflow-hidden relative">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-xl shadow-xl border border-[#E2E8F0] w-full max-w-md overflow-hidden relative">
             {/* Header */}
-            <div className="flex items-center justify-between p-5 border-b border-slate-100">
-              <h3 className="font-bold text-slate-800 text-base">
+            <div className="flex items-center justify-between p-5 border-b border-[#F1F5F9]">
+              <h3 className="font-bold text-[#0F172A] text-base">
                 Add Custom Activity Log
               </h3>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                className="text-[#94A3B8] hover:text-[#0F172A] p-1.5 hover:bg-[#F1F5F9] rounded-lg transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -519,7 +516,7 @@ export default function ClientHistory() {
             {/* Form */}
             <form onSubmit={handleAddLog} className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1.5">
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-1.5">
                   Activity Type
                 </label>
                 <select
@@ -531,7 +528,7 @@ export default function ClientHistory() {
                       badge: e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1) + " Update",
                     }))
                   }
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-hidden"
+                  className="w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-xs text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
                 >
                   <option value="case">Case Update</option>
                   <option value="document">Document Upload</option>
@@ -541,7 +538,7 @@ export default function ClientHistory() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1.5">
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-1.5">
                   Title / Subject
                 </label>
                 <input
@@ -549,54 +546,54 @@ export default function ClientHistory() {
                   placeholder="e.g. ₹15,000 Received, Wakalatnama Uploaded..."
                   value={newLog.title}
                   onChange={(e) => setNewLog((prev) => ({ ...prev, title: e.target.value }))}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-hidden"
+                  className="w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">
+                  <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-1.5">
                     Date
                   </label>
                   <input
                     type="date"
                     value={newLog.date}
                     onChange={(e) => setNewLog((prev) => ({ ...prev, date: e.target.value }))}
-                    className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-hidden"
+                    className="w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-xs text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">
+                  <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-1.5">
                     Time
                   </label>
                   <input
                     type="time"
                     value={newLog.time}
                     onChange={(e) => setNewLog((prev) => ({ ...prev, time: e.target.value }))}
-                    className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-hidden"
+                    className="w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-xs text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1.5">
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-1.5">
                   Description Details
                 </label>
                 <textarea
                   placeholder="Provide detailed description of the event..."
                   value={newLog.desc}
                   onChange={(e) => setNewLog((prev) => ({ ...prev, desc: e.target.value }))}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-hidden"
+                  className="w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200 resize-y"
                   rows="3"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1.5">
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-1.5">
                   Status / Tag Badge
                 </label>
                 <input
@@ -604,22 +601,22 @@ export default function ClientHistory() {
                   placeholder="e.g. Active, Completed, 3 Files..."
                   value={newLog.badge}
                   onChange={(e) => setNewLog((prev) => ({ ...prev, badge: e.target.value }))}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-hidden"
+                  className="w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
                 />
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-3 border-t border-slate-100">
+              <div className="flex gap-3 pt-4 border-t border-[#F1F5F9]">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 py-2.5 border border-slate-200 text-slate-700 font-semibold text-xs rounded-lg hover:bg-slate-50 transition-colors cursor-pointer text-center"
+                  className="flex-1 py-2.5 border border-[#E2E8F0] text-[#0F172A] font-semibold text-xs rounded-lg hover:bg-[#F1F5F9] transition-colors cursor-pointer text-center"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg transition-colors cursor-pointer text-center"
+                  className="flex-1 py-2.5 bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-semibold text-xs rounded-lg transition-colors cursor-pointer text-center shadow-sm"
                 >
                   Save Log
                 </button>
@@ -631,4 +628,3 @@ export default function ClientHistory() {
     </div>
   );
 }
-
