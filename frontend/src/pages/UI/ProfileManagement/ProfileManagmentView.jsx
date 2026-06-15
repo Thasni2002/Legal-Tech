@@ -61,20 +61,17 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 py-6 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+    <div className="w-full space-y-6 md:space-y-8">
+        {/* Page Header */}
+        <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
+            <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
               Profile Management
             </h1>
-
-            <p className="text-gray-500 mt-1">
-              Dashboard &gt; Profile Management
+            <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
+              Manage your personal and professional profile details
             </p>
           </div>
-
           <Button
             title="Save Profile"
             type="submit"
@@ -85,7 +82,7 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
 
         <form id="profile-form" className="space-y-8" onSubmit={handleSubmit}>
           {/* Profile Card */}
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-3xl shadow-sm border border-[#E2E8F0] p-6">
             <div className="flex flex-col items-center">
               <div className="relative">
                 <img
@@ -94,7 +91,7 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
                   className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-white shadow-lg"
                 />
 
-                <label className="absolute bottom-0 right-0 bg-blue-600 text-white w-12 h-12 rounded-full flex items-center justify-center cursor-pointer shadow-lg">
+                <label className="absolute bottom-0 right-0 bg-[#2563EB] text-white w-12 h-12 rounded-full flex items-center justify-center cursor-pointer shadow-lg">
                   📷
                   <input
                     type="file"
@@ -105,19 +102,19 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
                 </label>
               </div>
 
-              <h2 className="mt-4 text-xl font-bold text-gray-800">
+              <h2 className="mt-4 text-xl font-bold text-[#0F172A]">
                 Advocate Profile
               </h2>
 
-              <p className="text-gray-500 text-sm">
+              <p className="text-[#64748B] text-sm">
                 Update your personal and professional details
               </p>
             </div>
           </div>
 
           {/* Personal Information */}
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">
+          <div className="bg-white rounded-3xl shadow-sm border border-[#E2E8F0] p-6">
+            <h2 className="text-xl font-semibold text-[#0F172A] mb-6">
               Personal Information
             </h2>
 
@@ -198,8 +195,8 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
           </div>
 
           {/* Professional Information */}
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">
+          <div className="bg-white rounded-3xl shadow-sm border border-[#E2E8F0] p-6">
+            <h2 className="text-xl font-semibold text-[#0F172A] mb-6">
               Professional Information
             </h2>
 
@@ -266,8 +263,8 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
           </div>
 
           {/* Address Information */}
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">
+          <div className="bg-white rounded-3xl shadow-sm border border-[#E2E8F0] p-6">
+            <h2 className="text-xl font-semibold text-[#0F172A] mb-6">
               Address Information
             </h2>
 
@@ -298,14 +295,14 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
             </div>
 
             <div className="mt-6">
-              <label className="block mb-2 font-medium text-gray-700">
+              <label className="block mb-2 font-medium text-[#334155]">
                 Chambers Address
               </label>
 
               <textarea
                 rows="4"
                 placeholder="Enter Chambers Address"
-                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-black placeholder:text-black focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none"
+                className="w-full rounded-xl border border-[#CBD5E1] bg-white px-4 py-3 text-[#0F172A] placeholder:text-[#0F172A] focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none"
                 name="chambersAddress"
                 value={formData.chambersAddress}
                 onChange={handleChange}
@@ -314,15 +311,15 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
           </div>
 
           {/* About Section */}
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">
+          <div className="bg-white rounded-3xl shadow-sm border border-[#E2E8F0] p-6">
+            <h2 className="text-xl font-semibold text-[#0F172A] mb-6">
               About Advocate
             </h2>
 
             <textarea
               rows="5"
               placeholder="Write a short professional bio..."
-              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-black placeholder:text-black focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none"
+              className="w-full rounded-xl border border-[#CBD5E1] bg-white px-4 py-3 text-[#0F172A] placeholder:text-[#0F172A] focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none"
               name="about"
               value={formData.about}
               onChange={handleChange}
@@ -345,7 +342,6 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
             />
           </div>
         </form>
-      </div>
     </div>
   );
 }

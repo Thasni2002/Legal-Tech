@@ -1,23 +1,18 @@
+
 import "./globals.css";
-import Sidebar from "@/components/layout/sidebar";
-import Navbar from "@/components/layout/navbar";
+import LayoutWrapper from "@/components/layout/LayoutWrapper";
+
+export const metadata = {
+  title: "Legal Tech — Enterprise Legal Management",
+  description: "Premium Legal Tech SaaS platform for law firms, advocates, and case management.",
+};
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <div className="flex min-h-screen bg-[#f8fafc]">
-          <Sidebar />
-
-          <div className="flex-1 flex flex-col md:pl-64 min-h-screen">
-            <Navbar />
-
-            <main className="flex-1 p-4 md:p-6 lg:p-8">
-              {children}
-            </main>
-          </div>
-        </div>
+        <LayoutWrapper>{children}</LayoutWrapper>
       </body>
     </html>
   );
-}
+}

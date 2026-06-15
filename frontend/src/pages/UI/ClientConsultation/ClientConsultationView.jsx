@@ -123,16 +123,14 @@ export default function ClientConsultationView() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 py-6 px-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="w-full space-y-6 md:space-y-8">
 
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-800">
-            Consultation
+        {/* Page Header */}
+        <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6">
+          <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
+            Consultations
           </h1>
-
-          <p className="text-gray-500 mt-2">
+          <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
             Book an appointment or join a consultation
           </p>
         </div>
@@ -147,11 +145,11 @@ export default function ClientConsultationView() {
             <div className="grid md:grid-cols-2 gap-6">
 
               <div className="bg-white rounded-2xl border p-6">
-                <h2 className="text-2xl font-semibold text-purple-700">
+                <h2 className="text-2xl font-semibold text-[#0F172A]">
                   Book Appointment
                 </h2>
 
-                <p className="text-gray-500 mt-3">
+                <p className="text-[#64748B] mt-3">
                   Choose a date and time to meet your advocate.
                 </p>
 
@@ -160,22 +158,22 @@ export default function ClientConsultationView() {
                     setRescheduleId(null);
                     setShowModal(true);
                   }}
-                  className="mt-6 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl"
+                  className="mt-6 bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-6 py-3 rounded-xl"
                 >
                   Book Appointment
                 </button>
               </div>
 
               <div className="bg-white rounded-2xl border p-6">
-                <h2 className="text-2xl font-semibold text-green-700">
+                <h2 className="text-2xl font-semibold text-[#0F172A]">
                   Video Consultation
                 </h2>
 
-                <p className="text-gray-500 mt-3">
+                <p className="text-[#64748B] mt-3">
                   Join a video consultation with your advocate.
                 </p>
 
-                <button className="mt-6 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl">
+                <button className="mt-6 bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-6 py-3 rounded-xl">
                   Join Consultation
                 </button>
               </div>
@@ -190,7 +188,7 @@ export default function ClientConsultationView() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="bg-slate-100">
+                    <tr className="bg-[#F8FAFC]">
                       <th className="p-3 text-left">
                         Date
                       </th>
@@ -259,11 +257,11 @@ export default function ClientConsultationView() {
                     {item.advocate}
                   </h3>
 
-                  <p className="text-sm text-gray-500 mt-2">
+                  <p className="text-sm text-[#64748B] mt-2">
                     {item.date}
                   </p>
 
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-[#64748B]">
                     {item.time}
                   </p>
 
@@ -274,10 +272,10 @@ export default function ClientConsultationView() {
                   <span
                     className={`inline-block mt-3 px-3 py-1 rounded-full text-sm ${
                       item.status === "Rescheduled"
-                        ? "bg-orange-100 text-orange-700"
+                        ? "bg-amber-100 text-amber-700"
                         : item.status === "Approved"
-                        ? "bg-green-100 text-green-700 font-semibold"
-                        : "bg-blue-100 text-blue-700"
+                        ? "bg-green-100 text-[#0F172A] font-semibold"
+                        : "bg-blue-50 text-[#2563EB]"
                     }`}
                   >
                     {item.status}
@@ -286,7 +284,7 @@ export default function ClientConsultationView() {
                   {item.status === "Approved" ? (
                     <button
                       disabled
-                      className="w-full mt-4 bg-green-100 text-green-700 border border-green-300 py-2 rounded-xl font-semibold cursor-not-allowed text-center transition"
+                      className="w-full mt-4 bg-green-100 text-[#0F172A] border border-green-300 py-2 rounded-xl font-semibold cursor-not-allowed text-center transition"
                     >
                       Approved
                     </button>
@@ -296,8 +294,8 @@ export default function ClientConsultationView() {
                       onClick={() => handleApproveAppointment(item.id)}
                       className={`w-full mt-4 py-2 rounded-xl font-medium transition ${
                         item.status === "Rescheduled"
-                          ? "bg-gray-200 text-gray-400 border border-gray-300 cursor-not-allowed text-center"
-                          : "bg-blue-600 hover:bg-blue-700 text-white"
+                          ? "bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed text-center"
+                          : "bg-[#2563EB] hover:bg-[#1d4ed8] text-white"
                       }`}
                     >
                       Approve
@@ -319,8 +317,8 @@ export default function ClientConsultationView() {
                     }}
                     className={`w-full mt-2 border py-2 rounded-xl transition ${
                       item.status === "Approved"
-                        ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed"
-                        : "border-blue-600 text-blue-600 hover:bg-blue-50"
+                        ? "border-slate-200 text-slate-400 bg-slate-50 cursor-not-allowed"
+                        : "border-[#E2E8F0] text-[#2563EB] hover:bg-blue-50"
                     }`}
                   >
                     Reschedule
@@ -333,7 +331,7 @@ export default function ClientConsultationView() {
 
         {/* Modal */}
         {showModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-[#0F172A]/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl p-6 w-full max-w-lg">
 
               <h2 className="text-2xl font-bold mb-6">
@@ -356,7 +354,7 @@ export default function ClientConsultationView() {
                           name: e.target.value,
                         })
                       }
-                      className="w-full border rounded-xl p-3 text-black"
+                      className="w-full border rounded-xl p-3 text-[#0F172A]"
                     />
 
                     <input
@@ -369,7 +367,7 @@ export default function ClientConsultationView() {
                           advocate: e.target.value,
                         })
                       }
-                      className="w-full border rounded-xl p-3 text-black"
+                      className="w-full border rounded-xl p-3 text-[#0F172A]"
                     />
                   </>
                 )}
@@ -383,7 +381,7 @@ export default function ClientConsultationView() {
                       date: e.target.value,
                     })
                   }
-                  className="w-full border rounded-xl p-3 text-black"
+                  className="w-full border rounded-xl p-3 text-[#0F172A]"
                 />
 
                 <input
@@ -395,7 +393,7 @@ export default function ClientConsultationView() {
                       time: e.target.value,
                     })
                   }
-                  className="w-full border rounded-xl p-3 text-black"
+                  className="w-full border rounded-xl p-3 text-[#0F172A]"
                 />
 
                 {!rescheduleId && (
@@ -407,7 +405,7 @@ export default function ClientConsultationView() {
                         type: e.target.value,
                       })
                     }
-                    className="w-full border rounded-xl p-3 text-black"
+                    className="w-full border rounded-xl p-3 text-[#0F172A]"
                   >
                     <option value="">
                       Select Consultation Type
@@ -433,7 +431,7 @@ export default function ClientConsultationView() {
                   onClick={() =>
                     setShowModal(false)
                   }
-                  className="px-5 py-2 bg-gray-300 rounded-xl"
+                  className="px-5 py-2 bg-slate-200 rounded-xl"
                 >
                   Cancel
                 </button>
@@ -473,6 +471,5 @@ export default function ClientConsultationView() {
           </div>
         )}
       </div>
-    </div>
   );
 }

@@ -36,23 +36,22 @@ export default function AssignDocuments({ isOpen, onClose }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
     console.log(formData);
-
     onClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white w-full max-w-5xl rounded-xl shadow-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center border-b px-6 py-4">
-          <h2 className="text-xl font-bold">Share Case Document</h2>
-
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="bg-white w-full max-w-5xl rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] max-h-[90vh] overflow-y-auto border border-[#E2E8F0]">
+        
+        {/* Header */}
+        <div className="flex justify-between items-center border-b border-[#E2E8F0] px-6 py-5 sticky top-0 bg-white/95 backdrop-blur z-10">
+          <h2 className="text-xl font-bold text-[#0F172A]">Share Case Document</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 text-xl cursor-pointer"
+            className="text-[#64748B] hover:text-[#DC2626] text-xl cursor-pointer transition-colors duration-200"
           >
             ✕
           </button>
@@ -62,10 +61,9 @@ export default function AssignDocuments({ isOpen, onClose }) {
 
           {/* Case Information */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">
+            <h3 className="text-lg font-semibold text-[#0F172A] mb-4">
               Case Information
             </h3>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
                 type="text"
@@ -73,44 +71,40 @@ export default function AssignDocuments({ isOpen, onClose }) {
                 placeholder="Case Number"
                 value={formData.caseNumber}
                 onChange={handleChange}
-                className="border rounded-lg p-3"
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
               />
-
               <input
                 type="text"
                 name="caseTitle"
                 placeholder="Case Title"
                 value={formData.caseTitle}
                 onChange={handleChange}
-                className="border rounded-lg p-3"
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
               />
-
               <input
                 type="text"
                 name="clientName"
                 placeholder="Client Name"
                 value={formData.clientName}
                 onChange={handleChange}
-                className="border rounded-lg p-3"
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
               />
-
               <input
                 type="text"
                 name="courtName"
                 placeholder="Court Name"
                 value={formData.courtName}
                 onChange={handleChange}
-                className="border rounded-lg p-3"
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
               />
             </div>
           </div>
 
           {/* Document Information */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">
+            <h3 className="text-lg font-semibold text-[#0F172A] mb-4">
               Document Information
             </h3>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
                 type="text"
@@ -118,23 +112,21 @@ export default function AssignDocuments({ isOpen, onClose }) {
                 placeholder="Document ID"
                 value={formData.documentId}
                 onChange={handleChange}
-                className="border rounded-lg p-3"
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
               />
-
               <input
                 type="text"
                 name="documentName"
                 placeholder="Document Name"
                 value={formData.documentName}
                 onChange={handleChange}
-                className="border rounded-lg p-3"
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
               />
-
               <select
                 name="documentType"
                 value={formData.documentType}
                 onChange={handleChange}
-                className="border rounded-lg p-3"
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
               >
                 <option value="">Select Document Type</option>
                 <option>Evidence</option>
@@ -143,12 +135,11 @@ export default function AssignDocuments({ isOpen, onClose }) {
                 <option>Court Order</option>
                 <option>Petition</option>
               </select>
-
               <select
                 name="documentCategory"
                 value={formData.documentCategory}
                 onChange={handleChange}
-                className="border rounded-lg p-3"
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
               >
                 <option value="">Document Category</option>
                 <option>Client Documents</option>
@@ -156,22 +147,20 @@ export default function AssignDocuments({ isOpen, onClose }) {
                 <option>Court Orders</option>
                 <option>Legal Notices</option>
               </select>
-
               <input
                 type="file"
                 name="uploadFile"
                 onChange={handleChange}
-                className="border rounded-lg p-3 md:col-span-2"
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#2563EB]/10 file:text-[#2563EB] hover:file:bg-[#2563EB]/20 md:col-span-2 cursor-pointer transition-all duration-200"
               />
             </div>
           </div>
 
           {/* Sharing Information */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">
+            <h3 className="text-lg font-semibold text-[#0F172A] mb-4">
               Sharing Information
             </h3>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
                 type="text"
@@ -179,23 +168,21 @@ export default function AssignDocuments({ isOpen, onClose }) {
                 placeholder="Senior Advocate"
                 value={formData.sharedBy}
                 onChange={handleChange}
-                className="border rounded-lg p-3"
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
               />
-
               <input
                 type="text"
                 name="sharedWith"
                 placeholder="Junior Advocate"
                 value={formData.sharedWith}
                 onChange={handleChange}
-                className="border rounded-lg p-3"
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
               />
-
               <select
                 name="accessType"
                 value={formData.accessType}
                 onChange={handleChange}
-                className="border rounded-lg p-3"
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
               >
                 <option value="">Access Type</option>
                 <option>Password Protected</option>
@@ -203,23 +190,21 @@ export default function AssignDocuments({ isOpen, onClose }) {
                 <option>View Only</option>
                 <option>Download Allowed</option>
               </select>
-
               <input
                 type="date"
                 name="expiryDate"
                 value={formData.expiryDate}
                 onChange={handleChange}
-                className="border rounded-lg p-3"
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
               />
             </div>
           </div>
 
           {/* Security */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">
+            <h3 className="text-lg font-semibold text-[#0F172A] mb-4">
               Security & Remarks
             </h3>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
                 type="text"
@@ -227,14 +212,13 @@ export default function AssignDocuments({ isOpen, onClose }) {
                 placeholder="Password / OTP"
                 value={formData.passwordOtp}
                 onChange={handleChange}
-                className="border rounded-lg p-3"
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
               />
-
               <select
                 name="confidentialLevel"
                 value={formData.confidentialLevel}
                 onChange={handleChange}
-                className="border rounded-lg p-3"
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
               >
                 <option value="">Confidential Level</option>
                 <option>Normal</option>
@@ -242,30 +226,29 @@ export default function AssignDocuments({ isOpen, onClose }) {
                 <option>Highly Confidential</option>
                 <option>Restricted</option>
               </select>
-
               <textarea
                 name="remarks"
                 placeholder="Remarks"
                 value={formData.remarks}
                 onChange={handleChange}
                 rows="4"
-                className="border rounded-lg p-3 md:col-span-2"
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200 md:col-span-2"
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 border-t pt-5">
+          <div className="flex justify-end gap-3 border-t border-[#E2E8F0] pt-5">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2 border rounded-lg cursor-pointer"
+              className="px-6 py-2.5 border border-[#E2E8F0] text-[#0F172A] rounded-lg text-sm font-medium hover:bg-[#F1F5F9] transition-all duration-200"
             >
               Cancel
             </button>
 
             <button
               type="submit"
-              className="px-5 py-2 bg-blue-600 text-white rounded-lg cursor-pointer"
+              className="px-6 py-2.5 bg-[#2563EB] text-white rounded-lg text-sm font-medium hover:bg-[#1d4ed8] shadow-sm transition-all duration-200"
             >
               Share Document
             </button>

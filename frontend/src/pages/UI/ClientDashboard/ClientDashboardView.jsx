@@ -45,120 +45,135 @@ export default function ClientDashboard() {
   ];
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-6 md:space-y-8">
 
-      {/* Welcome Card */}
-      <div className="bg-gradient-to-r from-blue-700 to-blue-500 text-white rounded-2xl p-6 shadow-lg">
-        <h1 className="text-3xl font-bold">
-          Welcome, John Mathew
+      {/* Page Header */}
+      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6">
+        <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
+          Dashboard
         </h1>
-
-        <p className="mt-2 text-sm opacity-90">
-          Manage your cases, hearings and payments.
+        <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
+          Welcome, John Mathew — manage your cases, hearings and payments securely.
         </p>
       </div>
 
       {/* Top Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
-        <div className="bg-white rounded-xl border p-5 shadow-sm">
-          <Briefcase className="w-8 h-8 text-blue-600 mb-3" />
-          <p className="text-gray-500 text-sm">
+        <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+          <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center mb-4">
+            <Briefcase className="w-5 h-5 text-[#2563EB]" />
+          </div>
+          <p className="text-[#64748B] text-sm font-medium">
             Active Cases
           </p>
-          <h2 className="text-3xl font-bold">2</h2>
+          <h2 className="text-3xl font-bold mt-1 text-[#0F172A]">2</h2>
         </div>
 
-        <div className="bg-white rounded-xl border p-5 shadow-sm">
-          <Calendar className="w-8 h-8 text-green-600 mb-3" />
-          <p className="text-gray-500 text-sm">
+        <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+          <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center mb-4">
+            <Calendar className="w-5 h-5 text-[#16A34A]" />
+          </div>
+          <p className="text-[#64748B] text-sm font-medium">
             Upcoming Hearings
           </p>
-          <h2 className="text-3xl font-bold">2</h2>
+          <h2 className="text-3xl font-bold mt-1 text-[#0F172A]">2</h2>
         </div>
 
       </div>
 
       {/* My Cases */}
-      <div className="bg-white rounded-xl border p-6 shadow-sm">
-        <h2 className="text-xl font-bold mb-4">
+      <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm">
+        <h2 className="text-lg font-bold text-[#0F172A] mb-4">
           My Cases
         </h2>
 
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b">
-              <th className="text-left p-3">Case No</th>
-              <th className="text-left p-3">Type</th>
-              <th className="text-left p-3">Next Hearing</th>
-              <th className="text-left p-3">Advocate</th>
-              <th className="text-left p-3">Status</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {cases.map((item, index) => (
-              <tr key={index} className="border-b">
-                <td className="p-3">{item.caseNo}</td>
-                <td className="p-3">{item.type}</td>
-                <td className="p-3">{item.hearing}</td>
-                <td className="p-3">{item.advocate}</td>
-                <td className="p-3">
-                  <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
-                    {item.status}
-                  </span>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-[#E2E8F0] text-xs font-semibold text-[#64748B] uppercase tracking-wider">
+                <th className="pb-3 font-medium">Case No</th>
+                <th className="pb-3 font-medium">Type</th>
+                <th className="pb-3 font-medium">Next Hearing</th>
+                <th className="pb-3 font-medium">Advocate</th>
+                <th className="pb-3 font-medium">Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody className="divide-y divide-[#F1F5F9]">
+              {cases.map((item, index) => (
+                <tr key={index} className="hover:bg-[#F8FAFC] transition-colors duration-150">
+                  <td className="py-4 text-sm font-medium text-[#1E293B]">{item.caseNo}</td>
+                  <td className="py-4 text-sm text-[#1E293B]">{item.type}</td>
+                  <td className="py-4 text-sm text-[#64748B]">{item.hearing}</td>
+                  <td className="py-4 text-sm text-[#1E293B]">{item.advocate}</td>
+                  <td className="py-4 text-sm">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
+                      item.status === 'Active'
+                        ? 'bg-green-50 text-green-700 border-green-200/50'
+                        : 'bg-blue-50 text-blue-700 border-blue-200/50'
+                    }`}>
+                      {item.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Consultation + Payment */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Consultation History */}
-        <div className="bg-white rounded-xl border p-6 shadow-sm">
-          <h2 className="text-xl font-bold mb-4">
+        <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm">
+          <h2 className="text-lg font-bold text-[#0F172A] mb-4">
             Consultation History
           </h2>
 
-          {consultations.map((item, index) => (
-            <div
-              key={index}
-              className="flex justify-between border-b py-3"
-            >
-              <span>{item.date}</span>
-              <span>{item.advocate}</span>
-              <span>{item.status}</span>
-            </div>
-          ))}
+          <div className="divide-y divide-[#F1F5F9]">
+            {consultations.map((item, index) => (
+              <div
+                key={index}
+                className="flex justify-between items-center py-3.5 text-sm"
+              >
+                <span className="font-medium text-[#1E293B]">{item.date}</span>
+                <span className="text-[#64748B]">{item.advocate}</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
+                  item.status === 'Completed'
+                    ? 'bg-green-50 text-green-700 border-green-200/50'
+                    : 'bg-amber-50 text-amber-700 border-amber-200/50'
+                }`}>{item.status}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Payment Summary */}
-        <div className="bg-white rounded-xl border p-6 shadow-sm">
-          <h2 className="text-xl font-bold mb-4">
+        <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm">
+          <h2 className="text-lg font-bold text-[#0F172A] mb-4">
             Payment Summary
           </h2>
 
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span>Total Paid</span>
-              <span>₹35,000</span>
+          <div className="space-y-3.5 divide-y divide-[#F1F5F9]">
+            <div className="flex justify-between text-sm pt-1">
+              <span className="text-[#64748B]">Total Paid</span>
+              <span className="font-semibold text-green-600">₹35,000</span>
             </div>
 
-            <div className="flex justify-between">
-              <span>Pending Amount</span>
-              <span>₹15,000</span>
+            <div className="flex justify-between text-sm pt-3">
+              <span className="text-[#64748B]">Pending Amount</span>
+              <span className="font-semibold text-[#DC2626]">₹15,000</span>
             </div>
 
-            <div className="flex justify-between">
-              <span>Next Due Date</span>
-              <span>25 June 2026</span>
+            <div className="flex justify-between text-sm pt-3">
+              <span className="text-[#64748B]">Next Due Date</span>
+              <span className="font-medium text-[#1E293B]">25 June 2026</span>
             </div>
           </div>
 
-          <button className="mt-5 w-full bg-blue-600 text-white py-2 rounded-lg">
+          <button className="mt-6 w-full bg-[#2563EB] hover:bg-[#1d4ed8] text-white py-2.5 rounded-lg font-medium text-sm shadow-sm transition-colors duration-200 cursor-pointer">
             Pay Now
           </button>
         </div>
@@ -166,31 +181,43 @@ export default function ClientDashboard() {
       </div>
 
       {/* Assigned Advocate */}
-      <div className="bg-white rounded-xl border p-6 shadow-sm">
-        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-          <User className="w-5 h-5" />
+      <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm">
+        <h2 className="text-lg font-bold text-[#0F172A] mb-4 flex items-center gap-2">
+          <User className="w-5 h-5 text-[#2563EB]" />
           Assigned Advocate
         </h2>
 
-        <div className="space-y-2">
-          <p><strong>Name:</strong> Rahul Sharma</p>
-          <p><strong>Phone:</strong> +91 9876543210</p>
-          <p><strong>Email:</strong> rahul@gmail.com</p>
-          <p><strong>Specialization:</strong> Criminal Lawyer</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+          <div className="border border-[#F1F5F9] rounded-lg p-3">
+            <span className="block text-xs text-[#64748B] font-medium uppercase tracking-wider mb-1">Name</span>
+            <span className="font-semibold text-[#1E293B]">Rahul Sharma</span>
+          </div>
+          <div className="border border-[#F1F5F9] rounded-lg p-3">
+            <span className="block text-xs text-[#64748B] font-medium uppercase tracking-wider mb-1">Phone</span>
+            <span className="font-medium text-[#1E293B]">+91 9876543210</span>
+          </div>
+          <div className="border border-[#F1F5F9] rounded-lg p-3">
+            <span className="block text-xs text-[#64748B] font-medium uppercase tracking-wider mb-1">Email</span>
+            <span className="font-medium text-[#1E293B]">rahul@gmail.com</span>
+          </div>
+          <div className="border border-[#F1F5F9] rounded-lg p-3">
+            <span className="block text-xs text-[#64748B] font-medium uppercase tracking-wider mb-1">Specialization</span>
+            <span className="font-medium text-[#1E293B]">Criminal Lawyer</span>
+          </div>
         </div>
       </div>
 
       {/* Recent Activity */}
-      <div className="bg-white rounded-xl border p-6 shadow-sm">
-        <h2 className="text-xl font-bold mb-4">
+      <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm">
+        <h2 className="text-lg font-bold text-[#0F172A] mb-4">
           Recent Activity
         </h2>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           {timeline.map((item, index) => (
             <div
               key={index}
-              className="border-l-4 border-green-500 pl-3"
+              className="border-l-4 border-[#2563EB] pl-4 py-0.5 text-sm text-[#1E293B]"
             >
               {item}
             </div>

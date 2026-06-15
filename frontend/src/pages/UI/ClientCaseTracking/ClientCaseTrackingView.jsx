@@ -56,56 +56,55 @@ export default function ClientCaseTrackingView() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-6 px-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="w-full space-y-6 md:space-y-8">
 
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">
+        {/* Page Header */}
+        <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6">
+          <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
             Case Tracking
           </h1>
-          {/* <p className="text-gray-500 mt-2">
+          <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
             Track your case status and progress
-          </p> */}
+          </p>
         </div>
 
         {/* Input Boxes — Advocate Name & Case Number */}
-        {/* <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-8 shadow-sm">
+        {/* <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 mb-8 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-2">
+              <label className="block text-sm font-medium text-[#64748B] mb-2">
                 Advocate Name
               </label>
               <div className="relative">
                 <User
                   size={18}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]"
                 />
                 <input
                   type="text"
                   placeholder="Enter advocate name"
                   value={advocateName}
                   onChange={(e) => setAdvocateName(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-2">
+              <label className="block text-sm font-medium text-[#64748B] mb-2">
                 Case Number
               </label>
               <div className="relative">
                 <FileText
                   size={18}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]"
                 />
                 <input
                   type="text"
                   placeholder="Enter case number"
                   value={caseNumber}
                   onChange={(e) => setCaseNumber(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
               </div>
             </div>
@@ -114,37 +113,37 @@ export default function ClientCaseTrackingView() {
 
         {/* Case Cards with Status Flow */}
         {filteredCases.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
-            <p className="text-gray-400 text-lg">No cases found</p>
+          <div className="bg-white rounded-2xl border border-[#E2E8F0] p-12 text-center shadow-sm">
+            <p className="text-[#64748B] text-lg">No cases found</p>
           </div>
         ) : (
           <div className="space-y-6">
             {filteredCases.map((item, index) => (
               <div
                 key={index}
-                className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow"
+                className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-sm hover:shadow-md transition-shadow"
               >
                 {/* Case Info Row */}
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-800">
+                    <h2 className="text-xl font-semibold text-[#0F172A]">
                       {item.title}
                     </h2>
-                    <div className="flex flex-wrap gap-x-5 gap-y-2 mt-2 text-sm text-gray-500">
+                    <div className="flex flex-wrap gap-x-5 gap-y-2 mt-2 text-sm text-[#64748B]">
                       <span className="flex items-center gap-1.5">
-                        <FileText size={15} className="text-blue-500" />
+                        <FileText size={15} className="text-[#2563EB]" />
                         {item.caseId}
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <User size={15} className="text-blue-500" />
+                        <User size={15} className="text-[#2563EB]" />
                         {item.advocate}
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <Building2 size={15} className="text-blue-500" />
+                        <Building2 size={15} className="text-[#2563EB]" />
                         {item.court}
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <Calendar size={15} className="text-blue-500" />
+                        <Calendar size={15} className="text-[#2563EB]" />
                         Next: {item.nextHearing}
                       </span>
                     </div>
@@ -162,8 +161,8 @@ export default function ClientCaseTrackingView() {
                 </div>
 
                 {/* Status Flow */}
-                <div className="bg-slate-50 rounded-xl p-5">
-                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+                <div className="bg-[#F1F5F9] rounded-xl p-5">
+                  <h3 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-4">
                     Case Progress
                   </h3>
 
@@ -183,8 +182,8 @@ export default function ClientCaseTrackingView() {
                                 isCompleted
                                   ? "bg-emerald-500 text-white shadow-md shadow-emerald-200"
                                   : isCurrent
-                                  ? "bg-blue-600 text-white shadow-md shadow-blue-200 ring-4 ring-blue-100"
-                                  : "bg-slate-200 text-slate-400"
+                                  ? "bg-[#2563EB] text-white shadow-md shadow-[#2563EB]/20 ring-4 ring-blue-100"
+                                  : "bg-[#E2E8F0] text-[#64748B]"
                               }`}
                             >
                               {isCompleted ? (
@@ -198,8 +197,8 @@ export default function ClientCaseTrackingView() {
                                 isCompleted
                                   ? "text-emerald-700 font-semibold"
                                   : isCurrent
-                                  ? "text-blue-700 font-semibold"
-                                  : "text-gray-400"
+                                  ? "text-[#2563EB] font-semibold"
+                                  : "text-[#64748B]"
                               }`}
                             >
                               {step}
@@ -213,7 +212,7 @@ export default function ClientCaseTrackingView() {
                                 className={`h-0.5 w-full rounded transition-all ${
                                   stepIdx < item.currentStep
                                     ? "bg-emerald-400"
-                                    : "bg-slate-200"
+                                    : "bg-[#E2E8F0]"
                                 }`}
                               />
                             </div>
@@ -237,8 +236,8 @@ export default function ClientCaseTrackingView() {
                                 isCompleted
                                   ? "bg-emerald-500 text-white"
                                   : isCurrent
-                                  ? "bg-blue-600 text-white ring-4 ring-blue-100"
-                                  : "bg-slate-200 text-slate-400"
+                                  ? "bg-[#2563EB] text-white ring-4 ring-blue-100"
+                                  : "bg-[#E2E8F0] text-[#64748B]"
                               }`}
                             >
                               {isCompleted ? (
@@ -252,7 +251,7 @@ export default function ClientCaseTrackingView() {
                                 className={`w-0.5 h-6 mt-1 ${
                                   stepIdx < item.currentStep
                                     ? "bg-emerald-400"
-                                    : "bg-slate-200"
+                                    : "bg-[#E2E8F0]"
                                 }`}
                               />
                             )}
@@ -262,8 +261,8 @@ export default function ClientCaseTrackingView() {
                               isCompleted
                                 ? "text-emerald-700 font-medium"
                                 : isCurrent
-                                ? "text-blue-700 font-medium"
-                                : "text-gray-400"
+                                ? "text-[#2563EB] font-medium"
+                                : "text-[#64748B]"
                             }`}
                           >
                             {step}
@@ -279,6 +278,5 @@ export default function ClientCaseTrackingView() {
         )}
 
       </div>
-    </div>
   );
 }

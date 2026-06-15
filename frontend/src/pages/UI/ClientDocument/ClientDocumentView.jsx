@@ -56,21 +56,20 @@ export default function ClientDocuments() {
   };
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-6 md:space-y-8">
 
-      {/* Header */}
-      <div className="bg-white border rounded-xl p-5">
-        <h1 className="text-2xl font-bold text-gray-800">
-          Client Documents
+      {/* Page Header */}
+      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6">
+        <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
+          Documents
         </h1>
-
-        <p className="text-sm text-gray-500">
+        <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
           Upload and manage documents for your advocate
         </p>
       </div>
 
       {/* Upload Section */}
-      <div className="bg-white rounded-xl border p-6 shadow-sm">
+      <div className="bg-white rounded-xl border-[#E2E8F0] p-6 shadow-sm">
         <h2 className="text-xl font-bold mb-4">
           Upload New Document
         </h2>
@@ -84,7 +83,7 @@ export default function ClientDocuments() {
             onChange={(e) =>
               setDocumentName(e.target.value)
             }
-            className="border rounded-lg p-3"
+            className="border-[#E2E8F0] rounded-lg p-3"
           />
 
           <select
@@ -92,7 +91,7 @@ export default function ClientDocuments() {
             onChange={(e) =>
               setDocumentType(e.target.value)
             }
-            className="border rounded-lg p-3"
+            className="border-[#E2E8F0] rounded-lg p-3"
           >
             <option value="">
               Select Document Type
@@ -109,13 +108,13 @@ export default function ClientDocuments() {
             onChange={(e) =>
               setFile(e.target.files[0])
             }
-            className="border rounded-lg p-2"
+            className="border-[#E2E8F0] rounded-lg p-2"
           />
         </div>
 
         <button
           onClick={handleUpload}
-          className="mt-5 bg-blue-600 text-white px-5 py-2 rounded-lg flex items-center gap-2"
+          className="mt-5 bg-[#2563EB] text-white px-5 py-2 rounded-lg flex items-center gap-2"
         >
           <Upload size={18} />
           Upload Document
@@ -123,14 +122,14 @@ export default function ClientDocuments() {
       </div>
 
       {/* Documents Table */}
-      <div className="bg-white rounded-xl border p-6 shadow-sm overflow-x-auto">
+      <div className="bg-white rounded-xl border-[#E2E8F0] p-6 shadow-sm overflow-x-auto">
         <h2 className="text-xl font-bold mb-4">
           Uploaded Documents
         </h2>
 
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-gray-50">
+            <tr className="border-b border-[#E2E8F0] bg-[#F1F5F9]">
               <th className="text-left p-3">Title</th>
               <th className="text-left p-3">Type</th>
               <th className="text-left p-3">File Name</th>
@@ -142,14 +141,14 @@ export default function ClientDocuments() {
 
           <tbody>
             {documents.map((doc) => (
-              <tr key={doc.id} className="border-b">
+              <tr key={doc.id} className="border-b border-[#E2E8F0]">
                 <td className="p-3">{doc.name}</td>
                 <td className="p-3">{doc.type}</td>
                 <td className="p-3">{doc.fileName}</td>
                 <td className="p-3">{doc.date}</td>
 
                 <td className="p-3">
-                  <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+                  <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
                     {doc.status}
                   </span>
                 </td>
@@ -161,7 +160,7 @@ export default function ClientDocuments() {
                     href={doc.fileUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800"
+                    className="text-[#2563EB] hover:text-[#1d4ed8]"
                   >
                     <Eye size={18} />
                   </a>
@@ -174,7 +173,7 @@ export default function ClientDocuments() {
                     onClick={() =>
                       handleDelete(doc.id)
                     }
-                    className="text-red-600 hover:text-red-800"
+                    className="text-[#DC2626] hover:text-[#991b1b]"
                   >
                     <Trash size={18} />
                   </button>

@@ -9,13 +9,13 @@ export default function Button({
 }) {
   const styles = {
     primary:
-      "bg-blue-600 hover:bg-blue-700 text-white",
+      "bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm",
 
     secondary:
-      "bg-gray-200 hover:bg-gray-300 text-gray-700",
+      "bg-white border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F1F5F9] shadow-sm",
 
     danger:
-      "bg-red-600 hover:bg-red-700 text-white",
+      "bg-[#DC2626]/90 hover:bg-[#DC2626] text-white shadow-sm",
   };
 
   return (
@@ -25,9 +25,11 @@ export default function Button({
       className={`
         px-6
         py-3
-        rounded-xl
+        rounded-lg
         font-medium
-        transition
+        text-sm
+        transition-all
+        duration-200
         ${styles[variant]}
       `}
       {...props}

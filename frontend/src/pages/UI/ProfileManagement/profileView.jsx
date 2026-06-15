@@ -10,10 +10,9 @@ export default function ProfileView({ profile = {}, onEdit }) {
   const roleLabel = roleParts.length > 0 ? `${roleParts.join(" (")} Advocate${roleParts.length > 1 ? ")" : ""}` : "Advocate";
 
   return (
-    <div className="min-h-screen bg-slate-100 py-6 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="w-full space-y-6 md:space-y-8">
         {/* Header */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-8">
+        <div className="bg-white rounded-xl shadow-sm border border-[#E2E8F0] p-6">
           <div className="flex flex-col md:flex-row gap-8 items-center justify-between">
             <div className="flex flex-col md:flex-row gap-8 items-center flex-1">
               {/* Profile Image */}
@@ -27,15 +26,15 @@ export default function ProfileView({ profile = {}, onEdit }) {
 
               {/* Profile Info */}
               <div className="flex-1">
-                <h1 className="text-3xl font-bold text-gray-800">
+                <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
                   {profile.advocateName || "Advocate Name"}
                 </h1>
 
-                <p className="text-blue-600 font-medium mt-2">
+                <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
                   {roleLabel}
                 </p>
 
-                <p className="text-gray-500 mt-3 whitespace-pre-wrap">
+                <p className="text-[#64748B] mt-3 whitespace-pre-wrap">
                   {profile.about || "No professional bio provided."}
                 </p>
               </div>
@@ -45,7 +44,7 @@ export default function ProfileView({ profile = {}, onEdit }) {
               <div className="mt-4 md:mt-0">
                 <button
                   onClick={onEdit}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-xl transition shadow-sm cursor-pointer"
+                  className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium px-6 py-2.5 rounded-xl transition shadow-sm cursor-pointer"
                 >
                   Edit Profile
                 </button>
@@ -57,7 +56,7 @@ export default function ProfileView({ profile = {}, onEdit }) {
         {/* Details */}
         <div className="grid md:grid-cols-2 gap-6 mt-8">
           {/* Personal Information */}
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-3xl shadow-sm border border-[#E2E8F0] p-6">
             <h2 className="text-xl font-semibold mb-6">
               Personal Information
             </h2>
@@ -111,7 +110,7 @@ export default function ProfileView({ profile = {}, onEdit }) {
           </div>
 
           {/* Professional Information */}
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-3xl shadow-sm border border-[#E2E8F0] p-6">
             <h2 className="text-xl font-semibold mb-6">
               Professional Information
             </h2>
@@ -161,28 +160,27 @@ export default function ProfileView({ profile = {}, onEdit }) {
         </div>
 
         {/* Address */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6 mt-6">
+        <div className="bg-white rounded-3xl shadow-sm border border-[#E2E8F0] p-6 mt-6">
           <h2 className="text-xl font-semibold mb-4">
             Chambers Address
           </h2>
 
-          <p className="text-gray-700 whitespace-pre-wrap">
+          <p className="text-[#334155] whitespace-pre-wrap">
             {profile.chambersAddress || "-"}
           </p>
         </div>
-      </div>
     </div>
   );
 }
 
 function InfoRow({ label, value }) {
   return (
-    <div className="flex justify-between border-b pb-3">
-      <span className="font-medium text-gray-600">
+    <div className="flex justify-between border-b border-[#E2E8F0] pb-3">
+      <span className="font-medium text-[#475569]">
         {label}
       </span>
 
-      <span className="text-gray-900">
+      <span className="text-[#0F172A]">
         {value || "-"}
       </span>
     </div>

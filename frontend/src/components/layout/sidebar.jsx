@@ -1,123 +1,88 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
-  Shield,
+  Home,
+  Scale,
+  Folder,
+  Users,
+  Calendar,
+  CreditCard,
+  BookOpen,
+  Settings,
+  Menu,
+  X,
+  ChevronLeft,
+  ChevronRight,
   ChevronDown,
   ChevronUp,
+  Shield,
 } from "lucide-react";
 
-export default function Sidebar() {
+// Map original section titles to new header labels
+const sectionTitleMap = {
+  "Advocate Section": "Advocate Section",
+  "Junior Advocate": "Junior Advocate",
+  "Client Section": "Client Section",
+  "User Roles": "SYSTEM",
+};
+
+export default function Sidebar({ isCollapsed, setIsCollapsed }) {
   const pathname = usePathname();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false); // mobile overlay
   const [userRolesOpen, setUserRolesOpen] = useState(() =>
     pathname?.startsWith("/permissions") || false
   );
 
   useEffect(() => {
     setIsOpen(false);
-
     if (pathname?.startsWith("/permissions")) {
       setUserRolesOpen(true);
     }
   }, [pathname]);
 
-  // Later replace with JWT/localStorage
-  const role = "senior"; // senior | junior | client
-
-  // Senior
+  // Define the menu structure (icon + label)
   const seniorMenu = [
     {
       title: "Advocate Section",
       items: [
-        { name: "Dashboard", path: "/" },
-        {
-          name: "Law Firm Management",
-          path: "/lawfirm-management",
-        },
-        {
-          name: "Client Management",
-          path: "/client-management",
-        },
-        {
-          name: "Case Management",
-          path: "/case-management",
-        },
-        {
-          name: "Consultations",
-          path: "/consultations",
-        },
-        {
-          name: "Finance Management",
-          path: "/finance-management",
-        },
-        { name: "Calendar", path: "/calendar" },
-        {
-          name: "Notifications",
-          path: "/senior-notifications",
-        },
-        {
-          name: "Profile",
-          path: "/profile-management",
-        },
-        
+        { name: "Dashboard", path: "/", icon: Home },
+        { name: "Law Firm Management", path: "/lawfirm-management", icon: Scale },
+        { name: "Client Management", path: "/client-management", icon: Users },
+        { name: "Case Management", path: "/case-management", icon: Folder },
+        { name: "Consultations", path: "/consultations", icon: BookOpen },
+        { name: "Finance Management", path: "/finance-management", icon: CreditCard },
+        { name: "Calendar", path: "/calendar", icon: Calendar },
+        { name: "Notifications", path: "/senior-notifications", icon: Settings },
+        { name: "Profile", path: "/profile-management", icon: Settings },
       ],
     },
   ];
 
-  // Junior
   const juniorMenu = [
     {
       title: "Junior Advocate",
       items: [
-        {
-          name: "Dashboard",
-          path: "/junior-dashboard",
-        },
-        {
-          name: "Assigned Cases",
-          path: "/assigned-cases",
-        },
-        {
-          name: "Calendar",
-          path: "/junior-calendar",
-        },
+        { name: "Dashboard", path: "/junior-dashboard", icon: Home },
+        { name: "Assigned Cases", path: "/assigned-cases", icon: Folder },
+        { name: "Calendar", path: "/junior-calendar", icon: Calendar },
       ],
     },
   ];
 
-  // Client
   const clientMenu = [
     {
       title: "Client Section",
       items: [
-        {
-          name: "Dashboard",
-          path: "/client-dashboard",
-        },
-        {
-          name: "Consultation",
-          path: "/client-consultation",
-        },
-        {
-          name: "Case Tracking",
-          path: "/client-case-tracking",
-        },
-        {
-          name: "Documents",
-          path: "/client-documents",
-        },
-        {
-          name: "Payments",
-          path: "/client-payments",
-        },
+        { name: "Dashboard", path: "/client-dashboard", icon: Home },
+        { name: "Consultation", path: "/client-consultation", icon: BookOpen },
+        { name: "Case Tracking", path: "/client-case-tracking", icon: Folder },
+        { name: "Documents", path: "/client-documents", icon: Settings },
+        { name: "Payments", path: "/client-payments", icon: CreditCard },
       ],
     },
   ];
 
-  // Full menu (User Roles at bottom)
   const menuItems = [
     ...seniorMenu,
     ...juniorMenu,
@@ -128,19 +93,11 @@ export default function Sidebar() {
         {
           name: "User Roles",
           isDropdown: true,
+          icon: Shield,
           submenu: [
-            {
-              name: "Roles",
-              path: "/permissions/roles",
-            },
-            {
-              name: "Users",
-              path: "/permissions/users",
-            },
-            {
-              name: "Permissions",
-              path: "/permissions",
-            },
+            { name: "Roles", path: "/permissions/roles" },
+            { name: "Users", path: "/permissions/users" },
+            { name: "Permissions", path: "/permissions" },
           ],
         },
       ],
@@ -149,119 +106,143 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile button */}
+      {/* Mobile Hamburger */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-3 left-3 z-[60] flex items-center justify-center w-10 h-10 bg-black text-white rounded-md shadow-lg md:hidden"
+        className="fixed top-3 left-3 z-[60] flex items-center justify-center w-10 h-10 bg-[#0F172A] text-white rounded-lg shadow-lg md:hidden transition-colors duration-200"
       >
-        <span className="text-xl">
-          {isOpen ? "✕" : "☰"}
-        </span>
+        {isOpen ? <X size={24} className="text-white" /> : <Menu size={24} className="text-white" />}
       </button>
 
-      {/* Overlay */}
+      {/* Mobile overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/40 z-40 md:hidden"
+          className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-screen w-64 bg-white border-r shadow-lg z-50 transform transition-transform duration-300 ${
-          isOpen
-            ? "translate-x-0"
-            : "-translate-x-full md:translate-x-0"
-        }`}
+        className={`fixed top-0 left-0 h-screen transition-[width] duration-300 ease-in-out bg-white border-r border-[#E2E8F0] z-50 ${
+          isCollapsed ? "w-[72px]" : "w-[280px]"
+        } ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
       >
         <div className="flex flex-col h-full overflow-y-auto">
-          {/* Logo */}
-          <div className="p-5 border-b">
-            <h2 className="text-2xl font-bold text-black">
-              Legal Tech
-            </h2>
+          {/* Logo & Collapse Toggle */}
+          <div className="flex items-center justify-between px-6 py-5 border-b border-[#E2E8F0]">
+            <div className="flex items-center gap-2">
+              <Scale size={22} className="text-[#2563EB]" />
+              <h2 className={`text-xl font-bold tracking-tight ${isCollapsed ? "hidden" : "block"} text-[#0F172A]`}>LEGAL-TECH</h2>
+            </div>
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="p-1 rounded hover:bg-[#F1F5F9] transition-colors"
+              aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {isCollapsed ? (
+                <ChevronRight size={20} className="text-[#64748B]" />
+              ) : (
+                <ChevronLeft size={20} className="text-[#64748B]" />
+              )}
+            </button>
           </div>
+          
 
           {/* Menu */}
-          <div className="px-5 py-6">
+          <nav className="flex-1 px-4 py-5">
             {menuItems.map((section) => (
-              <div
-                key={section.title}
-                className="mb-6"
-              >
-                <h3 className="px-4 mb-3 text-xs font-bold text-gray-500 uppercase">
-                  {section.title}
-                </h3>
-
-                <ul className="space-y-2">
+              <div key={section.title} className="mb-5">
+                {/* Section Header */}
+                {!isCollapsed && (
+                  <h3 className="px-3 mb-2 text-[10px] font-semibold text-[#94A3B8] uppercase tracking-widest">
+                    {sectionTitleMap[section.title] || section.title}
+                  </h3>
+                )}
+                <ul className="space-y-0.5">
                   {section.items.map((item) => {
                     if (item.isDropdown) {
+                      const active = userRolesOpen;
                       return (
-                        <li key={section.title + "-" + item.name}>
+                        <li key={item.name}>
                           <button
-                            onClick={() =>
-                              setUserRolesOpen(
-                                !userRolesOpen
-                              )
-                            }
-                            className="flex items-center justify-between w-full px-4 py-3 rounded-lg font-semibold hover:bg-gray-100"
+                            onClick={() => setUserRolesOpen(!userRolesOpen)}
+                            className="flex w-full items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-[#1E293B] hover:bg-[#F8FAFC] transition-colors duration-200"
                           >
-                            <div className="flex items-center gap-2">
-                              <Shield size={18} />
-                              {item.name}
+                            <div className="flex items-center gap-2.5">
+                              <item.icon size={17} className="text-[#64748B]" />
+                              {!isCollapsed && <span>{item.name}</span>}
                             </div>
-
                             {userRolesOpen ? (
-                              <ChevronUp size={16} />
+                              <ChevronUp size={15} className="text-[#94A3B8]" />
                             ) : (
-                              <ChevronDown size={16} />
+                              <ChevronDown size={15} className="text-[#94A3B8]" />
                             )}
                           </button>
-
                           {userRolesOpen && (
-                            <ul className="pl-4 mt-2 ml-4 border-l-2 border-blue-100 space-y-1">
-                              {item.submenu.map(
-                                (sub) => (
-                                  <li
-                                    key={sub.path}
+                            <ul className="pl-4 mt-1 ml-4 border-l-2 border-[#2563EB]/20 space-y-0.5">
+                              {item.submenu.map((sub) => (
+                                <li key={sub.path}>
+                                  <Link
+                                    href={sub.path}
+                                    className={`block px-3 py-2 rounded-lg text-sm transition-colors duration-200 ${
+                                      pathname === sub.path
+                                        ? "text-[#2563EB] bg-[#2563EB]/5 font-medium"
+                                        : "text-[#64748B] hover:text-[#1E293B] hover:bg-[#F1F5F9]"
+                                    }`}
                                   >
-                                    <Link
-                                      href={sub.path}
-                                      className="block px-4 py-2 rounded-lg text-sm hover:bg-gray-100"
-                                    >
-                                      {sub.name}
-                                    </Link>
-                                  </li>
-                                )
-                              )}
+                                    {sub.name}
+                                  </Link>
+                                </li>
+                              ))}
                             </ul>
                           )}
                         </li>
                       );
                     }
 
-                    const active =
-                      pathname === item.path;
-
+                    const active = pathname === item.path;
+                    const IconComponent = item.icon;
                     return (
-                      <li key={section.title + "-" + item.path}>
-                        <Link
-                          href={item.path}
-                          className={`block px-4 py-3 rounded-lg font-semibold ${
-                            active
-                              ? "bg-blue-500 text-white"
-                              : "hover:bg-blue-500 hover:text-white"
-                          }`}
-                        >
-                          {item.name}
-                        </Link>
-                      </li>
+                          <li key={item.path} className="relative group">
+                            <Link
+                              href={item.path}
+                              title={isCollapsed ? item.name : undefined}
+                              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                                active
+                                  ? "bg-[rgba(37,99,235,0.12)] border-l-4 border-[#2563EB] text-[#2563EB] font-semibold"
+                                  : "text-[#1E293B] hover:bg-[#F8FAFC]"
+                              }`}
+                            >
+                              <IconComponent size={17} className="flex-shrink-0" />
+                              {!isCollapsed && <span>{item.name}</span>}
+                            </Link>
+                            {isCollapsed && (
+                              <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-2 py-1 bg-[#0F172A] text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                                {item.name}
+                              </div>
+                            )}
+                          </li>
                     );
                   })}
                 </ul>
               </div>
             ))}
+          </nav>
+
+          {/* User Profile */}
+          <div className="px-6 py-5 border-t border-[#E2E8F0] flex items-center">
+            <img
+              src="https://i.pravatar.cc/150?img=12"
+              alt="Profile"
+              className="w-9 h-9 rounded-full object-cover ring-2 ring-[#E2E8F0]"
+            />
+            {!isCollapsed && (
+              <div className="ml-3 text-left">
+                <h4 className="font-semibold text-sm text-[#0F172A]">Adv. Rahul Sharma</h4>
+                <p className="text-xs text-[#64748B]">Senior Advocate</p>
+              </div>
+            )}
           </div>
         </div>
       </aside>

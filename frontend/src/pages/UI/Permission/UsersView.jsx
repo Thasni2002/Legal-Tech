@@ -380,7 +380,7 @@ export default function UsersView() {
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-12">
+    <div className="w-full space-y-6 md:space-y-8">
       {/* Toast Notification */}
       {notification && (
         <div
@@ -399,13 +399,13 @@ export default function UsersView() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-extrabold text-[#0f172a] uppercase tracking-wider">
+      {/* Page Header */}
+      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6">
+        <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
           Users Management
         </h1>
-        <p className="text-sm font-semibold text-slate-400 tracking-wider">
-          CREATE AND LINK USER ACCOUNTS WITH PROFILE-SPECIFIC CASCADING FILTERS.
+        <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
+          Create and link user accounts with profile-specific cascading filters.
         </p>
       </div>
 
@@ -474,7 +474,7 @@ export default function UsersView() {
                 placeholder="Jane"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-emerald-100 focus:border-emerald-600 outline-none transition-all text-sm font-medium"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
               />
             </div>
 
@@ -488,7 +488,7 @@ export default function UsersView() {
                 placeholder="Doe"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-emerald-100 focus:border-emerald-600 outline-none transition-all text-sm font-medium"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
               />
             </div>
 
@@ -502,7 +502,7 @@ export default function UsersView() {
                 placeholder="+1 (555) 000-0000"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-emerald-100 focus:border-emerald-600 outline-none transition-all text-sm font-medium"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
               />
             </div>
 
@@ -517,7 +517,7 @@ export default function UsersView() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-emerald-100 focus:border-emerald-600 outline-none transition-all text-sm font-medium"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
               />
             </div>
 
@@ -532,7 +532,7 @@ export default function UsersView() {
                 value={emailAddress}
                 onChange={(e) => setEmailAddress(e.target.value)}
                 required
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-emerald-100 focus:border-emerald-600 outline-none transition-all text-sm font-medium"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
               />
             </div>
 
@@ -546,7 +546,7 @@ export default function UsersView() {
                   type={showPassword ? "text" : "password"}
                   value={tempPassword}
                   onChange={(e) => setTempPassword(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-4 pr-24 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-emerald-100 focus:border-emerald-600 outline-none transition-all text-sm font-medium"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-4 pr-24 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                   <button
@@ -602,7 +602,7 @@ export default function UsersView() {
             return (
               <div
                 key={user.id}
-                className="relative group border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/10 p-5 rounded-2xl transition-all shadow-sm flex flex-col justify-between"
+                className="relative group border border-slate-100 hover:border-[#2563EB] hover:bg-blue-50/10 p-5 rounded-2xl transition-all shadow-sm flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-start justify-between gap-4">
@@ -614,7 +614,7 @@ export default function UsersView() {
                         <h3 className="font-bold text-slate-900">
                           {user.firstName} {user.lastName}
                         </h3>
-                        <span className="inline-block px-2.5 py-0.5 mt-1 rounded-full text-xxs font-bold uppercase tracking-wider bg-emerald-50 text-[#0d6e53] border border-emerald-100">
+                        <span className="inline-block px-2.5 py-0.5 mt-1 rounded-full text-xxs font-bold uppercase tracking-wider bg-emerald-50 text-[#2563EB] border border-emerald-100">
                           {user.role}
                         </span>
                         {hasOverrides && (
@@ -657,9 +657,9 @@ export default function UsersView() {
                       <span className="text-slate-900">{user.phone || "N/A"}</span>
                     </div>
                     <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl mt-3 border border-slate-100">
-                      <Key size={14} className="text-emerald-500" />
+                      <Key size={14} className="text-[#16A34A]" />
                       <span className="text-slate-400 font-bold uppercase tracking-wider w-18">Temp Pass:</span>
-                      <code className="text-emerald-700 bg-emerald-50/50 px-2 py-0.5 rounded font-mono text-xxs font-bold">
+                      <code className="text-[#16A34A] bg-[#F1F5F9] px-2 py-0.5 rounded font-mono text-xxs font-bold">
                         {user.tempPassword}
                       </code>
                     </div>
@@ -701,7 +701,7 @@ export default function UsersView() {
                   <h3 className="font-bold text-slate-900 text-lg">
                     {editFirstName} {editLastName}
                   </h3>
-                  <span className="inline-block px-2.5 py-0.5 rounded-full text-xxs font-bold uppercase tracking-wider bg-emerald-50 text-[#0d6e53] border border-emerald-100">
+                  <span className="inline-block px-2.5 py-0.5 rounded-full text-xxs font-bold uppercase tracking-wider bg-emerald-50 text-[#2563EB] border border-emerald-100">
                     {activeUser.role} Account Detail
                   </span>
                 </div>
@@ -720,7 +720,7 @@ export default function UsersView() {
                 onClick={() => setModalTab("profile")}
                 className={`py-4 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
                   modalTab === "profile"
-                    ? "border-[#0d6e53] text-[#0d6e53]"
+                    ? "border-[#2563EB] text-[#2563EB]"
                     : "border-transparent text-slate-400 hover:text-slate-600"
                 }`}
               >
@@ -731,7 +731,7 @@ export default function UsersView() {
                 onClick={() => setModalTab("permissions")}
                 className={`py-4 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
                   modalTab === "permissions"
-                    ? "border-[#0d6e53] text-[#0d6e53]"
+                    ? "border-[#2563EB] text-[#2563EB]"
                     : "border-transparent text-slate-400 hover:text-slate-600"
                 }`}
               >
@@ -742,7 +742,7 @@ export default function UsersView() {
                 onClick={() => setModalTab("documents")}
                 className={`py-4 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
                   modalTab === "documents"
-                    ? "border-[#0d6e53] text-[#0d6e53]"
+                    ? "border-[#2563EB] text-[#2563EB]"
                     : "border-transparent text-slate-400 hover:text-slate-600"
                 }`}
               >
@@ -764,7 +764,7 @@ export default function UsersView() {
                       type="text"
                       value={editFirstName}
                       onChange={(e) => setEditFirstName(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-emerald-100 focus:border-emerald-600 outline-none transition-all text-sm font-medium"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
                     />
                   </div>
 
@@ -776,7 +776,7 @@ export default function UsersView() {
                       type="text"
                       value={editLastName}
                       onChange={(e) => setEditLastName(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-emerald-100 focus:border-emerald-600 outline-none transition-all text-sm font-medium"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
                     />
                   </div>
 
@@ -788,7 +788,7 @@ export default function UsersView() {
                       type="text"
                       value={editPhone}
                       onChange={(e) => setEditPhone(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-emerald-100 focus:border-emerald-600 outline-none transition-all text-sm font-medium"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
                     />
                   </div>
 
@@ -800,7 +800,7 @@ export default function UsersView() {
                       type="text"
                       value={editUsername}
                       onChange={(e) => setEditUsername(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-emerald-100 focus:border-emerald-600 outline-none transition-all text-sm font-medium"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
                     />
                   </div>
 
@@ -812,7 +812,7 @@ export default function UsersView() {
                       type="email"
                       value={editEmail}
                       onChange={(e) => setEditEmail(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-emerald-100 focus:border-emerald-600 outline-none transition-all text-sm font-medium"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
                     />
                   </div>
 
@@ -825,7 +825,7 @@ export default function UsersView() {
                         type="text"
                         value={editPassword}
                         onChange={(e) => setEditPassword(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-4 pr-12 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-emerald-100 focus:border-emerald-600 outline-none transition-all text-sm font-medium"
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-4 pr-12 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
                       />
                       <button
                         type="button"
@@ -897,8 +897,8 @@ export default function UsersView() {
               {/* Tab 3: Case Document Permissions */}
               {modalTab === "documents" && (
                 <div className="space-y-4">
-                  <div className="bg-emerald-50/30 border border-emerald-100 rounded-xl p-4 text-[#0d6e53] flex items-start gap-3">
-                    <Shield size={18} className="text-[#0d6e53] flex-shrink-0 mt-0.5" />
+                  <div className="bg-emerald-50/30 border border-emerald-100 rounded-xl p-4 text-[#2563EB] flex items-start gap-3">
+                    <Shield size={18} className="text-[#2563EB] flex-shrink-0 mt-0.5" />
                     <div className="text-xs font-semibold">
                       <p className="font-bold uppercase tracking-wider">Case Related Document clearance level</p>
                       <p className="mt-1 text-slate-500 font-medium normal-case">

@@ -57,22 +57,18 @@ export default function AdvDashboardView() {
     return (
         <div className="w-full space-y-6 md:space-y-8">
 
-            {/* Header */}
-            <div className="bg-gradient-to-r from-black via-gray-900 to-black text-white rounded-3xl shadow-2xl p-6 md:p-8">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">
-                            {greeting}, Rahul Sharma 
-                        </h1>
-
-                        <p className="text-gray-300 text-sm md:text-lg mt-2 md:mt-3">
-                            Senior Advocate
-                        </p>
-
-                        <p className="text-gray-400 text-xs md:text-sm mt-1">
-                            {currentDate}
-                        </p>
-                    </div>
+            {/* Page Header */}
+            <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
+                        {greeting}, Rahul Sharma
+                    </h1>
+                    <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
+                        Senior Advocate
+                    </p>
+                </div>
+                <div className="text-left md:text-right">
+                    <p className="text-[#64748B] font-medium" style={{ fontSize: '16px' }}>{currentDate}</p>
                 </div>
             </div>
 
@@ -84,17 +80,17 @@ export default function AdvDashboardView() {
                     return (
                         <div
                             key={index}
-                            className="bg-white rounded-3xl border border-gray-100 p-5 md:p-6 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+                            className="bg-white rounded-xl border border-[#E2E8F0] p-5 md:p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
                         >
-                            <div className="w-12 h-12 md:w-14 md:h-14 bg-black rounded-2xl flex items-center justify-center mb-4">
-                                <Icon className="w-6 h-6 md:w-7 md:h-7 text-white" />
+                            <div className="w-11 h-11 md:w-12 md:h-12 bg-[#2563EB] rounded-lg flex items-center justify-center mb-4">
+                                <Icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
                             </div>
 
-                            <p className="text-gray-500 text-sm md:text-base">
+                            <p className="text-[#64748B] text-sm md:text-base">
                                 {item.title}
                             </p>
 
-                            <h2 className="text-3xl md:text-4xl font-bold mt-2">
+                            <h2 className="text-3xl md:text-4xl font-bold mt-2 text-[#0F172A]">
                                 {item.value}
                             </h2>
                         </div>
@@ -105,8 +101,8 @@ export default function AdvDashboardView() {
             {/* Case Overview + Activities */}
             <div className="grid grid-cols-12 gap-6">
 
-                <div className="col-span-12 lg:col-span-8 bg-white rounded-3xl border border-gray-100 shadow-lg p-5 md:p-6">
-                    <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">
+                <div className="col-span-12 lg:col-span-8 bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 md:p-6">
+                    <h2 className="text-lg md:text-xl font-semibold mb-4 md:mb-6 text-[#0F172A]">
                         Case Overview
                     </h2>
 
@@ -114,35 +110,35 @@ export default function AdvDashboardView() {
                         <div className="inline-block min-w-full align-middle px-5 md:px-0">
                             <table className="w-full min-w-[500px]">
                                 <thead>
-                                    <tr className="border-b">
-                                        <th className="text-left py-3 text-sm font-semibold text-gray-600">Case No</th>
-                                        <th className="text-left text-sm font-semibold text-gray-600">Client</th>
-                                        <th className="text-left text-sm font-semibold text-gray-600">Type</th>
-                                        <th className="text-left text-sm font-semibold text-gray-600">Court</th>
-                                        <th className="text-left text-sm font-semibold text-gray-600">Status</th>
+                                    <tr className="border-b border-[#E2E8F0]">
+                                        <th className="text-left py-3 text-xs font-semibold text-[#64748B] uppercase tracking-wider">Case No</th>
+                                        <th className="text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client</th>
+                                        <th className="text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider">Type</th>
+                                        <th className="text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider">Court</th>
+                                        <th className="text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider">Status</th>
                                     </tr>
                                 </thead>
 
                                 <tbody>
-                                    <tr className="border-b hover:bg-gray-50 transition-colors">
-                                        <td className="py-4 text-sm">CIV/101</td>
-                                        <td className="text-sm">Arun Kumar</td>
-                                        <td className="text-sm">Civil</td>
-                                        <td className="text-sm">District Court</td>
+                                    <tr className="border-b border-[#F1F5F9] hover:bg-[#F8FAFC] transition-colors duration-150">
+                                        <td className="py-4 text-sm text-[#0F172A]">CIV/101</td>
+                                        <td className="text-sm text-[#1E293B]">Arun Kumar</td>
+                                        <td className="text-sm text-[#64748B]">Civil</td>
+                                        <td className="text-sm text-[#64748B]">District Court</td>
                                         <td>
-                                            <span className="bg-black text-white px-3 py-1 rounded-full text-xs font-medium">
+                                            <span className="bg-[#2563EB]/10 text-[#2563EB] px-3 py-1 rounded-full text-xs font-medium">
                                                 Hearing
                                             </span>
                                         </td>
                                     </tr>
 
-                                    <tr className="hover:bg-gray-50 transition-colors">
-                                        <td className="py-4 text-sm">CR/202</td>
-                                        <td className="text-sm">State Of Kerala</td>
-                                        <td className="text-sm">Criminal</td>
-                                        <td className="text-sm">Sessions Court</td>
+                                    <tr className="hover:bg-[#F8FAFC] transition-colors duration-150">
+                                        <td className="py-4 text-sm text-[#0F172A]">CR/202</td>
+                                        <td className="text-sm text-[#1E293B]">State Of Kerala</td>
+                                        <td className="text-sm text-[#64748B]">Criminal</td>
+                                        <td className="text-sm text-[#64748B]">Sessions Court</td>
                                         <td>
-                                            <span className="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-medium">
+                                            <span className="bg-[#16A34A]/10 text-[#16A34A] px-3 py-1 rounded-full text-xs font-medium">
                                                 Active
                                             </span>
                                         </td>
@@ -153,35 +149,35 @@ export default function AdvDashboardView() {
                     </div>
                 </div>
 
-                <div className="col-span-12 lg:col-span-4 bg-white rounded-3xl border border-gray-100 shadow-lg p-5 md:p-6">
-                    <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">
+                <div className="col-span-12 lg:col-span-4 bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 md:p-6">
+                    <h2 className="text-lg md:text-xl font-semibold mb-4 md:mb-6 text-[#0F172A]">
                         Recent Activities
                     </h2>
 
                     <div className="space-y-4 md:space-y-5">
-                        <div className="border-l-4 border-black pl-4">
-                            <h4 className="font-semibold text-sm md:text-base">
+                        <div className="border-l-[3px] border-[#2563EB] pl-4">
+                            <h4 className="font-medium text-sm md:text-base text-[#0F172A]">
                                 New Case Assigned
                             </h4>
-                            <p className="text-xs md:text-sm text-gray-500">
+                            <p className="text-xs md:text-sm text-[#64748B]">
                                 10 mins ago
                             </p>
                         </div>
 
-                        <div className="border-l-4 border-black pl-4">
-                            <h4 className="font-semibold text-sm md:text-base">
+                        <div className="border-l-[3px] border-[#D97706] pl-4">
+                            <h4 className="font-medium text-sm md:text-base text-[#0F172A]">
                                 Hearing Completed
                             </h4>
-                            <p className="text-xs md:text-sm text-gray-500">
+                            <p className="text-xs md:text-sm text-[#64748B]">
                                 1 hour ago
                             </p>
                         </div>
 
-                        <div className="border-l-4 border-black pl-4">
-                            <h4 className="font-semibold text-sm md:text-base">
+                        <div className="border-l-[3px] border-[#16A34A] pl-4">
+                            <h4 className="font-medium text-sm md:text-base text-[#0F172A]">
                                 Client Meeting Scheduled
                             </h4>
-                            <p className="text-xs md:text-sm text-gray-500">
+                            <p className="text-xs md:text-sm text-[#64748B]">
                                 Today
                             </p>
                         </div>
@@ -193,8 +189,8 @@ export default function AdvDashboardView() {
             {/* Upcoming Hearings + Documents */}
             <div className="grid grid-cols-12 gap-6">
 
-                <div className="col-span-12 lg:col-span-8 bg-white rounded-3xl border border-gray-100 shadow-lg p-5 md:p-6">
-                    <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">
+                <div className="col-span-12 lg:col-span-8 bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 md:p-6">
+                    <h2 className="text-lg md:text-xl font-semibold mb-4 md:mb-6 text-[#0F172A]">
                         Upcoming Hearings
                     </h2>
 
@@ -202,30 +198,30 @@ export default function AdvDashboardView() {
                         <div className="inline-block min-w-full align-middle px-5 md:px-0">
                             <table className="w-full min-w-[500px]">
                                 <thead>
-                                    <tr className="border-b">
-                                        <th className="text-left py-3 text-sm font-semibold text-gray-600">Date</th>
-                                        <th className="text-left text-sm font-semibold text-gray-600">Case</th>
-                                        <th className="text-left text-sm font-semibold text-gray-600">Court</th>
-                                        <th className="text-left text-sm font-semibold text-gray-600">Advocate</th>
-                                        <th className="text-left text-sm font-semibold text-gray-600">Time</th>
+                                    <tr className="border-b border-[#E2E8F0]">
+                                        <th className="text-left py-3 text-xs font-semibold text-[#64748B] uppercase tracking-wider">Date</th>
+                                        <th className="text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider">Case</th>
+                                        <th className="text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider">Court</th>
+                                        <th className="text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider">Advocate</th>
+                                        <th className="text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider">Time</th>
                                     </tr>
                                 </thead>
 
                                 <tbody>
-                                    <tr className="border-b hover:bg-gray-50 transition-colors">
-                                        <td className="py-4 text-sm">10 Jun</td>
-                                        <td className="text-sm">Property Dispute</td>
-                                        <td className="text-sm">District Court</td>
-                                        <td className="text-sm">Rahul Sharma</td>
-                                        <td className="text-sm">10:30 AM</td>
+                                    <tr className="border-b border-[#F1F5F9] hover:bg-[#F8FAFC] transition-colors duration-150">
+                                        <td className="py-4 text-sm text-[#0F172A] font-medium">10 Jun</td>
+                                        <td className="text-sm text-[#1E293B]">Property Dispute</td>
+                                        <td className="text-sm text-[#64748B]">District Court</td>
+                                        <td className="text-sm text-[#1E293B]">Rahul Sharma</td>
+                                        <td className="text-sm text-[#64748B]">10:30 AM</td>
                                     </tr>
 
-                                    <tr className="hover:bg-gray-50 transition-colors">
-                                        <td className="py-4 text-sm">12 Jun</td>
-                                        <td className="text-sm">Theft Case</td>
-                                        <td className="text-sm">Sessions Court</td>
-                                        <td className="text-sm">Priya Nair</td>
-                                        <td className="text-sm">11:00 AM</td>
+                                    <tr className="hover:bg-[#F8FAFC] transition-colors duration-150">
+                                        <td className="py-4 text-sm text-[#0F172A] font-medium">12 Jun</td>
+                                        <td className="text-sm text-[#1E293B]">Theft Case</td>
+                                        <td className="text-sm text-[#64748B]">Sessions Court</td>
+                                        <td className="text-sm text-[#1E293B]">Priya Nair</td>
+                                        <td className="text-sm text-[#64748B]">11:00 AM</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -233,12 +229,12 @@ export default function AdvDashboardView() {
                     </div>
                 </div>
 
-                <div className="col-span-12 lg:col-span-4 bg-white rounded-3xl border border-gray-100 shadow-lg p-5 md:p-6">
-                    <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">
+                <div className="col-span-12 lg:col-span-4 bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 md:p-6">
+                    <h2 className="text-lg md:text-xl font-semibold mb-4 md:mb-6 text-[#0F172A]">
                         Recent Documents
                     </h2>
 
-                    <div className="space-y-3 md:space-y-4">
+                    <div className="space-y-2 md:space-y-3">
                         {[
                             "Petition_CIV101.pdf",
                             "Affidavit_CR202.pdf",
@@ -247,14 +243,14 @@ export default function AdvDashboardView() {
                         ].map((doc) => (
                             <div
                                 key={doc}
-                                className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-100 transition-all cursor-pointer"
+                                className="flex items-center justify-between p-3 rounded-lg hover:bg-[#F8FAFC] border border-transparent hover:border-[#E2E8F0] transition-all duration-200 cursor-pointer"
                             >
                                 <div className="flex items-center gap-3 min-w-0">
-                                    <FileText className="w-5 h-5 text-black shrink-0" />
-                                    <span className="truncate text-sm">{doc}</span>
+                                    <FileText className="w-5 h-5 text-[#64748B] shrink-0" />
+                                    <span className="truncate text-sm text-[#1E293B]">{doc}</span>
                                 </div>
 
-                                <button className="font-semibold text-sm hover:underline ml-2 shrink-0">
+                                <button className="font-medium text-sm text-[#2563EB] hover:text-[#1d4ed8] ml-2 shrink-0 transition-colors duration-150">
                                     View
                                 </button>
                             </div>

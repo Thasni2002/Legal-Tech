@@ -126,64 +126,62 @@ export default function ConsultationsView() {
     ]);
 
     return (
-        <div className="min-h-screen bg-slate-100 py-6 px-4 sm:px-6 lg:px-8">
-            <div className="w-full max-w-7xl mx-auto">
-                {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
-                        Consultation Management
+        <div className="w-full space-y-6 md:space-y-8">
+                {/* Page Header */}
+                <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6 mb-6">
+                    <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
+                        Consultations
                     </h1>
-
-                    <p className="text-gray-500 mt-2">
-                        Dashboard &gt; Consultation Management
+                    <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
+                        Schedule and manage client consultations
                     </p>
                 </div>
 
                 {/* Top Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-                    <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                        <h3 className="text-lg font-semibold text-gray-800">
+                    <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-sm">
+                        <h3 className="text-lg font-semibold text-[#0F172A]">
                             Accept Appointments
                         </h3>
 
-                        <p className="text-gray-500 text-sm mt-2">
+                        <p className="text-[#64748B] text-sm mt-2">
                             View and manage consultation requests
                         </p>
 
                         <button
                             onClick={() => setShowAppointments(!showAppointments)}
-                            className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl transition"
+                            className="w-full mt-4 bg-[#16A34A] hover:bg-[#15803d] text-white py-3 rounded-xl transition"
                         >
                             View Appointments
                         </button>
                     </div>
 
-                    <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                        <h3 className="text-lg font-semibold text-gray-800">
+                    <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-sm">
+                        <h3 className="text-lg font-semibold text-[#0F172A]">
                             Video / Chat Consultation
                         </h3>
 
-                        <p className="text-gray-500 text-sm mt-2">
+                        <p className="text-[#64748B] text-sm mt-2">
                             Start a new consultation
                         </p>
 
-                        <button className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl transition">
+                        <button className="w-full mt-4 bg-[#2563EB] hover:bg-[#1d4ed8] text-white py-3 rounded-xl transition">
                             Start Consultation
                         </button>
                     </div>
 
-                    <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm sm:col-span-2 xl:col-span-1">
-                        <h3 className="text-lg font-semibold text-gray-800">
+                    <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-sm sm:col-span-2 xl:col-span-1">
+                        <h3 className="text-lg font-semibold text-[#0F172A]">
                             Consultation History
                         </h3>
 
-                        <p className="text-gray-500 text-sm mt-2">
+                        <p className="text-[#64748B] text-sm mt-2">
                             View previous consultations
                         </p>
 
                         <button
                             onClick={() => setShowHistory(!showHistory)}
-                            className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl transition"
+                            className="w-full mt-4 bg-[#D97706] hover:bg-[#b45309] text-white py-3 rounded-xl transition"
                         >
                             {showHistory ? "Hide History" : "View History"}
                         </button>
@@ -192,15 +190,15 @@ export default function ConsultationsView() {
 
                 {/* Appointment Requests */}
                 {showAppointments && (
-                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-8">
-                        <h2 className="text-xl font-semibold text-gray-800 mb-6">
+                    <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6 mb-8">
+                        <h2 className="text-xl font-semibold text-[#0F172A] mb-6">
                             Appointment Requests
                         </h2>
 
                         <div className="w-full overflow-x-auto">
                             <table className="min-w-full">
                                 <thead>
-                                    <tr className="bg-slate-100">
+                                    <tr className="bg-[#F8FAFC]">
                                         <th className="p-3 text-left whitespace-nowrap">
                                             Client
                                         </th>
@@ -226,7 +224,7 @@ export default function ConsultationsView() {
                                     {appointments.map((item) => (
                                         <tr
                                             key={item.id}
-                                            className="border-b border-gray-200"
+                                            className="border-b border-[#E2E8F0]"
                                         >
                                             <td className="p-3 whitespace-nowrap">
                                                 {item.client}
@@ -246,7 +244,7 @@ export default function ConsultationsView() {
                                                 {item.issue}
                                             </td>
 
-                                            <td className="p-3 text-green-600 font-semibold whitespace-nowrap">
+                                            <td className="p-3 text-[#16A34A] font-semibold whitespace-nowrap">
                                                 {item.fee}
                                             </td>
 
@@ -283,7 +281,7 @@ export default function ConsultationsView() {
                                                                     setSelectedAppointment(item);
                                                                     setShowDeclineModal(true);
                                                                 }}
-                                                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                                                                className="px-4 py-2 bg-[#DC2626] hover:bg-[#b91c1c] text-white rounded-lg transition-colors"
                                                             >
                                                                 Decline
                                                             </button>
@@ -301,31 +299,31 @@ export default function ConsultationsView() {
 
                 {/* Consultation History */}
                 {showHistory && (
-                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-8 transition-all duration-300">
-                        <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center justify-between">
+                    <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6 mb-8 transition-all duration-300">
+                        <h2 className="text-xl font-semibold text-[#0F172A] mb-6 flex items-center justify-between">
                             <span>Consultation History</span>
-                            <span className="text-sm font-normal text-gray-500">{history.length} total</span>
+                            <span className="text-sm font-normal text-[#64748B]">{history.length} total</span>
                         </h2>
 
                         {history.length === 0 ? (
-                            <div className="text-center py-8 text-gray-500">
+                            <div className="text-center py-8 text-[#64748B]">
                                 No consultations found. Start a new one below.
                             </div>
                         ) : (
                             <div className="w-full overflow-x-auto">
                                 <table className="min-w-full">
                                     <thead>
-                                        <tr className="bg-slate-50 border-b border-gray-200">
-                                            <th className="p-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                                        <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
+                                            <th className="p-4 text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider whitespace-nowrap">
                                                 Client
                                             </th>
-                                            <th className="p-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                                            <th className="p-4 text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider whitespace-nowrap">
                                                 Date & Time
                                             </th>
-                                            <th className="p-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                                            <th className="p-4 text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider whitespace-nowrap">
                                                 Type
                                             </th>
-                                            <th className="p-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                                            <th className="p-4 text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider whitespace-nowrap">
                                                 Status
                                             </th>
                                         </tr>
@@ -335,13 +333,13 @@ export default function ConsultationsView() {
                                         {history.map((item) => (
                                             <tr
                                                 key={item.id}
-                                                className="hover:bg-slate-50 transition-colors"
+                                                className="hover:bg-[#F8FAFC] transition-colors"
                                             >
-                                                <td className="p-4 whitespace-nowrap font-medium text-gray-800">
+                                                <td className="p-4 whitespace-nowrap font-medium text-[#0F172A]">
                                                     {item.client}
                                                 </td>
 
-                                                <td className="p-4 whitespace-nowrap text-sm text-gray-600">
+                                                <td className="p-4 whitespace-nowrap text-sm text-[#64748B]">
                                                     {item.date}
                                                     <span className="mx-2 text-gray-300">|</span>
                                                     {item.time}
@@ -378,8 +376,8 @@ export default function ConsultationsView() {
                 )}
 
                 {/* Consultation */}
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-8">
-                    <h2 className="text-xl font-semibold text-gray-800 mb-6">
+                <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6 mb-8">
+                    <h2 className="text-xl font-semibold text-[#0F172A] mb-6">
                         Consultation
                     </h2>
 
@@ -389,13 +387,13 @@ export default function ConsultationsView() {
                             placeholder="Client Name"
                             value={clientName}
                             onChange={(e) => setClientName(e.target.value)}
-                            className="w-full border border-gray-300 rounded-xl p-3 text-black placeholder:text-gray-500"
+                            className="w-full border border-[#E2E8F0] rounded-xl p-3 text-black placeholder:text-[#64748B]"
                         />
 
                         <select
                             value={consultationType}
                             onChange={(e) => setConsultationType(e.target.value)}
-                            className="w-full border border-gray-300 rounded-xl p-3 text-black"
+                            className="w-full border border-[#E2E8F0] rounded-xl p-3 text-black"
                         >
                             <option>Consultation Type</option>
                             <option>Video Call</option>
@@ -407,20 +405,20 @@ export default function ConsultationsView() {
                             type="date"
                             value={consultationDate}
                             onChange={(e) => setConsultationDate(e.target.value)}
-                            className="w-full border border-gray-300 rounded-xl p-3 text-black"
+                            className="w-full border border-[#E2E8F0] rounded-xl p-3 text-black"
                         />
 
                         <input
                             type="time"
                             value={consultationTime}
                             onChange={(e) => setConsultationTime(e.target.value)}
-                            className="w-full border border-gray-300 rounded-xl p-3 text-black"
+                            className="w-full border border-[#E2E8F0] rounded-xl p-3 text-black"
                         />
                     </div>
 
                     <button
                         onClick={handleStartConsultation}
-                        className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl transition"
+                        className="mt-6 bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-6 py-3 rounded-xl transition"
                     >
                         Start Consultation
                     </button>
@@ -428,26 +426,26 @@ export default function ConsultationsView() {
 
                 {/* Statistics */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                        <p className="text-gray-500">Total Consultations</p>
+                    <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm">
+                        <p className="text-[#64748B]">Total Consultations</p>
 
-                        <h3 className="text-3xl font-bold mt-2 text-gray-800">
+                        <h3 className="text-3xl font-bold mt-2 text-[#0F172A]">
                             {totalConsultations}
                         </h3>
                     </div>
 
-                    <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                        <p className="text-gray-500">Video Calls</p>
+                    <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm">
+                        <p className="text-[#64748B]">Video Calls</p>
 
-                        <h3 className="text-3xl font-bold mt-2 text-gray-800">
+                        <h3 className="text-3xl font-bold mt-2 text-[#0F172A]">
                             {videoCalls}
                         </h3>
                     </div>
 
-                    <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                        <p className="text-gray-500">Chat Consultations</p>
+                    <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm">
+                        <p className="text-[#64748B]">Chat Consultations</p>
 
-                        <h3 className="text-3xl font-bold mt-2 text-gray-800">
+                        <h3 className="text-3xl font-bold mt-2 text-[#0F172A]">
                             {chatConsultations}
                         </h3>
                     </div>
@@ -460,12 +458,12 @@ export default function ConsultationsView() {
                                     ✅
                                 </div>
 
-                                <h2 className="text-2xl font-bold text-gray-800 mt-4">
+                                <h2 className="text-2xl font-bold text-[#0F172A] mt-4">
                                     Appointment Approved
                                 </h2>
 
                                 {selectedAppointment && (
-                                    <p className="text-gray-600 mt-3">
+                                    <p className="text-[#64748B] mt-3">
                                         Appointment request from{" "}
                                         <span className="font-semibold">
                                             {selectedAppointment.client}
@@ -479,7 +477,7 @@ export default function ConsultationsView() {
                                         setAppointments(prev => prev.map(app => app.id === selectedAppointment.id ? {...app, status: 'Approved'} : app));
                                         setShowAcceptModal(false);
                                     }}
-                                    className="mt-6 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl"
+                                    className="mt-6 px-6 py-3 bg-[#16A34A] hover:bg-[#15803d] text-white rounded-xl"
                                 >
                                     OK
                                 </button>
@@ -490,12 +488,12 @@ export default function ConsultationsView() {
                 {showDeclineModal && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
-                            <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                            <h2 className="text-2xl font-bold text-[#0F172A] mb-6">
                                 Reschedule Appointment
                             </h2>
 
                             {selectedAppointment && (
-                                <div className="mb-4 p-3 bg-slate-100 rounded-lg">
+                                <div className="mb-4 p-3 bg-[#F8FAFC] rounded-lg">
                                     <p className="font-medium">
                                         Client: {selectedAppointment.client}
                                     </p>
@@ -510,7 +508,7 @@ export default function ConsultationsView() {
 
                                     <input
                                         type="date"
-                                        className="w-full border border-gray-300 rounded-xl p-3 text-black"
+                                        className="w-full border border-[#E2E8F0] rounded-xl p-3 text-black"
                                     />
 
                                     <DatePicker
@@ -519,7 +517,7 @@ export default function ConsultationsView() {
                                         showTimeSelect
                                         timeIntervals={15}
                                         dateFormat="MMMM d, yyyy h:mm aa"
-                                        className="w-full border border-gray-300 rounded-xl p-3 text-black"
+                                        className="w-full border border-[#E2E8F0] rounded-xl p-3 text-black"
                                     />
 
                                 </div>
@@ -531,7 +529,7 @@ export default function ConsultationsView() {
                                     <textarea
                                         rows="4"
                                         placeholder="Enter reason for rescheduling..."
-                                        className="w-full border border-gray-300 rounded-xl p-3 text-black"
+                                        className="w-full border border-[#E2E8F0] rounded-xl p-3 text-black"
                                     />
                                 </div>
                             </div>
@@ -539,7 +537,7 @@ export default function ConsultationsView() {
                             <div className="flex justify-end gap-3 mt-6">
                                 <button
                                     onClick={() => setShowDeclineModal(false)}
-                                    className="px-5 py-2 bg-gray-300 text-gray-800 rounded-lg"
+                                    className="px-5 py-2 bg-gray-300 text-[#0F172A] rounded-lg"
                                 >
                                     Cancel
                                 </button>
@@ -560,7 +558,6 @@ export default function ConsultationsView() {
 
 
                 )}
-            </div>
         </div>
     );
 }
