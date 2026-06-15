@@ -1,9 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
+
 
 export default function AddCaseForm() {
   const [documents, setDocuments] = useState([]);
+  const router = useRouter();
 
   const [formData, setFormData] = useState({
     caseTitle: "",
@@ -148,15 +152,28 @@ const handleDocumentUpload = () => {
   return (
     <div className="w-full max-w-5xl mx-auto bg-white p-6 md:p-8 rounded-xl border border-[#E2E8F0] shadow-sm">
       {/* Title */}
-      <div className="border-b border-[#F1F5F9] pb-4 mb-6">
-        <h2 className="text-xl font-bold text-[#0F172A]">
-          Add New Case
-        </h2>
-        <p className="text-sm text-[#64748B] mt-1">
-          Create a new case file and upload initial documentation.
-        </p>
-      </div>
+      {/* Header */}
+<div className="flex items-center gap-4 mb-6">
 
+  <button
+    type="button"
+    onClick={() => router.push("/case-management")}
+    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100"
+  >
+    <ArrowLeft size={20} />
+  </button>
+
+  <div>
+    <h2 className="text-2xl font-bold">
+      Add New Case
+    </h2>
+
+    <p className="text-sm text-gray-500">
+      Create a new case file and upload initial documentation.
+    </p>
+  </div>
+
+</div>
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Case Information */}
         <div className="space-y-5">
@@ -473,4 +490,4 @@ const handleDocumentUpload = () => {
     </div>
   );
 }
-
+
