@@ -13,6 +13,12 @@ export default function Navbar() {
 
   const router = useRouter();
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setShowProfile(false);
+    router.push("/login");
+  };
+
   const notifications = [
     "🎂 Today is Rahul Sharma's Birthday",
     "📢 New Supreme Court Judgment Added",
@@ -102,14 +108,9 @@ export default function Navbar() {
                 My Profile
               </button>
 
-              <button
-                className="w-full text-left px-4 py-3 text-sm text-[#1E293B] hover:bg-[#F1F5F9] transition-colors duration-150"
-              >
-                Settings
-              </button>
-
               <div className="border-t border-[#F1F5F9]">
                 <button
+                  onClick={handleLogout}
                   className="w-full text-left px-4 py-3 text-sm text-[#DC2626] hover:bg-red-50 transition-colors duration-150"
                 >
                   Logout

@@ -53,7 +53,6 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         { name: "Consultations", path: "/consultations", icon: BookOpen },
         { name: "Finance Management", path: "/finance-management", icon: CreditCard },
         { name: "Calendar", path: "/calendar", icon: Calendar },
-        { name: "Notifications", path: "/senior-notifications", icon: Settings },
         { name: "Profile", path: "/profile-management", icon: Settings },
       ],
     },
