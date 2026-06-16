@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -18,6 +19,7 @@ import {
   FileText,
   Bookmark
 } from "lucide-react";
+import { format } from "date-fns";
 
 const WEEKDAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEKDAYS_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -168,6 +170,11 @@ export default function CalendarView() {
   const [showEventModal, setShowEventModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [selectedEventId, setSelectedEventId] = useState(null);
+  
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   // Search & Filter state for Agenda View
   const [searchQuery, setSearchQuery] = useState("");
@@ -482,7 +489,16 @@ export default function CalendarView() {
 
         <div className="flex justify-end">
           <button
-            onClick={() => { setEditingId(null); setEventForm({ title: "", date: format(selectedDate), time: "", category: "Hearing", note: "" }); setShowEventModal(true); }}
+            onClick={() => { setEditingId(null);  setEventForm({
+      title: "",
+      date: getDateString(selectedDate),
+      time: "",
+      type: "Civil",
+      caseNo: "",
+      court: "",
+      status: "Pending",
+      notes: "",
+    }); setShowEventModal(true); }}
             className="flex items-center gap-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-colors"
           >
             <Plus className="h-5 w-5" />
@@ -1478,16 +1494,29 @@ export default function CalendarView() {
         </div>
 
         {/* --- ADD / EDIT EVENT MODAL --- */}
-        {showEventModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+        {showEventModal && mounted && createPortal(
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fade-in"
+            onClick={() => setShowEventModal(false)}
+          >
             <div
               className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-[#E2E8F0] flex flex-col max-h-[90vh]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-4 mb-5">
-                <h2 className="text-xl md:text-2xl font-black text-[#0F172A]">
-                  {editingId ? "Edit Event details" : "Schedule New Event"}
-                </h2>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowEventModal(false)}
+                    className="p-1.5 hover:bg-slate-100 rounded-xl text-[#64748B] hover:text-[#0F172A] transition-colors flex items-center justify-center"
+                    title="Back"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <h2 className="text-xl md:text-2xl font-black text-[#0F172A]">
+                    {editingId ? "Edit Event details" : "Schedule New Event"}
+                  </h2>
+                </div>
                 <span className="text-[10px] font-bold uppercase px-3 py-1 bg-[#F8FAFC] text-[#64748B] rounded-full">
                   Advocate Log
                 </span>
@@ -1626,7 +1655,7 @@ export default function CalendarView() {
                     onClick={() => setShowEventModal(false)}
                     className="px-5 py-2.5 bg-[#F8FAFC] text-[#64748B] hover:bg-slate-200 rounded-xl font-bold text-sm transition"
                   >
-                    Cancel
+                    Back
                   </button>
                   <button
                     type="submit"
@@ -1638,7 +1667,8 @@ export default function CalendarView() {
 
               </form>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
   );
