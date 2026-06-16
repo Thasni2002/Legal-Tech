@@ -3,8 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
 from app.authapp.models import User
 from app.advocate.consultations.models import Consultation
+from app.advocate.finance_management.models import Invoice
 from app.authapp import router as auth_router
 from app.advocate.consultations import router as consultations_router
+from app.advocate.finance_management import router as finance_router
 
 app = FastAPI()
 
@@ -21,3 +23,4 @@ Base.metadata.create_all(bind=engine)
 
 app.include_router(auth_router)
 app.include_router(consultations_router)
+app.include_router(finance_router)
