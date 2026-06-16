@@ -1,0 +1,55 @@
+from pydantic import BaseModel
+from datetime import date as date_type, datetime
+from typing import Optional
+
+class ConsultationBase(BaseModel):
+    client_name: str
+    advocate_name: Optional[str] = None
+    date: date_type
+    time: str
+    type: str
+    issue: Optional[str] = None
+    fee: Optional[str] = "₹500"
+
+class ConsultationCreate(ConsultationBase):
+    client_id: Optional[int] = None
+    advocate_id: Optional[int] = None
+
+class ConsultationStart(BaseModel):
+    client_name: str
+    type: str
+    date: date_type
+    time: str
+
+class ConsultationReschedule(BaseModel):
+    date: date_type
+    time: str
+    reason: Optional[str] = None
+
+class ConsultationUpdateStatus(BaseModel):
+    status: str
+
+class ConsultationOut(BaseModel):
+    id: int
+    client_id: Optional[int]
+    client_name: str
+    advocate_id: Optional[int]
+    advocate_name: Optional[str]
+    date: date_type
+    time: str
+    type: str
+    issue: Optional[str]
+    fee: Optional[str]
+    status: str
+    duration: Optional[str]
+    summary: Optional[str]
+    reschedule_reason: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ConsultationStats(BaseModel):
+    total_consultations: int
+    video_calls: int
+    chat_consultations: int
