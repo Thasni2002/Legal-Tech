@@ -88,6 +88,8 @@ def update_consultation_status(db: Session, consultation_id: int, status: str):
     consultation = get_consultation_by_id(db, consultation_id)
     if not consultation:
         return None
+    if status == "Approved" and consultation.status == "Pending Client":
+        consultation.reschedule_reason = "Approved by client"
     consultation.status = status
     db.commit()
     db.refresh(consultation)

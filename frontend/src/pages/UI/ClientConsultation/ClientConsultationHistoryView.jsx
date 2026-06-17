@@ -20,13 +20,6 @@ export default function ClientConsultationHistoryView() {
   });
   const [successToast, setSuccessToast] = useState({ show: false, message: "" });
 
-  useEffect(() => {
-    setMounted(true);
-    const loggedIn = getLoggedInUser();
-    setUser(loggedIn);
-    fetchHistory(loggedIn);
-  }, []);
-
   const fetchHistory = async (currentUser) => {
     try {
       let url = "http://localhost:8000/consultations";
@@ -59,6 +52,13 @@ export default function ClientConsultationHistoryView() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    setMounted(true);
+    const loggedIn = getLoggedInUser();
+    setUser(loggedIn);
+    fetchHistory(loggedIn);
+  }, []);
 
   const triggerSuccess = (message) => {
     setSuccessToast({ show: true, message });
