@@ -1,10 +1,6 @@
 from pydantic import BaseModel
 
-class RegisterSchema(BaseModel):
-    username: str
-    email: str
-    password: str
-    role: str = "user"
+
 
 class LoginSchema(BaseModel):
     email: str
