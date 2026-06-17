@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
-from .schemas import RegisterSchema, LoginSchema, TokenSchema
+from .schemas import LoginSchema, TokenSchema
 from . import service
 
 router = APIRouter(tags=["Authentication"])
@@ -13,18 +13,10 @@ def get_db():
     finally:
         db.close()
 
-@router.post("/register")
-def register(user: RegisterSchema, db: Session = Depends(get_db)):
-    existing_user = service.get_user_by_email(db, user.email)
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email already exists")
-    
-    service.create_user(db, user)
-    return {"message": "User registered successfully"}
-
 @router.post("/login", response_model=TokenSchema)
 def login(user: LoginSchema, db: Session = Depends(get_db)):
     db_user = service.get_user_by_email(db, user.email)
+
     if not db_user:
         raise HTTPException(status_code=400, detail="Invalid email")
 
