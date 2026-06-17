@@ -2,6 +2,17 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from .models import Consultation
 from .schemas import ConsultationCreate, ConsultationReschedule, ConsultationStart
+from app.authapp.models import User
+
+def find_user_by_name(db: Session, name: str) -> Optional[User]:
+    if not name:
+        return None
+    # Lookup by exact username, email, or a partial match on username
+    return db.query(User).filter(
+        (User.username.ilike(name)) | 
+        (User.email.ilike(name)) |
+        (User.username.ilike(name.replace(" ", "")))
+    ).first()
 
 def get_consultations(
     db: Session,
@@ -11,7 +22,14 @@ def get_consultations(
 ):
     query = db.query(Consultation)
     if client_id is not None:
-        query = query.filter(Consultation.client_id == client_id)
+        user = db.query(User).filter(User.id == client_id).first()
+        if user:
+            query = query.filter(
+                (Consultation.client_id == client_id) | 
+                (Consultation.client_name.ilike(user.username))
+            )
+        else:
+            query = query.filter(Consultation.client_id == client_id)
     if advocate_id is not None:
         query = query.filter(Consultation.advocate_id == advocate_id)
     if status is not None:
@@ -22,10 +40,25 @@ def get_consultation_by_id(db: Session, consultation_id: int):
     return db.query(Consultation).filter(Consultation.id == consultation_id).first()
 
 def create_consultation(db: Session, data: ConsultationCreate):
+    # Lookup client and advocate if they are not provided but names are
+    client_id = data.client_id
+    if not client_id and data.client_name:
+        client = find_user_by_name(db, data.client_name)
+        if client:
+            client_id = client.id
+
+    advocate_id = data.advocate_id
+    if not advocate_id and data.advocate_name:
+        # Strip prefixes like "Adv. " when searching
+        clean_name = data.advocate_name.replace("Adv.", "").strip()
+        advocate = find_user_by_name(db, clean_name)
+        if advocate:
+            advocate_id = advocate.id
+
     new_consultation = Consultation(
-        client_id=data.client_id,
+        client_id=client_id,
         client_name=data.client_name,
-        advocate_id=data.advocate_id,
+        advocate_id=advocate_id,
         advocate_name=data.advocate_name,
         date=data.date,
         time=data.time,
@@ -61,19 +94,35 @@ def update_consultation_status(db: Session, consultation_id: int, status: str):
     return consultation
 
 def start_instant_consultation(db: Session, data: ConsultationStart, advocate_id: Optional[int] = None, advocate_name: Optional[str] = None):
+    # Lookup client ID by client_name
+    client_id = None
+    if data.client_name:
+        client = find_user_by_name(db, data.client_name)
+        if client:
+            client_id = client.id
+
     new_consultation = Consultation(
+        client_id=client_id,
         client_name=data.client_name,
         type=data.type,
         date=data.date,
         time=data.time,
         advocate_id=advocate_id,
         advocate_name=advocate_name,
-        status="Scheduled"
+        status=data.status if data.status else "Pending"
     )
     db.add(new_consultation)
     db.commit()
     db.refresh(new_consultation)
     return new_consultation
+
+def delete_consultation(db: Session, consultation_id: int) -> bool:
+    consultation = get_consultation_by_id(db, consultation_id)
+    if not consultation:
+        return False
+    db.delete(consultation)
+    db.commit()
+    return True
 
 def get_consultation_stats(db: Session, advocate_id: Optional[int] = None, client_id: Optional[int] = None):
     query = db.query(Consultation)

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { getLoggedInUser } from "@/utils/auth";
 import {
   Bell,
   ChevronDown,
@@ -10,8 +11,13 @@ import {
 export default function Navbar() {
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [user, setUser] = useState(null);
 
   const router = useRouter();
+
+  useEffect(() => {
+    setUser(getLoggedInUser());
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -83,12 +89,12 @@ export default function Navbar() {
             />
 
             <div className="text-left">
-              <h4 className="font-semibold text-sm text-[#0F172A]">
-                Adv. Rahul Sharma
+              <h4 className="font-semibold text-sm text-[#0F172A] capitalize">
+                {user ? user.username : "Guest User"}
               </h4>
 
               <p className="text-xs text-[#64748B]">
-                Senior Advocate
+                {user ? user.role : "Viewer"}
               </p>
             </div>
 

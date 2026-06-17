@@ -1,8 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
+from typing import Optional
+from jose import jwt
 from app.database import SessionLocal
 from .schemas import LoginSchema, TokenSchema
 from . import service
+from .service import SECRET_KEY, ALGORITHM
+from .models import User
 
 router = APIRouter(tags=["Authentication"])
 
@@ -26,7 +30,8 @@ def login(user: LoginSchema, db: Session = Depends(get_db)):
     token = service.create_token({
         "id": db_user.id,
         "email": db_user.email,
-        "role": db_user.role
+        "role": db_user.role,
+        "username": db_user.username
     })
 
     return {
