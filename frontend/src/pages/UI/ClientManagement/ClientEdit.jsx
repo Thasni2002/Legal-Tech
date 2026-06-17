@@ -41,7 +41,7 @@ export default function ClientEdit({ onSave, onCancel }) {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (
@@ -54,14 +54,34 @@ export default function ClientEdit({ onSave, onCancel }) {
       return;
     }
 
-    localStorage.setItem("clientData", JSON.stringify(formData));
+    try {
+      const payload = {
+        full_name: formData.fullName,
+        email: formData.email,
+        phone: formData.phone
+      };
 
-    alert("Client Updated Successfully");
+      const res = await fetch(`http://localhost:8000/clients/${formData.clientId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
-    if (onSave) {
-      onSave(formData);
-    } else {
-      router.push("/client-management");
+      if (res.ok) {
+        localStorage.setItem("clientData", JSON.stringify(formData));
+        alert("Client Updated Successfully");
+        if (onSave) {
+          onSave(formData);
+        } else {
+          router.push("/client-management");
+        }
+      } else {
+        const errorData = await res.json();
+        alert(`Failed to update client: ${errorData.detail || "Unknown error"}`);
+      }
+    } catch (err) {
+      console.error("Error updating client:", err);
+      alert("Error connecting to server");
     }
   };
 

@@ -1,6 +1,6 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Search,
@@ -16,56 +16,56 @@ import {
   Building,
   Users,
   Briefcase,
+  Plus
 } from "lucide-react";
-import ClientAdd from "./ClientAdd";
-import ClientEdit from "./ClientEdit";
 
 export default function ClientView() {
-  const [client, setClient] = useState(null);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [showEditForm, setShowEditForm] = useState(false);
+  const router = useRouter();
+  const [clients, setClients] = useState([]);
 
-  useEffect(() => {
-    const data = localStorage.getItem("clientData");
-    if (data) {
-      try {
-        setClient(JSON.parse(data));
-      } catch (err) {
-        console.error("Failed to parse client data:", err);
+  const fetchClients = async () => {
+    try {
+      const res = await fetch("http://localhost:8000/clients");
+      if (res.ok) {
+        const data = await res.json();
+        // Map backend client schema (client_id, full_name, email, phone) to view expected names if needed
+        const mapped = data.map(c => ({
+          clientId: c.client_id,
+          clientName: c.full_name,
+          contactNumber: c.phone,
+          emailId: c.email,
+          activeCases: 1,
+          courtName: "District Court",
+          status: "Active"
+        }));
+        setClients(mapped);
       }
-    }
-  }, []);
-
-  const handleRemoveClient = () => {
-    if (confirm("Are you sure you want to remove this client? All details will be deleted.")) {
-      localStorage.removeItem("clientData");
-      setClient(null);
+    } catch (err) {
+      console.error("Failed to fetch clients from backend:", err);
     }
   };
 
-  if (showAddForm) {
-    return (
-      <ClientAdd
-        onSave={(newClient) => {
-          setClient(newClient);
-          setShowAddForm(false);
-        }}
-        onCancel={() => setShowAddForm(false)}
-      />
-    );
-  }
+  useEffect(() => {
+    fetchClients();
+  }, []);
 
-  if (showEditForm) {
-    return (
-      <ClientEdit
-        onSave={(updatedClient) => {
-          setClient(updatedClient);
-          setShowEditForm(false);
-        }}
-        onCancel={() => setShowEditForm(false)}
-      />
-    );
-  }
+  const handleDelete = async (clientId) => {
+    if (!window.confirm("Are you sure you want to delete this client?")) {
+      return;
+    }
+    try {
+      const res = await fetch(`http://localhost:8000/clients/${clientId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        fetchClients();
+      } else {
+        alert("Failed to delete client");
+      }
+    } catch (err) {
+      console.error("Error deleting client:", err);
+    }
+  };
 
   return (
     <div className="w-full space-y-6 md:space-y-8">
@@ -80,13 +80,13 @@ export default function ClientView() {
       </div>
 
       {/* Top Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <TopCard
-          title="Add / Manage Client"
-          desc="Add new client or manage existing clients"
-          button="Add / Manage Client"
-          color="bg-[#2563EB] hover:bg-[#1d4ed8]"
-          link="/client-management/client-add"
+          title="Add Client"
+          desc="Register a new client profile"
+          button="Add Client"
+          color="bg-[#16A34A] hover:bg-[#15803d]"
+          link="/client-management/add-client"
         />
 
         <TopCard
@@ -112,45 +112,88 @@ export default function ClientView() {
           <h2 className="font-bold text-lg text-[#0F172A]">Client Overview</h2>
         </div>
 
-        {client ? (
+        {clients .length > 0? (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-[#E2E8F0] text-xs font-semibold text-[#64748B] uppercase tracking-wider">
-                  <th className="pb-3 font-medium">Client ID</th>
-                  <th className="pb-3 font-medium">Name</th>
-                  <th className="pb-3 font-medium">Phone</th>
-                  <th className="pb-3 font-medium">Email</th>
-                  <th className="pb-3 font-medium text-center">Actions</th>
+                <tr className="border-b border-[#E2E8F0] text-xs font-semibold text-[#64748B] uppercase">
+                  <th className="pb-3">Client ID</th>
+                  <th className="pb-3">Client Name</th>
+                  <th className="pb-3">Phone</th>
+                  <th className="pb-3">Email</th>
+                  <th className="pb-3">Cases</th>
+                  <th className="pb-3">Court</th>
+                  <th className="pb-3">Status</th>
+                  <th className="pb-3 text-right">Actions</th>
                 </tr>
               </thead>
-
               <tbody className="divide-y divide-[#F1F5F9]">
-                <tr className="hover:bg-[#F8FAFC] transition-colors duration-150">
-                  <td className="py-4 text-sm font-medium text-[#1E293B]">{client.clientId}</td>
-                  <td className="py-4 text-sm text-[#1E293B] font-medium">{client.fullName}</td>
-                  <td className="py-4 text-sm text-[#64748B]">{client.phone}</td>
-                  <td className="py-4 text-sm text-[#64748B]">{client.email}</td>
-
-                  <td className="py-4">
-                    <div className="flex justify-center gap-2">
-                      <button
-                        onClick={() => setShowEditForm(true)}
-                        className="px-3.5 py-1.5 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-lg text-xs font-semibold shadow-sm transition-colors duration-200 cursor-pointer"
+                {clients.map((client) => (
+                  <tr
+                    key={client.clientId}
+                    className="hover:bg-[#F8FAFC]"
+                  >
+                    <td className="py-4">{client.clientId}</td>
+                    <td className="py-4 font-semibold text-[#0F172A]">{client.clientName}</td>
+                    <td className="py-4">{client.contactNumber}</td>
+                    <td className="py-4">{client.emailId}</td>
+                    <td className="py-4">{client.activeCases}</td>
+                    <td className="py-4">{client.courtName}</td>
+                    <td className="py-4">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${
+                          client.status === "Active"
+                            ? "bg-green-100 text-green-700"
+                            : client.status === "Pending"
+                            ? "bg-yellow-100 text-yellow-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
                       >
-                        Edit
-                      </button>
-
-                      <button
-                        onClick={handleRemoveClient}
-                        className="px-3.5 py-1.5 bg-[#DC2626]/90 hover:bg-[#DC2626] text-white rounded-lg text-xs font-semibold shadow-sm transition-colors duration-200 cursor-pointer"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                        {client.status}
+                      </span>
+                    </td>
+                    <td className="py-4 text-right">
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={() => {
+                            localStorage.setItem("clientData", JSON.stringify({
+                              clientId: client.clientId,
+                              fullName: client.clientName,
+                              email: client.emailId,
+                              phone: client.contactNumber
+                            }));
+                            router.push("/client-management/view-history");
+                          }}
+                          className="px-2.5 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-xs font-semibold cursor-pointer transition"
+                        >
+                          History
+                        </button>
+                        <button
+                          onClick={() => {
+                            localStorage.setItem("clientData", JSON.stringify({
+                              clientId: client.clientId,
+                              fullName: client.clientName,
+                              email: client.emailId,
+                              phone: client.contactNumber
+                            }));
+                            router.push("/client-management/edit-client");
+                          }}
+                          className="px-2.5 py-1 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded text-xs font-semibold cursor-pointer transition"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(client.clientId)}
+                          className="px-2.5 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs font-semibold cursor-pointer transition"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
+           
             </table>
           </div>
         ) : (
@@ -167,12 +210,7 @@ export default function ClientView() {
               No client details have been recorded yet.
             </p>
 
-            <Link
-              href="/client-management/client-add"
-              className="inline-flex px-5 py-2.5 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-lg font-semibold text-sm shadow-sm transition-colors duration-200 cursor-pointer"
-            >
-              Add Client Profile
-            </Link>
+            
           </div>
         )}
       </div>

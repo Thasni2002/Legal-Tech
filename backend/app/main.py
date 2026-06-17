@@ -5,9 +5,11 @@ from app.authapp.models import User
 from app.authapp.seed import create_default_user   # import seed
 from app.advocate.consultations.models import Consultation
 from app.advocate.finance_management.models import Invoice
+from app.advocate.client_management.routes import router as client_router
 from app.authapp import router as auth_router
 from app.advocate.consultations import router as consultations_router
 from app.advocate.finance_management import router as finance_router
+from app.advocate.client_management import router as client_router
 
 app = FastAPI()
 
@@ -34,3 +36,4 @@ def startup():
 app.include_router(auth_router)
 app.include_router(consultations_router)
 app.include_router(finance_router)
+app.include_router(client_router)

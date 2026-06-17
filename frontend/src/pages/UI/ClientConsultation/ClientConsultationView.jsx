@@ -302,8 +302,10 @@ export default function ClientConsultationView() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-[#F8FAFC]">
+                <th className="p-3 font-semibold text-[#0F172A]">Client Name</th>
                 <th className="p-3 font-semibold text-[#0F172A]">Advocate</th>
-                <th className="p-3 font-semibold text-[#0F172A]">Date & Time</th>
+                <th className="p-3 font-semibold text-[#0F172A]">Date</th>
+                <th className="p-3 font-semibold text-[#0F172A]">Time</th>
                 <th className="p-3 font-semibold text-[#0F172A]">Type</th>
                 <th className="p-3 font-semibold text-[#0F172A]">Fee</th>
                 <th className="p-3 font-semibold text-[#0F172A]">Status</th>
@@ -313,19 +315,17 @@ export default function ClientConsultationView() {
             <tbody>
               {appointments.filter(item => item.status === "Pending Client").length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="p-4 text-center text-slate-500">
+                  <td colSpan="8" className="p-4 text-center text-slate-500">
                     No pending consultation requests.
                   </td>
                 </tr>
               ) : (
                 appointments.filter(item => item.status === "Pending Client").map((item) => (
                   <tr key={item.id} className="border-b hover:bg-[#F8FAFC] transition-colors duration-150">
-                    <td className="p-3 font-medium text-[#1E293B] capitalize">{item.advocate_name || item.advocate}</td>
-                    <td className="p-3 text-sm text-[#64748B]">
-                      {item.date}
-                      <br />
-                      {item.time}
-                    </td>
+                    <td className="p-3 font-medium text-[#1E293B] capitalize">{item.client_name || item.client}</td>
+                    <td className="p-3 text-sm text-[#64748B] capitalize">{item.advocate_name || item.advocate}</td>
+                    <td className="p-3 text-sm text-[#64748B]">{item.date}</td>
+                    <td className="p-3 text-sm text-[#64748B]">{item.time}</td>
                     <td className="p-3 text-sm text-[#64748B]">{item.type}</td>
                     <td className="p-3 text-sm text-[#16A34A] font-semibold">{item.fee || "₹500"}</td>
                     <td className="p-3 text-sm">

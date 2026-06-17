@@ -154,6 +154,7 @@ export default function ClientConsultationHistoryView() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-[#F8FAFC]">
+                <th className="p-4 font-semibold text-[#0F172A]">Client</th>
                 <th className="p-4 font-semibold text-[#0F172A]">Date</th>
                 <th className="p-4 font-semibold text-[#0F172A]">Time</th>
                 <th className="p-4 font-semibold text-[#0F172A]">Advocate</th>
@@ -168,22 +169,23 @@ export default function ClientConsultationHistoryView() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="9" className="p-8 text-center text-slate-500">
+                  <td colSpan="10" className="p-8 text-center text-slate-500">
                     Loading history...
                   </td>
                 </tr>
               ) : history.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="p-8 text-center text-slate-500">
+                  <td colSpan="10" className="p-8 text-center text-slate-500">
                     No previous consultations found.
                   </td>
                 </tr>
               ) : (
                 history.map((item) => (
                   <tr key={item.id} className="border-b hover:bg-[#F8FAFC] transition-colors duration-150">
+                    <td className="p-4 text-sm text-[#1E293B] font-medium capitalize">{item.client_name || item.client}</td>
                     <td className="p-4 text-sm text-[#1E293B] font-medium">{item.date}</td>
                     <td className="p-4 text-sm text-[#64748B]">{item.time || "N/A"}</td>
-                    <td className="p-4 text-sm text-[#1E293B] font-medium">{item.advocate_name || item.advocate}</td>
+                    <td className="p-4 text-sm text-[#1E293B] font-medium capitalize">{item.advocate_name || item.advocate}</td>
                     <td className="p-4 text-sm text-[#64748B]">{item.type}</td>
                     <td className="p-4 text-sm text-[#64748B]">{item.duration || "30 mins"}</td>
                     <td className="p-4 text-sm text-[#16A34A] font-semibold">{item.fee || "₹500"}</td>

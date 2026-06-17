@@ -3,10 +3,11 @@ import ClientSlugClient from "./ClientSlugClient";
 
 export function generateStaticParams() {
   return [
-    { slug: "client-add" },
+   
     { slug: "case-tracking" },
-    { slug: "edit-client" },
+   
     { slug: "view-history" },
+    
   
   ];
 }
