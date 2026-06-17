@@ -57,3 +57,10 @@ def get_stats(
     db: Session = Depends(get_db)
 ):
     return service.get_consultation_stats(db, advocate_id=advocate_id, client_id=client_id)
+
+@router.delete("/{consultation_id}", status_code=204)
+def delete_consultation(consultation_id: int, db: Session = Depends(get_db)):
+    success = service.delete_consultation(db, consultation_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Consultation not found")
+    return

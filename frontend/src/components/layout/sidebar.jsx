@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { getLoggedInUser } from "@/utils/auth";
 import {
   Home,
   Scale,
@@ -33,8 +34,11 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
   const [userRolesOpen, setUserRolesOpen] = useState(() =>
     pathname?.startsWith("/permissions") || false
   );
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
+    const loggedIn = getLoggedInUser();
+    setUser(loggedIn);
     setIsOpen(false);
     if (pathname?.startsWith("/permissions")) {
       setUserRolesOpen(true);
@@ -238,8 +242,12 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
             />
             {!isCollapsed && (
               <div className="ml-3 text-left">
-                <h4 className="font-semibold text-sm text-[#0F172A]">Adv. Rahul Sharma</h4>
-                <p className="text-xs text-[#64748B]">Senior Advocate</p>
+                <h4 className="font-semibold text-sm text-[#0F172A] capitalize">
+                  {user ? user.username : "Guest User"}
+                </h4>
+                <p className="text-xs text-[#64748B]">
+                  {user ? user.role : "Viewer"}
+                </p>
               </div>
             )}
           </div>

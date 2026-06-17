@@ -20,6 +20,7 @@ class ConsultationStart(BaseModel):
     type: str
     date: date_type
     time: str
+    status: Optional[str] = "Pending"
 
 class ConsultationReschedule(BaseModel):
     date: date_type
