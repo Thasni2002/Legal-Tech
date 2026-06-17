@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, History } from "lucide-react";
+import { History } from "lucide-react";
 import jsPDF from "jspdf";
 import InvoiceHistoryView from "./InvoiceHistoryView";
 
 export default function CourtFeeCalView() {
   const [savedCalculations, setSavedCalculations] = useState([]);
-  
+
   // Dynamic list of invoices and stats from the backend
   const [invoices, setInvoices] = useState([]);
   const [stats, setStats] = useState({
@@ -50,8 +50,8 @@ export default function CourtFeeCalView() {
 
 
   const [searchTerm, setSearchTerm] = useState("");
-const [filteredClients, setFilteredClients] = useState([]);
-const [showDropdown, setShowDropdown] = useState(false);
+  const [filteredClients, setFilteredClients] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const total =
     Number(courtFee || 0) +
@@ -85,12 +85,12 @@ const [showDropdown, setShowDropdown] = useState(false);
   useEffect(() => {
     fetchInvoicesAndStats();
   }, []);
-
   const handleGenerateInvoice = async () => {
     if (!clientName) {
       alert("Please select a client first.");
       return;
     }
+
     try {
       const payload = {
         client_name: clientName,
@@ -109,7 +109,7 @@ const [showDropdown, setShowDropdown] = useState(false);
         filing_cost_pages: Number(filingCostPages || 0),
         filing_cost_amount: Number(filingCost || 0),
         filing_cost_notes: filingCostNotes || "N/A",
-        status: "Pending"
+        status: "Sent"
       };
 
       const res = await fetch("http://localhost:8000/finance/invoices", {
@@ -121,8 +121,9 @@ const [showDropdown, setShowDropdown] = useState(false);
       });
 
       if (res.ok) {
-        alert("Invoice generated and saved successfully!");
-        // Clear all inputs after save
+        alert(`Invoice generated and sent successfully to ${clientName}!`);
+
+        // Clear all inputs
         setCourtFeeCaseType("");
         setCourtFee("");
         setCourtFeeJurisdiction("");
@@ -139,36 +140,37 @@ const [showDropdown, setShowDropdown] = useState(false);
         setCaseNumber("");
         setMobileNumber("");
         setEmail("");
-        
-        // Refresh data
+        setSearchTerm("");
+
         fetchInvoicesAndStats();
       } else {
-        alert("Failed to generate invoice. Please check the backend connection.");
+        alert("Failed to generate invoice.");
       }
     } catch (error) {
       console.error("Error generating invoice:", error);
-      alert("Error generating invoice. Is the backend running?");
+      alert("Error generating invoice.");
     }
   };
-const handleClientSearch = (value) => {
-  setSearchTerm(value);
-  setClientName(value);
 
-  if (value.trim() === "") {
-    setFilteredClients([]);
-    setShowDropdown(false);
-    setEmail("");
-    setMobileNumber("");
-    return;
-  }
+  const handleClientSearch = (value) => {
+    setSearchTerm(value);
+    setClientName(value);
 
-  const filtered = clients.filter((client) =>
-    client.name.toLowerCase().includes(value.toLowerCase())
-  );
+    if (value.trim() === "") {
+      setFilteredClients([]);
+      setShowDropdown(false);
+      setEmail("");
+      setMobileNumber("");
+      return;
+    }
 
-  setFilteredClients(filtered);
-  setShowDropdown(true);
-};
+    const filtered = clients.filter((client) =>
+      client.name.toLowerCase().includes(value.toLowerCase())
+    );
+
+    setFilteredClients(filtered);
+    setShowDropdown(true);
+  };
   const handleUpdateStatus = async (invoiceId, newStatus) => {
     try {
       const res = await fetch(`http://localhost:8000/finance/invoices/${invoiceId}/status`, {
@@ -394,8 +396,8 @@ const handleClientSearch = (value) => {
     const statusColor = inv.status.toLowerCase() === "paid"
       ? [22, 163, 74]
       : inv.status.toLowerCase() === "overdue"
-      ? [220, 38, 38]
-      : [217, 119, 6];
+        ? [220, 38, 38]
+        : [217, 119, 6];
     doc.setFillColor(...statusColor);
     doc.roundedRect(130, y - 4, 50, 7, 2, 2, "F");
     doc.setTextColor(255, 255, 255);
@@ -412,53 +414,8 @@ const handleClientSearch = (value) => {
     doc.save(`Invoice_${inv.id}_${inv.client_name || "Record"}.pdf`);
   };
 
-  const handleSendToClient = async () => {
-    if (!clientName) {
-      alert("Please select a client first.");
-      return;
-    }
-    try {
-      const payload = {
-        client_name: clientName,
-        case_number: caseNumber,
-        mobile_number: mobileNumber,
-        email: email,
-        court_fee_case_type: courtFeeCaseType || "N/A",
-        court_fee_amount: Number(courtFee || 0),
-        court_fee_jurisdiction: courtFeeJurisdiction || "N/A",
-        stamp_duty_doc_type: stampDutyDocType || "N/A",
-        stamp_duty_amount: Number(stampDuty || 0),
-        stamp_duty_state: stampDutyState || "N/A",
-        advocate_fee_case_type: advocateFeeCaseType || "N/A",
-        advocate_fee_amount: Number(advocateFee || 0),
-        advocate_fee_remarks: advocateFeeRemarks || "N/A",
-        filing_cost_pages: Number(filingCostPages || 0),
-        filing_cost_amount: Number(filingCost || 0),
-        filing_cost_notes: filingCostNotes || "N/A",
-        status: "Sent"
-      };
 
-      const res = await fetch("http://localhost:8000/finance/invoices", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-      });
 
-      if (res.ok) {
-        alert(`Invoice details generated and sent to client ${clientName} at ${email}!`);
-        
-        // Refresh data
-        fetchInvoicesAndStats();
-      } else {
-        alert("Failed to send invoice to client.");
-      }
-    } catch (error) {
-      console.error("Error sending invoice:", error);
-      alert("Error sending invoice. Is the backend running?");
-    }
-  };
 
   if (isHistoryOpen) {
     return (
@@ -524,74 +481,74 @@ const handleClientSearch = (value) => {
         </div>
       </div>
 
-{/* Client Details */}
-<div className="bg-white border border-[#E2E8F0] rounded-xl p-5">
-  <h3 className="font-bold text-lg mb-4">
-    Client Details
-  </h3>
+      {/* Client Details */}
+      <div className="bg-white border border-[#E2E8F0] rounded-xl p-5">
+        <h3 className="font-bold text-lg mb-4">
+          Client Details
+        </h3>
 
-  <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
 
-    {/* Searchable Client Input */}
-    <div className="relative">
-      <input
-        type="text"
-        placeholder="Type Client Name"
-        value={searchTerm}
-        onChange={(e) => handleClientSearch(e.target.value)}
-        className="w-full border border-[#E2E8F0] rounded-lg p-2"
-      />
+          {/* Searchable Client Input */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Type Client Name"
+              value={searchTerm}
+              onChange={(e) => handleClientSearch(e.target.value)}
+              className="w-full border border-[#E2E8F0] rounded-lg p-2"
+            />
 
-      {showDropdown && filteredClients.length > 0 && (
-        <div className="absolute w-full bg-white border border-[#E2E8F0] rounded-lg mt-1 max-h-48 overflow-y-auto z-50 shadow-md">
-          {filteredClients.map((client) => (
-            <div
-              key={client.id}
-              onClick={() => {
-                setClientName(client.name);
-                setSearchTerm(client.name);
-                setEmail(client.email);
-                setMobileNumber(client.mobile || "");
-                setCaseNumber("");
-                setShowDropdown(false);
-              }}
-              className="p-2 cursor-pointer hover:bg-gray-100"
-            >
-              {client.name}
-            </div>
-          ))}
+            {showDropdown && filteredClients.length > 0 && (
+              <div className="absolute w-full bg-white border border-[#E2E8F0] rounded-lg mt-1 max-h-48 overflow-y-auto z-50 shadow-md">
+                {filteredClients.map((client) => (
+                  <div
+                    key={client.id}
+                    onClick={() => {
+                      setClientName(client.name);
+                      setSearchTerm(client.name);
+                      setEmail(client.email);
+                      setMobileNumber(client.mobile || "");
+                      setCaseNumber("");
+                      setShowDropdown(false);
+                    }}
+                    className="p-2 cursor-pointer hover:bg-gray-100"
+                  >
+                    {client.name}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Case Number */}
+          <input
+            type="text"
+            placeholder="Case Number"
+            value={caseNumber}
+            onChange={(e) => setCaseNumber(e.target.value)}
+            className="border border-[#E2E8F0] rounded-lg p-2"
+          />
+
+          {/* Mobile Number */}
+          <input
+            type="text"
+            placeholder="Mobile Number"
+            value={mobileNumber}
+            onChange={(e) => setMobileNumber(e.target.value)}
+            className="border border-[#E2E8F0] rounded-lg p-2"
+          />
+
+          {/* Email */}
+          <input
+            type="email"
+            placeholder="Email Address"
+            value={email}
+            readOnly
+            className="border border-[#E2E8F0] rounded-lg p-2 bg-[#F1F5F9] text-[#64748B]"
+          />
         </div>
-      )}
-    </div>
-
-    {/* Case Number */}
-    <input
-      type="text"
-      placeholder="Case Number"
-      value={caseNumber}
-      onChange={(e) => setCaseNumber(e.target.value)}
-      className="border border-[#E2E8F0] rounded-lg p-2"
-    />
-
-    {/* Mobile Number */}
-    <input
-      type="text"
-      placeholder="Mobile Number"
-      value={mobileNumber}
-      onChange={(e) => setMobileNumber(e.target.value)}
-      className="border border-[#E2E8F0] rounded-lg p-2"
-    />
-
-    {/* Email */}
-    <input
-      type="email"
-      placeholder="Email Address"
-      value={email}
-      readOnly
-      className="border border-[#E2E8F0] rounded-lg p-2 bg-[#F1F5F9] text-[#64748B]"
-    />
-  </div>
-</div>
+      </div>
 
       {/* Calculator Forms */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -624,13 +581,21 @@ const handleClientSearch = (value) => {
               className="w-full border border-[#E2E8F0] rounded-lg p-2 text-sm"
             />
 
-            <input
-              type="text"
-              placeholder="Court Jurisdiction"
+            <select
               value={courtFeeJurisdiction}
               onChange={(e) => setCourtFeeJurisdiction(e.target.value)}
               className="w-full border border-[#E2E8F0] rounded-lg p-2 text-sm"
-            />
+            >
+              <option value="">Select Court Jurisdiction</option>
+              <option value="District Court">District Court</option>
+              <option value="High Court">High Court</option>
+              <option value="Supreme Court">Supreme Court</option>
+              <option value="Family Court">Family Court</option>
+              <option value="Consumer Court">Consumer Court</option>
+              <option value="Sessions Court">Sessions Court</option>
+              <option value="Labour Court">Labour Court</option>
+              <option value="Tribunal">Tribunal</option>
+            </select>
           </div>
 
           <div className="mt-4 font-bold text-[#2563EB]">
@@ -849,20 +814,12 @@ const handleClientSearch = (value) => {
             ).toFixed(2)}
           </span>
         </div>
-
         <div className="mt-6 flex flex-wrap gap-3 justify-end">
           <button
             onClick={handleGenerateInvoice}
             className="px-4 py-2 bg-[#16A34A] text-white rounded-lg hover:bg-[#15803d] transition-colors"
           >
             Generate Invoice
-          </button>
-
-          <button
-            onClick={handleSendToClient}
-            className="px-4 py-2 bg-[#D97706] text-white rounded-lg hover:bg-[#b45309] transition-colors"
-          >
-            Send To Client
           </button>
         </div>
       </div>
@@ -889,5 +846,6 @@ const handleClientSearch = (value) => {
         </div>
       </div>
     </div>
+
   );
 }
