@@ -24,14 +24,7 @@ export default function ConsultationsView() {
     const [appointments, setAppointments] = useState([]);
     const [user, setUser] = useState(null);
     const [mounted, setMounted] = useState(false);
-
-    // Fetch user and consultations on mount
-    useEffect(() => {
-        setMounted(true);
-        const loggedIn = getLoggedInUser();
-        setUser(loggedIn);
-        fetchConsultations(loggedIn);
-    }, []);
+    const [dismissedNotifications, setDismissedNotifications] = useState([]);
 
     const fetchConsultations = async (currentUser) => {
         try {
@@ -58,9 +51,9 @@ export default function ConsultationsView() {
                     item.status === "Pending"
                 );
 
-                // History: Approved or Rescheduled
+                // History: Approved, Rescheduled, or Pending Client
                 const hist = mappedData.filter(item =>
-                    item.status === "Approved" || item.status === "Rescheduled"
+                    item.status === "Approved" || item.status === "Rescheduled" || item.status === "Pending Client"
                 );
 
                 setAppointments(appts);
@@ -70,6 +63,22 @@ export default function ConsultationsView() {
             console.error("Failed to fetch consultations:", err);
         }
     };
+
+    const handleDismissNotification = (id) => {
+        const updated = [...dismissedNotifications, id];
+        setDismissedNotifications(updated);
+        localStorage.setItem("dismissed_consultation_notifications", JSON.stringify(updated));
+    };
+
+    // Fetch user and consultations on mount
+    useEffect(() => {
+        setMounted(true);
+        const loggedIn = getLoggedInUser();
+        setUser(loggedIn);
+        fetchConsultations(loggedIn);
+        const dismissed = JSON.parse(localStorage.getItem("dismissed_consultation_notifications") || "[]");
+        setDismissedNotifications(dismissed);
+    }, []);
 
     const formatDateString = (dateStr) => {
         if (!dateStr) return "";
@@ -120,7 +129,7 @@ export default function ConsultationsView() {
             type: consultationType,
             date: consultationDate,
             time: consultationTime,
-            status: "Approved"
+            status: "Pending Client"
         };
 
         try {
@@ -190,6 +199,58 @@ export default function ConsultationsView() {
                     Schedule and manage client consultations
                 </p>
             </div>
+
+            {/* Notifications */}
+            {mounted && history.filter(item => {
+                if (dismissedNotifications.includes(item.id)) return false;
+                const isApprovedByClient = item.status === "Approved" && item.reschedule_reason === "Approved by client";
+                const isRescheduledByClient = item.status === "Rescheduled" && item.reschedule_reason?.includes("client");
+                return isApprovedByClient || isRescheduledByClient;
+            }).length > 0 && (
+                <div className="space-y-3 mb-6">
+                    {history.filter(item => {
+                        if (dismissedNotifications.includes(item.id)) return false;
+                        const isApprovedByClient = item.status === "Approved" && item.reschedule_reason === "Approved by client";
+                        const isRescheduledByClient = item.status === "Rescheduled" && item.reschedule_reason?.includes("client");
+                        return isApprovedByClient || isRescheduledByClient;
+                    }).map(item => {
+                        const isApproved = item.status === "Approved";
+                        return (
+                            <div
+                                key={item.id}
+                                className={`flex items-start justify-between p-4 rounded-xl border transition-all duration-300 ${
+                                    isApproved 
+                                        ? "bg-emerald-50 border-emerald-200 text-emerald-900" 
+                                        : "bg-amber-50 border-amber-200 text-amber-900"
+                                }`}
+                            >
+                                <div className="flex gap-3 items-center">
+                                    <span className="text-xl">{isApproved ? "✅" : "🗓️"}</span>
+                                    <div>
+                                        <p className="font-semibold text-sm">
+                                            {isApproved 
+                                                ? `Client ${item.client} approved your consultation request` 
+                                                : `Client ${item.client} rescheduled the consultation`}
+                                        </p>
+                                        <p className="text-xs mt-0.5 opacity-90">
+                                            Scheduled for: <span className="font-medium">{formatDateString(item.date)}</span> at <span className="font-medium">{formatTimeString(item.time)}</span> ({item.type})
+                                            {!isApproved && item.reschedule_reason && (
+                                                <span className="block mt-1 font-medium italic">Reason: {item.reschedule_reason}</span>
+                                            )}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => handleDismissNotification(item.id)}
+                                    className="text-gray-400 hover:text-gray-700 font-bold ml-4 text-sm leading-none focus:outline-none cursor-pointer"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
 
             {/* Top Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
@@ -361,6 +422,8 @@ export default function ConsultationsView() {
                                                         ? "bg-green-50 text-green-700 border border-green-200"
                                                         : item.status === "Rescheduled"
                                                         ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                                        : item.status === "Pending Client"
+                                                        ? "bg-purple-50 text-purple-700 border border-purple-200"
                                                         : "bg-indigo-50 text-indigo-700 border border-indigo-200"
                                                 }`}>
                                                     {item.status}

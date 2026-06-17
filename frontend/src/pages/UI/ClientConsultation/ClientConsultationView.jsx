@@ -41,20 +41,6 @@ export default function ClientConsultationView() {
   const [rescheduleId, setRescheduleId] = useState(null);
   const [successToast, setSuccessToast] = useState({ show: false, message: "" });
 
-  // Load user details on mount and fetch consultations
-  useEffect(() => {
-    setMounted(true);
-    const loggedIn = getLoggedInUser();
-    setUser(loggedIn);
-    if (loggedIn) {
-      setFormData((prev) => ({
-        ...prev,
-        name: loggedIn.username,
-      }));
-    }
-    fetchConsultations(loggedIn);
-  }, []);
-
   const fetchConsultations = async (currentUser) => {
     try {
       let url = "http://localhost:8000/consultations";
@@ -71,13 +57,14 @@ export default function ClientConsultationView() {
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        // Separate appointments (upcoming: Pending, Approved, Rescheduled, Scheduled) and history
+        // Separate appointments (upcoming: Pending, Approved, Rescheduled, Scheduled, Pending Client) and history
         const upcoming = data.filter(
           (item) =>
             item.status === "Pending" ||
             item.status === "Approved" ||
             item.status === "Rescheduled" ||
-            item.status === "Scheduled"
+            item.status === "Scheduled" ||
+            item.status === "Pending Client"
         );
         const hist = data.filter(
           (item) =>
@@ -94,6 +81,20 @@ export default function ClientConsultationView() {
       console.error("Failed to fetch consultations:", err);
     }
   };
+
+  // Load user details on mount and fetch consultations
+  useEffect(() => {
+    setMounted(true);
+    const loggedIn = getLoggedInUser();
+    setUser(loggedIn);
+    if (loggedIn) {
+      setFormData((prev) => ({
+        ...prev,
+        name: loggedIn.username,
+      }));
+    }
+    fetchConsultations(loggedIn);
+  }, []);
 
   const triggerSuccess = (message) => {
     setSuccessToast({ show: true, message });
@@ -249,102 +250,165 @@ export default function ClientConsultationView() {
       </div>
 
       {/* Top Section */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left Side */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Cards */}
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-2xl border p-6">
-              <h2 className="text-2xl font-semibold text-[#0F172A]">Book Appointment</h2>
-              <p className="text-[#64748B] mt-3">Choose a date and time to meet your advocate.</p>
-              <button
-                onClick={() => {
-                  setRescheduleId(null);
-                  setFormData({
-                    name: user ? user.username : "",
-                    advocate: "",
-                    date: "",
-                    time: "",
-                    type: "",
-                  });
-                  setShowModal(true);
-                }}
-                className="mt-6 bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-6 py-3 rounded-xl"
-              >
-                Book Appointment
-              </button>
-            </div>
-
-            <div className="bg-white rounded-2xl border p-6">
-              <h2 className="text-2xl font-semibold text-[#0F172A]">Video Consultation</h2>
-              <p className="text-[#64748B] mt-3">Join a video consultation with your advocate.</p>
-              <button className="mt-6 bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-6 py-3 rounded-xl">
-                Join Consultation
-              </button>
-            </div>
-          </div>
-
-          {/* Upcoming Hearings */}
-          <div className="bg-white rounded-2xl border p-6">
-            <h2 className="text-xl font-semibold mb-6">Upcoming Hearings</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-[#F8FAFC]">
-                    <th className="p-3 text-left">Case No</th>
-                    <th className="p-3 text-left">Type</th>
-                    <th className="p-3 text-left">Next Hearing</th>
-                    <th className="p-3 text-left">Advocate</th>
-                    <th className="p-3 text-left">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {hearings.length === 0 ? (
-                    <tr>
-                      <td colSpan="5" className="p-4 text-center text-slate-500">
-                        No upcoming hearings.
-                      </td>
-                    </tr>
-                  ) : (
-                    hearings.map((item, index) => (
-                      <tr key={index} className="border-b">
-                        <td className="p-3 font-medium text-[#1E293B]">{item.caseNo}</td>
-                        <td className="p-3">{item.type}</td>
-                        <td className="p-3">{item.hearing}</td>
-                        <td className="p-3">{item.advocate}</td>
-                        <td className="p-3">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                            item.status === 'Active'
-                              ? 'bg-green-50 text-green-700 border-green-200/50'
-                              : 'bg-blue-50 text-blue-700 border-blue-200/50'
-                          }`}>
-                            {item.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Book Appointment */}
+        <div className="bg-white rounded-2xl border p-6">
+          <h2 className="text-2xl font-semibold text-[#0F172A]">Book Appointment</h2>
+          <p className="text-[#64748B] mt-3">Choose a date and time to meet your advocate.</p>
+          <button
+            onClick={() => {
+              setRescheduleId(null);
+              setFormData({
+                name: user ? user.username : "",
+                advocate: "",
+                date: "",
+                time: "",
+                type: "",
+              });
+              setShowModal(true);
+            }}
+            className="mt-6 bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-6 py-3 rounded-xl cursor-pointer"
+          >
+            Book Appointment
+          </button>
         </div>
 
-        {/* Right Side */}
-        <div className="space-y-6 h-fit">
+        {/* Video Consultation */}
+        <div className="bg-white rounded-2xl border p-6">
+          <h2 className="text-2xl font-semibold text-[#0F172A]">Video Consultation</h2>
+          <p className="text-[#64748B] mt-3">Join a video consultation with your advocate.</p>
+          <button className="mt-6 bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-6 py-3 rounded-xl cursor-pointer">
+            Join Consultation
+          </button>
+        </div>
 
+        {/* Consultation History */}
+        <div className="bg-white rounded-2xl border p-6">
+          <h2 className="text-2xl font-semibold text-[#0F172A]">Consultation History</h2>
+          <p className="text-[#64748B] mt-3">View your previous consultations and logs.</p>
+          <Link
+            href="/client-consultation/history"
+            className="inline-block mt-6 bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-6 py-3 rounded-xl transition cursor-pointer"
+          >
+            View History
+          </Link>
+        </div>
+      </div>
 
-          {/* Consultation History */}
-          <div className="bg-white rounded-2xl border p-6">
-            <h2 className="text-2xl font-semibold text-[#0F172A]">Consultation History</h2>
-            <p className="text-[#64748B] mt-3">View your previous consultations and logs.</p>
-            <Link
-              href="/client-consultation/history"
-              className="inline-block mt-6 bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-6 py-3 rounded-xl transition cursor-pointer"
-            >
-              View History
-            </Link>
-          </div>
+      {/* Consultation Requests */}
+      <div className="bg-white rounded-2xl border p-6">
+        <h2 className="text-xl font-semibold mb-6">Consultation Requests</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-[#F8FAFC]">
+                <th className="p-3 font-semibold text-[#0F172A]">Advocate</th>
+                <th className="p-3 font-semibold text-[#0F172A]">Date & Time</th>
+                <th className="p-3 font-semibold text-[#0F172A]">Type</th>
+                <th className="p-3 font-semibold text-[#0F172A]">Fee</th>
+                <th className="p-3 font-semibold text-[#0F172A]">Status</th>
+                <th className="p-3 font-semibold text-[#0F172A]">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {appointments.filter(item => item.status === "Pending Client").length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="p-4 text-center text-slate-500">
+                    No pending consultation requests.
+                  </td>
+                </tr>
+              ) : (
+                appointments.filter(item => item.status === "Pending Client").map((item) => (
+                  <tr key={item.id} className="border-b hover:bg-[#F8FAFC] transition-colors duration-150">
+                    <td className="p-3 font-medium text-[#1E293B] capitalize">{item.advocate_name || item.advocate}</td>
+                    <td className="p-3 text-sm text-[#64748B]">
+                      {item.date}
+                      <br />
+                      {item.time}
+                    </td>
+                    <td className="p-3 text-sm text-[#64748B]">{item.type}</td>
+                    <td className="p-3 text-sm text-[#16A34A] font-semibold">{item.fee || "₹500"}</td>
+                    <td className="p-3 text-sm">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-purple-50 text-purple-700 border-purple-200/50">
+                        {item.status}
+                      </span>
+                    </td>
+                    <td className="p-3 text-sm">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleApproveAppointment(item.id)}
+                          className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-xs font-medium cursor-pointer"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => {
+                            setRescheduleId(item.id);
+                            setFormData({
+                              name: item.client_name,
+                              advocate: item.advocate_name || item.advocate,
+                              date: item.date,
+                              time: item.time,
+                              type: item.type,
+                            });
+                            setShowModal(true);
+                          }}
+                          className="px-3 py-1.5 bg-[#D97706] hover:bg-[#b45309] text-white rounded-lg transition-colors text-xs font-medium cursor-pointer"
+                        >
+                          Reschedule
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Upcoming Hearings */}
+      <div className="bg-white rounded-2xl border p-6">
+        <h2 className="text-xl font-semibold mb-6">Upcoming Hearings</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-[#F8FAFC]">
+                <th className="p-3 text-left">Case No</th>
+                <th className="p-3 text-left">Type</th>
+                <th className="p-3 text-left">Next Hearing</th>
+                <th className="p-3 text-left">Advocate</th>
+                <th className="p-3 text-left">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {hearings.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="p-4 text-center text-slate-500">
+                    No upcoming hearings.
+                  </td>
+                </tr>
+              ) : (
+                hearings.map((item, index) => (
+                  <tr key={index} className="border-b">
+                    <td className="p-3 font-medium text-[#1E293B]">{item.caseNo}</td>
+                    <td className="p-3">{item.type}</td>
+                    <td className="p-3">{item.hearing}</td>
+                    <td className="p-3">{item.advocate}</td>
+                    <td className="p-3">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                        item.status === 'Active'
+                          ? 'bg-green-50 text-green-700 border-green-200/50'
+                          : 'bg-blue-50 text-blue-700 border-blue-200/50'
+                      }`}>
+                        {item.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
