@@ -17,29 +17,21 @@ export default function RolesView() {
   const [editingRole, setEditingRole] = useState(null);
   const [notification, setNotification] = useState(null);
 
-  // Load roles from localStorage on mount
+  // Load roles from backend on mount
   useEffect(() => {
-    const storedRoles = localStorage.getItem("legal_tech_roles");
-    if (storedRoles) {
+    const loadRoles = async () => {
       try {
-        const parsed = JSON.parse(storedRoles);
-        const hasOldRole = parsed.some(
-          (r) => r.id === "superadmin" || r.id === "teacher" || r.name === "SuperAdmin"
-        );
-        if (hasOldRole) {
-          setRoles(DEFAULT_ROLES);
-          localStorage.setItem("legal_tech_roles", JSON.stringify(DEFAULT_ROLES));
-        } else {
-          setRoles(parsed);
+        const res = await fetch("http://localhost:8000/permissions/roles");
+        if (res.ok) {
+          const data = await res.json();
+          setRoles(data);
         }
       } catch (e) {
+        console.error("Error loading roles", e);
         setRoles(DEFAULT_ROLES);
-        localStorage.setItem("legal_tech_roles", JSON.stringify(DEFAULT_ROLES));
       }
-    } else {
-      setRoles(DEFAULT_ROLES);
-      localStorage.setItem("legal_tech_roles", JSON.stringify(DEFAULT_ROLES));
-    }
+    };
+    loadRoles();
   }, []);
 
   // Show notification toast helper
@@ -49,14 +41,12 @@ export default function RolesView() {
   };
 
   // Create or update role
-  const handleSaveRole = (e) => {
+  const handleSaveRole = async (e) => {
     e.preventDefault();
     if (!roleName.trim()) {
       showToast("Role name is required", "error");
       return;
     }
-
-    let updatedRoles;
 
     if (editingRole) {
       // Editing Mode
@@ -65,36 +55,54 @@ export default function RolesView() {
         return;
       }
 
-      updatedRoles = roles.map((r) =>
-        r.id === editingRole.id
-          ? { ...r, name: roleName.trim(), description: roleDescription.trim() }
-          : r
-      );
-      showToast(`Role "${roleName}" updated successfully!`);
-      setEditingRole(null);
+      try {
+        const res = await fetch(`http://localhost:8000/permissions/roles/${editingRole.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: roleName.trim(),
+            description: roleDescription.trim()
+          })
+        });
+        if (res.ok) {
+          const updatedRole = await res.json();
+          setRoles((prev) => prev.map((r) => r.id === editingRole.id ? updatedRole : r));
+          showToast(`Role "${roleName}" updated successfully!`);
+          setEditingRole(null);
+          setRoleName("");
+          setRoleDescription("");
+        } else {
+          const errData = await res.json();
+          showToast(errData.detail || "Error updating role", "error");
+        }
+      } catch (err) {
+        showToast("Unable to connect to backend", "error");
+      }
     } else {
       // Creating Mode
-      const roleExists = roles.some(
-        (r) => r.name.toLowerCase() === roleName.trim().toLowerCase()
-      );
-      if (roleExists) {
-        showToast(`Role "${roleName}" already exists!`, "error");
-        return;
+      try {
+        const res = await fetch("http://localhost:8000/permissions/roles", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: roleName.trim(),
+            description: roleDescription.trim()
+          })
+        });
+        if (res.ok) {
+          const newRole = await res.json();
+          setRoles((prev) => [...prev, newRole]);
+          showToast(`Role "${roleName}" created successfully!`);
+          setRoleName("");
+          setRoleDescription("");
+        } else {
+          const errData = await res.json();
+          showToast(errData.detail || "Error creating role", "error");
+        }
+      } catch (err) {
+        showToast("Unable to connect to backend", "error");
       }
-
-      const newRole = {
-        id: "role_" + Date.now(),
-        name: roleName.trim(),
-        description: roleDescription.trim(),
-      };
-      updatedRoles = [...roles, newRole];
-      showToast(`Role "${roleName}" created successfully!`);
     }
-
-    setRoles(updatedRoles);
-    localStorage.setItem("legal_tech_roles", JSON.stringify(updatedRoles));
-    setRoleName("");
-    setRoleDescription("");
   };
 
   // Set role up for editing
@@ -106,7 +114,7 @@ export default function RolesView() {
   };
 
   // Delete a role
-  const handleDeleteRole = (roleId, roleName) => {
+  const handleDeleteRole = async (roleId, roleName) => {
     if (
       roleId === "senioradvocate" ||
       roleId === "junioradvocate" ||
@@ -120,16 +128,26 @@ export default function RolesView() {
     }
 
     if (confirm(`Are you sure you want to delete the "${roleName}" role?`)) {
-      const updatedRoles = roles.filter((r) => r.id !== roleId);
-      setRoles(updatedRoles);
-      localStorage.setItem("legal_tech_roles", JSON.stringify(updatedRoles));
-      showToast(`Role "${roleName}" deleted.`);
+      try {
+        const res = await fetch(`http://localhost:8000/permissions/roles/${roleId}`, {
+          method: "DELETE"
+        });
+        if (res.ok) {
+          setRoles((prev) => prev.filter((r) => r.id !== roleId));
+          showToast(`Role "${roleName}" deleted.`);
 
-      // Clear edit state if we just deleted the role being edited
-      if (editingRole && editingRole.id === roleId) {
-        setEditingRole(null);
-        setRoleName("");
-        setRoleDescription("");
+          // Clear edit state if we just deleted the role being edited
+          if (editingRole && editingRole.id === roleId) {
+            setEditingRole(null);
+            setRoleName("");
+            setRoleDescription("");
+          }
+        } else {
+          const errData = await res.json();
+          showToast(errData.detail || "Error deleting role", "error");
+        }
+      } catch (err) {
+        showToast("Unable to connect to backend", "error");
       }
     }
   };

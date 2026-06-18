@@ -12,7 +12,13 @@ def create_default_user(db: Session):
             username="admin",
             email="admin@example.com",
             password=hash_password("admin123"),
-            role="advocate"
+            role="Senior Advocate",
+            first_name="Admin",
+            last_name="System",
+            phone="",
+            temp_password="admin123",
+            custom_permissions={},
+            document_access=[]
         )
 
         db.add(default_user)

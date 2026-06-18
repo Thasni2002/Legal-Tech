@@ -1,5 +1,5 @@
 import React from "react";
-import { Download, Trash, ArrowLeft, Send } from "lucide-react";
+import { Download, Trash, ArrowLeft,} from "lucide-react";
 
 const InvoiceHistoryView = ({
   invoices,
@@ -128,17 +128,7 @@ const InvoiceHistoryView = ({
                     {/* Actions */}
                     <td className="px-4 py-3 text-center">
                       <div className="flex justify-center gap-2">
-                        {inv.status.toLowerCase() !== "paid" && (
-                          <button
-                            onClick={() =>
-                              handleUpdateStatus(inv.id, "Sent")
-                            }
-                            className="text-amber-600 hover:bg-amber-50 p-2 rounded-lg"
-                            title="Send to Client"
-                          >
-                            <Send className="w-4 h-4" />
-                          </button>
-                        )}
+                    
 
                         <button
                           onClick={() => handleDownloadInvoicePDF(inv)}

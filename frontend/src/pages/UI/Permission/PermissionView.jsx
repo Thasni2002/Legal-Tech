@@ -130,76 +130,47 @@ export default function PermissionView() {
 
   // Load configuration on mount
   useEffect(() => {
-    // 1. Roles
-    const storedRoles = localStorage.getItem("legal_tech_roles");
-    let currentRoles = DEFAULT_ROLES;
-    if (storedRoles) {
+    const loadConfig = async () => {
       try {
-        const parsed = JSON.parse(storedRoles);
-        const hasOldRole = parsed.some(
-          (r) => r.id === "superadmin" || r.id === "teacher" || r.name === "SuperAdmin"
-        );
-        if (hasOldRole) {
-          currentRoles = DEFAULT_ROLES;
-          localStorage.setItem("legal_tech_roles", JSON.stringify(DEFAULT_ROLES));
-        } else {
-          currentRoles = parsed;
+        const resRoles = await fetch("http://localhost:8000/permissions/roles");
+        let currentRoles = DEFAULT_ROLES;
+        if (resRoles.ok) {
+          currentRoles = await resRoles.json();
+          setRoles(currentRoles);
+          if (currentRoles.length > 0) {
+            setSelectedRole(currentRoles[0].name);
+          }
         }
       } catch (e) {
-        currentRoles = DEFAULT_ROLES;
+        console.error("Error fetching roles", e);
+        setRoles(DEFAULT_ROLES);
+        if (DEFAULT_ROLES.length > 0) setSelectedRole(DEFAULT_ROLES[0].name);
       }
-    } else {
-      localStorage.setItem("legal_tech_roles", JSON.stringify(DEFAULT_ROLES));
-    }
-    setRoles(currentRoles);
 
-    // Pick first role as active default
-    if (currentRoles.length > 0) {
-      setSelectedRole(currentRoles[0].name);
-    }
-
-    // 2. Users (to count assigned users per role and edit custom user override)
-    const storedUsers = localStorage.getItem("legal_tech_users");
-    if (storedUsers) {
       try {
-        const parsed = JSON.parse(storedUsers);
-        const hasOldUserRole = parsed.some(
-          (u) => u.role === "SuperAdmin" || u.role === "teacher"
-        );
-        if (hasOldUserRole) {
-          localStorage.setItem("legal_tech_users", JSON.stringify(DEFAULT_USERS));
-          setUsers(DEFAULT_USERS);
-        } else {
-          setUsers(parsed);
+        const resUsers = await fetch("http://localhost:8000/permissions/users");
+        if (resUsers.ok) {
+          const usersData = await resUsers.json();
+          setUsers(usersData);
         }
       } catch (e) {
-        localStorage.setItem("legal_tech_users", JSON.stringify(DEFAULT_USERS));
+        console.error("Error fetching users", e);
         setUsers(DEFAULT_USERS);
       }
-    } else {
-      localStorage.setItem("legal_tech_users", JSON.stringify(DEFAULT_USERS));
-      setUsers(DEFAULT_USERS);
-    }
 
-    // 3. Permissions
-    const storedPermissions = localStorage.getItem("legal_tech_permissions");
-    if (storedPermissions) {
       try {
-        const parsed = JSON.parse(storedPermissions);
-        if (parsed["SuperAdmin"] || parsed["teacher"]) {
-          setPermissions(DEFAULT_PERMISSIONS);
-          localStorage.setItem("legal_tech_permissions", JSON.stringify(DEFAULT_PERMISSIONS));
-        } else {
-          setPermissions(parsed);
+        const resPerms = await fetch("http://localhost:8000/permissions");
+        if (resPerms.ok) {
+          const permsData = await resPerms.json();
+          setPermissions(permsData);
         }
       } catch (e) {
+        console.error("Error fetching permissions matrix", e);
         setPermissions(DEFAULT_PERMISSIONS);
-        localStorage.setItem("legal_tech_permissions", JSON.stringify(DEFAULT_PERMISSIONS));
       }
-    } else {
-      setPermissions(DEFAULT_PERMISSIONS);
-      localStorage.setItem("legal_tech_permissions", JSON.stringify(DEFAULT_PERMISSIONS));
-    }
+    };
+
+    loadConfig();
   }, []);
 
   // Reset selected user override when the active selected role changes
@@ -349,18 +320,50 @@ export default function PermissionView() {
     }
   };
 
-  // Save current states back to localStorage
-  const handleSavePermissions = () => {
+  // Save current states back to API
+  const handleSavePermissions = async () => {
     if (!selectedRole) return;
 
     if (selectedUser) {
       // Save User Override
-      localStorage.setItem("legal_tech_users", JSON.stringify(users));
-      showToast(`Direct permissions for user "${selectedUser}" saved successfully!`);
+      const targetUserObj = users.find((u) => u.username === selectedUser);
+      if (!targetUserObj) {
+        showToast("Selected user not found", "error");
+        return;
+      }
+
+      try {
+        const res = await fetch(`http://localhost:8000/permissions/users/${targetUserObj.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            customPermissions: targetUserObj.customPermissions
+          })
+        });
+        if (res.ok) {
+          showToast(`Direct permissions for user "${selectedUser}" saved successfully!`);
+        } else {
+          showToast("Error saving user override permissions", "error");
+        }
+      } catch (err) {
+        showToast("Unable to connect to backend", "error");
+      }
     } else {
       // Save Role defaults
-      localStorage.setItem("legal_tech_permissions", JSON.stringify(permissions));
-      showToast(`Default permissions for "${selectedRole}" saved successfully!`);
+      try {
+        const res = await fetch(`http://localhost:8000/permissions/role/${selectedRole}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(permissions[selectedRole] || {})
+        });
+        if (res.ok) {
+          showToast(`Default permissions for "${selectedRole}" saved successfully!`);
+        } else {
+          showToast("Error saving role permissions matrix", "error");
+        }
+      } catch (err) {
+        showToast("Unable to connect to backend", "error");
+      }
     }
   };
 
