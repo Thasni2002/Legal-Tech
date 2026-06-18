@@ -5,6 +5,8 @@ import { getLoggedInUser } from "@/utils/auth";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { ArrowLeft } from "lucide-react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 export default function ClientConsultationHistoryView() {
   const [history, setHistory] = useState([]);
@@ -18,6 +20,23 @@ export default function ClientConsultationHistoryView() {
     date: "",
     time: "",
   });
+  const [selectedTimeDate, setSelectedTimeDate] = useState(null);
+
+  const handleTimeChange = (date) => {
+    setSelectedTimeDate(date);
+    if (date) {
+      let hours = date.getHours();
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12; // the hour '0' should be '12'
+      const timeString = `${hours}:${minutes} ${ampm}`;
+      setFormData((prev) => ({ ...prev, time: timeString }));
+    } else {
+      setFormData((prev) => ({ ...prev, time: "" }));
+    }
+  };
+
   const [successToast, setSuccessToast] = useState({ show: false, message: "" });
 
   const fetchHistory = async (currentUser) => {
@@ -98,6 +117,7 @@ export default function ClientConsultationHistoryView() {
           date: "",
           time: "",
         });
+        setSelectedTimeDate(null);
       } else {
         alert("Failed to reschedule consultation");
       }
@@ -260,15 +280,15 @@ export default function ClientConsultationHistoryView() {
                 className="w-full border rounded-xl p-3 text-[#0F172A]"
               />
 
-              <input
-                type="time"
-                value={formData.time}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    time: e.target.value,
-                  })
-                }
+              <DatePicker
+                selected={selectedTimeDate}
+                onChange={handleTimeChange}
+                showTimeSelect
+                showTimeSelectOnly
+                timeIntervals={15}
+                timeCaption="Time"
+                dateFormat="h:mm aa"
+                placeholderText="Select Time"
                 className="w-full border rounded-xl p-3 text-[#0F172A]"
               />
             </div>

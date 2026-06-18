@@ -19,6 +19,7 @@ export default function ConsultationsView() {
     const [consultationType, setConsultationType] = useState("Consultation Type");
     const [consultationDate, setConsultationDate] = useState("");
     const [consultationTime, setConsultationTime] = useState("");
+    const [selectedTimeDate, setSelectedTimeDate] = useState(null);
 
     const [history, setHistory] = useState([]);
     const [appointments, setAppointments] = useState([]);
@@ -106,6 +107,21 @@ export default function ConsultationsView() {
         return `${hours}:${minutesFormatted} ${ampm}`;
     };
 
+    const handleTimeChange = (date) => {
+        setSelectedTimeDate(date);
+        if (date) {
+            let hours = date.getHours();
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // the hour '0' should be '12'
+            const timeString = `${hours}:${minutes} ${ampm}`;
+            setConsultationTime(timeString);
+        } else {
+            setConsultationTime("");
+        }
+    };
+
     const handleStartConsultation = async () => {
         if (!clientName.trim()) {
             alert("Please enter a client name.");
@@ -154,6 +170,7 @@ export default function ConsultationsView() {
                 setConsultationType("Consultation Type");
                 setConsultationDate("");
                 setConsultationTime("");
+                setSelectedTimeDate(null);
                 setShowHistory(true);
                 fetchConsultations(user);
             } else {
@@ -477,10 +494,15 @@ export default function ConsultationsView() {
                         onChange={(e) => setConsultationDate(e.target.value)}
                         className="w-full border border-[#E2E8F0] rounded-xl p-3 text-black"
                     />
-                    <input
-                        type="time"
-                        value={consultationTime}
-                        onChange={(e) => setConsultationTime(e.target.value)}
+                    <DatePicker
+                        selected={selectedTimeDate}
+                        onChange={handleTimeChange}
+                        showTimeSelect
+                        showTimeSelectOnly
+                        timeIntervals={15}
+                        timeCaption="Time"
+                        dateFormat="h:mm aa"
+                        placeholderText="Select Time"
                         className="w-full border border-[#E2E8F0] rounded-xl p-3 text-black"
                     />
                 </div>
