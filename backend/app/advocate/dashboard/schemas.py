@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import List, Optional
 
+
 class DashboardStats(BaseModel):
     total_advocates: int
     active_cases: int
