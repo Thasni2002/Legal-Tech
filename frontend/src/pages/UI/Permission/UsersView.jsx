@@ -13,82 +13,47 @@ const DEFAULT_ROLES = [
   { id: "client", name: "Client", description: "Client access" }
 ];
 
-const DEFAULT_USERS = [
-  {
-    id: "user_1",
-    firstName: "Rahul",
-    lastName: "Sharma",
-    phone: "+91 98765 43210",
-    username: "rahulsharma",
-    email: "rahul@legaltech.com",
-    role: "Senior Advocate",
-    tempPassword: "temp_Rahul123!",
-    customPermissions: {},
-    documentAccess: []
-  },
-  {
-    id: "user_2",
-    firstName: "Priya",
-    lastName: "Nair",
-    phone: "+91 87654 32109",
-    username: "priyanair",
-    email: "priya@legaltech.com",
-    role: "Junior Advocate",
-    tempPassword: "temp_Priya456!",
-    customPermissions: {},
-    documentAccess: []
-  },
-  {
-    id: "user_3",
-    firstName: "Amit",
-    lastName: "Verma",
-    phone: "+91 76543 21098",
-    username: "amitverma",
-    email: "amit@legaltech.com",
-    role: "Client",
-    tempPassword: "temp_Amit789!",
-    customPermissions: {},
-    documentAccess: []
-  }
-];
+
 
 const ACTIONS = ["view", "add", "edit", "delete"];
 
 // Base module keys (internal, used for localStorage storage)
-const BASE_MODULES = [
+const ALL_MODULES = [
+  // Advocate Section
   "Dashboard",
   "Law Firm Management",
   "Client Management",
   "Case Management",
   "Consultations",
-  "Calendar",
   "Finance Management",
-  "Profile Management",
+  "Calendar",
+  "Profile",
+
+  // Junior Advocate
+  "Assigned Cases",
+  "Client Section",
+
+  // Client Section
+  "Consultation",
+  "Case Tracking",
+  "Documents",
+  "Payments",
+
+  // System
+  "User Roles",
+  "Roles",
+  "Users",
+  "Permissions",
 ];
 
-// Role-specific display label overrides for module names
-const ROLE_MODULE_LABELS = {
-  "Senior Advocate": { "Dashboard": "Adv Dashboard" },
-  "Junior Advocate": { "Dashboard": "User Dashboard" },
-  "Client":          { "Dashboard": "Client Dashboard" },
-};
-
-// Returns modules with display labels resolved for a given role name
-const getModulesForRole = (roleName, isDirectPermission = false) => {
-  let resolvedRoleName = roleName;
-  if (isDirectPermission) {
-    if (roleName === "Senior Advocate") {
-      resolvedRoleName = "Junior Advocate";
-    } else if (roleName === "Junior Advocate") {
-      resolvedRoleName = "Client";
-    }
-  }
-  const overrides = ROLE_MODULE_LABELS[resolvedRoleName] || {};
-  return BASE_MODULES.map((mod) => ({
+const getModulesForRole = () => {
+  return ALL_MODULES.map((mod) => ({
     key: mod,
-    label: overrides[mod] || mod,
+    label: mod,
   }));
 };
+
+
 
 const DEFAULT_DOCUMENTS = [
   { docId: "doc_1", name: "Smith v. State - Case Brief.pdf", type: "Case File", view: true, upload: true, edit: false, delete: false },
@@ -129,60 +94,37 @@ export default function UsersView() {
 
   const [notification, setNotification] = useState(null);
 
-  // Load roles & users from localStorage on mount
+  // Load roles & users from backend on mount
   useEffect(() => {
-    // Roles
-    const storedRoles = localStorage.getItem("legal_tech_roles");
-    let currentRoles = DEFAULT_ROLES;
-    if (storedRoles) {
+    const loadData = async () => {
       try {
-        const parsed = JSON.parse(storedRoles);
-        const hasOldRole = parsed.some(
-          (r) => r.id === "superadmin" || r.id === "teacher" || r.name === "SuperAdmin"
-        );
-        if (hasOldRole) {
-          currentRoles = DEFAULT_ROLES;
-          localStorage.setItem("legal_tech_roles", JSON.stringify(DEFAULT_ROLES));
-        } else {
-          currentRoles = parsed;
+        const resRoles = await fetch("http://localhost:8000/permissions/roles");
+        if (resRoles.ok) {
+          const rolesData = await resRoles.json();
+          setRoles(rolesData);
+          if (rolesData.length > 0) {
+            setSelectedRole(rolesData[0].name);
+          }
         }
       } catch (e) {
-        currentRoles = DEFAULT_ROLES;
+        console.error("Error fetching roles", e);
+        setRoles(DEFAULT_ROLES);
+        if (DEFAULT_ROLES.length > 0) setSelectedRole(DEFAULT_ROLES[0].name);
       }
-    } else {
-      localStorage.setItem("legal_tech_roles", JSON.stringify(DEFAULT_ROLES));
-    }
-    setRoles(currentRoles);
 
-    // Set default selected role
-    if (currentRoles.length > 0) {
-      setSelectedRole(currentRoles[0].name);
-    }
-
-    // Users
-    const storedUsers = localStorage.getItem("legal_tech_users");
-    let currentUsers = DEFAULT_USERS;
-    if (storedUsers) {
       try {
-        const parsed = JSON.parse(storedUsers);
-        const hasOldUserRole = parsed.some(
-          (u) => u.role === "SuperAdmin" || u.role === "teacher"
-        );
-        if (hasOldUserRole) {
-          currentUsers = DEFAULT_USERS;
-          localStorage.setItem("legal_tech_users", JSON.stringify(DEFAULT_USERS));
-        } else {
-          currentUsers = parsed;
+        const resUsers = await fetch("http://localhost:8000/permissions/users");
+        if (resUsers.ok) {
+          const usersData = await resUsers.json();
+          setUsers(usersData);
         }
       } catch (e) {
-        currentUsers = DEFAULT_USERS;
+        console.error("Error fetching users", e);
+        setUsers(DEFAULT_USERS);
       }
-    } else {
-      localStorage.setItem("legal_tech_users", JSON.stringify(DEFAULT_USERS));
-    }
-    setUsers(currentUsers);
+    };
 
-    // Generate initial password
+    loadData();
     generateRandomPassword();
   }, []);
 
@@ -212,7 +154,7 @@ export default function UsersView() {
   };
 
   // Handle Provisioning
-  const handleProvisionUser = (e) => {
+  const handleProvisionUser = async (e) => {
     e.preventDefault();
 
     if (!selectedRole) {
@@ -228,43 +170,40 @@ export default function UsersView() {
       return;
     }
 
-    // Verify uniqueness
-    const userExists = users.some(
-      (u) =>
-        u.username.toLowerCase() === username.trim().toLowerCase() ||
-        u.email.toLowerCase() === emailAddress.trim().toLowerCase()
-    );
-    if (userExists) {
-      showToast("Username or Email already exists in the system", "error");
-      return;
+    try {
+      const res = await fetch("http://localhost:8000/permissions/users/provision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          phone: phoneNumber.trim(),
+          username: username.trim(),
+          email: emailAddress.trim(),
+          role: selectedRole,
+          tempPassword: tempPassword
+        })
+      });
+
+      if (res.ok) {
+        const newUser = await res.json();
+        setUsers((prev) => [...prev, newUser]);
+        showToast(`User "${firstName || username}" provisioned successfully!`);
+        
+        // Reset Form
+        setFirstName("");
+        setLastName("");
+        setPhoneNumber("");
+        setUsername("");
+        setEmailAddress("");
+        generateRandomPassword();
+      } else {
+        const errData = await res.json();
+        showToast(errData.detail || "Error provisioning user", "error");
+      }
+    } catch (err) {
+      showToast("Unable to connect to the backend", "error");
     }
-
-    const newUser = {
-      id: "user_" + Date.now(),
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      phone: phoneNumber.trim(),
-      username: username.trim(),
-      email: emailAddress.trim(),
-      role: selectedRole,
-      tempPassword: tempPassword,
-      customPermissions: {},
-      documentAccess: DEFAULT_DOCUMENTS
-    };
-
-    const updatedUsers = [...users, newUser];
-    setUsers(updatedUsers);
-    localStorage.setItem("legal_tech_users", JSON.stringify(updatedUsers));
-
-    showToast(`User "${firstName || username}" provisioned successfully!`);
-
-    // Reset Form (except password which regenerates)
-    setFirstName("");
-    setLastName("");
-    setPhoneNumber("");
-    setUsername("");
-    setEmailAddress("");
-    generateRandomPassword();
   };
 
   // Cancel form edits
@@ -279,16 +218,26 @@ export default function UsersView() {
   };
 
   // Delete a user
-  const handleDeleteUser = (userId, uName) => {
-    if (userId === "user_1") {
+  const handleDeleteUser = async (userId, uName) => {
+    if (userId === "user_1" || userId === 1 || uName === "admin") {
       showToast("Cannot delete system administration user", "error");
       return;
     }
     if (confirm(`Are you sure you want to remove user "${uName}"?`)) {
-      const updatedUsers = users.filter((u) => u.id !== userId);
-      setUsers(updatedUsers);
-      localStorage.setItem("legal_tech_users", JSON.stringify(updatedUsers));
-      showToast(`User "${uName}" has been de-provisioned.`);
+      try {
+        const res = await fetch(`http://localhost:8000/permissions/users/${userId}`, {
+          method: "DELETE"
+        });
+        if (res.ok) {
+          setUsers((prev) => prev.filter((u) => u.id !== userId));
+          showToast(`User "${uName}" has been de-provisioned.`);
+        } else {
+          const errData = await res.json();
+          showToast(errData.detail || "Error de-provisioning user", "error");
+        }
+      } catch (err) {
+        showToast("Unable to connect to backend", "error");
+      }
     }
   };
 
@@ -315,16 +264,17 @@ export default function UsersView() {
     setIsDetailsOpen(true);
   };
 
-  const handleSaveModal = () => {
+  const handleSaveModal = async () => {
     if (!editUsername.trim() || !editEmail.trim()) {
       showToast("Username and email are required", "error");
       return;
     }
 
-    const updatedUsers = users.map((u) => {
-      if (u.id === activeUser.id) {
-        return {
-          ...u,
+    try {
+      const res = await fetch(`http://localhost:8000/permissions/users/${activeUser.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           firstName: editFirstName.trim(),
           lastName: editLastName.trim(),
           phone: editPhone.trim(),
@@ -333,15 +283,21 @@ export default function UsersView() {
           tempPassword: editPassword.trim(),
           customPermissions: editCustomPerms,
           documentAccess: editDocAccess
-        };
-      }
-      return u;
-    });
+        })
+      });
 
-    setUsers(updatedUsers);
-    localStorage.setItem("legal_tech_users", JSON.stringify(updatedUsers));
-    showToast("User details and overrides updated successfully!");
-    setIsDetailsOpen(false);
+      if (res.ok) {
+        const updatedUser = await res.json();
+        setUsers((prev) => prev.map((u) => u.id === activeUser.id ? updatedUser : u));
+        showToast("User details and overrides updated successfully!");
+        setIsDetailsOpen(false);
+      } else {
+        const errData = await res.json();
+        showToast(errData.detail || "Error updating user details", "error");
+      }
+    } catch (err) {
+      showToast("Unable to connect to backend", "error");
+    }
   };
 
   // Toggle custom permission in details modal
@@ -590,389 +546,341 @@ export default function UsersView() {
         </form>
       </div>
 
-      {/* Provisioned Users List */}
-      <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm">
-        <h2 className="text-xl font-bold text-slate-900 mb-6">
-          Active Provisioned Users
-        </h2>
+      {/* Provisioned Users Table */}
+{/* Provisioned Users Table */}
+<div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+  <div className="px-8 py-6 border-b border-slate-100">
+    <h2 className="text-xl font-bold text-slate-900">
+      Active Provisioned Users
+    </h2>
+    <p className="text-xs text-slate-400 mt-1">
+      {users.length} user{users.length !== 1 ? "s" : ""} available
+    </p>
+  </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {users.map((user) => {
-            const hasOverrides = user.customPermissions && Object.keys(user.customPermissions).length > 0;
-            return (
-              <div
-                key={user.id}
-                className="relative group border border-slate-100 hover:border-[#2563EB] hover:bg-blue-50/10 p-5 rounded-2xl transition-all shadow-sm flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-sm">
-                        {user.firstName ? user.firstName.charAt(0) : user.username.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-slate-900">
-                          {user.firstName} {user.lastName}
-                        </h3>
-                        <span className="inline-block px-2.5 py-0.5 mt-1 rounded-full text-xxs font-bold uppercase tracking-wider bg-emerald-50 text-[#2563EB] border border-emerald-100">
-                          {user.role}
-                        </span>
-                        {hasOverrides && (
-                          <span className="inline-block px-2.5 py-0.5 mt-1 ml-1.5 rounded-full text-xxs font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-100">
-                            Custom Matrix
-                          </span>
-                        )}
-                      </div>
-                    </div>
+  <table className="w-full border-collapse text-left">
+    <thead>
+      <tr className="bg-slate-50 border-b border-slate-100">
+        <th className="py-4 px-6 text-xs font-bold text-slate-400 uppercase">
+          Profile Name
+        </th>
+        <th className="py-4 px-6 text-xs font-bold text-slate-400 uppercase">
+          Role
+        </th>
+        <th className="py-4 px-6 text-xs font-bold text-slate-400 uppercase text-center">
+          Status
+        </th>
+        <th className="py-4 px-6 text-xs font-bold text-slate-400 uppercase text-center">
+          Action
+        </th>
+      </tr>
+    </thead>
 
-                    <div className="flex flex-col gap-1.5 items-end">
-                      <button
-                        onClick={() => handleDeleteUser(user.id, user.username)}
-                        disabled={user.id === "user_1"}
-                        className={`text-xxs font-bold py-1 px-2.5 rounded-lg border transition-all cursor-pointer ${
-                          user.id === "user_1"
-                            ? "text-slate-300 border-slate-100 bg-slate-50 cursor-not-allowed"
-                            : "text-red-500 border-red-100 hover:bg-red-50 hover:border-red-200"
-                        }`}
-                      >
-                        De-provision
-                      </button>
-                    </div>
-                  </div>
+    <tbody>
+      {users.length === 0 ? (
+        <tr>
+          <td colSpan={4} className="py-12 text-center text-slate-400 text-sm">
+            No users available
+          </td>
+        </tr>
+      ) : (
+        users.map((user, idx) => {
+          const avatarColors = [
+            "bg-indigo-600",
+            "bg-blue-600",
+            "bg-emerald-600",
+            "bg-violet-600",
+            "bg-rose-600",
+          ];
 
-                  <div className="mt-5 space-y-2 border-t border-slate-100/80 pt-4 text-xs font-semibold text-slate-600">
-                    <div className="flex items-center gap-2">
-                      <User size={14} className="text-slate-400" />
-                      <span className="text-slate-400 font-bold uppercase tracking-wider w-18">Username:</span>
-                      <span className="text-slate-900">{user.username}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Mail size={14} className="text-slate-400" />
-                      <span className="text-slate-400 font-bold uppercase tracking-wider w-18">Email:</span>
-                      <span className="text-slate-900 truncate">{user.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Phone size={14} className="text-slate-400" />
-                      <span className="text-slate-400 font-bold uppercase tracking-wider w-18">Phone:</span>
-                      <span className="text-slate-900">{user.phone || "N/A"}</span>
-                    </div>
-                    <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl mt-3 border border-slate-100">
-                      <Key size={14} className="text-[#16A34A]" />
-                      <span className="text-slate-400 font-bold uppercase tracking-wider w-18">Temp Pass:</span>
-                      <code className="text-[#16A34A] bg-[#F1F5F9] px-2 py-0.5 rounded font-mono text-xxs font-bold">
-                        {user.tempPassword}
-                      </code>
-                    </div>
-                  </div>
-                </div>
+          const avatarBg = avatarColors[idx % avatarColors.length];
 
-                <div className="mt-5 pt-3 border-t border-slate-50">
-                  <button
-                    onClick={() => handleOpenDetails(user)}
-                    className="w-full text-center text-xs font-bold py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all cursor-pointer uppercase tracking-wider"
+          return (
+            <tr key={user.id} className="border-b border-slate-100 hover:bg-slate-50">
+              
+              {/* Profile */}
+              <td className="py-4 px-6">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-10 h-10 rounded-full ${avatarBg} text-white flex items-center justify-center font-bold`}
                   >
-                    Edit Info & Direct Override
-                  </button>
+                    {(user.firstName || user.username || "?")
+                      .charAt(0)
+                      .toUpperCase()}
+                  </div>
+
+                  <div>
+                    <p className="font-bold text-slate-900 text-sm">
+                      {user.firstName} {user.lastName}
+                    </p>
+                    <p className="text-xs text-slate-400">@{user.username}</p>
+                  </div>
                 </div>
+              </td>
+
+              {/* Role */}
+              <td className="py-4 px-6">
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
+                  {user.role}
+                </span>
+              </td>
+
+              {/* Status */}
+              <td className="py-4 px-6 text-center">
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  Active
+                </span>
+              </td>
+
+              {/* Action */}
+              <td className="py-4 px-6 text-center">
+                <button
+                  onClick={() => handleOpenDetails(user)}
+                  className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"
+                >
+                  View
+                </button>
+              </td>
+
+            </tr>
+          );
+        })
+      )}
+    </tbody>
+  </table>
+</div>
+
+      {/* ─── Edit Info & Direct Override Modal ─── */}
+
+ {/* ─── Edit Info & Direct Override Modal ─── */}
+{isDetailsOpen && activeUser && (
+  <div
+    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-md px-4 py-6 overflow-y-auto"
+    onClick={() => setIsDetailsOpen(false)}
+  >
+    {/* Modal */}
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className="relative bg-white rounded-3xl w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col border border-slate-200 my-auto"
+    >
+      {/* Header */}
+      <div className="relative bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-8 py-6">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white text-xl font-bold">
+              {(editFirstName || editUsername || "?")
+                .charAt(0)
+                .toUpperCase()}
+            </div>
+
+            <div>
+              <h3 className="text-white font-bold text-2xl">
+                {editFirstName} {editLastName}
+              </h3>
+              <p className="text-slate-400 text-sm">@{editUsername}</p>
+
+              <div className="flex items-center gap-2 mt-2">
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-white border border-white/20">
+                  {activeUser.role}
+                </span>
+
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-400/30">
+                  Active
+                </span>
               </div>
-            );
-          })}
+            </div>
+          </div>
+
+          <button
+            onClick={() => setIsDetailsOpen(false)}
+            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Info strip */}
+        <div className="flex flex-wrap gap-6 mt-5 pt-4 border-t border-white/10">
+          <div className="flex items-center gap-2 text-xs text-slate-300">
+            <Mail size={12} />
+            {editEmail}
+          </div>
+
+          <div className="flex items-center gap-2 text-xs text-slate-300">
+            <Phone size={12} />
+            {editPhone || "No phone"}
+          </div>
+
+          <div className="flex items-center gap-2 text-xs text-emerald-400">
+            <Key size={12} />
+            <code>{editPassword}</code>
+          </div>
         </div>
       </div>
 
-      {/* Edit Details, Direct Permissions Override & Case Related Documents Modal */}
-      {isDetailsOpen && activeUser && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
-            onClick={() => setIsDetailsOpen(false)}
-          />
+      {/* Tabs */}
+      <div className="flex items-center border-b border-slate-100 bg-white px-6 gap-2 overflow-x-auto">
+        {[
+          { key: "profile", icon: <User size={15} />, label: "Profile Info" },
+          {
+            key: "permissions",
+            icon: <Settings size={15} />,
+            label: "Direct Permissions",
+          },
+          {
+            key: "documents",
+            icon: <FileText size={15} />,
+            label: "Document Access",
+          },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setModalTab(tab.key)}
+            className={`flex items-center gap-2 py-4 px-5 text-xs font-bold uppercase border-b-2 whitespace-nowrap ${
+              modalTab === tab.key
+                ? "border-indigo-600 text-indigo-600"
+                : "border-transparent text-slate-400 hover:text-slate-700"
+            }`}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-          {/* Modal Container */}
-          <div className="relative bg-white rounded-3xl w-full max-w-4xl border border-slate-100 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            {/* Header */}
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-sm">
-                  {editFirstName ? editFirstName.charAt(0) : editUsername.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-lg">
-                    {editFirstName} {editLastName}
-                  </h3>
-                  <span className="inline-block px-2.5 py-0.5 rounded-full text-xxs font-bold uppercase tracking-wider bg-emerald-50 text-[#2563EB] border border-emerald-100">
-                    {activeUser.role} Account Detail
-                  </span>
-                </div>
+      {/* Content */}
+      <div className="max-h-[60vh] overflow-y-auto bg-slate-50">
+        
+        {/* Profile */}
+        {modalTab === "profile" && (
+          <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-5">
+            {[
+              ["First Name", editFirstName, setEditFirstName],
+              ["Last Name", editLastName, setEditLastName],
+              ["Phone Number", editPhone, setEditPhone],
+              ["Username", editUsername, setEditUsername],
+              ["Email Address", editEmail, setEditEmail],
+            ].map(([label, value, setter]) => (
+              <div key={label}>
+                <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">
+                  {label}
+                </label>
+                <input
+                  value={value}
+                  onChange={(e) => setter(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"
+                />
               </div>
-              <button 
-                onClick={() => setIsDetailsOpen(false)}
-                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <X size={20} />
-              </button>
-            </div>
+            ))}
+          </div>
+        )}
 
-            {/* Tab navigation */}
-            <div className="flex border-b border-slate-100 px-6 bg-white">
-              <button
-                onClick={() => setModalTab("profile")}
-                className={`py-4 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
-                  modalTab === "profile"
-                    ? "border-[#2563EB] text-[#2563EB]"
-                    : "border-transparent text-slate-400 hover:text-slate-600"
-                }`}
-              >
-                <User size={16} />
-                <span>Profile Info</span>
-              </button>
-              <button
-                onClick={() => setModalTab("permissions")}
-                className={`py-4 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
-                  modalTab === "permissions"
-                    ? "border-[#2563EB] text-[#2563EB]"
-                    : "border-transparent text-slate-400 hover:text-slate-600"
-                }`}
-              >
-                <Settings size={16} />
-                <span>Direct Permissions</span>
-              </button>
-              <button
-                onClick={() => setModalTab("documents")}
-                className={`py-4 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
-                  modalTab === "documents"
-                    ? "border-[#2563EB] text-[#2563EB]"
-                    : "border-transparent text-slate-400 hover:text-slate-600"
-                }`}
-              >
-                <FileText size={16} />
-                <span>Case Related Documents</span>
-              </button>
-            </div>
+        {/* Permissions */}
+        {modalTab === "permissions" && (
+          <div className="p-8">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-slate-800 text-white">
+                    <th className="py-3 px-4 text-left">Module</th>
+                    {ACTIONS.map((act) => (
+                      <th key={act} className="py-3 px-4 text-center">
+                        {act}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
 
-            {/* Content Panel */}
-            <div className="flex-1 overflow-y-auto p-8 space-y-6">
-              {/* Tab 1: Profile Edit */}
-              {modalTab === "profile" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="flex flex-col">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      First Name
-                    </label>
-                    <input
-                      type="text"
-                      value={editFirstName}
-                      onChange={(e) => setEditFirstName(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
-                    />
-                  </div>
+                <tbody>
+                  {getModulesForRole(activeUser.role).map(({ key, label }) => {
+                    const perms = editCustomPerms[key] || {};
+                    return (
+                      <tr key={key} className="border-b">
+                        <td className="py-3 px-4 font-medium">{label}</td>
 
-                  <div className="flex flex-col">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      Last Name
-                    </label>
-                    <input
-                      type="text"
-                      value={editLastName}
-                      onChange={(e) => setEditLastName(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
-                    />
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      Phone Number
-                    </label>
-                    <input
-                      type="text"
-                      value={editPhone}
-                      onChange={(e) => setEditPhone(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
-                    />
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      Username
-                    </label>
-                    <input
-                      type="text"
-                      value={editUsername}
-                      onChange={(e) => setEditUsername(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
-                    />
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      Email Address
-                    </label>
-                    <input
-                      type="email"
-                      value={editEmail}
-                      onChange={(e) => setEditEmail(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
-                    />
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      Temp Password
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={editPassword}
-                        onChange={(e) => setEditPassword(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-4 pr-12 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
-                      />
-                      <button
-                        type="button"
-                        onClick={generateModalPassword}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors"
-                        title="Regenerate password"
-                      >
-                        <RefreshCw size={16} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Tab 2: Direct Custom Permissions */}
-              {modalTab === "permissions" && (
-                <div className="space-y-4">
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-800 flex items-start gap-3">
-                    <AlertTriangle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
-                    <div className="text-xs font-semibold">
-                      <p className="font-bold uppercase tracking-wider">Direct Permissions Override Active</p>
-                      <p className="mt-1 text-amber-700/90 font-medium normal-case">
-                        Configuring these fields assigns direct access controls that bypass the user's role default of ({activeUser.role}). Leave unchecked to fallback to role permissions.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="overflow-x-auto rounded-2xl border border-slate-100">
-                    <table className="w-full border-collapse text-left">
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-slate-100">
-                          <th className="py-4 px-5 text-xs font-bold text-slate-400 uppercase tracking-wider">Module</th>
-                          {ACTIONS.map(act => (
-                            <th key={act} className="py-4 px-5 text-xs font-bold text-slate-400 uppercase tracking-wider text-center w-24">{act}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50">
-                        {getModulesForRole(activeUser.role, true).map(({ key, label }) => {
-                          const modulePermissions = editCustomPerms[key] || {
-                            view: false,
-                            add: false,
-                            edit: false,
-                            delete: false,
-                          };
-
-                          return (
-                            <tr key={key} className="hover:bg-slate-50/50 transition-colors">
-                              <td className="py-3.5 px-5 font-bold text-slate-800 text-xs">{label}</td>
-                              {ACTIONS.map(action => (
-                                <td key={action} className="py-3.5 px-5 text-center">
-                                  <input
-                                    type="checkbox"
-                                    checked={modulePermissions[action] || false}
-                                    onChange={() => handleCustomPermissionToggle(key, action)}
-                                    className="w-4 h-4 text-emerald-600 rounded border-slate-300 accent-[#0d6e53] cursor-pointer"
-                                  />
-                                </td>
-                              ))}
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* Tab 3: Case Document Permissions */}
-              {modalTab === "documents" && (
-                <div className="space-y-4">
-                  <div className="bg-emerald-50/30 border border-emerald-100 rounded-xl p-4 text-[#2563EB] flex items-start gap-3">
-                    <Shield size={18} className="text-[#2563EB] flex-shrink-0 mt-0.5" />
-                    <div className="text-xs font-semibold">
-                      <p className="font-bold uppercase tracking-wider">Case Related Document clearance level</p>
-                      <p className="mt-1 text-slate-500 font-medium normal-case">
-                        Define which case documents and lawsuit files this specific user has access clearance to.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="overflow-x-auto rounded-2xl border border-slate-100">
-                    <table className="w-full border-collapse text-left">
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-slate-100">
-                          <th className="py-4 px-5 text-xs font-bold text-slate-400 uppercase tracking-wider">Case Documents</th>
-                          <th className="py-4 px-5 text-xs font-bold text-slate-400 uppercase tracking-wider w-36">Doc Type</th>
-                          <th className="py-4 px-5 text-xs font-bold text-slate-400 uppercase tracking-wider text-center w-20">View</th>
-                          <th className="py-4 px-5 text-xs font-bold text-slate-400 uppercase tracking-wider text-center w-20">Upload</th>
-                          <th className="py-4 px-5 text-xs font-bold text-slate-400 uppercase tracking-wider text-center w-20">Edit</th>
-                          <th className="py-4 px-5 text-xs font-bold text-slate-400 uppercase tracking-wider text-center w-20">Delete</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50">
-                        {editDocAccess.map((doc) => (
-                          <tr key={doc.docId} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="py-3.5 px-5">
-                              <div className="flex items-center gap-2">
-                                <FileText size={15} className="text-slate-400 flex-shrink-0" />
-                                <span className="font-bold text-slate-800 text-xs">{doc.name}</span>
-                              </div>
-                            </td>
-                            <td className="py-3.5 px-5">
-                              <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-bold text-xxs uppercase tracking-wider">
-                                {doc.type}
-                              </span>
-                            </td>
-                            {["view", "upload", "edit", "delete"].map((act) => (
-                              <td key={act} className="py-3.5 px-5 text-center">
-                                <input
-                                  type="checkbox"
-                                  checked={doc[act] || false}
-                                  onChange={() => handleDocAccessToggle(doc.docId, act)}
-                                  className="w-4 h-4 text-emerald-600 rounded border-slate-300 accent-[#0d6e53] cursor-pointer"
-                                />
-                              </td>
-                            ))}
-                          </tr>
+                        {ACTIONS.map((action) => (
+                          <td key={action} className="text-center">
+                            <input
+                              type="checkbox"
+                              checked={perms[action] || false}
+                              onChange={() =>
+                                handleCustomPermissionToggle(key, action)
+                              }
+                            />
+                          </td>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setIsDetailsOpen(false)}
-                className="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold uppercase rounded-full cursor-pointer tracking-wider transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveModal}
-                className="px-6 py-2.5 bg-black text-white hover:bg-slate-800 text-xs font-bold uppercase rounded-full cursor-pointer tracking-wider transition-all shadow-md active:scale-95 flex items-center gap-1.5"
-              >
-                <Check size={14} />
-                <span>Save Changes</span>
-              </button>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Documents */}
+        {modalTab === "documents" && (
+          <div className="p-8">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-slate-800 text-white">
+                    <th className="py-3 px-4 text-left">Document</th>
+                    <th className="py-3 px-4 text-left">Type</th>
+                    {["view", "upload", "edit", "delete"].map((act) => (
+                      <th key={act} className="py-3 px-4 text-center">
+                        {act}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {editDocAccess.map((doc) => (
+                    <tr key={doc.docId} className="border-b">
+                      <td className="py-3 px-4">{doc.name}</td>
+                      <td className="py-3 px-4">{doc.type}</td>
+
+                      {["view", "upload", "edit", "delete"].map((act) => (
+                        <td key={act} className="text-center">
+                          <input
+                            type="checkbox"
+                            checked={doc[act] || false}
+                            onChange={() =>
+                              handleDocAccessToggle(doc.docId, act)
+                            }
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="px-8 py-5 border-t border-slate-100 bg-white flex justify-end gap-3">
+        <button
+          onClick={() => setIsDetailsOpen(false)}
+          className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={handleSaveModal}
+          className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold"
+        >
+          Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

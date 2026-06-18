@@ -16,7 +16,11 @@ class Invoice(Base):
     case_number = Column(String(100), nullable=True)
     mobile_number = Column(String(50), nullable=True)
     email = Column(String(150), nullable=True)
-    
+
+    # Payment Details
+    gpay_number = Column(String(50), nullable=True)
+    upi_id = Column(String(100), nullable=True)
+
     # Court Fee details
     court_fee_case_type = Column(String(150), nullable=True)
     court_fee_amount = Column(Float, default=0.0)

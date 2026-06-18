@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { History } from "lucide-react";
-import jsPDF from "jspdf";
+import { jsPDF } from "jspdf";
 import InvoiceHistoryView from "./InvoiceHistoryView";
 
 export default function CourtFeeCalView() {
-  const [savedCalculations, setSavedCalculations] = useState([]);
+
 
   // Dynamic list of invoices and stats from the backend
   const [invoices, setInvoices] = useState([]);
@@ -60,7 +60,7 @@ export default function CourtFeeCalView() {
     Number(filingCost || 0);
 
   // Fetch data from FastAPI backend
-  const fetchInvoicesAndStats = async () => {
+  const fetchInvoicesAndStats = useCallback(async () => {
     try {
       const resInvoices = await fetch("http://localhost:8000/finance/invoices");
       if (resInvoices.ok) {
@@ -80,11 +80,11 @@ export default function CourtFeeCalView() {
     } catch (err) {
       console.error("Error fetching finance data:", err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchInvoicesAndStats();
-  }, []);
+  }, [fetchInvoicesAndStats]);
   const handleGenerateInvoice = async () => {
     if (!clientName) {
       alert("Please select a client first.");
@@ -369,7 +369,7 @@ export default function CourtFeeCalView() {
       [`Court Fee (${inv.court_fee_case_type || "N/A"})`, inv.court_fee_jurisdiction || "N/A", inv.court_fee_amount],
       [`Stamp Duty (${inv.stamp_duty_doc_type || "N/A"})`, inv.stamp_duty_state || "N/A", inv.stamp_duty_amount],
       [`Advocate Fee (${inv.advocate_fee_case_type || "N/A"})`, inv.advocate_fee_remarks || "N/A", inv.advocate_fee_amount],
-      ["Paper Filing", `${inv.paper_filing_pages || 0} pages`, inv.paper_filing_cost],
+      ["Paper Filing", `${inv.filing_cost_pages || 0} pages`, inv.filing_cost_amount],
     ];
     rows.forEach(([name, detail, amount]) => {
       doc.setFontSize(10);
@@ -385,7 +385,7 @@ export default function CourtFeeCalView() {
     doc.text("Subtotal:", 130, y);
     doc.text(`Rs. ${Number(inv.subtotal || 0).toFixed(2)}`, 165, y); y += 7;
     doc.text("GST (18%):", 130, y);
-    doc.text(`Rs. ${Number(inv.gst_amount || 0).toFixed(2)}`, 165, y); y += 7;
+    doc.text(`Rs. ${Number(inv.gst || 0).toFixed(2)}`, 165, y); y += 7;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
     doc.text("Grand Total:", 130, y);

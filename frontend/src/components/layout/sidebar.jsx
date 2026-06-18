@@ -51,9 +51,9 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
       title: "Advocate Section",
       items: [
         { name: "Dashboard", path: "/", icon: Home },
-        { name: "Law Firm Management", path: "/lawfirm-management", icon: Scale },
-        { name: "Client Management", path: "/client-management", icon: Users },
         { name: "Case Management", path: "/case-management", icon: Folder },
+        { name: "Client Management", path: "/client-management", icon: Users },
+        { name: "Law Firm Management", path: "/lawfirm-management", icon: Scale },
         { name: "Consultations", path: "/consultations", icon: BookOpen },
         { name: "Finance Management", path: "/finance-management", icon: CreditCard },
         { name: "Calendar", path: "/calendar", icon: Calendar },

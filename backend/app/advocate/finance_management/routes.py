@@ -14,6 +14,7 @@ def get_db():
         yield db
     finally:
         db.close()
+# fetch all invoices from the database
 
 @router.get("/invoices", response_model=List[InvoiceOut])
 def get_invoices(
@@ -25,6 +26,8 @@ def get_invoices(
 ):
     return service.get_invoices(db, advocate_id=advocate_id, status=status, client_name=client_name, email=email)
 
+# get one invoice by ID
+
 @router.get("/invoices/{invoice_id}", response_model=InvoiceOut)
 def get_invoice(invoice_id: int, db: Session = Depends(get_db)):
     invoice = service.get_invoice_by_id(db, invoice_id)
@@ -32,9 +35,13 @@ def get_invoice(invoice_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Invoice not found")
     return invoice
 
+# create and save a new invoice in the database
+
 @router.post("/invoices", response_model=InvoiceOut)
 def create_invoice(data: InvoiceCreate, db: Session = Depends(get_db)):
     return service.create_invoice(db, data)
+
+# Status update = changing invoice payment condition
 
 @router.put("/invoices/{invoice_id}/status", response_model=InvoiceOut)
 def update_status(invoice_id: int, data: InvoiceUpdateStatus, db: Session = Depends(get_db)):
@@ -42,6 +49,7 @@ def update_status(invoice_id: int, data: InvoiceUpdateStatus, db: Session = Depe
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
     return invoice
+# used to delete an invoice by its ID.
 
 @router.delete("/invoices/{invoice_id}")
 def delete_invoice(invoice_id: int, db: Session = Depends(get_db)):
@@ -50,12 +58,16 @@ def delete_invoice(invoice_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Invoice not found")
     return {"message": "Invoice deleted successfully"}
 
+# dashboard summary for invoices.
+
 @router.get("/stats", response_model=InvoiceStats)
 def get_stats(
     advocate_id: Optional[int] = Query(None),
     db: Session = Depends(get_db)
 ):
     return service.get_invoice_stats(db, advocate_id=advocate_id)
+
+# frontend to fetch client data for invoice creation
 
 @router.get("/clients")
 def get_registered_clients(db: Session = Depends(get_db)):
@@ -66,5 +78,7 @@ def get_registered_clients(db: Session = Depends(get_db)):
             "id": user.id,
             "name": user.username,
             "email": user.email,
+            "mobile": user.mobile_number if hasattr(user, "mobile_number") else None
+
         })
     return client_list
