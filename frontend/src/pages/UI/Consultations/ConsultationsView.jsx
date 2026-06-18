@@ -324,18 +324,20 @@ export default function ConsultationsView() {
                         <table className="min-w-full">
                             <thead>
                                 <tr className="bg-[#F8FAFC]">
-                                    <th className="p-3 text-left whitespace-nowrap">Client</th>
-                                    <th className="p-3 text-left whitespace-nowrap">Date & Time</th>
+                                    <th className="p-3 text-left whitespace-nowrap">Client Name</th>
+                                    <th className="p-3 text-left whitespace-nowrap">Date</th>
+                                    <th className="p-3 text-left whitespace-nowrap">Time</th>
                                     <th className="p-3 text-left whitespace-nowrap">Type</th>
                                     <th className="p-3 text-left whitespace-nowrap">Issue</th>
                                     <th className="p-3 text-left whitespace-nowrap">Fee</th>
+                                    <th className="p-3 text-left whitespace-nowrap">Status</th>
                                     <th className="p-3 text-left whitespace-nowrap">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {appointments.length === 0 ? (
                                     <tr>
-                                        <td colSpan="6" className="p-4 text-center text-slate-500">
+                                        <td colSpan="8" className="p-4 text-center text-slate-500">
                                             No pending appointment requests.
                                         </td>
                                     </tr>
@@ -343,14 +345,16 @@ export default function ConsultationsView() {
                                     appointments.map((item) => (
                                         <tr key={item.id} className="border-b border-[#E2E8F0]">
                                             <td className="p-3 whitespace-nowrap capitalize">{item.client}</td>
-                                            <td className="p-3 whitespace-nowrap">
-                                                {formatDateString(item.date)}
-                                                <br />
-                                                {formatTimeString(item.time)}
-                                            </td>
+                                            <td className="p-3 whitespace-nowrap">{formatDateString(item.date)}</td>
+                                            <td className="p-3 whitespace-nowrap">{formatTimeString(item.time)}</td>
                                             <td className="p-3 whitespace-nowrap">{item.type}</td>
                                             <td className="p-3 whitespace-nowrap">{item.issue || "General Consultation"}</td>
                                             <td className="p-3 text-[#16A34A] font-semibold whitespace-nowrap">{item.fee || "₹500"}</td>
+                                            <td className="p-3 whitespace-nowrap">
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200/50">
+                                                    {item.status || "Pending"}
+                                                </span>
+                                            </td>
                                             <td className="p-3">
                                                 <div className="flex flex-wrap gap-2 items-center">
                                                     <button
@@ -404,8 +408,9 @@ export default function ConsultationsView() {
                             <table className="min-w-full">
                                 <thead>
                                     <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-                                        <th className="p-4 text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Client</th>
-                                        <th className="p-4 text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Date & Time</th>
+                                        <th className="p-4 text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Client Name</th>
+                                        <th className="p-4 text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Date</th>
+                                        <th className="p-4 text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Time</th>
                                         <th className="p-4 text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Type</th>
                                         <th className="p-4 text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Status</th>
                                         <th className="p-4 text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Action</th>
@@ -415,11 +420,8 @@ export default function ConsultationsView() {
                                     {history.map((item) => (
                                         <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors">
                                             <td className="p-4 whitespace-nowrap font-medium text-[#0F172A] capitalize">{item.client}</td>
-                                            <td className="p-4 whitespace-nowrap text-sm text-[#64748B]">
-                                                {formatDateString(item.date)}
-                                                <span className="mx-2 text-gray-300">|</span>
-                                                {formatTimeString(item.time)}
-                                            </td>
+                                            <td className="p-4 whitespace-nowrap text-sm text-[#64748B]">{formatDateString(item.date)}</td>
+                                            <td className="p-4 whitespace-nowrap text-sm text-[#64748B]">{formatTimeString(item.time)}</td>
                                             <td className="p-4 whitespace-nowrap">
                                                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                                                     item.type === "Video Call" || item.type === "Video Consultation"

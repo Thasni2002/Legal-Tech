@@ -2,16 +2,15 @@
 
 import React from "react";
 import Link from "next/link";
-import ClientAdd from "@/pages/UI/ClientManagement/ClientAdd";
-import ClientEdit from "@/pages/UI/ClientManagement/ClientEdit";
+
 import CaseTracking from "@/pages/UI/ClientManagement/CaseTracking";
 import ClientHistory from "@/pages/UI/ClientManagement/ClientHistory";
-
-
+import ClientAdd from "@/pages/UI/ClientManagement/ClientAdd";
+import ClientEdit from "@/pages/UI/ClientManagement/ClientEdit";
 
 export default function ClientSlugClient({ slug }) {
   // 1. Render Client Add
-  if (slug === "client-add") {
+  if (slug === "add-client") {
     return <ClientAdd />;
   }
 
@@ -27,7 +26,6 @@ export default function ClientSlugClient({ slug }) {
 
   // 4. Render Case Tracking
   if (slug === "case-tracking") {
-
     return <CaseTracking />;
   }
 

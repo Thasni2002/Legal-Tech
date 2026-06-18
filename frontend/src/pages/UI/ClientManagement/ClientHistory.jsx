@@ -104,20 +104,47 @@ export default function ClientHistory() {
           time: "11:00",
           badge: "Completed",
         },
-        {
-          id: "4",
-          type: "consultation",
-          title: "15-minute Consultation Completed",
-          desc: `Initial 15-minute online video consultation completed with ${currentClient?.assignedAdvocate || "Adv. Arjun Menon"} regarding case review.`,
-          date: "2026-05-02",
-          time: "16:30",
-          badge: "Completed",
-        },
       ];
       setHistoryItems(defaultHistory);
       localStorage.setItem(historyKey, JSON.stringify(defaultHistory));
     }
   }, []);
+
+  useEffect(() => {
+    const fetchDbConsultations = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/consultations");
+        if (res.ok) {
+          const data = await res.json();
+          const targetName = (client?.fullName || client?.clientName || "John Doe (Demo Case)").trim().toLowerCase();
+          
+          const matchedConsultations = data.filter(item => {
+            const itemClientName = (item.client_name || "").trim().toLowerCase();
+            return itemClientName === targetName || targetName.includes(itemClientName) || itemClientName.includes(targetName);
+          });
+
+          const mapped = matchedConsultations.map(item => ({
+            id: `db-consultation-${item.id}`,
+            type: "consultation",
+            title: item.status === "Completed" ? "Consultation Completed" : `Consultation ${item.status || "Scheduled"}`,
+            desc: `${item.type || "Video Call"} consultation with ${item.advocate_name || item.advocate || "Advocate"} regarding case.`,
+            date: item.date,
+            time: item.time,
+            badge: item.status || "Completed",
+          }));
+
+          setHistoryItems(prev => {
+            const nonDb = prev.filter(i => !i.id.startsWith("db-consultation-"));
+            return [...mapped, ...nonDb];
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch consultations in ClientHistory:", err);
+      }
+    };
+
+    fetchDbConsultations();
+  }, [client]);
 
   const handleAddLog = (e) => {
     e.preventDefault();

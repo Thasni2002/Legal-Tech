@@ -12,40 +12,9 @@ export default function ClientAdd({ onSave, onCancel }) {
     fullName: "",
     email: "",
     phone: "",
-    // whatsapp: "",
-    // address: "",
-    // city: "",
-    // state: "",
-    // pincode: "",
-    // assignedAdvocate: "",
-    // caseTitle: "",
-    // caseType: "",
-    // caseNumber: "",
-    // courtName: "",
-    // nextHearing: "",
-    // caseStatus: "",
-    // totalFee: "",
-    // amountPaid: "",
-    // outstandingAmount: "",
-    // notes: "",
+
   });
 
-//   const courts = [
-//   "Supreme Court",
-//   "High Court",
-//   "District Court",
-//   "Family Court",
-//   "Consumer Court",
-//   "Labour Court",
-//   "Sessions Court",
-//   "Magistrate Court",
-// ];
-
-// const advocates = [
-//   "Adv. Arjun Menon",
-//   "Adv. Priya Nair",
-//   "Adv. Rahul Krishnan",
-// ];
 
   const handleChange = (e) => {
     setFormData({
@@ -54,40 +23,50 @@ export default function ClientAdd({ onSave, onCancel }) {
     });
   };
 
-  // const handleSubmit = (e) => {
-  //   e.preventDefault();
-  //   console.log(formData);
-  //   alert("Client Saved Successfully");
-  // };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  const handleSubmit = (e) => {
-  e.preventDefault();
+    if (
+      !formData.clientId ||
+      !formData.fullName ||
+      !formData.email ||
+      !formData.phone 
+    ) {
+      alert("Please fill all required fields");
+      return;
+    }
 
-  if (
-    !formData.clientId ||
-    !formData.fullName ||
-    !formData.email ||
-    !formData.phone 
-    // !formData.caseType ||
-    // !formData.courtName
-  ) {
-    alert("Please fill all required fields");
-    return;
-  }
+    try {
+      const payload = {
+        client_id: formData.clientId,
+        full_name: formData.fullName,
+        email: formData.email,
+        phone: formData.phone
+      };
 
-  localStorage.setItem(
-    "clientData",
-    JSON.stringify(formData)
-  );
+      const res = await fetch("http://localhost:8000/clients/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
-  alert("Client Saved Successfully");
-
-  if (onSave) {
-    onSave(formData);
-  } else {
-    router.push("/client-management");
-  }
-};
+      if (res.ok) {
+        localStorage.setItem("clientData", JSON.stringify(formData));
+        alert("Client Saved Successfully");
+        if (onSave) {
+          onSave(formData);
+        } else {
+          router.push("/client-management");
+        }
+      } else {
+        const errorData = await res.json();
+        alert(`Failed to save client: ${errorData.detail || "Unknown error"}`);
+      }
+    } catch (err) {
+      console.error("Error saving client:", err);
+      alert("Error connecting to server");
+    }
+  };
 
   return (
     <div className="w-full max-w-4xl mx-auto bg-white p-6 md:p-8 rounded-xl border border-[#E2E8F0] shadow-sm">
