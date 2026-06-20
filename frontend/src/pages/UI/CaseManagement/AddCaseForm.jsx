@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-
+import { ArrowLeft, Upload, X, Eye } from "lucide-react";
 
 export default function AddCaseForm() {
-  const [documents, setDocuments] = useState([]);
+  const [documents, setDocuments] = useState([
+    {
+      documentType: "",
+      advocate: "",
+      file: null,
+    },
+  ]);
   const router = useRouter();
 
   const [formData, setFormData] = useState({
@@ -24,163 +29,160 @@ export default function AddCaseForm() {
     courtType: "",
 
     status: "Active",
-
-    documentType: "",
-    advocate: "",
-    documentFile: null,
-
-
-    
   });
+
+  // For multiple document upload (limited to 2 files)
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [advocates, setAdvocates] = useState([]);
+  const [selectedAdvocate, setSelectedAdvocate] = useState("");
+
+
+
+async function fetchAdvocates() {
+  try {
+    const response = await fetch(
+      "http://127.0.0.1:8000/lawfirm-management/"
+    );
+
+    const data = await response.json();
+    setAdvocates(data);
+  } catch (error) {
+    console.error("Error fetching advocates:", error);
+  }
+}
+
+useEffect(() => {
+  fetchAdvocates();
+}, []);
+
+
 
   const handleChange = (e) => {
-  const { name, value, files } = e.target;
+    const { name, value, files } = e.target;
+    if (name === "documentFiles") {
+      const fileArray = Array.from(files);
+      if (fileArray.length > 2) {
+        alert("You can only select up to 2 files at a time.");
+        return;
+      }
+      const fileList = fileArray.map((file) => ({
+        file,
+        documentType: "",
+        advocate: "",
+      }));
+      setSelectedFiles(fileList);
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+    }
+  };
 
-  setFormData({
-    ...formData,
-    [name]: files ? files[0] : value,
-  });
-};
+  const handleFileFieldChange = (index, field, value) => {
+    const updated = [...selectedFiles];
+    updated[index][field] = value;
+    setSelectedFiles(updated);
+  };
 
-const handleDocumentUpload = () => {
-  if (
-    !formData.documentType ||
-    !formData.advocate ||
-    !formData.documentFile
-  ) {
-    alert("Please fill all document fields");
-    return;
-  }
+  const removeSelectedFile = (index) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
 
-  const newDocument = {
-  documentType: formData.documentType,
-  fileName: formData.documentFile.name,
-  fileUrl: URL.createObjectURL(formData.documentFile),
-  advocate: formData.advocate,
-  uploadDate: new Date().toLocaleDateString(),
-};
+  const handleUploadDocuments = () => {
+    if (selectedFiles.length === 0) {
+      alert("Please select files first");
+      return;
+    }
 
-  
+    const invalid = selectedFiles.some(
+      (item) => !item.documentType || !item.advocate
+    );
+    if (invalid) {
+      alert("Please select Document Type and Advocate for every file");
+      return;
+    }
 
-  setDocuments([...documents, newDocument]);
+    const newDocs = selectedFiles.map((item) => ({
+      documentType: item.documentType,
+      fileName: item.file.name,
+      fileUrl: URL.createObjectURL(item.file),
+      advocate: item.advocate,
+      uploadDate: new Date().toLocaleDateString(),
+    }));
 
-  setFormData({
-    ...formData,
-    documentType: "",
-    advocate: "",
-    documentFile: null,
-  });
+    setDocuments((prev) => [...prev, ...newDocs]);
+    setSelectedFiles([]);
 
-  alert("Document Saved Successfully");
-};
-
-
-
-
-
-
-
+    alert(`${newDocs.length} Document(s) Uploaded Successfully`);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
     const newCase = {
       ...formData,
+      documents: [...documents],
     };
 
-
-    const handleDocumentUpload = () => {
-
-  if (
-    !formData.documentType ||
-    !formData.advocate ||
-    !formData.documentFile
-  ) {
-    alert("Please fill all document fields");
-    return;
-  }
-
-  const newDocument = {
-    documentType: formData.documentType,
-    fileName: formData.documentFile.name,
-    advocate: formData.advocate,
-    uploadDate: new Date().toLocaleDateString(),
-  };
-
-  setDocuments([...documents, newDocument]);
-
-  setFormData({
-    ...formData,
-    documentType: "",
-    advocate: "",
-    documentFile: null,
-  });
-
-  alert("Document Uploaded Successfully");
-};
-
-    const existingCases =
-      JSON.parse(localStorage.getItem("cases")) || [];
-
+    const existingCases = JSON.parse(localStorage.getItem("cases")) || [];
     existingCases.push(newCase);
-
-    localStorage.setItem(
-      "cases",
-      JSON.stringify(existingCases)
-    );
+    localStorage.setItem("cases", JSON.stringify(existingCases));
 
     alert("Case Saved Successfully");
 
+    // Reset form
     setFormData({
       caseTitle: "",
       caseNo: "",
       caseType: "",
       caseCat: "",
       caseDes: "",
-
       clientName: "",
       contactNumber: "",
       emailId: "",
-
       courtName: "",
       courtType: "",
-
       status: "Active",
     });
+    setDocuments([
+      {
+        documentType: "",
+        advocate: "",
+        file: null,
+      },
+    ]);
+
+    setSelectedAdvocate("");
+    setSelectedFiles([]);
   };
 
   return (
     <div className="w-full max-w-5xl mx-auto bg-white p-6 md:p-8 rounded-xl border border-[#E2E8F0] shadow-sm">
-      {/* Title */}
       {/* Header */}
-<div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-6">
+        <button
+          type="button"
+          onClick={() => router.push("/case-management")}
+          className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100"
+        >
+          <ArrowLeft size={20} />
+        </button>
 
-  <button
-    type="button"
-    onClick={() => router.push("/case-management")}
-    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100"
-  >
-    <ArrowLeft size={20} />
-  </button>
+        <div>
+          <h2 className="text-2xl font-bold">Add New Case</h2>
+          <p className="text-sm text-gray-500">
+            Create a new case file and upload initial documentation.
+          </p>
+        </div>
+      </div>
 
-  <div>
-    <h2 className="text-2xl font-bold">
-      Add New Case
-    </h2>
-
-    <p className="text-sm text-gray-500">
-      Create a new case file and upload initial documentation.
-    </p>
-  </div>
-
-</div>
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Case Information */}
         <div className="space-y-5">
           <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">
             Case Details
           </h3>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Case ID</label>
@@ -264,45 +266,21 @@ const handleDocumentUpload = () => {
           <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">
             Client Details
           </h3>
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div>
               <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Client Name</label>
-              <input
-                type="text"
-                name="clientName"
-                placeholder="Full Name"
-                value={formData.clientName}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-                required
-              />
+              <input type="text" name="clientName" placeholder="Full Name" value={formData.clientName} onChange={handleChange}
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200" required />
             </div>
-
             <div>
               <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Contact Number</label>
-              <input
-                type="tel"
-                name="contactNumber"
-                placeholder="+91 XXXXX XXXXX"
-                value={formData.contactNumber}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-                required
-              />
+              <input type="tel" name="contactNumber" placeholder="+91 XXXXX XXXXX" value={formData.contactNumber} onChange={handleChange}
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200" required />
             </div>
-
             <div>
               <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Email Address</label>
-              <input
-                type="email"
-                name="emailId"
-                placeholder="client@example.com"
-                value={formData.emailId}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-                required
-              />
+              <input type="email" name="emailId" placeholder="client@example.com" value={formData.emailId} onChange={handleChange}
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200" required />
             </div>
           </div>
         </div>
@@ -312,17 +290,11 @@ const handleDocumentUpload = () => {
           <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">
             Jurisdiction & Court
           </h3>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Court Name</label>
-              <select
-                name="courtName"
-                value={formData.courtName}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-                required
-              >
+              <select name="courtName" value={formData.courtName} onChange={handleChange}
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200" required>
                 <option value="">Select Court Name</option>
                 <option value="Supreme Court">Supreme Court</option>
                 <option value="High Court">High Court</option>
@@ -332,16 +304,10 @@ const handleDocumentUpload = () => {
                 <option value="Motor Accident Tribunal">Motor Accident Tribunal</option>
               </select>
             </div>
-
             <div>
               <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Court Type</label>
-              <select
-                name="courtType"
-                value={formData.courtType}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-                required
-              >
+              <select name="courtType" value={formData.courtType} onChange={handleChange}
+                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200" required>
                 <option value="">Select Court Type</option>
                 <option value="Civil">Civil</option>
                 <option value="Criminal">Criminal</option>
@@ -354,113 +320,108 @@ const handleDocumentUpload = () => {
           </div>
         </div>
 
-        {/* Document Upload */}
-        <div className="space-y-5 pt-4 border-t border-[#F1F5F9]">
+        {/* ==================== DOCUMENT UPLOAD SECTION ==================== */}
+
+        <div className="space-y-6 pt-4 border-t border-[#F1F5F9]">
           <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">
-            Document Upload
+            DOCUMENT UPLOAD
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 items-end">
-            <div className="md:col-span-1">
-              <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Doc Type</label>
-              <select
-                name="documentType"
-                value={formData.documentType}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-xs text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-              >
-                <option value="">Type</option>
-                <option value="Petition">Petition</option>
-                <option value="Evidence">Evidence</option>
-                <option value="Affidavit">Affidavit</option>
-                <option value="Judgment">Judgment</option>
-                <option value="Notice">Notice</option>
-              </select>
-            </div>
-
-            <div className="md:col-span-1">
-              <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Choose File</label>
-              <input
-                type="file"
-                name="documentFile"
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                onChange={handleChange}
-                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-2 py-1.5 text-xs text-[#64748B] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-              />
-            </div>
-
-            <div className="md:col-span-1">
-              <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Uploader</label>
-              <select
-                name="advocate"
-                value={formData.advocate}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-xs text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-              >
-                <option value="">Advocate</option>
-                <option value="Adv. Rahul Sharma">Adv. Rahul Sharma</option>
-                <option value="Adv. Priya Verma">Adv. Priya Verma</option>
-                <option value="Adv. Arjun Nair">Adv. Arjun Nair</option>
-              </select>
-            </div>
-
-            <div className="md:col-span-1">
-              <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Upload Date</label>
-              <input
-                type="text"
-                value={new Date().toLocaleDateString()}
-                readOnly
-                className="w-full rounded-lg border border-[#E2E8F0] bg-[#F1F5F9] px-3 py-2.5 text-xs text-[#64748B] outline-none"
-              />
-            </div>
-
-            <div className="md:col-span-1">
-              <button
-                type="button"
-                onClick={handleDocumentUpload}
-                className="w-full bg-[#16A34A] hover:bg-[#15803d] text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm transition-colors duration-200 cursor-pointer"
-              >
-                Upload
-              </button>
-            </div>
+          {/* Advocate only once */}
+          <div>
+            <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">
+              Advocate Name
+            </label>
+            <select
+              value={selectedAdvocate}
+              onChange={(e) => setSelectedAdvocate(e.target.value)}
+              className="w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-sm"
+            >
+              <option value="">Select Advocate</option>
+              {advocates.map((adv) => (
+                <option key={adv.id} value={adv.advocateName}>
+                  {adv.advocateName}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {documents.length > 0 && (
-            <div className="mt-4 overflow-x-auto rounded-lg border border-[#E2E8F0]">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0] text-xs font-semibold text-[#64748B] uppercase tracking-wider">
-                    <th className="p-3 font-medium">Document Type</th>
-                    <th className="p-3 font-medium">File Name</th>
-                    <th className="p-3 font-medium">Uploaded By</th>
-                    <th className="p-3 font-medium">Upload Date</th>
-                  </tr>
-                </thead>
+          {/* Multiple document uploads */}
+          {documents.map((doc, index) => (
+            <div
+              key={index}
+              className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end border border-[#E2E8F0] p-5 rounded-2xl bg-[#F8FAFC]"
+            >
+              {/* Document Type */}
+              <div>
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">
+                  Document Type
+                </label>
+                <select
+                  value={doc.documentType}
+                  onChange={(e) => {
+                    const updated = [...documents];
+                    updated[index].documentType = e.target.value;
+                    setDocuments(updated);
+                  }}
+                  className="w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-sm"
+                >
+                  <option value="">Select Type</option>
+                  <option value="Petition">Petition</option>
+                  <option value="Evidence">Evidence</option>
+                  <option value="Affidavit">Affidavit</option>
+                </select>
+              </div>
 
-                <tbody className="divide-y divide-[#F1F5F9]">
-                  {documents.map((doc, index) => (
-                    <tr key={index} className="hover:bg-[#F8FAFC] transition-colors duration-150">
-                      <td className="p-3 text-xs font-medium text-[#1E293B]">{doc.documentType}</td>
-                      <td className="p-3 text-xs">
-                        <a
-                          href={doc.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[#2563EB] hover:underline font-medium"
-                        >
-                          {doc.fileName}
-                        </a>
-                      </td>
-                      <td className="p-3 text-xs text-[#1E293B]">{doc.advocate}</td>
-                      <td className="p-3 text-xs text-[#64748B]">{doc.uploadDate}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {/* File Upload */}
+              {/* File Upload */}
+              <div>
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">
+                  Upload File
+                </label>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    key={`${index}-${doc.file?.name || "empty"}`}
+                    type="file"
+                    onChange={(e) => {
+                      const updated = [...documents];
+                      updated[index].file = e.target.files[0];
+                      setDocuments(updated);
+                    }}
+                    className="w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-sm"
+                  />
+
+                  {doc.file && (
+                    <button
+                      type="button"
+                      onClick={() => window.open(URL.createObjectURL(doc.file))}
+                      className="p-3 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition"
+                    >
+                      <Eye size={18} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Add / Remove */}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDocuments([
+                      ...documents,
+                      { documentType: "", file: null }
+                    ])
+                  }
+                  className="bg-[#2563EB] text-white px-4 py-2 rounded-lg"
+                >
+                  +
+                </button>
+              </div>
             </div>
-          )}
+          ))}
         </div>
-
         {/* Status & Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[#F1F5F9] items-end">
           <div>
@@ -490,4 +451,3 @@ const handleDocumentUpload = () => {
     </div>
   );
 }
-

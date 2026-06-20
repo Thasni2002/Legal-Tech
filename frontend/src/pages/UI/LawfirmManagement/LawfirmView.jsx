@@ -1,91 +1,168 @@
 "use client";
+
 import { useRouter } from "next/navigation";
 import {
   Building2,
   Users,
-  FileText,
   History,
-
   Briefcase,
-  
+  Search,
+  Eye,
+  Trash2,
+  FolderOpen,
 } from "lucide-react";
-
-
-
+import { useState, useEffect } from "react";
+import Image from "next/image";
 
 export default function LawfirmView() {
   const router = useRouter();
 
-
+  const [advocates, setAdvocates] = useState([]);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("All");
+  const [loading, setLoading] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [assignedCases, setAssignedCases] = useState([]);
+  const [caseSearch, setCaseSearch] = useState("");
+  const [caseFilter, setCaseFilter] = useState("All");
+  const [selectedCaseId, setSelectedCaseId] = useState(null);
   const actions = [
     {
-      title: "Add / Manage Firm",
+      title: "Add Advocate",
       icon: Building2,
-      button: "Add / Manage",
+      button: "Add Advocate",
       color: "bg-blue-600",
+      path: "/lawfirm-management/add-manage-firm",
     },
     {
       title: "Assign Advocate",
       icon: Users,
       button: "Assign Advocate",
       color: "bg-green-600",
+      path: "/lawfirm-management/assign-advocate",
     },
-    {
-      title: "Assign Documents",
-      icon: FileText,
-      button: "Assign Documents",
-      color: "bg-purple-600",
-    },
-
   ];
+
+  useEffect(() => {
+    fetchAdvocates();
+    fetchDashboardStats();
+    fetchAssignedCases();
+  }, []);
+
+  const fetchAdvocates = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/lawfirm-management/");
+      const data = await response.json();
+
+      setAdvocates(Array.isArray(data) ? data : data.data || []);
+    } catch (error) {
+      console.error("Error fetching advocates:", error);
+      setAdvocates([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAssignedCases = async () => {
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/lawfirm-management/assigned-cases"
+      );
+
+      const data = await response.json();
+      setAssignedCases(data);
+    } catch (error) {
+      console.error("Error fetching assigned cases:", error);
+    }
+  };
+
+  const fetchDashboardStats = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/advocate/dashboard");
+      const data = await response.json();
+      setDashboardStats(data.stats);
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+    }
+  };
+
+const handleAdvocateDelete = async (id) => {
+  try {
+    await fetch(`http://127.0.0.1:8000/lawfirm-management/${id}`, {
+      method: "DELETE",
+    });
+
+    setAdvocates((prev) =>
+      prev.filter((item) => item.id !== id)
+    );
+  } catch (error) {
+    console.error("Delete advocate failed:", error);
+  }
+};
+
+const handleCaseDelete = async (id) => {
+  try {
+    await fetch(
+      `http://127.0.0.1:8000/lawfirm-management/assigned-cases/${id}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    setAssignedCases((prev) =>
+      prev.filter((item) => item.id !== id)
+    );
+  } catch (error) {
+    console.error("Delete case failed:", error);
+  }
+};
+
+  const filteredAdvocates = advocates.filter((item) => {
+    const matchesSearch =
+      item.advocateName?.toLowerCase().includes(search.toLowerCase()) ||
+      item.specialization?.toLowerCase().includes(search.toLowerCase());
+
+    const matchesFilter =
+      filter === "All" ? true : item.status === filter;
+
+    return matchesSearch && matchesFilter;
+  });
 
   return (
     <div className="w-full space-y-6 md:space-y-8">
-      {/* Page Header */}
+      {/* Header */}
       <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6">
-        <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
+        <h1 className="text-[#0F172A] font-bold text-[40px]">
           Law Firm Management
         </h1>
-        <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
+        <p className="text-[#64748B] mt-1.5 text-[18px]">
           Manage law firms, branches and firm information
         </p>
       </div>
 
       {/* Action Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {actions.map((item, index) => {
           const Icon = item.icon;
 
           return (
             <div
               key={index}
-              className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6 flex flex-col justify-between hover:shadow-md transition-all duration-200"
+              className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6"
             >
               <div>
                 <div className="w-12 h-12 bg-blue-50 text-[#2563EB] rounded-full flex items-center justify-center mb-4 border border-blue-100">
                   <Icon className="w-6 h-6" />
                 </div>
 
-                <h3 className="font-bold text-[#0F172A] text-sm md:text-base mb-4">
+                <h3 className="font-bold text-[#0F172A] mb-4">
                   {item.title}
                 </h3>
               </div>
 
               <button
-                onClick={() => {
-                  if (item.title === "Add / Manage Firm") {
-                    router.push("/lawfirm-management/add-manage-firm");
-                  }
-
-                  if (item.title === "Assign Advocate") {
-                    router.push("/lawfirm-management/assign-advocate");
-                  }
-
-                  if (item.title === "Assign Documents") {
-                    router.push("/lawfirm-management/assign-documents");
-                  }
-                }}
-                className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white w-full py-2.5 rounded-lg text-sm font-semibold shadow-sm transition-all duration-200 cursor-pointer"
+                onClick={() => router.push(item.path)}
+                className={`${item.color} text-white w-full py-2.5 rounded-lg`}
               >
                 {item.button}
               </button>
@@ -94,32 +171,321 @@ export default function LawfirmView() {
         })}
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
-          <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center mb-4">
-            <Users className="w-5 h-5 text-[#2563EB]" />
+      {/* Stats Overview Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+          <div className="w-11 h-11 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+            <Users className="w-5 h-5 text-purple-600" />
           </div>
-          <p className="text-[#64748B] text-sm font-medium">Total Advocates</p>
-          <h3 className="text-3xl font-bold mt-1 text-[#0F172A]">12</h3>
+          <p className="text-[#64748B] text-sm">Total Advocates</p>
+          <h3 className="text-3xl md:text-4xl font-bold mt-2 text-[#0F172A]">
+            {dashboardStats ? dashboardStats.total_advocates : "—"}
+          </h3>
         </div>
 
-        <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
-          <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center mb-4">
-            <Briefcase className="w-5 h-5 text-[#16A34A]" />
+        <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+          <div className="w-11 h-11 bg-cyan-100 rounded-lg flex items-center justify-center mb-4">
+            <Briefcase className="w-5 h-5 text-cyan-600" />
           </div>
-          <p className="text-[#64748B] text-sm font-medium">Active Cases</p>
-          <h3 className="text-3xl font-bold mt-1 text-[#0F172A]">28</h3>
+          <p className="text-[#64748B] text-sm">Active Cases</p>
+          <h3 className="text-3xl md:text-4xl font-bold mt-2 text-[#0F172A]">
+            {dashboardStats ? dashboardStats.active_cases : "—"}
+          </h3>
         </div>
 
-        <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
-          <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center mb-4">
-            <History className="w-5 h-5 text-[#7C3AED]" />
+        <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+          <div className="w-11 h-11 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+            <FolderOpen className="w-5 h-5 text-green-600" />
           </div>
-          <p className="text-[#64748B] text-sm font-medium">Closed Cases</p>
-          <h3 className="text-3xl font-bold mt-1 text-[#0F172A]">41</h3>
+          <p className="text-[#64748B] text-sm">Closed Cases</p>
+          <h3 className="text-3xl md:text-4xl font-bold mt-2 text-[#0F172A]">
+            {dashboardStats ? dashboardStats.closed_cases : "—"}
+          </h3>
         </div>
       </div>
+
+      {/* Search + Filter + Table Card */}
+      {!loading && advocates.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          {/* Header with Search + Filter */}
+          <div className="p-5 border-b border-gray-100 flex flex-col md:flex-row gap-4 justify-between items-center bg-white">
+            <div className="flex items-center border border-gray-300 rounded-xl px-4 py-2 w-full md:w-96 bg-gray-50">
+              <Search className="w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search advocate..."
+                className="w-full ml-3 bg-transparent outline-none text-sm"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+
+            <select
+              className="border border-gray-300 rounded-xl px-4 py-2 text-sm bg-white"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            >
+              <option value="All">All</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+
+          {/* Table */}
+          {filteredAdvocates.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+                      Profile
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+                      Name
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+                      Specialization
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+                      Phone
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+                      City
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-600">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {filteredAdvocates.map((item) => (
+                    <tr
+                      key={item.id}
+                      className="border-b last:border-0 hover:bg-gray-50 transition duration-200"
+                    >
+                      {/* Profile */}
+                      {/* Profile */}
+                      <td className="px-6 py-4">
+                        <Image
+                          src={
+                            item.profileImage?.trim()
+                              ? item.profileImage
+                              : "https://images.unsplash.com/photo-1500648767791-00dcc994a43?w=400"
+                          }
+                          alt={item.advocateName || "Advocate"}
+                          width={64}
+                          height={64}
+                          className="rounded-full object-cover border border-gray-200"
+                        />
+                      </td>
+
+                      {/* Name */}
+                      <td className="px-6 py-4">
+                        <div>
+                          <p className="font-semibold text-gray-900 text-sm">
+                            {item.advocateName}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {item.email}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-gray-700">
+                        {item.specialization}
+                      </td>
+
+                      <td className="px-6 py-4 text-gray-700">
+                        {item.phoneNumber}
+                      </td>
+
+                      <td className="px-6 py-4 text-gray-700">
+                        {item.city}
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-4 py-1 rounded-full text-xs font-medium ${item.status === "Active"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                            }`}
+                        >
+                          {item.status || "Active"}
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-6 py-4">
+                        <div className="flex justify-center gap-3">
+                          <button
+                            onClick={() =>
+                              router.push(`/lawfirm-management/view?id=${item.id}`)
+                            }
+                            className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition"
+                          >
+                            <Eye size={18} />
+                          </button>
+
+                          <button
+                            onClick={() => handleAdvocateDelete(item.id)}
+                            className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-8 text-center text-gray-500 text-sm">
+              No advocates found matching the filters.
+            </div>
+          )}
+        </div>
+      )}
+
+ {assignedCases.length > 0 && (
+  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mt-8">
+
+    {/* Header */}
+    <div className="p-5 border-b border-gray-100 flex flex-col md:flex-row gap-4 justify-between items-center bg-white">
+      <h2 className="text-lg font-bold text-[#0F172A]">
+        Assigned Cases
+      </h2>
+
+      {/* Search */}
+      <div className="flex items-center border border-gray-300 rounded-xl px-4 py-2 w-full md:w-80 bg-gray-50">
+        <Search className="w-4 h-4 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Search case..."
+          className="w-full ml-3 bg-transparent outline-none text-sm"
+          value={caseSearch}
+          onChange={(e) => setCaseSearch(e.target.value)}
+        />
+      </div>
+
+      {/* Filter */}
+      <select
+        className="border border-gray-300 rounded-xl px-4 py-2 text-sm bg-white"
+        value={caseFilter}
+        onChange={(e) => setCaseFilter(e.target.value)}
+      >
+        <option value="All">All Priority</option>
+        <option value="High">High</option>
+        <option value="Medium">Medium</option>
+        <option value="Low">Low</option>
+      </select>
+    </div>
+
+    {/* Table */}
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead className="bg-gray-50 border-b">
+          <tr>
+            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+              Case Name
+            </th>
+            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+              Case Number
+            </th>
+            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+              Case Title
+            </th>
+            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+              Advocate Name
+            </th>
+            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+              Priority
+            </th>
+            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+              Due Date
+            </th>
+            <th className="px-6 py-4 text-center text-sm font-semibold text-gray-600">
+              Actions
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {assignedCases
+            .filter((item) => {
+              const matchesSearch =
+                item.case_title
+                  ?.toLowerCase()
+                  .includes(caseSearch.toLowerCase()) ||
+                item.case_number
+                  ?.toLowerCase()
+                  .includes(caseSearch.toLowerCase());
+
+              const matchesFilter =
+                caseFilter === "All" || item.priority === caseFilter;
+
+              return matchesSearch && matchesFilter;
+            })
+            .map((item) => (
+              <tr
+                key={item.id}
+                className="border-b last:border-0 hover:bg-gray-50"
+              >
+                <td className="px-6 py-4">{item.case_name}</td>
+                <td className="px-6 py-4">{item.case_number}</td>
+                <td className="px-6 py-4">{item.case_title}</td>
+                <td className="px-6 py-4">{item.advocate_name}</td>
+
+                <td className="px-6 py-4">
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      item.priority === "High"
+                        ? "bg-red-100 text-red-700"
+                        : item.priority === "Medium"
+                        ? "bg-yellow-100 text-yellow-700"
+                        : "bg-green-100 text-green-700"
+                    }`}
+                  >
+                    {item.priority}
+                  </span>
+                </td>
+
+                <td className="px-6 py-4">{item.due_date}</td>
+
+                {/* Actions */}
+                <td className="px-6 py-4">
+                  <div className="flex justify-center gap-3">
+                    <button
+                      onClick={() =>
+                        router.push(
+                          `/lawfirm-management/assign-advocate?id=${item.id}`
+                        )
+                      }
+                      className="p-2 rounded-lg bg-yellow-100 text-yellow-600 hover:bg-yellow-200 transition"
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      onClick={() => handleCaseDelete(item.id)}
+                      className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }

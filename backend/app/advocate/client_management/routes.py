@@ -1,55 +1,64 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
-from app.database import SessionLocal
-from app.advocate.client_management import service, schemas
-
-router = APIRouter(prefix="/clients", tags=["Clients"])
-
-
-# DB Dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+from app.database import get_db
+from .service import get_case_documents
+from .models import Client
 
 
-# CREATE
-@router.post("/", response_model=schemas.ClientOut)
-def create_client(client: schemas.ClientCreate, db: Session = Depends(get_db)):
-    return service.create_client(db, client)
+router = APIRouter(
+    prefix="/clients",
+    tags=["Clients"]
+)
 
 
-# READ ALL
-@router.get("/", response_model=list[schemas.ClientOut])
-def get_clients(db: Session = Depends(get_db)):
-    return service.get_clients(db)
+class ClientResponse(BaseModel):
+    id: int
+    client_id: str
+    full_name: str
+    email: str
+    phone: str
+
+    class Config:
+        from_attributes = True
+
+# Document Response Schema
+class DocumentResponse(BaseModel):
+    id: int
+    document_name: str
+    document_type: str
+    file_path: str
+
+    class Config:
+        from_attributes = True
 
 
-# READ ONE
-@router.get("/{client_id}", response_model=schemas.ClientOut)
-def get_client(client_id: str, db: Session = Depends(get_db)):
-    client = service.get_client(db, client_id)
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
-    return client
+# Get all clients
+@router.get(
+    "/",
+    response_model=list[ClientResponse]
+)
+def get_clients(
+    db: Session = Depends(get_db)
+):
+    return db.query(Client).all()
 
 
-# UPDATE
-@router.put("/{client_id}", response_model=schemas.ClientOut)
-def update_client(client_id: str, data: schemas.ClientUpdate, db: Session = Depends(get_db)):
-    client = service.update_client(db, client_id, data)
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
-    return client
-
-
-# DELETE
-@router.delete("/{client_id}")
-def delete_client(client_id: str, db: Session = Depends(get_db)):
-    client = service.delete_client(db, client_id)
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
-    return {"message": "Client deleted successfully"}
+# Get client documents
+@router.get(
+    "/documents/view",
+    response_model=list[DocumentResponse]
+)
+def view_documents(
+    client_id: int,
+    advocate_role: str,
+    document_type: str = None,
+    db: Session = Depends(get_db)
+):
+    return get_case_documents(
+        db=db,
+        client_id=client_id,
+        advocate_role=advocate_role,
+        document_type=document_type
+    )

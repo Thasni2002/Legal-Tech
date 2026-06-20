@@ -6,6 +6,7 @@ class DashboardStats(BaseModel):
     total_advocates: int
     active_cases: int
     pending_cases: int
+    closed_cases: int
     upcoming_hearings_count: int
 
 class DashboardCase(BaseModel):

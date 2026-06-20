@@ -20,6 +20,12 @@ def get_dashboard_data(db: Session, advocate_id: Optional[int] = None):
         pending_cases_query = pending_cases_query.filter(Case.advocate_id == advocate_id)
     pending_cases = pending_cases_query.count()
 
+    # Closed Cases
+    closed_cases_query = db.query(Case).filter(Case.status == "Closed")
+    if advocate_id is not None:
+        closed_cases_query = closed_cases_query.filter(Case.advocate_id == advocate_id)
+    closed_cases = closed_cases_query.count()
+
     # Upcoming Hearings Count
     today = date.today()
     hearings_count_query = db.query(Hearing).filter(Hearing.date >= today)
@@ -71,6 +77,7 @@ def get_dashboard_data(db: Session, advocate_id: Optional[int] = None):
             "total_advocates": total_advocates,
             "active_cases": active_cases,
             "pending_cases": pending_cases,
+            "closed_cases": closed_cases,
             "upcoming_hearings_count": upcoming_hearings_count
         },
         "cases": [

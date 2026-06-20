@@ -1,26 +1,11 @@
-from pydantic import BaseModel, EmailStr
-
-# -------- Client --------
-
-class ClientBase(BaseModel):
-    client_id: str
-    full_name: str
-    email: EmailStr
-    phone: str
+from pydantic import BaseModel
 
 
-class ClientCreate(ClientBase):
-    pass
-
-
-class ClientUpdate(BaseModel):
-    full_name: str | None = None
-    email: EmailStr | None = None
-    phone: str | None = None
-
-
-class ClientOut(ClientBase):
+class DocumentResponse(BaseModel):
     id: int
+    document_name: str
+    document_type: str
+    file_path: str
 
     class Config:
         from_attributes = True

@@ -555,7 +555,7 @@ export default function CourtFeeCalView() {
         {/* Court Fee */}
         <div className="bg-white border border-[#E2E8F0] rounded-xl p-5">
           <h3 className="font-semibold text-[#2563EB] mb-4">
-            Court Fee Calculator
+            Court Fee 
           </h3>
 
           <div className="space-y-3">
@@ -606,7 +606,7 @@ export default function CourtFeeCalView() {
         {/* Stamp Duty */}
         <div className="bg-white border border-[#E2E8F0] rounded-xl p-5">
           <h3 className="font-semibold text-[#16A34A] mb-4">
-            Stamp Duty Calculator
+            Stamp Duty
           </h3>
 
           <div className="space-y-3">
