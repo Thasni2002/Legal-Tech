@@ -11,7 +11,6 @@ import {
   Clock,
   ArrowLeft,
 } from "lucide-react";
-
 export default function CaseTracking() {
   const router = useRouter();
   const clients = [
@@ -74,7 +73,7 @@ export default function CaseTracking() {
       )
   );
   return (
-    <div className="w-full space-y-6 md:space-y-8">
+    <div className="relative w-full space-y-6 md:space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -352,105 +351,111 @@ export default function CaseTracking() {
 
       {/* Edit Case Form */}
       {editingCase && (
-        <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm">
-          <h2 className="text-lg font-bold text-[#0F172A] mb-6 border-b border-[#F1F5F9] pb-3">
-            Edit Case Details
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-              <label className="block mb-2 text-xs font-semibold text-[#64748B] uppercase tracking-wider">
-                Case Name
-              </label>
-
-              <input
-                type="text"
-                value={editingCase.name}
-                onChange={(e) =>
-                  setEditingCase({
-                    ...editingCase,
-                    name: e.target.value,
-                  })
-                }
-                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-              />
-            </div>
-
-            <div>
-              <label className="block mb-2 text-xs font-semibold text-[#64748B] uppercase tracking-wider">
-                Status
-              </label>
-
-              <select
-                value={editingCase.status}
-                onChange={(e) =>
-                  setEditingCase({
-                    ...editingCase,
-                    status: e.target.value,
-                  })
-                }
-                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-              >
-                <option>Active</option>
-                <option>Closed</option>
-                <option>Hearing Scheduled</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block mb-2 text-xs font-semibold text-[#64748B] uppercase tracking-wider">
-                Court Name
-              </label>
-
-              <input
-                type="text"
-                value={editingCase.court}
-                onChange={(e) =>
-                  setEditingCase({
-                    ...editingCase,
-                    court: e.target.value,
-                  })
-                }
-                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-              />
-            </div>
-
-            <div>
-              <label className="block mb-2 text-xs font-semibold text-[#64748B] uppercase tracking-wider">
-                Hearing Date
-              </label>
-
-              <input
-                type="text"
-                value={editingCase.hearing}
-                onChange={(e) =>
-                  setEditingCase({
-                    ...editingCase,
-                    hearing: e.target.value,
-                  })
-                }
-                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-3 mt-6 pt-4 border-t border-[#F1F5F9]">
-            <button
-              onClick={() => {
-                alert("Case Updated Successfully");
-                setEditingCase(null);
-              }}
-              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-6 py-2.5 rounded-lg font-semibold text-sm shadow-sm transition-all duration-200 cursor-pointer"
-            >
-              Save Changes
-            </button>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[9999]">
+          <div className="bg-white rounded-xl w-full max-w-2xl p-6 shadow-xl relative">
 
             <button
               onClick={() => setEditingCase(null)}
-              className="bg-white border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F1F5F9] px-6 py-2.5 rounded-lg font-semibold text-sm shadow-sm transition-all duration-200 cursor-pointer"
+              className="absolute top-4 right-4 text-gray-500 hover:text-black"
             >
-              Cancel
+              ✕
             </button>
+
+            <h2 className="text-lg font-bold text-[#0F172A] mb-6">
+              Edit Case Details
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="block mb-2 text-xs font-semibold">
+                  Case Name
+                </label>
+                <input
+                  type="text"
+                  value={editingCase.name}
+                  onChange={(e) =>
+                    setEditingCase({
+                      ...editingCase,
+                      name: e.target.value,
+                    })
+                  }
+                  className="w-full border rounded-lg px-4 py-2"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-2 text-xs font-semibold">
+                  Status
+                </label>
+                <select
+                  value={editingCase.status}
+                  onChange={(e) =>
+                    setEditingCase({
+                      ...editingCase,
+                      status: e.target.value,
+                    })
+                  }
+                  className="w-full border rounded-lg px-4 py-2"
+                >
+                  <option>Active</option>
+                  <option>Closed</option>
+                  <option>Hearing Scheduled</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block mb-2 text-xs font-semibold">
+                  Court Name
+                </label>
+                <input
+                  type="text"
+                  value={editingCase.court}
+                  onChange={(e) =>
+                    setEditingCase({
+                      ...editingCase,
+                      court: e.target.value,
+                    })
+                  }
+                  className="w-full border rounded-lg px-4 py-2"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-2 text-xs font-semibold">
+                  Hearing Date
+                </label>
+                <input
+                  type="text"
+                  value={editingCase.hearing}
+                  onChange={(e) =>
+                    setEditingCase({
+                      ...editingCase,
+                      hearing: e.target.value,
+                    })
+                  }
+                  className="w-full border rounded-lg px-4 py-2"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  alert("Case Updated Successfully");
+                  setEditingCase(null);
+                }}
+                className="bg-blue-600 text-white px-5 py-2 rounded-lg"
+              >
+                Save Changes
+              </button>
+
+              <button
+                onClick={() => setEditingCase(null)}
+                className="border px-5 py-2 rounded-lg"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
