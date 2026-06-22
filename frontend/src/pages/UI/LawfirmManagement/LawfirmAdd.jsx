@@ -1,12 +1,24 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import Button from "@/components/Button/Button";
 import InputField from "@/components/InputField/InputField";
 import SelectField from "@/components/SelectField/SelectField";
 
-export default function LawfirmAdd({ onSubmit, onCancel, initialData }) {
+export default function LawfirmAdd({ onCancel, initialData }) {
+  const router = useRouter();
+
+  // Convert null values in initialData to empty strings to avoid controlled input warnings
+  const sanitizedInitialData = {};
+  if (initialData) {
+    Object.keys(initialData).forEach((key) => {
+      sanitizedInitialData[key] = initialData[key] ?? "";
+    });
+  }
+
   const [formData, setFormData] = useState({
+    id: null,
     advocateName: "",
     barCouncilId: "",
     enrollmentNumber: "",
@@ -28,7 +40,8 @@ export default function LawfirmAdd({ onSubmit, onCancel, initialData }) {
     chambersAddress: "",
     about: "",
     profileImage: "",
-    ...initialData,
+    status: "Active",
+    ...sanitizedInitialData,
   });
 
   const handleChange = (e) => {
@@ -41,22 +54,83 @@ export default function LawfirmAdd({ onSubmit, onCancel, initialData }) {
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
+
     if (file) {
       const reader = new FileReader();
+
       reader.onloadend = () => {
         setFormData((prev) => ({
           ...prev,
           profileImage: reader.result,
         }));
       };
+
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (onSubmit) {
-      onSubmit(formData);
+
+    try {
+      const payload = {
+        advocateName: formData.advocateName,
+        barCouncilId: formData.barCouncilId,
+        enrollmentNumber: formData.enrollmentNumber,
+        phoneNumber: formData.phoneNumber,
+        emailAddress: formData.emailAddress,
+        specialization: formData.specialization,
+        city: formData.city,
+        status: formData.status || "Active",
+        dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender,
+        aadhaarNumber: formData.aadhaarNumber,
+        panNumber: formData.panNumber,
+        practiceArea: formData.practiceArea,
+        courtType: formData.courtType,
+        yearsOfExperience: formData.yearsOfExperience,
+        languagesKnown: formData.languagesKnown,
+        lawFirmName: formData.lawFirmName,
+        state: formData.state,
+        pincode: formData.pincode,
+        chambersAddress: formData.chambersAddress,
+        about: formData.about,
+        profileImage: formData.profileImage,
+      };
+
+      let response;
+
+      if (formData.id) {
+        response = await fetch(
+          `http://127.0.0.1:8000/lawfirm-management/${formData.id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          }
+        );
+      } else {
+        response = await fetch("http://127.0.0.1:8000/lawfirm-management/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (!response.ok) {
+        throw new Error("Failed to save advocate");
+      }
+
+      const data = await response.json();
+      console.log("Saved:", data);
+
+      router.push("/lawfirm-management");
+    } catch (error) {
+      console.error("Save failed:", error);
     }
   };
 
@@ -74,25 +148,32 @@ export default function LawfirmAdd({ onSubmit, onCancel, initialData }) {
         </div>
 
         <Button
-          title="Save Profile"
+          title={formData.id ? "Update Profile" : "Save Profile"}
           type="submit"
           form="profile-form"
           variant="primary"
         />
       </div>
 
-      <form id="profile-form" className="space-y-6 md:space-y-8" onSubmit={handleSubmit}>
+      <form
+        id="profile-form"
+        className="space-y-6 md:space-y-8"
+        onSubmit={handleSubmit}
+      >
         {/* Profile Card */}
         <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm">
           <div className="flex flex-col items-center">
             <div className="relative">
               <img
-                src={formData.profileImage || "https://images.unsplash.com/photo-1500648767791-00dcc994a43?w=400"}
+                src={
+                  formData.profileImage ||
+                  "https://images.unsplash.com/photo-1500648767791-00dcc994a43?w=400"
+                }
                 alt="profile"
                 className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-white shadow-md ring-1 ring-[#E2E8F0]"
               />
 
-              <label className="absolute bottom-1 right-1 bg-[#2563EB] hover:bg-[#1d4ed8] text-white w-10 h-10 rounded-full flex items-center justify-center cursor-pointer shadow-md transition-colors">
+              <label className="absolute bottom-1 right-1 bg-[#2563EB] text-white w-10 h-10 rounded-full flex items-center justify-center cursor-pointer shadow-md">
                 📷
                 <input
                   type="file"
@@ -106,68 +187,22 @@ export default function LawfirmAdd({ onSubmit, onCancel, initialData }) {
             <h2 className="mt-4 text-base font-bold text-[#0F172A]">
               Law Firm Profile
             </h2>
-
-            <p className="text-[#64748B] text-xs mt-0.5">
-              Update advocate personal and professional credentials.
-            </p>
           </div>
         </div>
 
         {/* Personal Information */}
         <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm">
-          <h2 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider mb-5 pb-2 border-b border-[#F1F5F9]">
+          <h2 className="text-sm font-semibold mb-5">
             Personal Information
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            <InputField
-              label="Advocate Name"
-              placeholder="Enter Advocate Name"
-              name="advocateName"
-              value={formData.advocateName}
-              onChange={handleChange}
-            />
-
-            <InputField
-              label="Bar Council ID"
-              placeholder="Enter Bar Council ID"
-              name="barCouncilId"
-              value={formData.barCouncilId}
-              onChange={handleChange}
-            />
-
-            <InputField
-              label="Enrollment Number"
-              placeholder="Enter Enrollment Number"
-              name="enrollmentNumber"
-              value={formData.enrollmentNumber}
-              onChange={handleChange}
-            />
-
-            <InputField
-              label="Phone Number"
-              placeholder="Enter Phone Number"
-              name="phoneNumber"
-              value={formData.phoneNumber}
-              onChange={handleChange}
-            />
-
-            <InputField
-              label="Email Address"
-              type="email"
-              placeholder="Enter Email Address"
-              name="emailAddress"
-              value={formData.emailAddress}
-              onChange={handleChange}
-            />
-
-            <InputField
-              label="Date of Birth"
-              type="date"
-              name="dateOfBirth"
-              value={formData.dateOfBirth}
-              onChange={handleChange}
-            />
+            <InputField label="Advocate Name" name="advocateName" value={formData.advocateName} onChange={handleChange} />
+            <InputField label="Bar Council ID" name="barCouncilId" value={formData.barCouncilId} onChange={handleChange} />
+            <InputField label="Enrollment Number" name="enrollmentNumber" value={formData.enrollmentNumber} onChange={handleChange} />
+            <InputField label="Phone Number" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} />
+            <InputField label="Email Address" name="emailAddress" value={formData.emailAddress} onChange={handleChange} />
+            <InputField label="Date of Birth" type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} />
 
             <SelectField
               label="Gender"
@@ -177,87 +212,29 @@ export default function LawfirmAdd({ onSubmit, onCancel, initialData }) {
               onChange={handleChange}
             />
 
-            <InputField
-              label="Aadhaar Number"
-              placeholder="Enter Aadhaar Number"
-              name="aadhaarNumber"
-              value={formData.aadhaarNumber}
-              onChange={handleChange}
-            />
-
-            <InputField
-              label="PAN Number"
-              placeholder="Enter PAN Number"
-              name="panNumber"
-              value={formData.panNumber}
-              onChange={handleChange}
-            />
+            <InputField label="Aadhaar Number" name="aadhaarNumber" value={formData.aadhaarNumber} onChange={handleChange} />
+            <InputField label="PAN Number" name="panNumber" value={formData.panNumber} onChange={handleChange} />
           </div>
         </div>
 
         {/* Professional Information */}
         <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm">
-          <h2 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider mb-5 pb-2 border-b border-[#F1F5F9]">
+          <h2 className="text-sm font-semibold mb-5">
             Professional Information
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            <InputField label="Practice Area" name="practiceArea" value={formData.practiceArea} onChange={handleChange} />
+            <InputField label="Court Type" name="courtType" value={formData.courtType} onChange={handleChange} />
+            <InputField label="Years of Experience" name="yearsOfExperience" value={formData.yearsOfExperience} onChange={handleChange} />
+            <InputField label="Languages Known" name="languagesKnown" value={formData.languagesKnown} onChange={handleChange} />
+            <InputField label="Law Firm Name" name="lawFirmName" value={formData.lawFirmName} onChange={handleChange} />
+            <InputField label="Specialization" name="specialization" value={formData.specialization} onChange={handleChange} />
             <SelectField
-              label="Practice Area"
-              options={[
-                "Civil Law",
-                "Criminal Law",
-                "Corporate Law",
-                "Family Law",
-                "Property Law",
-              ]}
-              name="practiceArea"
-              value={formData.practiceArea}
-              onChange={handleChange}
-            />
-
-            <SelectField
-              label="Court Type"
-              options={[
-                "District Court",
-                "High Court",
-                "Supreme Court",
-              ]}
-              name="courtType"
-              value={formData.courtType}
-              onChange={handleChange}
-            />
-
-            <InputField
-              label="Years of Experience"
-              type="number"
-              placeholder="Enter Experience"
-              name="yearsOfExperience"
-              value={formData.yearsOfExperience}
-              onChange={handleChange}
-            />
-
-            <InputField
-              label="Languages Known"
-              placeholder="English, Hindi, Malayalam"
-              name="languagesKnown"
-              value={formData.languagesKnown}
-              onChange={handleChange}
-            />
-
-            <InputField
-              label="Law Firm Name"
-              placeholder="Enter Law Firm Name"
-              name="lawFirmName"
-              value={formData.lawFirmName}
-              onChange={handleChange}
-            />
-
-            <InputField
-              label="Specialization"
-              placeholder="Enter Specialization"
-              name="specialization"
-              value={formData.specialization}
+              label="Status"
+              options={["Active", "Inactive"]}
+              name="status"
+              value={formData.status || "Active"}
               onChange={handleChange}
             />
           </div>
@@ -265,45 +242,21 @@ export default function LawfirmAdd({ onSubmit, onCancel, initialData }) {
 
         {/* Address Information */}
         <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm">
-          <h2 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider mb-5 pb-2 border-b border-[#F1F5F9]">
+          <h2 className="text-sm font-semibold mb-5">
             Address Information
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            <InputField
-              label="City"
-              placeholder="Enter City"
-              name="city"
-              value={formData.city}
-              onChange={handleChange}
-            />
-
-            <InputField
-              label="State"
-              placeholder="Enter State"
-              name="state"
-              value={formData.state}
-              onChange={handleChange}
-            />
-
-            <InputField
-              label="Pincode"
-              placeholder="Enter Pincode"
-              name="pincode"
-              value={formData.pincode}
-              onChange={handleChange}
-            />
+            <InputField label="City" name="city" value={formData.city} onChange={handleChange} />
+            <InputField label="State" name="state" value={formData.state} onChange={handleChange} />
+            <InputField label="Pincode" name="pincode" value={formData.pincode} onChange={handleChange} />
           </div>
 
           <div className="mt-5">
-            <label className="block mb-2 text-sm font-medium text-[#0F172A]">
-              Chambers Address
-            </label>
-
             <textarea
               rows="4"
               placeholder="Enter Chambers Address"
-              className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200 resize-y"
+              className="w-full rounded-lg border px-4 py-3"
               name="chambersAddress"
               value={formData.chambersAddress}
               onChange={handleChange}
@@ -311,16 +264,14 @@ export default function LawfirmAdd({ onSubmit, onCancel, initialData }) {
           </div>
         </div>
 
-        {/* About Section */}
+        {/* About */}
         <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm">
-          <h2 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider mb-5 pb-2 border-b border-[#F1F5F9]">
-            About Advocate
-          </h2>
+          <h2 className="text-sm font-semibold mb-5">About Advocate</h2>
 
           <textarea
             rows="5"
             placeholder="Write a short professional bio..."
-            className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200 resize-y"
+            className="w-full rounded-lg border px-4 py-3"
             name="about"
             value={formData.about}
             onChange={handleChange}
@@ -330,7 +281,7 @@ export default function LawfirmAdd({ onSubmit, onCancel, initialData }) {
         {/* Buttons */}
         <div className="flex flex-row gap-3 pt-4 border-t border-[#F1F5F9]">
           <Button
-            title="Save Profile"
+            title={formData.id ? "Update Profile" : "Save Profile"}
             type="submit"
             variant="primary"
           />

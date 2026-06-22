@@ -19,7 +19,7 @@ import {
   ChevronUp,
   Shield,
 } from "lucide-react";
-
+import Image from "next/image";
 // Map original section titles to new header labels
 const sectionTitleMap = {
   "Advocate Section": "Advocate Section",
@@ -54,10 +54,9 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         { name: "Case Management", path: "/case-management", icon: Folder },
         { name: "Client Management", path: "/client-management", icon: Users },
         { name: "Law Firm Management", path: "/lawfirm-management", icon: Scale },
-        { name: "Consultations", path: "/consultations", icon: BookOpen },
+        { name: "Case Discussion", path: "/consultations", icon: BookOpen },
         { name: "Finance Management", path: "/finance-management", icon: CreditCard },
         { name: "Calendar", path: "/calendar", icon: Calendar },
-        { name: "Profile", path: "/profile-management", icon: Settings },
       ],
     },
   ];
@@ -78,7 +77,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
       title: "Client Section",
       items: [
         { name: "Dashboard", path: "/client-dashboard", icon: Home },
-        { name: "Consultation", path: "/client-consultation", icon: BookOpen },
+        { name: "Case Discussion", path: "/client-consultation", icon: BookOpen },
         { name: "Case Tracking", path: "/client-case-tracking", icon: Folder },
         { name: "Documents", path: "/client-documents", icon: Settings },
         { name: "Payments", path: "/client-payments", icon: CreditCard },
@@ -127,9 +126,8 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-screen transition-[width] duration-300 ease-in-out bg-white border-r border-[#E2E8F0] z-50 ${
-          isCollapsed ? "w-[72px]" : "w-[280px]"
-        } ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
+        className={`fixed top-0 left-0 h-screen transition-[width] duration-300 ease-in-out bg-white border-r border-[#E2E8F0] z-50 ${isCollapsed ? "w-[72px]" : "w-[280px]"
+          } ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
       >
         <div className="flex flex-col h-full overflow-y-auto">
           {/* Logo & Collapse Toggle */}
@@ -150,7 +148,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
               )}
             </button>
           </div>
-          
+
 
           {/* Menu */}
           <nav className="flex-1 px-4 py-5">
@@ -188,11 +186,10 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
                                 <li key={sub.path}>
                                   <Link
                                     href={sub.path}
-                                    className={`block px-3 py-2 rounded-lg text-sm transition-colors duration-200 ${
-                                      pathname === sub.path
+                                    className={`block px-3 py-2 rounded-lg text-sm transition-colors duration-200 ${pathname === sub.path
                                         ? "text-[#2563EB] bg-[#2563EB]/5 font-medium"
                                         : "text-[#64748B] hover:text-[#1E293B] hover:bg-[#F1F5F9]"
-                                    }`}
+                                      }`}
                                   >
                                     {sub.name}
                                   </Link>
@@ -204,42 +201,46 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
                       );
                     }
 
-                    const active = pathname === item.path;
+                    const active = pathname === item.path || pathname.startsWith(item.path + "/");
                     const IconComponent = item.icon;
                     return (
-                          <li key={item.path} className="relative group">
-                            <Link
-                              href={item.path}
-                              title={isCollapsed ? item.name : undefined}
-                              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                                active
-                                  ? "bg-[rgba(37,99,235,0.12)] border-l-4 border-[#2563EB] text-[#2563EB] font-semibold"
-                                  : "text-[#1E293B] hover:bg-[#F8FAFC]"
-                              }`}
-                            >
-                              <IconComponent size={17} className="flex-shrink-0" />
-                              {!isCollapsed && <span>{item.name}</span>}
-                            </Link>
-                            {isCollapsed && (
-                              <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-2 py-1 bg-[#0F172A] text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                                {item.name}
-                              </div>
-                            )}
-                          </li>
+                      <li key={item.path} className="relative group">
+                        <Link
+                          href={item.path}
+                          title={isCollapsed ? item.name : undefined}
+                          className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 ${active
+                              ? "bg-[rgba(37,99,235,0.12)] border-l-4 border-[#2563EB] text-[#2563EB] font-semibold"
+                              : "text-[#1E293B] hover:bg-[#F8FAFC]"
+                            }`}
+                        >
+                          <IconComponent size={17} className="flex-shrink-0" />
+                          {!isCollapsed && <span>{item.name}</span>}
+                        </Link>
+                        {isCollapsed && (
+                          <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-2 py-1 bg-[#0F172A] text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                            {item.name}
+                          </div>
+                        )}
+                      </li>
                     );
                   })}
                 </ul>
               </div>
             ))}
           </nav>
-
           {/* User Profile */}
-          <div className="px-6 py-5 border-t border-[#E2E8F0] flex items-center">
-            <img
+          <Link
+            href="/profile-management"
+            className="px-6 py-5 border-t border-[#E2E8F0] flex items-center hover:bg-[#F8FAFC] transition"
+          >
+            <Image
               src="https://i.pravatar.cc/150?img=12"
               alt="Profile"
-              className="w-9 h-9 rounded-full object-cover ring-2 ring-[#E2E8F0]"
+              width={36}
+              height={36}
+              className="rounded-full object-cover ring-2 ring-[#E2E8F0]"
             />
+
             {!isCollapsed && (
               <div className="ml-3 text-left">
                 <h4 className="font-semibold text-sm text-[#0F172A] capitalize">
@@ -250,7 +251,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
                 </p>
               </div>
             )}
-          </div>
+          </Link>
         </div>
       </aside>
     </>

@@ -18,11 +18,9 @@ import {
   Briefcase,
   Plus
 } from "lucide-react";
-
 export default function ClientView() {
   const router = useRouter();
   const [clients, setClients] = useState([]);
-
   const fetchClients = async () => {
     try {
       const res = await fetch("http://localhost:8000/clients");
@@ -44,11 +42,9 @@ export default function ClientView() {
       console.error("Failed to fetch clients from backend:", err);
     }
   };
-
   useEffect(() => {
     fetchClients();
   }, []);
-
   const handleDelete = async (clientId) => {
     if (!window.confirm("Are you sure you want to delete this client?")) {
       return;
@@ -66,7 +62,6 @@ export default function ClientView() {
       console.error("Error deleting client:", err);
     }
   };
-
   return (
     <div className="w-full space-y-6 md:space-y-8">
       {/* Page Header */}
@@ -78,17 +73,15 @@ export default function ClientView() {
           Manage clients, documents and communications
         </p>
       </div>
-
       {/* Top Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <TopCard
+        {/* <TopCard
           title="Add Client"
           desc="Register a new client profile"
           button="Add Client"
           color="bg-[#16A34A] hover:bg-[#15803d]"
           link="/client-management/add-client"
-        />
-
+        /> */}
         <TopCard
           title="Case Tracking"
           desc="Track all cases"
@@ -96,7 +89,6 @@ export default function ClientView() {
           color="bg-[#2563EB] hover:bg-[#1d4ed8]"
           link="/client-management/case-tracking"
         />
-
         <TopCard
           title="View History"
           desc="Communication and activity history"
@@ -105,13 +97,11 @@ export default function ClientView() {
           link="/client-management/view-history"
         />
       </div>
-
       {/* Client Overview */}
       <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <h2 className="font-bold text-lg text-[#0F172A]">Client Overview</h2>
         </div>
-
         {clients .length > 0? (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -201,15 +191,12 @@ export default function ClientView() {
             <div className="w-16 h-16 bg-[#F1F5F9] text-[#64748B] rounded-full flex items-center justify-center mx-auto mb-4">
               <Users size={32} />
             </div>
-
             <h2 className="font-bold text-lg text-[#0F172A] mb-2">
               No Client Registered
             </h2>
-
             <p className="text-sm text-[#64748B] mb-6">
               No client details have been recorded yet.
             </p>
-
             
           </div>
         )}
@@ -217,7 +204,6 @@ export default function ClientView() {
     </div>
   );
 }
-
 function TopCard({
   title,
   desc,
@@ -234,7 +220,6 @@ function TopCard({
           {desc}
         </p>
       </div>
-
       {onClick ? (
         <button
           onClick={onClick}
@@ -260,7 +245,6 @@ function TopCard({
     </div>
   );
 }
-
 function InfoItem({ icon, text }) {
   return (
     <div className="flex items-center gap-3">
@@ -269,7 +253,6 @@ function InfoItem({ icon, text }) {
     </div>
   );
 }
-
 function ActivityItem({ title, time }) {
   return (
     <div className="flex justify-between py-2">
@@ -277,7 +260,6 @@ function ActivityItem({ title, time }) {
         <Clock size={16} />
         {title}
       </div>
-
       <span className="text-xs text-gray-500">
         {time}
       </span>

@@ -1,46 +1,35 @@
 from sqlalchemy.orm import Session
-from app.advocate.client_management.models import Client
-from app.advocate.client_management.schemas import ClientCreate, ClientUpdate
-
-# CREATE CLIENT
-def create_client(db: Session, client: ClientCreate):
-    new_client = Client(**client.dict())
-    db.add(new_client)
-    db.commit()
-    db.refresh(new_client)
-    return new_client
+from .models import ClientDocument, Client
 
 
-# GET ALL CLIENTS
-def get_clients(db: Session):
-    return db.query(Client).all()
+def get_case_documents(
+    db: Session,
+    client_id: int,
+    advocate_role: str,
+    document_type: str = None
+):
+    # Get all documents of client
+    documents = db.query(ClientDocument).filter(
+        ClientDocument.client_id == client_id
+    ).all()
 
+    # Junior Advocate Restrictions
+    if advocate_role.lower() == "junior":
+        restricted_docs = [
+            "Witness Statement",
+            "Strategy Notes"
+        ]
 
-# GET SINGLE CLIENT
-def get_client(db: Session, client_id: str):
-    return db.query(Client).filter(Client.client_id == client_id).first()
+        documents = [
+            doc for doc in documents
+            if doc.document_type not in restricted_docs
+        ]
 
+    # Filter by document type
+    if document_type:
+        documents = [
+            doc for doc in documents
+            if doc.document_type == document_type
+        ]
 
-# UPDATE CLIENT
-def update_client(db: Session, client_id: str, updated_data: ClientUpdate):
-    client = get_client(db, client_id)
-    if not client:
-        return None
-
-    for key, value in updated_data.dict(exclude_unset=True).items():
-        setattr(client, key, value)
-
-    db.commit()
-    db.refresh(client)
-    return client
-
-
-# DELETE CLIENT
-def delete_client(db: Session, client_id: str):
-    client = get_client(db, client_id)
-    if not client:
-        return None
-
-    db.delete(client)
-    db.commit()
-    return client
+    return documents
