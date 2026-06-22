@@ -51,7 +51,10 @@ def create_new_role(data: RoleCreate, db: Session = Depends(get_db)):
     existing = service.get_role_by_name(db, data.name)
     if existing:
         raise HTTPException(status_code=400, detail=f"Role '{data.name}' already exists!")
-    return service.create_role(db, data)
+    try:
+        return service.create_role(db, data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 # finds a role and updates it.
 
@@ -105,6 +108,14 @@ def list_users(db: Session = Depends(get_db)):
     users = service.get_users(db)
     return [map_user_to_out(u) for u in users]
 
+@router.get("/users/{user_id}", response_model=UserOut)
+def get_user_details(user_id: int, db: Session = Depends(get_db)):
+    user = service.get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return map_user_to_out(user)
+
+
 # adds a new user to database
 
 @router.post("/users/provision", response_model=UserOut)
@@ -120,7 +131,10 @@ def provision_new_user(data: UserProvision, db: Session = Depends(get_db)):
 
 @router.put("/users/{user_id}", response_model=UserOut)
 def update_user_details(user_id: int, data: UserUpdate, db: Session = Depends(get_db)):
-    updated = service.update_user(db, user_id, data)
+    try:
+        updated = service.update_user(db, user_id, data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     if not updated:
         raise HTTPException(status_code=404, detail="User not found")
     return map_user_to_out(updated)
