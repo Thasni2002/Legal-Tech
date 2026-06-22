@@ -44,51 +44,51 @@ export default function LawfirmView() {
   ];
 
   useEffect(() => {
+    const fetchAdvocates = async () => {
+      try {
+        const response = await fetch("http://localhost:8000/lawfirm-management/");
+        const data = await response.json();
+
+        setAdvocates(Array.isArray(data) ? data : data.data || []);
+      } catch (error) {
+        console.error("Error fetching advocates:", error);
+        setAdvocates([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fetchAssignedCases = async () => {
+      try {
+        const response = await fetch(
+          "http://localhost:8000/lawfirm-management/assigned-cases"
+        );
+
+        const data = await response.json();
+        setAssignedCases(data);
+      } catch (error) {
+        console.error("Error fetching assigned cases:", error);
+      }
+    };
+
+    const fetchDashboardStats = async () => {
+      try {
+        const response = await fetch("http://localhost:8000/advocate/dashboard");
+        const data = await response.json();
+        setDashboardStats(data.stats);
+      } catch (error) {
+        console.error("Error fetching dashboard stats:", error);
+      }
+    };
+
     fetchAdvocates();
     fetchDashboardStats();
     fetchAssignedCases();
   }, []);
 
-  const fetchAdvocates = async () => {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/lawfirm-management/");
-      const data = await response.json();
-
-      setAdvocates(Array.isArray(data) ? data : data.data || []);
-    } catch (error) {
-      console.error("Error fetching advocates:", error);
-      setAdvocates([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchAssignedCases = async () => {
-    try {
-      const response = await fetch(
-        "http://127.0.0.1:8000/lawfirm-management/assigned-cases"
-      );
-
-      const data = await response.json();
-      setAssignedCases(data);
-    } catch (error) {
-      console.error("Error fetching assigned cases:", error);
-    }
-  };
-
-  const fetchDashboardStats = async () => {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/advocate/dashboard");
-      const data = await response.json();
-      setDashboardStats(data.stats);
-    } catch (error) {
-      console.error("Error fetching dashboard stats:", error);
-    }
-  };
-
 const handleAdvocateDelete = async (id) => {
   try {
-    await fetch(`http://127.0.0.1:8000/lawfirm-management/${id}`, {
+    await fetch(`http://localhost:8000/lawfirm-management/${id}`, {
       method: "DELETE",
     });
 
@@ -103,7 +103,7 @@ const handleAdvocateDelete = async (id) => {
 const handleCaseDelete = async (id) => {
   try {
     await fetch(
-      `http://127.0.0.1:8000/lawfirm-management/assigned-cases/${id}`,
+      `http://localhost:8000/lawfirm-management/assigned-cases/${id}`,
       {
         method: "DELETE",
       }
@@ -172,34 +172,34 @@ const handleCaseDelete = async (id) => {
       </div>
 
       {/* Stats Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
           <div className="w-11 h-11 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
             <Users className="w-5 h-5 text-purple-600" />
           </div>
           <p className="text-[#64748B] text-sm">Total Advocates</p>
           <h3 className="text-3xl md:text-4xl font-bold mt-2 text-[#0F172A]">
-            {dashboardStats ? dashboardStats.total_advocates : "—"}
-          </h3>
-        </div>
-
-        <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-          <div className="w-11 h-11 bg-cyan-100 rounded-lg flex items-center justify-center mb-4">
-            <Briefcase className="w-5 h-5 text-cyan-600" />
-          </div>
-          <p className="text-[#64748B] text-sm">Active Cases</p>
-          <h3 className="text-3xl md:text-4xl font-bold mt-2 text-[#0F172A]">
-            {dashboardStats ? dashboardStats.active_cases : "—"}
+            {advocates.length}
           </h3>
         </div>
 
         <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
           <div className="w-11 h-11 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-            <FolderOpen className="w-5 h-5 text-green-600" />
+            <Users className="w-5 h-5 text-green-600" />
           </div>
-          <p className="text-[#64748B] text-sm">Closed Cases</p>
+          <p className="text-[#64748B] text-sm">Active Advocates</p>
           <h3 className="text-3xl md:text-4xl font-bold mt-2 text-[#0F172A]">
-            {dashboardStats ? dashboardStats.closed_cases : "—"}
+            {advocates.filter((a) => a.status === "Active" || !a.status).length}
+          </h3>
+        </div>
+
+        <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+          <div className="w-11 h-11 bg-red-100 rounded-lg flex items-center justify-center mb-4">
+            <Users className="w-5 h-5 text-red-600" />
+          </div>
+          <p className="text-[#64748B] text-sm">Inactive Advocates</p>
+          <h3 className="text-3xl md:text-4xl font-bold mt-2 text-[#0F172A]">
+            {advocates.filter((a) => a.status === "Inactive").length}
           </h3>
         </div>
       </div>

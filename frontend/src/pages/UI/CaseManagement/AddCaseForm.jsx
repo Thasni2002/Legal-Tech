@@ -41,7 +41,7 @@ export default function AddCaseForm() {
 async function fetchAdvocates() {
   try {
     const response = await fetch(
-      "http://127.0.0.1:8000/lawfirm-management/"
+      "http://localhost:8000/lawfirm-management/"
     );
 
     const data = await response.json();
