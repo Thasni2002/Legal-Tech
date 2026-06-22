@@ -2,11 +2,11 @@ import React from "react";
 import { Download, Trash, ArrowLeft,} from "lucide-react";
 
 const InvoiceHistoryView = ({
-  invoices,
-  handleUpdateStatus,
-  handleDownloadInvoicePDF,
-  handleDeleteInvoice,
-  onBack,
+  invoices = [],
+  handleUpdateStatus = () => {},
+  handleDownloadInvoicePDF = () => {},
+  handleDeleteInvoice = () => {},
+  onBack = () => {},
 }) => {
   return (
     <div className="p-6 min-h-screen bg-slate-50">

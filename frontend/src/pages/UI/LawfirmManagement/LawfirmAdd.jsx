@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/Button/Button";
 import InputField from "@/components/InputField/InputField";
@@ -8,6 +10,14 @@ import SelectField from "@/components/SelectField/SelectField";
 
 export default function LawfirmAdd({ onCancel, initialData }) {
   const router = useRouter();
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   // Convert null values in initialData to empty strings to avoid controlled input warnings
   const sanitizedInitialData = {};
@@ -46,6 +56,18 @@ export default function LawfirmAdd({ onCancel, initialData }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    const numberFields = [
+      "phoneNumber",
+      "aadhaarNumber",
+      "pincode",
+      "yearsOfExperience",
+    ];
+
+    if (numberFields.includes(name)) {
+      if (!/^\d*$/.test(value)) return;
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -71,6 +93,27 @@ export default function LawfirmAdd({ onCancel, initialData }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!/^\d{10}$/.test(formData.phoneNumber)) {
+      alert("Phone Number must be 10 digits");
+      return;
+    }
+
+    if (
+      formData.aadhaarNumber &&
+      !/^\d{12}$/.test(formData.aadhaarNumber)
+    ) {
+      alert("Aadhaar Number must be 12 digits");
+      return;
+    }
+
+    if (
+      formData.pincode &&
+      !/^\d{6}$/.test(formData.pincode)
+    ) {
+      alert("Pincode must be 6 digits");
+      return;
+    }
 
     try {
       const payload = {
@@ -102,7 +145,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
 
       if (formData.id) {
         response = await fetch(
-          `http://127.0.0.1:8000/lawfirm-management/${formData.id}`,
+          `http://localhost:8000/lawfirm-management/${formData.id}`,
           {
             method: "PUT",
             headers: {
@@ -112,7 +155,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
           }
         );
       } else {
-        response = await fetch("http://127.0.0.1:8000/lawfirm-management/", {
+        response = await fetch("http://localhost:8000/lawfirm-management/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -128,7 +171,15 @@ export default function LawfirmAdd({ onCancel, initialData }) {
       const data = await response.json();
       console.log("Saved:", data);
 
-      router.push("/lawfirm-management");
+      setSuccessMessage(
+        formData.id
+          ? "Profile updated successfully!"
+          : "Profile saved successfully!"
+      );
+
+      setShowSuccessModal(true);
+
+
     } catch (error) {
       console.error("Save failed:", error);
     }
@@ -137,7 +188,15 @@ export default function LawfirmAdd({ onCancel, initialData }) {
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6 md:space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#F1F5F9] pb-4 mb-6">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="flex items-center justify-center w-10 h-10 rounded-lg border border-[#E2E8F0] hover:bg-gray-100 transition"
+        >
+          <ArrowLeft size={20} />
+        </button>
+
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] tracking-tight">
             Law Firm Management
@@ -146,13 +205,6 @@ export default function LawfirmAdd({ onCancel, initialData }) {
             Create and manage advocate profiles affiliated with your firm.
           </p>
         </div>
-
-        <Button
-          title={formData.id ? "Update Profile" : "Save Profile"}
-          type="submit"
-          form="profile-form"
-          variant="primary"
-        />
       </div>
 
       <form
@@ -200,7 +252,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
             <InputField label="Advocate Name" name="advocateName" value={formData.advocateName} onChange={handleChange} />
             <InputField label="Bar Council ID" name="barCouncilId" value={formData.barCouncilId} onChange={handleChange} />
             <InputField label="Enrollment Number" name="enrollmentNumber" value={formData.enrollmentNumber} onChange={handleChange} />
-            <InputField label="Phone Number" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} />
+            <InputField label="Phone Number" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} maxLength={10} />
             <InputField label="Email Address" name="emailAddress" value={formData.emailAddress} onChange={handleChange} />
             <InputField label="Date of Birth" type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} />
 
@@ -212,7 +264,8 @@ export default function LawfirmAdd({ onCancel, initialData }) {
               onChange={handleChange}
             />
 
-            <InputField label="Aadhaar Number" name="aadhaarNumber" value={formData.aadhaarNumber} onChange={handleChange} />
+            <InputField
+              label="Aadhaar Number" name="aadhaarNumber" value={formData.aadhaarNumber} onChange={handleChange} maxLength={12} />
             <InputField label="PAN Number" name="panNumber" value={formData.panNumber} onChange={handleChange} />
           </div>
         </div>
@@ -249,7 +302,8 @@ export default function LawfirmAdd({ onCancel, initialData }) {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             <InputField label="City" name="city" value={formData.city} onChange={handleChange} />
             <InputField label="State" name="state" value={formData.state} onChange={handleChange} />
-            <InputField label="Pincode" name="pincode" value={formData.pincode} onChange={handleChange} />
+            <InputField
+              label="Pincode" name="pincode" value={formData.pincode} onChange={handleChange} maxLength={6} />
           </div>
 
           <div className="mt-5">
@@ -294,6 +348,36 @@ export default function LawfirmAdd({ onCancel, initialData }) {
           />
         </div>
       </form>
+        { showSuccessModal && mounted && createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 w-[90%] max-w-md text-center">
+              <div className="flex justify-center mb-4">
+                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+                  <span className="text-green-600 text-3xl">✓</span>
+                </div>
+              </div>
+
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                Success
+              </h2>
+
+              <p className="text-gray-600 mb-6">
+                {successMessage}
+              </p>
+
+              <button
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  router.push("/lawfirm-management");
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg cursor-pointer"
+              >
+                OK
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
