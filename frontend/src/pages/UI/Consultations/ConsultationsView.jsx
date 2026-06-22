@@ -210,7 +210,7 @@ export default function ConsultationsView() {
             {/* Page Header */}
             <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6 mb-6">
                 <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
-                    Consultations
+                    Case Disussion
                 </h1>
                 <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
                     Schedule and manage client consultations

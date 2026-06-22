@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { 
   UserPlus, Key, Eye, EyeOff, RefreshCw, AlertTriangle, 
-  ShieldCheck, Mail, Phone, User, Check, X, FileText, Settings, Shield
+  ShieldCheck, Mail, Phone, User, Check, X, FileText, Settings, Shield, Plus
 } from "lucide-react";
 
 const DEFAULT_ROLES = [
@@ -13,7 +14,44 @@ const DEFAULT_ROLES = [
   { id: "client", name: "Client", description: "Client access" }
 ];
 
-
+const DEFAULT_USERS = [
+  {
+    id: "user_1",
+    firstName: "Rahul",
+    lastName: "Sharma",
+    phone: "+91 98765 43210",
+    username: "rahulsharma",
+    email: "rahul@legaltech.com",
+    role: "Senior Advocate",
+    tempPassword: "temp_Rahul123!",
+    customPermissions: {},
+    documentAccess: []
+  },
+  {
+    id: "user_2",
+    firstName: "Priya",
+    lastName: "Nair",
+    phone: "+91 87654 32109",
+    username: "priyanair",
+    email: "priya@legaltech.com",
+    role: "Junior Advocate",
+    tempPassword: "temp_Priya456!",
+    customPermissions: {},
+    documentAccess: []
+  },
+  {
+    id: "user_3",
+    firstName: "Amit",
+    lastName: "Verma",
+    phone: "+91 76543 21098",
+    username: "amitverma",
+    email: "amit@legaltech.com",
+    role: "Client",
+    tempPassword: "temp_Amit789!",
+    customPermissions: {},
+    documentAccess: []
+  }
+];
 
 const ACTIONS = ["view", "add", "edit", "delete"];
 
@@ -46,11 +84,37 @@ const ALL_MODULES = [
   "Permissions",
 ];
 
-const getModulesForRole = () => {
-  return ALL_MODULES.map((mod) => ({
-    key: mod,
-    label: mod,
-  }));
+const getModulesForRole = (roleName) => {
+  const normRole = (roleName || "").toLowerCase().replace(/\s+/g, "");
+  
+  if (normRole === "client") {
+    return [
+      { key: "Dashboard", label: "Dashboard" },
+      { key: "Consultation", label: "Case Discussion" },
+      { key: "Case Tracking", label: "Case Tracking" },
+      { key: "Documents", label: "Documents" },
+      { key: "Payments", label: "Payments" },
+    ];
+  }
+  
+  if (normRole === "junioradvocate") {
+    return [
+      { key: "Dashboard", label: "Dashboard" },
+      { key: "Assigned Cases", label: "Assigned Cases" },
+      { key: "Calendar", label: "Calendar" },
+    ];
+  }
+  
+  // For Senior Advocate or any other role, show the main advocate features
+  return [
+    { key: "Dashboard", label: "Dashboard" },
+    { key: "Law Firm Management", label: "Law Firm Management" },
+    { key: "Client Management", label: "Client Management" },
+    { key: "Case Management", label: "Case Management" },
+    { key: "Consultations", label: "Case Discussion" },
+    { key: "Finance Management", label: "Finance Management" },
+    { key: "Calendar", label: "Calendar" },
+  ];
 };
 
 
@@ -94,6 +158,8 @@ export default function UsersView() {
 
   const [notification, setNotification] = useState(null);
 
+  const [mounted, setMounted] = useState(false);
+
   // Load roles & users from backend on mount
   useEffect(() => {
     const loadData = async () => {
@@ -126,6 +192,7 @@ export default function UsersView() {
 
     loadData();
     generateRandomPassword();
+    setMounted(true);
   }, []);
 
   // Generate random password helper
@@ -320,20 +387,7 @@ export default function UsersView() {
     });
   };
 
-  // Toggle document access check in details modal
-  const handleDocAccessToggle = (docId, action) => {
-    setEditDocAccess((prev) =>
-      prev.map((doc) => {
-        if (doc.docId === docId) {
-          return {
-            ...doc,
-            [action]: !doc[action],
-          };
-        }
-        return doc;
-      })
-    );
-  };
+
 
   return (
     <div className="w-full space-y-6 md:space-y-8">
@@ -397,7 +451,7 @@ export default function UsersView() {
                   onClick={() => setSelectedRole(role.name)}
                   className={`px-5 py-3 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                     active
-                      ? "bg-slate-100 hover:bg-slate-200 text-slate-700 ring-2 ring-slate-200 font-extrabold"
+                      ? "bg-black text-white shadow-md"
                       : "bg-slate-100 hover:bg-slate-200 text-slate-600"
                   }`}
                 >
@@ -410,140 +464,163 @@ export default function UsersView() {
             <button
               type="button"
               onClick={() => router.push("/permissions/roles")}
-              className="px-5 py-3 rounded-full text-xs font-bold uppercase tracking-wider bg-black text-white hover:bg-slate-800 transition-all cursor-pointer flex items-center gap-1.5"
+              className="px-5 py-3 rounded-full text-xs font-bold uppercase tracking-wider border border-dashed border-slate-300 text-slate-500 hover:text-slate-800 hover:border-slate-400 hover:bg-slate-50/50 transition-all cursor-pointer flex items-center gap-1"
             >
+              <Plus size={14} />
               <span>NEW</span>
             </button>
           </div>
         </div>
 
         {/* User Details Form */}
-        <form onSubmit={handleProvisionUser} className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {/* First Name */}
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                First Name
-              </label>
-              <input
-                type="text"
-                placeholder="Jane"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
-              />
-            </div>
+<form onSubmit={handleProvisionUser} className="space-y-8">
+  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 
-            {/* Last Name */}
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                Last Name
-              </label>
-              <input
-                type="text"
-                placeholder="Doe"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
-              />
-            </div>
+    {/* First Name */}
+    <div className="flex flex-col">
+      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+        First Name
+      </label>
+      <input
+        type="text"
+        value={firstName}
+        onChange={(e) => setFirstName(e.target.value)}
+        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+      />
+    </div>
 
-            {/* Phone Number */}
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                Phone Number
-              </label>
-              <input
-                type="text"
-                placeholder="+1 (555) 000-0000"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
-              />
-            </div>
+    {/* Last Name */}
+    <div className="flex flex-col">
+      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+        Last Name
+      </label>
+      <input
+        type="text"
+        value={lastName}
+        onChange={(e) => setLastName(e.target.value)}
+        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+      />
+    </div>
 
-            {/* Username */}
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                Username *
-              </label>
-              <input
-                type="text"
-                placeholder="Unique username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
-              />
-            </div>
+    {/* Phone Number */}
+    <div className="flex flex-col">
+      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+        Phone Number
+      </label>
 
-            {/* Email Address */}
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                Email Address *
-              </label>
-              <input
-                type="email"
-                placeholder="example@legaltech.com"
-                value={emailAddress}
-                onChange={(e) => setEmailAddress(e.target.value)}
-                required
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
-              />
-            </div>
+      <input
+        type="tel"
+        value={phoneNumber}
+        onChange={(e) => {
+          const value = e.target.value.replace(/\D/g, "");
 
-            {/* Temp Password */}
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                Temp Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={tempPassword}
-                  onChange={(e) => setTempPassword(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-4 pr-24 py-3 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors"
-                    title={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={generateRandomPassword}
-                    className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors"
-                    title="Regenerate password"
-                  >
-                    <RefreshCw size={16} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          if (value.length <= 10) {
+            setPhoneNumber(value);
+          }
+        }}
+        maxLength={10}
+        className={`w-full rounded-xl border px-4 py-3 text-slate-800 placeholder:text-slate-700 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all text-sm font-medium ${
+          phoneNumber &&
+          !/^[6-9][0-9]{9}$/.test(phoneNumber)
+            ? "border-red-400 focus:border-red-500"
+            : "border-slate-200 focus:border-[#2563EB]"
+        }`}
+      />
 
-          {/* Form Action buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-slate-50">
-            <button
-              type="submit"
-              className="px-8 py-3.5 bg-black text-white hover:bg-slate-800 text-xs font-bold uppercase rounded-full cursor-pointer tracking-wider transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
-            >
-              <Check size={16} />
-              <span>Provision User</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="px-8 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold uppercase rounded-full cursor-pointer tracking-wider transition-all flex items-center justify-center"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+      {phoneNumber &&
+        !/^[6-9][0-9]{9}$/.test(phoneNumber) && (
+          <p className="mt-2 text-xs font-medium text-red-500">
+            Enter a valid Indian mobile number
+          </p>
+        )}
+    </div>
+
+    {/* Username */}
+    <div className="flex flex-col">
+      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+        Username *
+      </label>
+      <input
+        type="text"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        required
+        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+      />
+    </div>
+
+    {/* Email Address */}
+    <div className="flex flex-col">
+      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+        Email Address *
+      </label>
+      <input
+        type="email"
+        value={emailAddress}
+        onChange={(e) => setEmailAddress(e.target.value)}
+        required
+        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+      />
+    </div>
+
+    {/* Temp Password */}
+    <div className="flex flex-col">
+      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+        Temp Password
+      </label>
+
+      <div className="relative">
+        <input
+          type={showPassword ? "text" : "password"}
+          value={tempPassword}
+          onChange={(e) => setTempPassword(e.target.value)}
+          className="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-4 pr-24 py-3 text-slate-800 placeholder:text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+        />
+
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors"
+          >
+            {showPassword ? (
+              <EyeOff size={16} />
+            ) : (
+              <Eye size={16} />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={generateRandomPassword}
+            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors"
+          >
+            <RefreshCw size={16} />
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {/* Buttons */}
+  <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-slate-50">
+    <button
+      type="submit"
+      className="px-8 py-3.5 bg-black text-white hover:bg-slate-800 text-xs font-bold uppercase rounded-full cursor-pointer tracking-wider transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
+    >
+      <Check size={16} />
+      <span>Provision User</span>
+    </button>
+
+    <button
+      type="button"
+      onClick={handleCancel}
+      className="px-8 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold uppercase rounded-full cursor-pointer tracking-wider transition-all flex items-center justify-center"
+    >
+      Cancel
+    </button>
+  </div>
+</form>
       </div>
 
       {/* Provisioned Users Table */}
@@ -652,235 +729,229 @@ export default function UsersView() {
 </div>
 
       {/* ─── Edit Info & Direct Override Modal ─── */}
-
- {/* ─── Edit Info & Direct Override Modal ─── */}
-{isDetailsOpen && activeUser && (
-  <div
-    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-md px-4 py-6 overflow-y-auto"
-    onClick={() => setIsDetailsOpen(false)}
-  >
-    {/* Modal */}
-    <div
-      onClick={(e) => e.stopPropagation()}
-      className="relative bg-white rounded-3xl w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col border border-slate-200 my-auto"
-    >
-      {/* Header */}
-      <div className="relative bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-8 py-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white text-xl font-bold">
-              {(editFirstName || editUsername || "?")
-                .charAt(0)
-                .toUpperCase()}
-            </div>
-
-            <div>
-              <h3 className="text-white font-bold text-2xl">
-                {editFirstName} {editLastName}
-              </h3>
-              <p className="text-slate-400 text-sm">@{editUsername}</p>
-
-              <div className="flex items-center gap-2 mt-2">
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-white border border-white/20">
-                  {activeUser.role}
-                </span>
-
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-400/30">
-                  Active
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={() => setIsDetailsOpen(false)}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Info strip */}
-        <div className="flex flex-wrap gap-6 mt-5 pt-4 border-t border-white/10">
-          <div className="flex items-center gap-2 text-xs text-slate-300">
-            <Mail size={12} />
-            {editEmail}
-          </div>
-
-          <div className="flex items-center gap-2 text-xs text-slate-300">
-            <Phone size={12} />
-            {editPhone || "No phone"}
-          </div>
-
-          <div className="flex items-center gap-2 text-xs text-emerald-400">
-            <Key size={12} />
-            <code>{editPassword}</code>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex items-center border-b border-slate-100 bg-white px-6 gap-2 overflow-x-auto">
-        {[
-          { key: "profile", icon: <User size={15} />, label: "Profile Info" },
-          {
-            key: "permissions",
-            icon: <Settings size={15} />,
-            label: "Direct Permissions",
-          },
-          {
-            key: "documents",
-            icon: <FileText size={15} />,
-            label: "Document Access",
-          },
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setModalTab(tab.key)}
-            className={`flex items-center gap-2 py-4 px-5 text-xs font-bold uppercase border-b-2 whitespace-nowrap ${
-              modalTab === tab.key
-                ? "border-indigo-600 text-indigo-600"
-                : "border-transparent text-slate-400 hover:text-slate-700"
-            }`}
-          >
-            {tab.icon}
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Content */}
-      <div className="max-h-[60vh] overflow-y-auto bg-slate-50">
-        
-        {/* Profile */}
-        {modalTab === "profile" && (
-          <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-5">
-            {[
-              ["First Name", editFirstName, setEditFirstName],
-              ["Last Name", editLastName, setEditLastName],
-              ["Phone Number", editPhone, setEditPhone],
-              ["Username", editUsername, setEditUsername],
-              ["Email Address", editEmail, setEditEmail],
-            ].map(([label, value, setter]) => (
-              <div key={label}>
-                <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">
-                  {label}
-                </label>
-                <input
-                  value={value}
-                  onChange={(e) => setter(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"
-                />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Permissions */}
-        {modalTab === "permissions" && (
-          <div className="p-8">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-slate-800 text-white">
-                    <th className="py-3 px-4 text-left">Module</th>
-                    {ACTIONS.map((act) => (
-                      <th key={act} className="py-3 px-4 text-center">
-                        {act}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {getModulesForRole(activeUser.role).map(({ key, label }) => {
-                    const perms = editCustomPerms[key] || {};
-                    return (
-                      <tr key={key} className="border-b">
-                        <td className="py-3 px-4 font-medium">{label}</td>
-
-                        {ACTIONS.map((action) => (
-                          <td key={action} className="text-center">
-                            <input
-                              type="checkbox"
-                              checked={perms[action] || false}
-                              onChange={() =>
-                                handleCustomPermissionToggle(key, action)
-                              }
-                            />
-                          </td>
-                        ))}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Documents */}
-        {modalTab === "documents" && (
-          <div className="p-8">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-slate-800 text-white">
-                    <th className="py-3 px-4 text-left">Document</th>
-                    <th className="py-3 px-4 text-left">Type</th>
-                    {["view", "upload", "edit", "delete"].map((act) => (
-                      <th key={act} className="py-3 px-4 text-center">
-                        {act}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {editDocAccess.map((doc) => (
-                    <tr key={doc.docId} className="border-b">
-                      <td className="py-3 px-4">{doc.name}</td>
-                      <td className="py-3 px-4">{doc.type}</td>
-
-                      {["view", "upload", "edit", "delete"].map((act) => (
-                        <td key={act} className="text-center">
-                          <input
-                            type="checkbox"
-                            checked={doc[act] || false}
-                            onChange={() =>
-                              handleDocAccessToggle(doc.docId, act)
-                            }
-                          />
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Footer */}
-      <div className="px-8 py-5 border-t border-slate-100 bg-white flex justify-end gap-3">
-        <button
+      {mounted && typeof window !== "undefined" && isDetailsOpen && activeUser ? createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-md px-4 py-6 overflow-y-auto"
           onClick={() => setIsDetailsOpen(false)}
-          className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"
         >
-          Cancel
-        </button>
+          {/* Modal */}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative bg-white rounded-3xl w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col border border-slate-200 my-auto"
+          >
+            {/* Header */}
+            <div className="relative bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-8 py-6">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white text-xl font-bold">
+                    {(editFirstName || editUsername || "?")
+                      .charAt(0)
+                      .toUpperCase()}
+                  </div>
 
-        <button
-          onClick={handleSaveModal}
-          className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold"
-        >
-          Save Changes
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+                  <div>
+                    <h3 className="text-white font-bold text-2xl">
+                      {editFirstName} {editLastName}
+                    </h3>
+                    <p className="text-slate-400 text-sm">@{editUsername}</p>
+
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-white border border-white/20">
+                        {activeUser.role}
+                      </span>
+
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-400/30">
+                        Active
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setIsDetailsOpen(false)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Info strip */}
+              <div className="flex flex-wrap gap-6 mt-5 pt-4 border-t border-white/10">
+                <div className="flex items-center gap-2 text-xs text-slate-300">
+                  <Mail size={12} />
+                  {editEmail}
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-slate-300">
+                  <Phone size={12} />
+                  {editPhone || "No phone"}
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-emerald-400">
+                  <Key size={12} />
+                  <code>{editPassword}</code>
+                </div>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex items-center border-b border-slate-100 bg-white px-6 gap-2 overflow-x-auto">
+              {[
+                { key: "profile", icon: <User size={15} />, label: "Profile Info" },
+                {
+                  key: "permissions",
+                  icon: <Settings size={15} />,
+                  label: "Direct Permissions",
+                }
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setModalTab(tab.key)}
+                  className={`flex items-center gap-2 py-4 px-5 text-xs font-bold uppercase border-b-2 whitespace-nowrap ${
+                    modalTab === tab.key
+                      ? "border-indigo-600 text-indigo-600"
+                      : "border-transparent text-slate-400 hover:text-slate-700"
+                  }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Content */}
+            <div className="max-h-[60vh] overflow-y-auto bg-slate-50">
+              
+              {/* Profile */}
+              {modalTab === "profile" && (
+                <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {[
+                    ["First Name", editFirstName, setEditFirstName],
+                    ["Last Name", editLastName, setEditLastName],
+                    ["Phone Number", editPhone, setEditPhone],
+                    ["Username", editUsername, setEditUsername],
+                    ["Email Address", editEmail, setEditEmail],
+                  ].map(([label, value, setter]) => (
+                    <div key={label}>
+                      <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">
+                        {label}
+                      </label>
+                      <input
+                        value={value}
+                        onChange={(e) => setter(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Permissions */}
+              {modalTab === "permissions" && (
+                <div className="p-8">
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-slate-800 text-white">
+                          <th className="py-3 px-4 text-left">Module</th>
+                          {ACTIONS.map((act) => (
+                            <th key={act} className="py-3 px-4 text-center">
+                              {act}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {getModulesForRole(activeUser.role).map(({ key, label }) => {
+                          const perms = editCustomPerms[key] || {};
+                          return (
+                            <tr key={key} className="border-b">
+                              <td className="py-3 px-4 font-medium">{label}</td>
+
+                              {ACTIONS.map((action) => (
+                                <td key={action} className="text-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={perms[action] || false}
+                                    onChange={() =>
+                                      handleCustomPermissionToggle(key, action)
+                                    }
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Documents */}
+              {modalTab === "documents" && (
+                <div className="p-8">
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-slate-800 text-white">
+                          <th className="py-3 px-4 text-left">Document</th>
+                          <th className="py-3 px-4 text-left">Type</th>
+                          {["view", "upload", "edit", "delete"].map((act) => (
+                            <th key={act} className="py-3 px-4 text-center">
+                              {act}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {editDocAccess.map((doc) => (
+                          <tr key={doc.docId} className="border-b">
+                            <td className="py-3 px-4">{doc.name}</td>
+                            <td className="py-3 px-4">{doc.type}</td>
+
+                            {["view", "upload", "edit", "delete"].map((act) => (
+                              <td key={act} className="text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={doc[act] || false}
+                                  onChange={() =>
+                                    handleDocAccessToggle(doc.docId, act)
+                                  }
+                                />
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-8 py-5 border-t border-slate-100 bg-white flex justify-end gap-3">
+              <button
+                onClick={() => setIsDetailsOpen(false)}
+                className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleSaveModal}
+                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      ) : null}
     </div>
   );
 }

@@ -6,6 +6,7 @@ export default function AssignAdv({ isOpen, onClose }) {
 
   const searchParams = useSearchParams();
   const caseId = searchParams.get("id");
+  const [showSuccess, setShowSuccess] = useState(false);
 
 
   const [formData, setFormData] = useState({
@@ -17,6 +18,7 @@ export default function AssignAdv({ isOpen, onClose }) {
     priority: "",
     dueDate: "",
     assignmentNotes: "",
+    status: "Active",
   });
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export default function AssignAdv({ isOpen, onClose }) {
     const fetchCase = async () => {
       try {
         const res = await fetch(
-          `http://127.0.0.1:8000/lawfirm-management/assigned-cases/${caseId}`
+          `http://localhost:8000/lawfirm-management/assigned-cases/${caseId}`
         );
 
         const data = await res.json();
@@ -39,6 +41,7 @@ export default function AssignAdv({ isOpen, onClose }) {
           priority: data.priority || "",
           dueDate: data.due_date || "",
           assignmentNotes: data.assignment_notes || "",
+          status: data.status || "Active",
         });
       } catch (error) {
         console.error("Error fetching case:", error);
@@ -55,7 +58,7 @@ export default function AssignAdv({ isOpen, onClose }) {
     const fetchAdvocates = async () => {
       try {
         const res = await fetch(
-          "http://127.0.0.1:8000/lawfirm-management/"
+          "http://localhost:8000/lawfirm-management/"
         );
 
         const data = await res.json();
@@ -153,11 +156,12 @@ export default function AssignAdv({ isOpen, onClose }) {
       priority: formData.priority,
       due_date: formData.dueDate,
       assignment_notes: formData.assignmentNotes,
+      status: formData.status,
     };
 
     try {
       const response = await fetch(
-        "http://127.0.0.1:8000/lawfirm-management/assign-case",
+        "http://localhost:8000/lawfirm-management/assign-case",
         {
           method: "POST",
           headers: {
@@ -171,8 +175,6 @@ export default function AssignAdv({ isOpen, onClose }) {
       console.log("Saved:", data);
 
       if (response.ok) {
-        alert("Case Assigned Successfully");
-
         // Reset form
         setFormData({
           caseName: "",
@@ -183,9 +185,10 @@ export default function AssignAdv({ isOpen, onClose }) {
           priority: "",
           dueDate: "",
           assignmentNotes: "",
+          status: "Active",
         });
 
-        onClose();
+        setShowSuccess(true);
       } else {
         console.log("Error:", data);
       }
@@ -195,6 +198,34 @@ export default function AssignAdv({ isOpen, onClose }) {
   };
 
   if (!isOpen) return null;
+
+  if (showSuccess) {
+    return (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+        <div className="bg-white w-full max-w-md rounded-2xl p-6 text-center shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-[#E2E8F0] transform transition-all duration-300 scale-100 flex flex-col items-center">
+          <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4 animate-bounce">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+          <h3 className="text-xl font-bold text-[#0F172A] mb-2">Assign Successful</h3>
+          <p className="text-[#64748B] text-sm mb-6">
+            The case has been successfully assigned to the advocate.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setShowSuccess(false);
+              onClose();
+            }}
+            className="w-full py-3 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold rounded-xl shadow-lg shadow-blue-500/20 transition duration-200"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 overflow-y-auto">

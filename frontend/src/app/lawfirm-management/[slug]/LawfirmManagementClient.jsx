@@ -21,7 +21,7 @@ export default function LawfirmManagementClient({
   const fetchAdvocate = async () => {
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/lawfirm-management/${advocateId}`
+        `http://localhost:8000/lawfirm-management/${advocateId}`
       );
 
       if (!response.ok) {

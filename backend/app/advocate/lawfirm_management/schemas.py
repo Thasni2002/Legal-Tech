@@ -58,6 +58,7 @@ class AssignedCaseCreate(BaseModel):
     priority: str
     due_date: str
     assignment_notes: str
+    status: Optional[str] = "Active"
 
 
 class AssignedCaseOut(AssignedCaseCreate):

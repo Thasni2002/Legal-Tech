@@ -46,3 +46,4 @@ class AssignedCase(Base):
     priority = Column(String(50))
     due_date = Column(String(50))
     assignment_notes = Column(String(500))   
+    status = Column(String(50), default="Active")
