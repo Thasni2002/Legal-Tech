@@ -42,16 +42,99 @@ export default function AdvDashboardView() {
 
         const fetchDashboardData = async () => {
             try {
-                let url = "http://localhost:8000/advocate/dashboard";
-                if (loggedIn && loggedIn.id) {
-                    url += `?advocate_id=${loggedIn.id}`;
+                const advParam = loggedIn && loggedIn.id ? `?advocate_id=${loggedIn.id}` : "";
+                
+                const [resUsers, resCases, resHearings, resActivities, resDocs] = await Promise.all([
+                    fetch("http://localhost:8000/permissions/users"),
+                    fetch(`http://localhost:8000/clients/cases${advParam}`),
+                    fetch(`http://localhost:8000/clients/hearings${advParam}`),
+                    fetch(`http://localhost:8000/clients/activities${advParam}`),
+                    fetch(`http://localhost:8000/clients/documents${advParam}`)
+                ]);
+
+                if (!resUsers.ok || !resCases.ok || !resHearings.ok || !resActivities.ok || !resDocs.ok) {
+                    throw new Error("Failed to fetch dashboard data from backend resources");
                 }
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error("Failed to fetch dashboard data");
-                }
-                const resData = await response.json();
-                setData(resData);
+
+                const [users, cases, hearings, activities, documents] = await Promise.all([
+                    resUsers.json(),
+                    resCases.json(),
+                    resHearings.json(),
+                    resActivities.json(),
+                    resDocs.json()
+                ]);
+
+                // 1. Total advocates count
+                const total_advocates = users.filter(u => u.role && u.role.toLowerCase().includes("advocate")).length;
+
+                // 2. Cases stats
+                const active_cases = cases.filter(c => c.status === "Active" || c.status === "Hearing").length;
+                const pending_cases = cases.filter(c => c.status === "Pending").length;
+                const closed_cases = cases.filter(c => c.status === "Closed").length;
+
+                // 3. Upcoming hearings count
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                const todayStr = `${year}-${month}-${day}`;
+
+                const upcomingHearings = hearings.filter(h => h.date >= todayStr);
+                const upcoming_hearings_count = upcomingHearings.length;
+
+                // 4. Case Overview list (sort by created_at desc, limit 5)
+                const casesList = [...cases]
+                    .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
+                    .slice(0, 5);
+
+                // 5. Hearings list (sort by date asc, time asc, limit 5)
+                const formatHearingDate = (dateStr) => {
+                    if (!dateStr) return "";
+                    const parts = dateStr.split("-");
+                    if (parts.length !== 3) return dateStr;
+                    const dNum = parseInt(parts[2], 10);
+                    const mNum = parseInt(parts[1], 10) - 1;
+                    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    return `${dNum} ${months[mNum]}`;
+                };
+
+                const hearingsList = [...upcomingHearings]
+                    .sort((a, b) => {
+                        if (a.date !== b.date) return a.date.localeCompare(b.date);
+                        return a.time.localeCompare(b.time);
+                    })
+                    .slice(0, 5)
+                    .map(h => ({
+                        date: formatHearingDate(h.date),
+                        case_title: h.case_title,
+                        court: h.court,
+                        advocate_name: h.advocate_name || "",
+                        time: h.time
+                    }));
+
+                // 6. Activities list (sort by created_at desc, limit 5)
+                const activitiesList = [...activities]
+                    .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
+                    .slice(0, 5);
+
+                // 7. Documents list (sort by created_at desc, limit 5)
+                const documentsList = [...documents]
+                    .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
+                    .slice(0, 5);
+
+                setData({
+                    stats: {
+                        total_advocates,
+                        active_cases,
+                        pending_cases,
+                        closed_cases,
+                        upcoming_hearings_count
+                    },
+                    cases: casesList,
+                    hearings: hearingsList,
+                    activities: activitiesList,
+                    documents: documentsList
+                });
             } catch (err) {
                 console.error("Dashboard fetch error:", err);
                 setError(err.message);
@@ -92,9 +175,9 @@ export default function AdvDashboardView() {
               .split(" ")
               .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
               .join(" ")
-        : "Rahul Sharma";
+        : "";
 
-    const displayRole = user ? user.role : "Senior Advocate";
+    const displayRole = user ? user.role : "";
 
     const stats = [
         {

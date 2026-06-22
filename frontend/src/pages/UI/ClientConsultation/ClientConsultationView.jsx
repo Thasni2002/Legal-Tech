@@ -416,11 +416,10 @@ export default function ClientConsultationView() {
                     <td className="p-3">{item.hearing}</td>
                     <td className="p-3">{item.advocate}</td>
                     <td className="p-3">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                        item.status === 'Active'
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${item.status === 'Active'
                           ? 'bg-green-50 text-green-700 border-green-200/50'
                           : 'bg-blue-50 text-blue-700 border-blue-200/50'
-                      }`}>
+                        }`}>
                         {item.status}
                       </span>
                     </td>
@@ -492,17 +491,20 @@ export default function ClientConsultationView() {
                 className="w-full border rounded-xl p-3 text-[#0F172A]"
               />
 
-              <DatePicker
-                selected={selectedTimeDate}
-                onChange={handleTimeChange}
-                showTimeSelect
-                showTimeSelectOnly
-                timeIntervals={15}
-                timeCaption="Time"
-                dateFormat="h:mm aa"
-                placeholderText="Select Time"
-                className="w-full border rounded-xl p-3 text-[#0F172A]"
-              />
+              <div className="w-full">
+                <DatePicker
+                  selected={selectedTimeDate}
+                  onChange={handleTimeChange}
+                  showTimeSelect
+                  showTimeSelectOnly
+                  timeIntervals={15}
+                  timeCaption="Time"
+                  dateFormat="h:mm aa"
+                  placeholderText="Select Time"
+                  wrapperClassName="w-full"
+                  className="w-full border rounded-xl p-3 text-[#0F172A]"
+                />
+              </div>
 
               {!rescheduleId && (
                 <select

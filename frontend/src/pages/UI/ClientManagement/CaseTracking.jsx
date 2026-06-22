@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import {
   Eye,
   Edit,
@@ -61,6 +62,11 @@ export default function CaseTracking() {
   const [selectedCase, setSelectedCase] = useState(null);
   const [editingCase, setEditingCase] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const filteredClients = clients.filter(
     (client) =>
       client.name
@@ -350,7 +356,7 @@ export default function CaseTracking() {
       )}
 
       {/* Edit Case Form */}
-      {editingCase && (
+      {mounted && editingCase && typeof document !== "undefined" ? createPortal(
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[9999]">
           <div className="bg-white rounded-xl w-full max-w-2xl p-6 shadow-xl relative">
 
@@ -457,8 +463,9 @@ export default function CaseTracking() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+        </div>,
+        document.body
+      ) : null}
     </div>
   );
 }
