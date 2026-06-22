@@ -50,16 +50,25 @@ const DEFAULT_USERS = [
 
 const ACTIONS = ["view", "add", "edit", "delete"];
 
-// All modules (internal keys stay consistent for localStorage storage)
 const BASE_MODULES = [
   "Dashboard",
   "Law Firm Management",
   "Client Management",
   "Case Management",
   "Consultations",
-  "Calendar",
   "Finance Management",
-  "Profile Management",
+  "Calendar",
+  "Profile",
+  "Assigned Cases",
+  "Client Section",
+  "Consultation",
+  "Case Tracking",
+  "Documents",
+  "Payments",
+  "User Roles",
+  "Roles",
+  "Users",
+  "Permissions",
 ];
 
 // Role-specific display label overrides for module names

@@ -35,6 +35,8 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
     pathname?.startsWith("/permissions") || false
   );
   const [user, setUser] = useState(null);
+  const [customPermissions, setCustomPermissions] = useState({});
+  const [rolePermissions, setRolePermissions] = useState({});
 
   useEffect(() => {
     const loggedIn = getLoggedInUser();
@@ -43,20 +45,67 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
     if (pathname?.startsWith("/permissions")) {
       setUserRolesOpen(true);
     }
+
+    if (loggedIn && loggedIn.id) {
+      // Fetch details including customPermissions
+      fetch(`http://localhost:8000/permissions/users/${loggedIn.id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setCustomPermissions(data.customPermissions || {});
+        })
+        .catch((err) => {
+          console.error("Error fetching user permissions:", err);
+        });
+
+      // Fetch permissions matrix
+      fetch("http://localhost:8000/permissions")
+        .then((res) => res.json())
+        .then((matrix) => {
+          const roleKey = Object.keys(matrix).find(
+            (k) => k.toLowerCase().replace(/\s+/g, "") === loggedIn.role.toLowerCase().replace(/\s+/g, "")
+          );
+          if (roleKey) {
+            setRolePermissions(matrix[roleKey] || {});
+          } else {
+            setRolePermissions(matrix[loggedIn.role] || {});
+          }
+        })
+        .catch((err) => {
+          console.error("Error fetching permissions matrix:", err);
+        });
+    }
   }, [pathname]);
 
-  // Define the menu structure (icon + label)
+  const hasViewPermission = (moduleKey) => {
+    if (!moduleKey) return true;
+
+    // Check custom permissions (direct permissions) first
+    if (customPermissions && customPermissions[moduleKey] !== undefined) {
+      if (customPermissions[moduleKey].view !== undefined) {
+        return !!customPermissions[moduleKey].view;
+      }
+    }
+
+    // Check role permissions next
+    if (rolePermissions && rolePermissions[moduleKey] !== undefined) {
+      return !!rolePermissions[moduleKey].view;
+    }
+
+    return true;
+  };
+
+  // Define the menu structure (icon + label + moduleKey)
   const seniorMenu = [
     {
       title: "Advocate Section",
       items: [
-        { name: "Dashboard", path: "/", icon: Home },
-        { name: "Case Management", path: "/case-management", icon: Folder },
-        { name: "Client Management", path: "/client-management", icon: Users },
-        { name: "Law Firm Management", path: "/lawfirm-management", icon: Scale },
-        { name: "Case Discussion", path: "/consultations", icon: BookOpen },
-        { name: "Finance Management", path: "/finance-management", icon: CreditCard },
-        { name: "Calendar", path: "/calendar", icon: Calendar },
+        { name: "Dashboard", path: "/", icon: Home, moduleKey: "Dashboard" },
+        { name: "Case Management", path: "/case-management", icon: Folder, moduleKey: "Case Management" },
+        { name: "Client Management", path: "/client-management", icon: Users, moduleKey: "Client Management" },
+        { name: "Law Firm Management", path: "/lawfirm-management", icon: Scale, moduleKey: "Law Firm Management" },
+        { name: "Case Discussion", path: "/consultations", icon: BookOpen, moduleKey: "Consultations" },
+        { name: "Finance Management", path: "/finance-management", icon: CreditCard, moduleKey: "Finance Management" },
+        { name: "Calendar", path: "/calendar", icon: Calendar, moduleKey: "Calendar" },
       ],
     },
   ];
@@ -65,9 +114,9 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
     {
       title: "Junior Advocate",
       items: [
-        { name: "Dashboard", path: "/junior-dashboard", icon: Home },
-        { name: "Assigned Cases", path: "/assigned-cases", icon: Folder },
-        { name: "Calendar", path: "/junior-calendar", icon: Calendar },
+        { name: "Dashboard", path: "/junior-dashboard", icon: Home, moduleKey: "Dashboard" },
+        { name: "Assigned Cases", path: "/assigned-cases", icon: Folder, moduleKey: "Assigned Cases" },
+        { name: "Calendar", path: "/junior-calendar", icon: Calendar, moduleKey: "Calendar" },
       ],
     },
   ];
@@ -76,35 +125,63 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
     {
       title: "Client Section",
       items: [
-        { name: "Dashboard", path: "/client-dashboard", icon: Home },
-        { name: "Case Discussion", path: "/client-consultation", icon: BookOpen },
-        { name: "Case Tracking", path: "/client-case-tracking", icon: Folder },
-        { name: "Documents", path: "/client-documents", icon: Settings },
-        { name: "Payments", path: "/client-payments", icon: CreditCard },
+        { name: "Dashboard", path: "/client-dashboard", icon: Home, moduleKey: "Dashboard" },
+        { name: "Case Discussion", path: "/client-consultation", icon: BookOpen, moduleKey: "Consultation" },
+        { name: "Case Tracking", path: "/client-case-tracking", icon: Folder, moduleKey: "Case Tracking" },
+        { name: "Documents", path: "/client-documents", icon: Settings, moduleKey: "Documents" },
+        { name: "Payments", path: "/client-payments", icon: CreditCard, moduleKey: "Payments" },
       ],
     },
   ];
 
-  const menuItems = [
-    ...seniorMenu,
-    ...juniorMenu,
-    ...clientMenu,
-    {
-      title: "User Roles",
-      items: [
+  let filteredMenuItems = [];
+  if (user) {
+    const roleName = (user.role || "").toLowerCase().replace(/\s+/g, "");
+    let baseMenu = [];
+    if (roleName === "client") {
+      baseMenu = clientMenu;
+    } else if (roleName === "junioradvocate") {
+      baseMenu = juniorMenu;
+    } else {
+      baseMenu = [
+        ...seniorMenu,
         {
-          name: "User Roles",
-          isDropdown: true,
-          icon: Shield,
-          submenu: [
-            { name: "Roles", path: "/permissions/roles" },
-            { name: "Users", path: "/permissions/users" },
-            { name: "Permissions", path: "/permissions" },
+          title: "User Roles",
+          items: [
+            {
+              name: "User Roles",
+              isDropdown: true,
+              icon: Shield,
+              submenu: [
+                { name: "Roles", path: "/permissions/roles", moduleKey: "Roles" },
+                { name: "Users", path: "/permissions/users", moduleKey: "Users" },
+                { name: "Permissions", path: "/permissions", moduleKey: "Permissions" },
+              ],
+            },
           ],
         },
-      ],
-    },
-  ];
+      ];
+    }
+
+    // Filter menu items by view permissions
+    filteredMenuItems = baseMenu.map((section) => {
+      const filteredItems = section.items
+        .map((item) => {
+          if (item.isDropdown) {
+            const filteredSubmenu = item.submenu.filter((sub) =>
+              hasViewPermission(sub.moduleKey)
+            );
+            if (filteredSubmenu.length === 0) return null;
+            return { ...item, submenu: filteredSubmenu };
+          }
+          if (!hasViewPermission(item.moduleKey)) return null;
+          return item;
+        })
+        .filter(Boolean);
+
+      return { ...section, items: filteredItems };
+    }).filter((section) => section.items.length > 0);
+  }
 
   return (
     <>
@@ -150,9 +227,8 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
           </div>
 
 
-          {/* Menu */}
           <nav className="flex-1 px-4 py-5">
-            {menuItems.map((section) => (
+            {filteredMenuItems.map((section) => (
               <div key={section.title} className="mb-5">
                 {/* Section Header */}
                 {!isCollapsed && (
