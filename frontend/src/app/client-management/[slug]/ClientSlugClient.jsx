@@ -5,15 +5,12 @@ import Link from "next/link";
 
 import CaseTracking from "@/pages/UI/ClientManagement/CaseTracking";
 import ClientHistory from "@/pages/UI/ClientManagement/ClientHistory";
-import ClientAdd from "@/pages/UI/ClientManagement/ClientAdd";
+
 import ClientEdit from "@/pages/UI/ClientManagement/ClientEdit";
 
 export default function ClientSlugClient({ slug }) {
   // 1. Render Client Add
-  if (slug === "add-client") {
-    return <ClientAdd />;
-  }
-
+  
   // 2. Render Client Edit
   if (slug === "edit-client") {
     return <ClientEdit />;

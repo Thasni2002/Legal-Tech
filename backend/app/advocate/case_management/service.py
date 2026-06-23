@@ -26,7 +26,8 @@ def create_case(db: Session, data: CaseCreate):
         selected_advocate=data.selectedAdvocate,
         documents=json.dumps(
             [doc.dict() for doc in data.documents]
-        ) if data.documents else "[]"
+        ) if data.documents else "[]",
+        next_hearing_date=data.nextHearingDate
     )
 
     db.add(new_case)
@@ -88,6 +89,8 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
         case.documents = json.dumps(
             [doc.dict() for doc in data.documents]
         )
+    if data.nextHearingDate is not None:
+        case.next_hearing_date = data.nextHearingDate
 
     db.commit()
     db.refresh(case)

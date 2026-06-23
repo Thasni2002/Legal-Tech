@@ -35,6 +35,7 @@ export default function AddCaseForm({ editId }) {
     courtName: "",
     courtType: "",
     status: "Active",
+    nextHearingDate: "",
   });
 
   const [loadingEdit, setLoadingEdit] = useState(false);
@@ -81,7 +82,20 @@ export default function AddCaseForm({ editId }) {
         courtName: data.court_name || "",
         courtType: data.court_type || "",
         status: data.status || "Active",
+        nextHearingDate: data.next_hearing_date || "",
       });
+      setSelectedAdvocate(data.selected_advocate || "");
+      if (data.documents && data.documents.length > 0) {
+        setDocuments(data.documents.map(d => ({
+          documentType: d.documentType || "",
+          advocate: d.advocate || "",
+          file: d.file ? { name: d.file } : null,
+          view: d.view !== undefined ? d.view : true,
+          upload: d.upload !== undefined ? d.upload : true,
+          edit: d.edit !== undefined ? d.edit : true,
+          delete: d.delete !== undefined ? d.delete : true,
+        })));
+      }
     } catch (err) {
       console.error("Error loading case:", err);
       alert("Failed to load case data.");
@@ -231,7 +245,12 @@ const handleSubmit = async (e) => {
       documentType: doc.documentType || "",
       advocate: selectedAdvocate || "",
       file: doc.file ? doc.file.name : null,
+      view: doc.view !== undefined ? doc.view : true,
+      upload: doc.upload !== undefined ? doc.upload : true,
+      edit: doc.edit !== undefined ? doc.edit : true,
+      delete: doc.delete !== undefined ? doc.delete : true,
     })),
+    nextHearingDate: formData.nextHearingDate || null,
   };
 
   try {
@@ -276,6 +295,7 @@ const handleSubmit = async (e) => {
         courtName: "",
         courtType: "",
         status: "Active",
+        nextHearingDate: "",
       });
 
       setErrors({});
@@ -432,6 +452,19 @@ const handleSubmit = async (e) => {
                   <option value="Tax">Tax</option>
                 </select>
                 {touched.caseType && errors.caseType && <ErrorMsg message={errors.caseType} />}
+              </div>
+
+              {/* Next Hearing Date */}
+              <div>
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Next Hearing Date</label>
+                <input
+                  type="date"
+                  name="nextHearingDate"
+                  value={formData.nextHearingDate || ""}
+                  onChange={handleChange}
+                  className={`${baseInputClass} ${getBorderClass("nextHearingDate")}`}
+                />
+                {touched.nextHearingDate && errors.nextHearingDate && <ErrorMsg message={errors.nextHearingDate} />}
               </div>
             </div>
 

@@ -176,6 +176,72 @@ export default function CaseView() {
     }
   };
 
+  const handleDocCheckboxToggle = async (docIndex, action) => {
+    if (!selectedCase) return;
+
+    // Create deep copy of documents
+    const updatedDocs = selectedCase.documents.map((doc, idx) => {
+      if (idx === docIndex) {
+        return {
+          ...doc,
+          [action]: !doc[action]
+        };
+      }
+      return doc;
+    });
+
+    // Optimistically update frontend state
+    const updatedCase = {
+      ...selectedCase,
+      documents: updatedDocs
+    };
+    setSelectedCase(updatedCase);
+
+    // Update in cases list too so it's in sync
+    setCases(prev => prev.map(c => c.id === selectedCase.id ? updatedCase : c));
+
+    // Call API to save changes
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/case-management/${selectedCase.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          caseId: selectedCase.case_id,
+          caseTitle: selectedCase.case_title,
+          caseNo: selectedCase.case_no,
+          caseType: selectedCase.case_type,
+          caseDes: selectedCase.case_description,
+          clientName: selectedCase.client_name,
+          contactNumber: selectedCase.contact_number,
+          emailId: selectedCase.email_id,
+          courtName: selectedCase.court_name,
+          courtType: selectedCase.court_type,
+          status: selectedCase.status,
+          selectedAdvocate: selectedCase.selected_advocate,
+          documents: updatedDocs.map(d => ({
+            documentType: d.documentType,
+            advocate: d.advocate || "",
+            file: d.file,
+            view: d.view || false,
+            upload: d.upload || false,
+            edit: d.edit || false,
+            delete: d.delete || false,
+          })),
+          nextHearingDate: selectedCase.next_hearing_date
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update document clearance");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Failed to save changes. Please try again.");
+    }
+  };
+
   const filteredCases = cases.filter((item) => {
     const term = searchTerm.toLowerCase();
     return (
@@ -320,16 +386,8 @@ export default function CaseView() {
                           <Eye size={15} />
                         </button>
 
-                        {/* Edit */}
-                        {hasPermission("Case Management", "edit") && (
-                          <button
-                            onClick={() => router.push(`/case-management/edit/${item.id}`)}
-                            title="Edit Case"
-                            className="p-2 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition cursor-pointer"
-                          >
-                            <Pencil size={15} />
-                          </button>
-                        )}
+                       
+                        
 
                         {/* Delete */}
                         {hasPermission("Case Management", "delete") && (
@@ -500,6 +558,7 @@ export default function CaseView() {
                       <InfoRow icon={<Hash size={14} />} label="Case ID" value={selectedCase.case_id} />
                       <InfoRow icon={<FileText size={14} />} label="Case Number" value={selectedCase.case_no} />
                       <InfoRow icon={<Scale size={14} />} label="Case Type" value={selectedCase.case_type} />
+                      <InfoRow icon={<Gavel size={14} />} label="Next Hearing Date" value={selectedCase.next_hearing_date} />
                     </div>
                     <div className="bg-[#F8FAFC] rounded-2xl p-5 border border-[#F1F5F9] space-y-4">
                       <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Court & Jurisdiction</h4>
@@ -528,50 +587,8 @@ export default function CaseView() {
                     </div>
                   )}
 
-                  {/* ── Assign to Jr. Advocate ── */}
-                  <div className="bg-gradient-to-br from-[#EFF6FF] to-[#DBEAFE] border border-[#BFDBFE] rounded-2xl p-5">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-8 h-8 rounded-lg bg-[#2563EB] flex items-center justify-center">
-                        <UserCheck size={15} className="text-white" />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-[#1E40AF] text-sm">Assign Case to Junior Advocate</h4>
-                        <p className="text-xs text-[#3B82F6]">Select a junior advocate to assign this case document</p>
-                      </div>
-                    </div>
-
-                    {assignSuccess && (
-                      <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4">
-                        <CheckCircle size={16} className="text-green-600" />
-                        <p className="text-sm text-green-700 font-semibold">
-                          Case successfully assigned to <strong>{assignedAdvocate}</strong>!
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="flex gap-3">
-                      <select
-                        value={assignedAdvocate}
-                        onChange={(e) => setAssignedAdvocate(e.target.value)}
-                        className="flex-1 rounded-xl border border-[#BFDBFE] bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition"
-                      >
-                        <option value="">— Select Junior Advocate —</option>
-                        {advocates.map((adv) => (
-                          <option key={adv.id} value={adv.advocateName || adv.advocate_name}>
-                            {adv.advocateName || adv.advocate_name}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={handleAssignDocument}
-                        disabled={!assignedAdvocate || assignLoading}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-[#2563EB] hover:bg-[#1d4ed8] disabled:opacity-50 text-white text-sm font-bold rounded-xl transition cursor-pointer"
-                      >
-                        <Send size={14} />
-                        {assignLoading ? "Assigning..." : "Assign"}
-                      </button>
-                    </div>
-                  </div>
+                  
+                 
                 </div>
               )}
 
@@ -642,25 +659,65 @@ export default function CaseView() {
                     </div>
                   </div>
 
-                  {/* Documents placeholder */}
-                  <div className="rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-8 text-center">
-                    <div className="w-14 h-14 rounded-2xl bg-white border border-[#E2E8F0] flex items-center justify-center mx-auto mb-4 shadow-sm">
-                      <FileText size={24} className="text-[#94A3B8]" />
+                  {/* Documents list table or placeholder */}
+                  {selectedCase.documents && selectedCase.documents.length > 0 ? (
+                    <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-slate-800 text-white text-xs font-bold uppercase tracking-wider">
+                            <th className="py-3.5 px-5 text-left">Case Documents</th>
+                            <th className="py-3.5 px-5 text-left">Doc Type</th>
+                            {["view", "upload", "edit", "delete"].map((act) => (
+                              <th key={act} className="py-3.5 px-5 text-center">
+                                {act}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#F1F5F9] text-sm">
+                          {selectedCase.documents.map((doc, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                              <td className="py-4 px-5 font-semibold text-slate-700">{doc.file || "Unnamed File"}</td>
+                              <td className="py-4 px-5">
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
+                                  {doc.documentType || "Other"}
+                                </span>
+                              </td>
+                              {["view", "upload", "edit", "delete"].map((act) => (
+                                <td key={act} className="text-center py-4 px-5">
+                                  <input
+                                    type="checkbox"
+                                    checked={doc[act] || false}
+                                    onChange={() => handleDocCheckboxToggle(idx, act)}
+                                    className="w-4 h-4 text-[#2563EB] border-slate-300 rounded focus:ring-[#2563EB]/20 cursor-pointer"
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                    <h4 className="font-bold text-[#0F172A] text-sm mb-1">No Documents Uploaded Yet</h4>
-                    <p className="text-[#64748B] text-xs max-w-xs mx-auto">
-                      Documents uploaded for this case will appear here. Use the Add Case form to attach documents.
-                    </p>
-                    <button
-                      onClick={() => {
-                        setIsModalOpen(false);
-                        router.push(`/case-management/edit/${selectedCase.id}`);
-                      }}
-                      className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded-xl transition"
-                    >
-                      <Plus size={13} /> Add Documents
-                    </button>
-                  </div>
+                  ) : (
+                    <div className="rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-8 text-center">
+                      <div className="w-14 h-14 rounded-2xl bg-white border border-[#E2E8F0] flex items-center justify-center mx-auto mb-4 shadow-sm">
+                        <FileText size={24} className="text-[#94A3B8]" />
+                      </div>
+                      <h4 className="font-bold text-[#0F172A] text-sm mb-1">No Documents Uploaded Yet</h4>
+                      <p className="text-[#64748B] text-xs max-w-xs mx-auto">
+                        Documents uploaded for this case will appear here. Use the Add Case form to attach documents.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setIsModalOpen(false);
+                          router.push(`/case-management/edit/${selectedCase.id}`);
+                        }}
+                        className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded-xl transition"
+                      >
+                        <Plus size={13} /> Add Documents
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
