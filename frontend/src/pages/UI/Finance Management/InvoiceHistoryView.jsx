@@ -7,6 +7,7 @@ const InvoiceHistoryView = ({
   handleDownloadInvoicePDF = () => {},
   handleDeleteInvoice = () => {},
   onBack = () => {},
+  hasPermission = () => true,
 }) => {
   return (
     <div className="p-6 min-h-screen bg-slate-50">
@@ -101,28 +102,44 @@ const InvoiceHistoryView = ({
                       Rs. {inv.grand_total.toFixed(2)}
                     </td>
 
-                    {/* Status */}
+                     {/* Status */}
                     <td className="px-4 py-3 text-center">
-                      <select
-                        value={inv.status}
-                        onChange={(e) =>
-                          handleUpdateStatus(inv.id, e.target.value)
-                        }
-                        className={`text-xs border rounded px-2.5 py-1 font-semibold focus:outline-none transition-colors ${
-                          inv.status.toLowerCase() === "paid"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : inv.status.toLowerCase() === "sent"
-                            ? "bg-blue-50 text-blue-700 border-blue-200"
-                            : inv.status.toLowerCase() === "overdue"
-                            ? "bg-red-50 text-red-700 border-red-200"
-                            : "bg-amber-50 text-amber-700 border-amber-200"
-                        }`}
-                      >
-                        <option value="Pending">Pending</option>
-                        <option value="Sent">Sent</option>
-                        <option value="Paid">Paid</option>
-                        <option value="Overdue">Overdue</option>
-                      </select>
+                      {hasPermission("Finance Management", "edit") ? (
+                        <select
+                          value={inv.status}
+                          onChange={(e) =>
+                            handleUpdateStatus(inv.id, e.target.value)
+                          }
+                          className={`text-xs border rounded px-2.5 py-1 font-semibold focus:outline-none transition-colors ${
+                            inv.status.toLowerCase() === "paid"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : inv.status.toLowerCase() === "sent"
+                              ? "bg-blue-50 text-blue-700 border-blue-200"
+                              : inv.status.toLowerCase() === "overdue"
+                              ? "bg-red-50 text-red-700 border-red-200"
+                              : "bg-amber-50 text-amber-700 border-amber-200"
+                          }`}
+                        >
+                          <option value="Pending">Pending</option>
+                          <option value="Sent">Sent</option>
+                          <option value="Paid">Paid</option>
+                          <option value="Overdue">Overdue</option>
+                        </select>
+                      ) : (
+                        <span
+                          className={`inline-block text-xs border rounded px-2.5 py-1 font-semibold ${
+                            inv.status.toLowerCase() === "paid"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : inv.status.toLowerCase() === "sent"
+                              ? "bg-blue-50 text-blue-700 border-blue-200"
+                              : inv.status.toLowerCase() === "overdue"
+                              ? "bg-red-50 text-red-700 border-red-200"
+                              : "bg-amber-50 text-amber-700 border-amber-200"
+                          }`}
+                        >
+                          {inv.status}
+                        </span>
+                      )}
                     </td>
 
                     {/* Actions */}
@@ -138,13 +155,15 @@ const InvoiceHistoryView = ({
                           <Download className="w-4 h-4" />
                         </button>
 
-                        <button
-                          onClick={() => handleDeleteInvoice(inv.id)}
-                          className="text-red-500 hover:bg-red-50 p-2 rounded-lg"
-                          title="Delete Invoice"
-                        >
-                          <Trash className="w-4 h-4" />
-                        </button>
+                        {hasPermission("Finance Management", "delete") && (
+                          <button
+                            onClick={() => handleDeleteInvoice(inv.id)}
+                            className="text-red-500 hover:bg-red-50 p-2 rounded-lg"
+                            title="Delete Invoice"
+                          >
+                            <Trash className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

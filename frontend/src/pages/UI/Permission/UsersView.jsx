@@ -84,36 +84,61 @@ const ALL_MODULES = [
   "Permissions",
 ];
 
-const getModulesForRole = (roleName) => {
+const getModuleCategories = (roleName) => {
   const normRole = (roleName || "").toLowerCase().replace(/\s+/g, "");
-  
-  if (normRole === "client") {
-    return [
-      { key: "Dashboard", label: "Dashboard" },
-      { key: "Consultation", label: "Case Discussion" },
-      { key: "Case Tracking", label: "Case Tracking" },
-      { key: "Documents", label: "Documents" },
-      { key: "Payments", label: "Payments" },
-    ];
+  let dashboardLabel = "Dashboard";
+  if (normRole.includes("senior")) {
+    dashboardLabel = "Dashboard (Senior Advocate)";
+  } else if (normRole.includes("junior")) {
+    dashboardLabel = "Dashboard (Junior Advocate)";
+  } else if (normRole.includes("client")) {
+    dashboardLabel = "Dashboard (Client)";
   }
-  
-  if (normRole === "junioradvocate") {
-    return [
-      { key: "Dashboard", label: "Dashboard" },
-      { key: "Assigned Cases", label: "Assigned Cases" },
-      { key: "Calendar", label: "Calendar" },
-    ];
-  }
-  
-  // For Senior Advocate or any other role, show the main advocate features
+
   return [
-    { key: "Dashboard", label: "Dashboard" },
-    { key: "Law Firm Management", label: "Law Firm Management" },
-    { key: "Client Management", label: "Client Management" },
-    { key: "Case Management", label: "Case Management" },
-    { key: "Consultations", label: "Case Discussion" },
-    { key: "Finance Management", label: "Finance Management" },
-    { key: "Calendar", label: "Calendar" },
+    {
+      category: "General",
+      modules: [
+        { key: "Dashboard", label: dashboardLabel }
+      ]
+    },
+    {
+      category: "Senior Advocate / Law Firm Features",
+      modules: [
+        { key: "Law Firm Management", label: "Law Firm Management" },
+        { key: "Client Management", label: "Client Management" },
+        { key: "Case Management", label: "Case Management" },
+        { key: "Consultations", label: "Case Discussion (Senior)" },
+        { key: "Finance Management", label: "Finance Management" },
+        { key: "Calendar", label: "Calendar" },
+        { key: "Profile", label: "Profile" }
+      ]
+    },
+    {
+      category: "Junior Advocate Features",
+      modules: [
+        { key: "Assigned Cases", label: "Assigned Cases" },
+        { key: "Client Section", label: "Client Section (Junior)" }
+      ]
+    },
+    {
+      category: "Client Features",
+      modules: [
+        { key: "Consultation", label: "Case Discussion (Client)" },
+        { key: "Case Tracking", label: "Case Tracking" },
+        { key: "Documents", label: "Documents" },
+        { key: "Payments", label: "Payments" }
+      ]
+    },
+    {
+      category: "System / Law Firm Administration",
+      modules: [
+        { key: "User Roles", label: "User Roles" },
+        { key: "Roles", label: "Roles" },
+        { key: "Users", label: "Users" },
+        { key: "Permissions", label: "Permissions" }
+      ]
+    }
   ];
 };
 
@@ -138,7 +163,14 @@ export default function UsersView() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [username, setUsername] = useState("");
   const [emailAddress, setEmailAddress] = useState("");
-  const [tempPassword, setTempPassword] = useState("");
+  const [tempPassword, setTempPassword] = useState(() => {
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let password = "temp_";
+    for (let i = 0; i < 8; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  });
   const [showPassword, setShowPassword] = useState(false);
 
   // Modal Details State
@@ -159,6 +191,41 @@ export default function UsersView() {
   const [notification, setNotification] = useState(null);
 
   const [mounted, setMounted] = useState(false);
+  const [provisionedUser, setProvisionedUser] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deletedUsername, setDeletedUsername] = useState("");
+  const [deletedUserRole, setDeletedUserRole] = useState("");
+
+  // Helper to format role names dynamically for modal and button text
+  const getRoleDisplayName = (roleName) => {
+    if (!roleName) return "User";
+    const lower = roleName.toLowerCase();
+    if (lower.includes("senior")) return "Senior";
+    if (lower.includes("junior") || lower.includes("client")) return "User";
+    return roleName
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+
+  // Generate random password helper
+  const generateRandomPassword = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let password = "temp_";
+    for (let i = 0; i < 8; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setTempPassword(password);
+  };
+
+  const generateModalPassword = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let password = "temp_";
+    for (let i = 0; i < 8; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setEditPassword(password);
+  };
 
   // Load roles & users from backend on mount
   useEffect(() => {
@@ -191,28 +258,10 @@ export default function UsersView() {
     };
 
     loadData();
-    generateRandomPassword();
-    setMounted(true);
+    setTimeout(() => {
+      setMounted(true);
+    }, 0);
   }, []);
-
-  // Generate random password helper
-  const generateRandomPassword = () => {
-    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    let password = "temp_";
-    for (let i = 0; i < 8; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setTempPassword(password);
-  };
-
-  const generateModalPassword = () => {
-    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    let password = "temp_";
-    for (let i = 0; i < 8; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setEditPassword(password);
-  };
 
   // Show notification toast helper
   const showToast = (message, type = "success") => {
@@ -255,7 +304,9 @@ export default function UsersView() {
       if (res.ok) {
         const newUser = await res.json();
         setUsers((prev) => [...prev, newUser]);
-        showToast(`User "${firstName || username}" provisioned successfully!`);
+        
+        // Show success modal overlaying the page
+        setProvisionedUser(newUser);
         
         // Reset Form
         setFirstName("");
@@ -284,27 +335,36 @@ export default function UsersView() {
     showToast("Provisioning cancelled", "error");
   };
 
-  // Delete a user
-  const handleDeleteUser = async (userId, uName) => {
+  // Trigger Delete Confirmation Modal
+  const handleDeleteUserClick = (userId, uName, uRole) => {
     if (userId === "user_1" || userId === 1 || uName === "admin") {
       showToast("Cannot delete system administration user", "error");
       return;
     }
-    if (confirm(`Are you sure you want to remove user "${uName}"?`)) {
-      try {
-        const res = await fetch(`http://localhost:8000/permissions/users/${userId}`, {
-          method: "DELETE"
-        });
-        if (res.ok) {
-          setUsers((prev) => prev.filter((u) => u.id !== userId));
-          showToast(`User "${uName}" has been de-provisioned.`);
-        } else {
-          const errData = await res.json();
-          showToast(errData.detail || "Error de-provisioning user", "error");
-        }
-      } catch (err) {
-        showToast("Unable to connect to backend", "error");
+    setDeleteTarget({ id: userId, username: uName, role: uRole });
+  };
+
+  // Execute Deletion after confirmation
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    const { id, username, role } = deleteTarget;
+    try {
+      const res = await fetch(`http://localhost:8000/permissions/users/${id}`, {
+        method: "DELETE"
+      });
+      if (res.ok) {
+        setUsers((prev) => prev.filter((u) => u.id !== id));
+        setDeleteTarget(null);
+        setDeletedUsername(username);
+        setDeletedUserRole(role || "");
+      } else {
+        const errData = await res.json();
+        showToast(errData.detail || `Error de-provisioning ${getRoleDisplayName(role).toLowerCase()}`, "error");
+        setDeleteTarget(null);
       }
+    } catch (err) {
+      showToast("Unable to connect to backend", "error");
+      setDeleteTarget(null);
     }
   };
 
@@ -609,7 +669,7 @@ export default function UsersView() {
       className="px-8 py-3.5 bg-black text-white hover:bg-slate-800 text-xs font-bold uppercase rounded-full cursor-pointer tracking-wider transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
     >
       <Check size={16} />
-      <span>Provision User</span>
+      <span>Provision {getRoleDisplayName(selectedRole)}</span>
     </button>
 
     <button
@@ -712,12 +772,20 @@ export default function UsersView() {
 
               {/* Action */}
               <td className="py-4 px-6 text-center">
-                <button
-                  onClick={() => handleOpenDetails(user)}
-                  className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"
-                >
-                  View
-                </button>
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => handleOpenDetails(user)}
+                    className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
+                  >
+                    View
+                  </button>
+                  <button
+                    onClick={() => handleDeleteUserClick(user.id, user.username, user.role)}
+                    className="px-4 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
               </td>
 
             </tr>
@@ -863,26 +931,43 @@ export default function UsersView() {
                       </thead>
 
                       <tbody>
-                        {getModulesForRole(activeUser.role).map(({ key, label }) => {
-                          const perms = editCustomPerms[key] || {};
-                          return (
-                            <tr key={key} className="border-b">
-                              <td className="py-3 px-4 font-medium">{label}</td>
-
-                              {ACTIONS.map((action) => (
-                                <td key={action} className="text-center">
-                                  <input
-                                    type="checkbox"
-                                    checked={perms[action] || false}
-                                    onChange={() =>
-                                      handleCustomPermissionToggle(key, action)
-                                    }
-                                  />
-                                </td>
-                              ))}
+                        {getModuleCategories(activeUser.role).map((cat) => (
+                          <React.Fragment key={cat.category}>
+                            {/* Category Header Row */}
+                            <tr>
+                              <td
+                                colSpan={5}
+                                className="py-2.5 px-4 font-bold text-xs uppercase tracking-wider text-slate-600 bg-slate-100 border-y border-slate-200"
+                              >
+                                {cat.category}
+                              </td>
                             </tr>
-                          );
-                        })}
+                            {/* Modules Rows */}
+                            {cat.modules.map(({ key, label }) => {
+                              const perms = editCustomPerms[key] || {};
+                              return (
+                                <tr key={key} className="border-b hover:bg-slate-50">
+                                  <td className="py-3 px-6 font-medium text-slate-800 text-sm pl-8">
+                                    {label}
+                                  </td>
+
+                                  {ACTIONS.map((action) => (
+                                    <td key={action} className="text-center py-3">
+                                      <input
+                                        type="checkbox"
+                                        checked={perms[action] || false}
+                                        onChange={() =>
+                                          handleCustomPermissionToggle(key, action)
+                                        }
+                                        className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 accent-indigo-600 cursor-pointer"
+                                      />
+                                    </td>
+                                  ))}
+                                </tr>
+                              );
+                            })}
+                          </React.Fragment>
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -946,6 +1031,180 @@ export default function UsersView() {
                 className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold"
               >
                 Save Changes
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      ) : null}
+
+      {/* ─── Success Modal for Provisioned User ─── */}
+      {mounted && typeof window !== "undefined" && provisionedUser ? createPortal(
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-md px-4 py-6 overflow-y-auto"
+          onClick={() => setProvisionedUser(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100 flex flex-col animate-in fade-in zoom-in-95 duration-200"
+          >
+            {/* Header Success Section */}
+            <div className="bg-emerald-50 py-8 px-6 flex flex-col items-center border-b border-slate-100 text-center">
+              <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center text-white mb-4 shadow-lg shadow-emerald-200">
+                <Check size={32} strokeWidth={3} />
+              </div>
+              <h3 className="text-slate-900 font-extrabold text-2xl text-center">
+                Create New {getRoleDisplayName(provisionedUser.role)} Successfully
+              </h3>
+              <p className="text-slate-500 text-xs mt-1.5 font-medium max-w-xs text-center">
+                A new {getRoleDisplayName(provisionedUser.role).toLowerCase()} account has been successfully created and linked with the mapped security role.
+              </p>
+            </div>
+
+            {/* Info Section */}
+            <div className="p-6 space-y-4 text-slate-700">
+              <div className="grid grid-cols-2 gap-4 text-sm font-medium">
+                <div>
+                  <span className="block text-slate-400 text-[10px] font-bold uppercase tracking-wider">Role</span>
+                  <span className="text-slate-900 font-bold bg-slate-100 px-2 py-0.5 rounded text-xs inline-block mt-1">
+                    {provisionedUser.role}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-slate-400 text-[10px] font-bold uppercase tracking-wider">Full Name</span>
+                  <span className="text-slate-800 font-semibold block mt-1">
+                    {provisionedUser.firstName || "-"} {provisionedUser.lastName || ""}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-slate-400 text-[10px] font-bold uppercase tracking-wider">Username</span>
+                  <span className="text-slate-800 font-semibold block mt-1">
+                    @{provisionedUser.username}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-slate-400 text-[10px] font-bold uppercase tracking-wider">Email Address</span>
+                  <span className="text-slate-800 font-semibold block mt-1 truncate">
+                    {provisionedUser.email}
+                  </span>
+                </div>
+              </div>
+
+              {/* Temporary Password Box */}
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                <span className="block text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                  Temporary Password
+                </span>
+                <div className="flex items-center justify-between">
+                  <code className="text-[#2563EB] font-bold text-sm select-all">
+                    {provisionedUser.tempPassword}
+                  </code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(provisionedUser.tempPassword);
+                      showToast("Password copied to clipboard!");
+                    }}
+                    className="text-[10px] font-extrabold uppercase bg-blue-50 hover:bg-blue-100 text-[#2563EB] px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => setProvisionedUser(null)}
+                className="bg-black hover:bg-slate-800 text-white text-xs font-bold uppercase py-3 px-6 rounded-full cursor-pointer tracking-wider transition-all shadow-md active:scale-95"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      ) : null}
+
+      {/* ─── Custom Delete Confirmation Modal ─── */}
+      {mounted && typeof window !== "undefined" && deleteTarget ? createPortal(
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-md px-4 py-6 overflow-y-auto"
+          onClick={() => setDeleteTarget(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-100 flex flex-col animate-in fade-in zoom-in-95 duration-200"
+          >
+            {/* Header / Warning Icon */}
+            <div className="bg-red-50 py-8 px-6 flex flex-col items-center border-b border-slate-100 text-center">
+              <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center text-white mb-4 shadow-lg shadow-red-200 animate-pulse">
+                <AlertTriangle size={32} />
+              </div>
+              <h3 className="text-slate-900 font-extrabold text-2xl">
+                Delete {getRoleDisplayName(deleteTarget.role)} Account?
+              </h3>
+              <p className="text-slate-500 text-xs mt-1.5 font-medium max-w-xs">
+                Are you sure you want to remove {getRoleDisplayName(deleteTarget.role).toLowerCase()} <strong className="text-red-600">@{deleteTarget.username}</strong>? This action cannot be undone.
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="px-6 py-5 bg-slate-50 flex flex-col sm:flex-row gap-3 justify-end">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="px-6 py-3 rounded-full bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-6 py-3 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer"
+              >
+                Delete {getRoleDisplayName(deleteTarget.role)}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      ) : null}
+
+      {/* ─── Delete Success Modal ─── */}
+      {mounted && typeof window !== "undefined" && deletedUsername ? createPortal(
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-md px-4 py-6 overflow-y-auto"
+          onClick={() => {
+            setDeletedUsername("");
+            setDeletedUserRole("");
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-100 flex flex-col animate-in fade-in zoom-in-95 duration-200"
+          >
+            {/* Header Success Section */}
+            <div className="bg-red-50 py-8 px-6 flex flex-col items-center border-b border-slate-100 text-center">
+              <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center text-white mb-4 shadow-lg shadow-red-200">
+                <Check size={32} strokeWidth={3} />
+              </div>
+              <h3 className="text-slate-900 font-extrabold text-2xl text-center">
+                Delete {getRoleDisplayName(deletedUserRole)} Successfully
+              </h3>
+              <p className="text-slate-500 text-xs mt-1.5 font-medium max-w-xs text-center">
+                The {getRoleDisplayName(deletedUserRole).toLowerCase()} account <strong className="text-slate-900">@{deletedUsername}</strong> has been completely de-provisioned and deleted from the database.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-slate-50 flex justify-end">
+              <button
+                onClick={() => {
+                  setDeletedUsername("");
+                  setDeletedUserRole("");
+                }}
+                className="bg-black hover:bg-slate-800 text-white text-xs font-bold uppercase py-3 px-6 rounded-full cursor-pointer tracking-wider transition-all shadow-md active:scale-95"
+              >
+                Done
               </button>
             </div>
           </div>

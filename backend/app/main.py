@@ -9,7 +9,7 @@ from app.advocate.client_management.routes import router as client_router
 from app.authapp import router as auth_router
 from app.advocate.consultations import router as consultations_router
 from app.advocate.finance_management import router as finance_router
-# from app.advocate.permissions import router as permissions_router
+from app.advocate.permissions import router as permissions_router
 from app.advocate.lawfirm_management.routes import router as lawfirm_router
 from app.advocate.case_management.routes import router as case_router
 app = FastAPI()
@@ -39,3 +39,5 @@ app.include_router(consultations_router)
 app.include_router(finance_router)
 app.include_router(client_router)
 app.include_router(lawfirm_router)
+app.include_router(permissions_router)
+

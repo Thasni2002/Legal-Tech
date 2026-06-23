@@ -182,10 +182,7 @@ export default function PermissionView() {
     loadConfig();
   }, []);
 
-  // Reset selected user override when the active selected role changes
-  useEffect(() => {
-    setSelectedUser("");
-  }, [selectedRole]);
+
 
   // Show toast utility
   const showToast = (message, type = "success") => {
@@ -442,7 +439,10 @@ export default function PermissionView() {
               <button
                 key={role.id}
                 type="button"
-                onClick={() => setSelectedRole(role.name)}
+                onClick={() => {
+                  setSelectedRole(role.name);
+                  setSelectedUser("");
+                }}
                 className={`flex flex-col text-left p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${
                   active
                     ? "border-[#2563EB] bg-blue-50/25 ring-2 ring-[#2563EB]/10 shadow-sm"
@@ -488,7 +488,7 @@ export default function PermissionView() {
             <div className="space-y-1">
               <h3 className="font-bold text-slate-800 text-sm">Configure Direct User Override (Optional)</h3>
               <p className="text-xxs text-slate-400 font-semibold uppercase tracking-wider">
-                Select a specific user holding the "{selectedRole}" role to edit their individual direct permissions.
+                Select a specific user holding the &quot;{selectedRole}&quot; role to edit their individual direct permissions.
               </p>
             </div>
             
@@ -534,7 +534,7 @@ export default function PermissionView() {
                   </span>
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Configure specific module rights and clearance levels. Click "Save Permissions" to commit changes.
+                  Configure specific module rights and clearance levels. Click &quot;Save Permissions&quot; to commit changes.
                 </p>
               </div>
 

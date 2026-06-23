@@ -13,8 +13,11 @@ import {
   MoreVertical,
 } from "lucide-react";
 
+import { usePermissions } from "@/utils/usePermissions";
+
 export default function CaseView() {
   const router = useRouter();
+  const { hasPermission } = usePermissions();
 
   const [cases, setCases] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -98,13 +101,15 @@ export default function CaseView() {
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
           <h2 className="font-bold text-lg text-[#0F172A]">My Cases</h2>
 
-          <button
-            onClick={() => router.push("/case-management/case-add")}
-            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-4 py-2.5 rounded-lg font-medium text-sm flex items-center gap-2"
-          >
-            <Plus size={16} />
-            Add Case
-          </button>
+          {hasPermission("Case Management", "add") && (
+            <button
+              onClick={() => router.push("/case-management/case-add")}
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-4 py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 shadow-sm transition-all duration-200 cursor-pointer"
+            >
+              <Plus size={16} />
+              Add Case
+            </button>
+          )}
         </div>
 
         {/* SEARCH BAR */}
@@ -159,9 +164,11 @@ export default function CaseView() {
 
                     <td className="py-4 text-sm">
                       <div className="flex gap-3 text-[#64748B]">
-                        <Eye size={18} className="cursor-pointer hover:text-blue-600" />
-                        <Pencil size={18} className="cursor-pointer hover:text-blue-600" />
-                        <MoreVertical size={18} className="cursor-pointer hover:text-blue-600" />
+                        <Eye size={18} className="hover:text-[#2563EB] cursor-pointer transition-colors" />
+                        {hasPermission("Case Management", "edit") && (
+                          <Pencil size={18} className="hover:text-[#2563EB] cursor-pointer transition-colors" />
+                        )}
+                        <MoreVertical size={18} className="hover:text-[#2563EB] cursor-pointer transition-colors" />
                       </div>
                     </td>
                   </tr>

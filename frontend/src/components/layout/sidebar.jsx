@@ -94,6 +94,31 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
     return true;
   };
 
+  const isItemAllowedForRole = (item, roleName) => {
+    const normRole = (roleName || "").toLowerCase().replace(/\s+/g, "");
+    
+    // Filter Dashboard by role
+    if (item.moduleKey === "Dashboard") {
+      if (normRole.includes("client")) return item.path === "/client-dashboard";
+      if (normRole.includes("junior")) return item.path === "/junior-dashboard";
+      if (normRole.includes("senior") || normRole.includes("admin")) {
+        return item.path === "/" || item.path === "/junior-dashboard";
+      }
+      return item.path === "/";
+    }
+    
+    // Filter Calendar by role
+    if (item.moduleKey === "Calendar") {
+      if (normRole.includes("junior")) return item.path === "/junior-calendar";
+      if (normRole.includes("senior") || normRole.includes("admin")) {
+        return item.path === "/calendar" || item.path === "/junior-calendar";
+      }
+      return item.path === "/calendar";
+    }
+    
+    return true;
+  };
+
   // Define the menu structure (icon + label + moduleKey)
   const seniorMenu = [
     {
@@ -124,6 +149,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
   const clientMenu = [
     {
       title: "Client Section",
+      moduleKey: "Client Section",
       items: [
         { name: "Dashboard", path: "/client-dashboard", icon: Home, moduleKey: "Dashboard" },
         { name: "Case Discussion", path: "/client-consultation", icon: BookOpen, moduleKey: "Consultation" },
@@ -136,51 +162,51 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
 
   let filteredMenuItems = [];
   if (user) {
-    const roleName = (user.role || "").toLowerCase().replace(/\s+/g, "");
-    let baseMenu = [];
-    if (roleName === "client") {
-      baseMenu = clientMenu;
-    } else if (roleName === "junioradvocate") {
-      baseMenu = juniorMenu;
-    } else {
-      baseMenu = [
-        ...seniorMenu,
-        {
-          title: "User Roles",
-          items: [
-            {
-              name: "User Roles",
-              isDropdown: true,
-              icon: Shield,
-              submenu: [
-                { name: "Roles", path: "/permissions/roles", moduleKey: "Roles" },
-                { name: "Users", path: "/permissions/users", moduleKey: "Users" },
-                { name: "Permissions", path: "/permissions", moduleKey: "Permissions" },
-              ],
-            },
-          ],
-        },
-      ];
-    }
+    const baseMenu = [
+      ...seniorMenu,
+      ...juniorMenu,
+      ...clientMenu,
+      {
+        title: "User Roles",
+        items: [
+          {
+            name: "User Roles",
+            isDropdown: true,
+            icon: Shield,
+            submenu: [
+              { name: "Roles", path: "/permissions/roles", moduleKey: "Roles" },
+              { name: "Users", path: "/permissions/users", moduleKey: "Users" },
+              { name: "Permissions", path: "/permissions", moduleKey: "Permissions" },
+            ],
+          },
+        ],
+      },
+    ];
 
-    // Filter menu items by view permissions
+    // Filter menu items by view permissions and role relevance
     filteredMenuItems = baseMenu.map((section) => {
+      if (section.moduleKey && !hasViewPermission(section.moduleKey)) {
+        return null;
+      }
+
       const filteredItems = section.items
         .map((item) => {
           if (item.isDropdown) {
             const filteredSubmenu = item.submenu.filter((sub) =>
-              hasViewPermission(sub.moduleKey)
+              hasViewPermission(sub.moduleKey) && isItemAllowedForRole(sub, user.role)
             );
             if (filteredSubmenu.length === 0) return null;
             return { ...item, submenu: filteredSubmenu };
           }
-          if (!hasViewPermission(item.moduleKey)) return null;
+          if (!hasViewPermission(item.moduleKey) || !isItemAllowedForRole(item, user.role)) return null;
           return item;
         })
         .filter(Boolean);
 
       return { ...section, items: filteredItems };
-    }).filter((section) => section.items.length > 0);
+    })
+    .filter(Boolean)
+    .filter((section) => section.items.length > 0);
   }
 
   return (
