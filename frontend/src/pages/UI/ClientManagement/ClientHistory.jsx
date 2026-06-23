@@ -258,18 +258,26 @@ export default function ClientHistory() {
 
   // Filter & search history items
   const filteredItems = historyItems
-    .filter((item) => {
-      if (activeTab === "all") return true;
-      return item.type === activeTab;
-    })
-    .filter((item) => {
-      const search = searchQuery.toLowerCase();
-      return (
-        item.title.toLowerCase().includes(search) ||
-        item.desc.toLowerCase().includes(search) ||
-        (item.badge && item.badge.toLowerCase().includes(search))
-      );
-    });
+  .filter((item) => {
+    // Tab filtering
+    if (activeTab !== "all" && item.type !== activeTab) {
+      return false;
+    }
+
+    // Search filtering
+    const search = searchQuery.trim().toLowerCase();
+
+    if (!search) return true;
+
+    return (
+      item.title?.toLowerCase().includes(search) ||
+      item.desc?.toLowerCase().includes(search) ||
+      item.badge?.toLowerCase().includes(search) ||
+      item.type?.toLowerCase().includes(search) ||
+      formatDate(item.date)?.toLowerCase().includes(search) ||
+      formatTime(item.time)?.toLowerCase().includes(search)
+    );
+  });
 
   const displayClient = client || {
     clientId: "C-9874",
@@ -306,7 +314,7 @@ export default function ClientHistory() {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        {/* <div className="flex gap-2">
           <button
             onClick={() => setShowAddModal(true)}
             className="flex items-center gap-2 px-4 py-2.5 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-lg font-semibold text-sm transition-all duration-200 shadow-sm cursor-pointer"
@@ -320,7 +328,7 @@ export default function ClientHistory() {
           >
             Reset to Defaults
           </button>
-        </div>
+        </div> */}
       </div>
 
       {/* Info Grid */}

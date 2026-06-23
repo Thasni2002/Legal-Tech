@@ -20,3 +20,6 @@ class Case(Base):
     court_type = Column(String(100))
 
     status = Column(String(50))
+    selected_advocate = Column(String(255), nullable=True)
+    documents = Column(Text, nullable=True)
+    next_hearing_date = Column(String(100), nullable=True)

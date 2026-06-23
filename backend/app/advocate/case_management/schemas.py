@@ -7,6 +7,11 @@ class DocumentSchema(BaseModel):
     documentType: str
     advocate: str
     file: Optional[str] = None
+    view: Optional[bool] = False
+    upload: Optional[bool] = False
+    edit: Optional[bool] = False
+    delete: Optional[bool] = False
+
 
 
 # Create Case Schema
@@ -28,6 +33,7 @@ class CaseCreate(BaseModel):
 
     selectedAdvocate: Optional[str] = None
     documents: Optional[List[DocumentSchema]] = []
+    nextHearingDate: Optional[str] = None
 
 
 # Update Case Schema
@@ -49,6 +55,7 @@ class CaseUpdate(BaseModel):
 
     selectedAdvocate: Optional[str] = None
     documents: Optional[List[DocumentSchema]] = []
+    nextHearingDate: Optional[str] = None
 
 
 # Response Schema
