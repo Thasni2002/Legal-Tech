@@ -11,6 +11,8 @@ from app.authapp.service import hash_password
 from app.advocate.client_management.models import Case, Hearing, Activity, Document
 from app.advocate.finance_management.models import Invoice
 from app.advocate.consultations.models import Consultation
+from app.advocate.permissions.models import Role, Permission
+from app.advocate.permissions.service import DEFAULT_ROLE_PERMISSIONS
 
 def seed_database():
     Base.metadata.create_all(bind=engine)
@@ -25,6 +27,8 @@ def seed_database():
     db.query(Activity).delete()
     db.query(Document).delete()
     db.query(User).delete()
+    db.query(Permission).delete()
+    db.query(Role).delete()
     db.commit()
 
     # Insert default admin user only
@@ -35,8 +39,30 @@ def seed_database():
         role="Senior Advocate"
     )
     db.add(admin)
+    
+    # Insert default roles and permissions
+    role_names = {
+        "senioradvocate": "Senior Advocate",
+        "junioradvocate": "Junior Advocate",
+        "client": "Client"
+    }
+
+    for role_id, perms in DEFAULT_ROLE_PERMISSIONS.items():
+        role = Role(id=role_id, name=role_names.get(role_id, role_id), description="Default Role")
+        db.add(role)
+        for module, actions in perms.items():
+            perm = Permission(
+                role_id=role_id,
+                module=module,
+                view=actions.get("view", False),
+                add=actions.get("add", False),
+                edit=actions.get("edit", False),
+                delete=actions.get("delete", False)
+            )
+            db.add(perm)
+
     db.commit()
-    print("Created default admin user.")
+    print("Created default admin user and role permissions.")
 
     db.close()
     print("Database seeding completed successfully.")

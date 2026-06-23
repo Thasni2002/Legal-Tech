@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Shield, ShieldAlert, Save, HelpCircle, Check } from "lucide-react";
+import { Shield, ShieldAlert, Save, HelpCircle, Check, CheckSquare } from "lucide-react";
 
 const DEFAULT_ROLES = [
   { id: "senioradvocate", name: "Senior Advocate", description: "Full system access" },
