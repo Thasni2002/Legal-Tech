@@ -40,4 +40,6 @@ app.include_router(finance_router)
 app.include_router(client_router)
 app.include_router(lawfirm_router)
 app.include_router(permissions_router)
+app.include_router(case_router)
+
 
