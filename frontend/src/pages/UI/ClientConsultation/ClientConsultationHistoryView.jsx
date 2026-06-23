@@ -149,94 +149,94 @@ export default function ClientConsultationHistoryView() {
   };
 
   return (
-    <div className="w-full space-y-6 md:space-y-8">
+    <div className="w-full space-y-8 max-w-7xl mx-auto">
       {/* Page Header */}
-      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6 flex items-center gap-4">
+      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 mb-8 flex items-center gap-6">
         <Link
           href="/client-consultation"
-          className="flex items-center justify-center w-10 h-10 bg-white border border-[#E2E8F0] rounded-xl shadow-sm text-[#64748B] hover:text-[#2563EB] hover:border-[#2563EB] transition-colors cursor-pointer"
+          className="flex items-center justify-center w-12 h-12 bg-[#F8FAFC] rounded-full text-[#64748B] hover:text-[#2563EB] hover:bg-blue-50 transition-colors cursor-pointer"
         >
-          <ArrowLeft size={20} />
+          <ArrowLeft size={24} />
         </Link>
         <div>
-          <h1 className="text-[#0F172A] font-bold" style={{ fontSize: "32px", fontWeight: 700, lineHeight: 1.2 }}>
+          <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
             Consultation History
           </h1>
-          <p className="text-[#64748B] mt-1" style={{ fontSize: "16px" }}>
+          <p className="text-[#64748B] mt-2 text-lg font-medium">
             View your past and approved consultations
           </p>
         </div>
       </div>
 
       {/* History Table */}
-      <div className="bg-white rounded-2xl border p-6">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-[#F8FAFC]">
-                <th className="p-4 font-semibold text-[#0F172A]">Client</th>
-                <th className="p-4 font-semibold text-[#0F172A]">Date</th>
-                <th className="p-4 font-semibold text-[#0F172A]">Time</th>
-                <th className="p-4 font-semibold text-[#0F172A]">Advocate</th>
-                <th className="p-4 font-semibold text-[#0F172A]">Type</th>
-                <th className="p-4 font-semibold text-[#0F172A]">Duration</th>
-                <th className="p-4 font-semibold text-[#0F172A]">Fee</th>
-                <th className="p-4 font-semibold text-[#0F172A]">Status</th>
-                <th className="p-4 font-semibold text-[#0F172A]">Summary</th>
-                <th className="p-4 font-semibold text-[#0F172A]">Action</th>
+      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
+        <div className="w-full overflow-x-auto rounded-xl border border-[#E2E8F0]">
+          <table className="min-w-full divide-y divide-[#E2E8F0]">
+            <thead className="bg-[#F8FAFC]">
+              <tr>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client</th>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Advocate</th>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Duration</th>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Fee</th>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Summary</th>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Action</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-[#E2E8F0] bg-white">
               {loading ? (
                 <tr>
-                  <td colSpan="10" className="p-8 text-center text-slate-500">
+                  <td colSpan="10" className="p-8 text-center text-[#64748B] font-medium">
                     Loading history...
                   </td>
                 </tr>
               ) : history.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="p-8 text-center text-slate-500">
+                  <td colSpan="10" className="p-8 text-center text-[#64748B] font-medium">
                     No previous consultations found.
                   </td>
                 </tr>
               ) : (
                 history.map((item) => (
-                  <tr key={item.id} className="border-b hover:bg-[#F8FAFC] transition-colors duration-150">
-                    <td className="p-4 text-sm text-[#1E293B] font-medium capitalize">{item.client_name || item.client}</td>
-                    <td className="p-4 text-sm text-[#1E293B] font-medium">{item.date}</td>
-                    <td className="p-4 text-sm text-[#64748B]">{item.time || "N/A"}</td>
-                    <td className="p-4 text-sm text-[#1E293B] font-medium capitalize">{item.advocate_name || item.advocate}</td>
-                    <td className="p-4 text-sm text-[#64748B]">{item.type}</td>
-                    <td className="p-4 text-sm text-[#64748B]">{item.duration || "30 mins"}</td>
-                    <td className="p-4 text-sm text-[#16A34A] font-semibold">{item.fee || "₹500"}</td>
-                    <td className="p-4 text-sm">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                  <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors duration-150">
+                    <td className="p-4 text-sm text-[#0F172A] font-bold capitalize whitespace-nowrap">{item.client_name || item.client}</td>
+                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.date}</td>
+                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">{item.time || "N/A"}</td>
+                    <td className="p-4 text-sm text-[#0F172A] font-bold capitalize whitespace-nowrap">{item.advocate_name || item.advocate}</td>
+                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.type}</td>
+                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.duration || "30 mins"}</td>
+                    <td className="p-4 text-sm text-[#16A34A] font-bold whitespace-nowrap">{item.fee || "₹500"}</td>
+                    <td className="p-4 text-sm whitespace-nowrap">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
                         item.status === 'Completed'
-                          ? 'bg-green-50 text-green-700 border-green-200/50'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : item.status === 'Approved'
-                          ? 'bg-blue-50 text-blue-700 border-blue-200/50'
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
                           : item.status === 'Rescheduled'
-                          ? 'bg-amber-50 text-amber-700 border-amber-200/50'
-                          : 'bg-slate-50 text-slate-700 border-slate-200/50'
+                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                          : 'bg-slate-50 text-slate-700 border border-slate-200'
                       }`}>
                         {item.status}
                       </span>
                     </td>
-                    <td className="p-4 text-sm text-[#64748B] max-w-xs truncate" title={item.summary || "No notes yet."}>
+                    <td className="p-4 text-sm text-[#475569] max-w-xs truncate" title={item.summary || "No notes yet."}>
                       {item.summary || "No notes yet."}
                     </td>
-                    <td className="p-4 text-sm">
+                    <td className="p-4 text-sm whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         {item.status === "Approved" ? (
-                          <span className="text-blue-600 font-semibold">Approved</span>
+                          <span className="text-blue-600 font-bold uppercase tracking-wider text-xs">Approved</span>
                         ) : item.status === "Rescheduled" ? (
-                          <span className="text-[#D97706] font-semibold">Rescheduled</span>
+                          <span className="text-[#D97706] font-bold uppercase tracking-wider text-xs">Rescheduled</span>
                         ) : (
-                          <span className="text-gray-400 text-xs">No Action</span>
+                          <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">No Action</span>
                         )}
                         <button
                           onClick={() => handleDeleteConsultation(item.id)}
-                          className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg transition-colors text-xs font-medium cursor-pointer"
+                          className="px-4 py-2 bg-slate-100 hover:bg-rose-100 text-[#475569] hover:text-rose-600 rounded-full transition-colors text-xs font-bold uppercase tracking-wider active:scale-95 shadow-sm"
                         >
                           Delete
                         </button>
@@ -252,58 +252,67 @@ export default function ClientConsultationHistoryView() {
 
       {/* Modal */}
       {mounted && showModal && typeof document !== "undefined" ? createPortal(
-        <div className="fixed inset-0 bg-[#0F172A]/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl relative animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center gap-3 mb-6">
-              <button
-                onClick={() => setShowModal(false)}
-                className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-slate-100 text-[#64748B] transition-colors cursor-pointer"
-                aria-label="Back"
-              >
-                <ArrowLeft size={20} />
-              </button>
-              <h2 className="text-2xl font-bold text-[#0F172A]">
+        <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-3xl p-8 md:p-10 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl relative animate-in fade-in zoom-in duration-200 border border-[#E2E8F0]">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-extrabold text-[#0F172A]">
                 Reschedule Consultation
               </h2>
-            </div>
-
-            <div className="space-y-4">
-              <input
-                type="date"
-                value={formData.date}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    date: e.target.value,
-                  })
-                }
-                className="w-full border rounded-xl p-3 text-[#0F172A]"
-              />
-
-              <DatePicker
-                selected={selectedTimeDate}
-                onChange={handleTimeChange}
-                showTimeSelect
-                showTimeSelectOnly
-                timeIntervals={15}
-                timeCaption="Time"
-                dateFormat="h:mm aa"
-                placeholderText="Select Time"
-                className="w-full border rounded-xl p-3 text-[#0F172A]"
-              />
-            </div>
-
-            <div className="flex justify-end gap-3 mt-6">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-5 py-2 bg-slate-200 rounded-xl cursor-pointer"
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-[#F8FAFC] text-[#64748B] hover:bg-rose-100 hover:text-rose-600 transition-colors"
+                aria-label="Close"
+              >
+                <span className="text-xl font-bold">✕</span>
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2 block">Date</label>
+                <input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      date: e.target.value,
+                    })
+                  }
+                  className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2 block">Time</label>
+                <div className="w-full border border-[#E2E8F0] rounded-xl bg-[#F8FAFC] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#2563EB]/20 focus-within:border-[#2563EB] transition-all cursor-pointer">
+                  <DatePicker
+                    selected={selectedTimeDate}
+                    onChange={handleTimeChange}
+                    showTimeSelect
+                    showTimeSelectOnly
+                    timeIntervals={15}
+                    timeCaption="Time"
+                    dateFormat="h:mm aa"
+                    placeholderText="Select Time"
+                    wrapperClassName="w-full"
+                    className="w-full p-3.5 text-[#0F172A] bg-transparent outline-none text-sm font-medium cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-10 pt-8 border-t border-[#F1F5F9]">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-6 py-3.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[#475569] text-xs font-bold uppercase tracking-wider transition-colors"
               >
                 Cancel
               </button>
 
               <button
                 onClick={handleReschedule}
-                className="px-5 py-2 bg-blue-600 text-white rounded-xl cursor-pointer"
+                className="px-8 py-3.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98]"
               >
                 Reschedule
               </button>

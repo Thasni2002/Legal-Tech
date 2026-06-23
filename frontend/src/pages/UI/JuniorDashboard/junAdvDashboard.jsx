@@ -39,49 +39,51 @@ export default function JunAdvDashView() {
   ];
 
   return (
-    <div className="w-full space-y-6 md:space-y-8">
+    <div className="w-full space-y-8 max-w-7xl mx-auto animate-in fade-in zoom-in-95 duration-500">
 
       {/* Page Header */}
-      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6">
-        <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
-          Junior Advocate Dashboard
-        </h1>
-        <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
-          Welcome back, view and manage your assigned tasks and cases.
-        </p>
+      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
+            Junior Advocate Dashboard
+          </h1>
+          <p className="text-[#64748B] mt-2 text-lg font-medium">
+            Welcome 
+          </p>
+        </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatCard
           title="Assigned Cases"
           value="12"
-          icon={<Briefcase size={22} />}
-          color="bg-[#2563EB]"
+          icon={<Briefcase className="w-7 h-7 md:w-8 md:h-8" />}
+          color="bg-blue-50 text-blue-600 border-blue-200"
         />
 
         <StatCard
           title="Hearings"
           value="5"
-          icon={<Calendar size={22} />}
-          color="bg-[#16A34A]"
+          icon={<Calendar className="w-7 h-7 md:w-8 md:h-8" />}
+          color="bg-emerald-50 text-emerald-600 border-emerald-200"
         />
 
         <StatCard
           title="Documents"
           value="25"
-          icon={<FileText size={22} />}
-          color="bg-[#7C3AED]"
+          icon={<FileText className="w-7 h-7 md:w-8 md:h-8" />}
+          color="bg-purple-50 text-purple-600 border-purple-200"
         />
       </div>
 
       {/* Main Content */}
-      <div className="grid lg:grid-cols-12 gap-6">
+      <div className="grid lg:grid-cols-12 gap-8">
 
         {/* Cases */}
-        <div className="lg:col-span-12 bg-white p-6 rounded-xl border border-[#E2E8F0] shadow-sm">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="font-bold text-lg text-[#0F172A]">
+        <div className="lg:col-span-12 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-2xl font-extrabold text-[#0F172A]">
               Assigned Cases
             </h2>
 
@@ -89,38 +91,38 @@ export default function JunAdvDashView() {
               onClick={() =>
                 router.push("/assigned-cases")
               }
-              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 shadow-sm cursor-pointer"
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-6 py-2.5 rounded-full font-bold uppercase tracking-wider text-xs transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 cursor-pointer"
             >
               View All
             </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-[#E2E8F0] text-xs font-semibold text-[#64748B] uppercase tracking-wider">
-                  <th className="pb-3 font-medium">Case</th>
-                  <th className="pb-3 font-medium">Hearing</th>
-                  <th className="pb-3 font-medium">Status</th>
+          <div className="w-full overflow-x-auto rounded-2xl border border-[#E2E8F0]">
+            <table className="min-w-full divide-y divide-[#E2E8F0]">
+              <thead className="bg-[#F8FAFC]">
+                <tr>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case</th>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Hearing</th>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-[#F1F5F9]">
+              <tbody className="divide-y divide-[#E2E8F0] bg-white">
                 {cases.map((item, index) => (
                   <tr key={index} className="hover:bg-[#F8FAFC] transition-colors duration-150">
-                    <td className="py-4 text-sm font-medium text-[#1E293B]">
+                    <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">
                       {item.title}
                     </td>
 
-                    <td className="py-4 text-sm text-[#64748B]">
+                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">
                       {item.hearing}
                     </td>
 
-                    <td className="py-4 text-sm">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
+                    <td className="p-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
                         item.status === 'Active'
-                          ? 'bg-green-50 text-green-700 border-green-200/50'
-                          : 'bg-amber-50 text-amber-700 border-amber-200/50'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-amber-50 text-amber-700 border-amber-200'
                       }`}>
                         {item.status}
                       </span>
@@ -135,20 +137,23 @@ export default function JunAdvDashView() {
       </div>
 
       {/* Bottom Section */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-2 gap-8">
 
         {/* Pending Tasks */}
-        <div className="bg-white p-6 rounded-xl border border-[#E2E8F0] shadow-sm">
-          <h2 className="font-bold text-lg text-[#0F172A] mb-4">
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
+          <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">
             Pending Tasks
           </h2>
 
-          <div className="space-y-3">
+          <div className="space-y-4 flex-1">
             {tasks.map((task, index) => (
               <div
                 key={index}
-                className="border border-[#E2E8F0] rounded-lg p-4 text-sm text-[#1E293B] hover:bg-[#F8FAFC] transition-colors duration-150"
+                className="bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0] p-4 text-sm font-bold text-[#1E293B] hover:bg-white hover:shadow-md hover:border-[#E2E8F0] transition-all duration-300 cursor-pointer flex items-center gap-4"
               >
+                <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-200">
+                  <span className="font-black text-xs">{index + 1}</span>
+                </div>
                 {task}
               </div>
             ))}
@@ -156,20 +161,25 @@ export default function JunAdvDashView() {
         </div>
 
         {/* Recent Documents */}
-        <div className="bg-white p-6 rounded-xl border border-[#E2E8F0] shadow-sm">
-          <h2 className="font-bold text-lg text-[#0F172A] mb-4">
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
+          <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">
             Recent Documents
           </h2>
 
-          <div className="space-y-3">
+          <div className="space-y-4 flex-1">
             {documents.map((doc, index) => (
               <div
                 key={index}
-                className="border border-[#E2E8F0] rounded-lg p-4 flex justify-between items-center text-sm text-[#1E293B] hover:bg-[#F8FAFC] transition-colors duration-150"
+                className="bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0] p-4 flex justify-between items-center text-sm font-bold text-[#1E293B] hover:bg-white hover:shadow-md transition-all duration-300 group cursor-pointer"
               >
-                <span className="font-medium">{doc}</span>
+                <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <FileText size={16} />
+                  </div>
+                  <span className="group-hover:text-[#2563EB] transition-colors">{doc}</span>
+                </div>
 
-                <button className="text-[#2563EB] hover:text-[#1d4ed8] font-medium text-sm transition-colors cursor-pointer">
+                <button className="text-[#2563EB] hover:text-[#1d4ed8] font-bold text-xs uppercase tracking-wider bg-blue-50 px-3 py-1.5 rounded-full transition-colors cursor-pointer opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 duration-200">
                   View
                 </button>
               </div>
@@ -190,22 +200,18 @@ function StatCard({
   color,
 }) {
   return (
-    <div className="bg-white p-6 rounded-xl border border-[#E2E8F0] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-      <div className="flex justify-between items-center">
-        <div>
-          <p className="text-[#64748B] text-sm font-medium">
-            {title}
-          </p>
-
-          <h2 className="text-3xl font-bold mt-2 text-[#0F172A]">
-            {value}
-          </h2>
-        </div>
-
-        <div className={`${color} text-white p-3 rounded-lg shadow-sm`}>
-          {icon}
-        </div>
+    <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-6 md:p-8 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 cursor-pointer group">
+      <div className={`w-14 h-14 md:w-16 md:h-16 ${color} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-sm border`}>
+        {icon}
       </div>
+
+      <p className="text-[#475569] text-xs font-bold uppercase tracking-wider mb-2">
+        {title}
+      </p>
+
+      <h2 className="text-4xl md:text-5xl font-black text-[#0F172A] tracking-tight">
+        {value}
+      </h2>
     </div>
   );
-}
+}

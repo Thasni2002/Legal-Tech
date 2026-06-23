@@ -17,7 +17,8 @@ from .service import (
     create_assigned_case,
     get_assigned_cases,
     get_assigned_case_by_id,
-    delete_assigned_case
+    delete_assigned_case,
+    update_assigned_case
 )
 
 router = APIRouter(
@@ -121,6 +122,31 @@ def remove_assigned_case(
         )
 
     return deleted
+
+
+# Update assigned case
+@router.put(
+    "/assigned-cases/{case_id}",
+    response_model=AssignedCaseOut
+)
+def edit_assigned_case(
+    case_id: int,
+    data: AssignedCaseCreate,
+    db: Session = Depends(get_db)
+):
+    updated = update_assigned_case(
+        db,
+        case_id,
+        data
+    )
+
+    if not updated:
+        raise HTTPException(
+            status_code=404,
+            detail="Assigned case not found"
+        )
+
+    return updated
 
 
 # Get single advocate

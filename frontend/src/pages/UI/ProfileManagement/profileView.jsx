@@ -1,8 +1,15 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { getLoggedInUser } from "@/utils/auth";
 
 export default function ProfileView({ profile = {}, onEdit }) {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    setUser(getLoggedInUser());
+  }, []);
+
   // Compute role label dynamically
   const roleParts = [];
   if (profile.courtType) roleParts.push(profile.courtType);
@@ -10,41 +17,41 @@ export default function ProfileView({ profile = {}, onEdit }) {
   const roleLabel = roleParts.length > 0 ? `${roleParts.join(" (")} Advocate${roleParts.length > 1 ? ")" : ""}` : "Advocate";
 
   return (
-    <div className="w-full space-y-6 md:space-y-8">
+    <div className="w-full space-y-8 max-w-6xl mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-[#E2E8F0] p-6">
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
           <div className="flex flex-col md:flex-row gap-8 items-center justify-between">
             <div className="flex flex-col md:flex-row gap-8 items-center flex-1">
               {/* Profile Image */}
-              <div>
+              <div className="shrink-0">
                 <img
-                  src={profile.profileImage || "https://images.unsplash.com/photo-1500648767791-00dcc994a43?w=400"}
+                  src={profile.profileImage || (user ? `https://ui-avatars.com/api/?name=${user.firstName || user.username}&background=2563EB&color=fff&rounded=true&bold=true&size=150` : "https://ui-avatars.com/api/?name=?&background=E2E8F0&color=64748B&rounded=true&bold=true&size=150")}
                   alt="Profile"
-                  className="w-40 h-40 rounded-full object-cover border-4 border-blue-100 shadow-sm"
+                  className="w-36 h-36 rounded-full object-cover border-[6px] border-white shadow-xl shadow-slate-300/50 bg-white"
                 />
               </div>
 
               {/* Profile Info */}
               <div className="flex-1">
-                <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
+                <h1 className="text-[#0F172A] font-extrabold text-4xl tracking-tight">
                   {profile.advocateName || "Advocate Name"}
                 </h1>
 
-                <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
+                <p className="text-[#64748B] mt-2 text-lg font-medium">
                   {roleLabel}
                 </p>
 
-                <p className="text-[#64748B] mt-3 whitespace-pre-wrap">
+                <p className="text-[#475569] mt-4 max-w-2xl text-sm leading-relaxed whitespace-pre-wrap">
                   {profile.about || "No professional bio provided."}
                 </p>
               </div>
             </div>
 
             {onEdit && (
-              <div className="mt-4 md:mt-0">
+              <div className="mt-6 md:mt-0">
                 <button
                   onClick={onEdit}
-                  className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium px-6 py-2.5 rounded-xl transition shadow-sm cursor-pointer"
+                  className="px-8 py-3.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] cursor-pointer shrink-0"
                 >
                   Edit Profile
                 </button>
@@ -54,120 +61,59 @@ export default function ProfileView({ profile = {}, onEdit }) {
         </div>
 
         {/* Details */}
-        <div className="grid md:grid-cols-2 gap-6 mt-8">
+        <div className="grid lg:grid-cols-2 gap-8">
           {/* Personal Information */}
-          <div className="bg-white rounded-3xl shadow-sm border border-[#E2E8F0] p-6">
-            <h2 className="text-xl font-semibold mb-6">
+          <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
+            <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
+              <span className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">👤</span>
               Personal Information
             </h2>
 
-            <div className="space-y-4">
-              <InfoRow
-                label="Phone"
-                value={profile.phoneNumber}
-              />
-
-              <InfoRow
-                label="Email"
-                value={profile.emailAddress}
-              />
-
-              <InfoRow
-                label="Date of Birth"
-                value={profile.dateOfBirth}
-              />
-
-              <InfoRow
-                label="Gender"
-                value={profile.gender}
-              />
-
-              <InfoRow
-                label="Aadhaar Number"
-                value={profile.aadhaarNumber}
-              />
-
-              <InfoRow
-                label="PAN Number"
-                value={profile.panNumber}
-              />
-
-              <InfoRow
-                label="City"
-                value={profile.city}
-              />
-
-              <InfoRow
-                label="State"
-                value={profile.state}
-              />
-
-              <InfoRow
-                label="Pincode"
-                value={profile.pincode}
-              />
+            <div className="space-y-5">
+              <InfoRow label="Phone" value={profile.phoneNumber} />
+              <InfoRow label="Email" value={profile.emailAddress} />
+              <InfoRow label="Date of Birth" value={profile.dateOfBirth} />
+              <InfoRow label="Gender" value={profile.gender} />
+              <InfoRow label="Aadhaar Number" value={profile.aadhaarNumber} />
+              <InfoRow label="PAN Number" value={profile.panNumber} />
+              <InfoRow label="City" value={profile.city} />
+              <InfoRow label="State" value={profile.state} />
+              <InfoRow label="Pincode" value={profile.pincode} />
             </div>
           </div>
 
           {/* Professional Information */}
-          <div className="bg-white rounded-3xl shadow-sm border border-[#E2E8F0] p-6">
-            <h2 className="text-xl font-semibold mb-6">
+          <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
+            <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
+              <span className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">⚖️</span>
               Professional Information
             </h2>
 
-            <div className="space-y-4">
-              <InfoRow
-                label="Bar Council ID"
-                value={profile.barCouncilId}
-              />
-
-              <InfoRow
-                label="Enrollment No"
-                value={profile.enrollmentNumber}
-              />
-
-              <InfoRow
-                label="Experience"
-                value={profile.yearsOfExperience ? `${profile.yearsOfExperience} Years` : ""}
-              />
-
-              <InfoRow
-                label="Practice Area"
-                value={profile.practiceArea}
-              />
-
-              <InfoRow
-                label="Court Type"
-                value={profile.courtType}
-              />
-
-              <InfoRow
-                label="Specialization"
-                value={profile.specialization}
-              />
-
-              <InfoRow
-                label="Law Firm Name"
-                value={profile.lawFirmName}
-              />
-
-              <InfoRow
-                label="Languages Known"
-                value={profile.languagesKnown}
-              />
+            <div className="space-y-5">
+              <InfoRow label="Bar Council ID" value={profile.barCouncilId} />
+              <InfoRow label="Enrollment No" value={profile.enrollmentNumber} />
+              <InfoRow label="Experience" value={profile.yearsOfExperience ? `${profile.yearsOfExperience} Years` : ""} />
+              <InfoRow label="Practice Area" value={profile.practiceArea} />
+              <InfoRow label="Court Type" value={profile.courtType} />
+              <InfoRow label="Specialization" value={profile.specialization} />
+              <InfoRow label="Law Firm Name" value={profile.lawFirmName} />
+              <InfoRow label="Languages Known" value={profile.languagesKnown} />
             </div>
           </div>
         </div>
 
         {/* Address */}
-        <div className="bg-white rounded-3xl shadow-sm border border-[#E2E8F0] p-6 mt-6">
-          <h2 className="text-xl font-semibold mb-4">
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
+          <h2 className="text-xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-3">
+            <span className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">🏢</span>
             Chambers Address
           </h2>
 
-          <p className="text-[#334155] whitespace-pre-wrap">
-            {profile.chambersAddress || "-"}
-          </p>
+          <div className="bg-[#F8FAFC] rounded-2xl p-6 border border-[#E2E8F0]">
+            <p className="text-[#334155] font-medium text-sm leading-relaxed whitespace-pre-wrap">
+              {profile.chambersAddress || "No chambers address provided."}
+            </p>
+          </div>
         </div>
     </div>
   );
@@ -175,12 +121,12 @@ export default function ProfileView({ profile = {}, onEdit }) {
 
 function InfoRow({ label, value }) {
   return (
-    <div className="flex justify-between border-b border-[#E2E8F0] pb-3">
-      <span className="font-medium text-[#475569]">
+    <div className="flex items-center justify-between border-b border-[#F1F5F9] pb-4">
+      <span className="font-bold text-[11px] uppercase tracking-widest text-[#64748B]">
         {label}
       </span>
 
-      <span className="text-[#0F172A]">
+      <span className="text-sm font-semibold text-[#0F172A] text-right max-w-[60%] truncate">
         {value || "-"}
       </span>
     </div>

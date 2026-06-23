@@ -20,6 +20,7 @@ import {
   Bookmark
 } from "lucide-react";
 import { format } from "date-fns";
+import { usePermissions } from "@/utils/usePermissions";
 
 const WEEKDAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEKDAYS_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -164,6 +165,7 @@ const getStatusColor = (status) => {
 };
 
 export default function CalendarView() {
+  const { hasPermission } = usePermissions();
   // --- States ---
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState("month"); // "month" | "week" | "day" | "agenda"
@@ -487,24 +489,26 @@ export default function CalendarView() {
           </p>
         </div>
 
-        <div className="flex justify-end">
-          <button
-            onClick={() => { setEditingId(null);  setEventForm({
-      title: "",
-      date: getDateString(selectedDate),
-      time: "",
-      type: "Civil",
-      caseNo: "",
-      court: "",
-      status: "Pending",
-      notes: "",
-    }); setShowEventModal(true); }}
-            className="flex items-center gap-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-colors"
-          >
-            <Plus className="h-5 w-5" />
-            <span>Add Event</span>
-          </button>
-        </div>
+        {hasPermission("Calendar", "add") && (
+          <div className="flex justify-end">
+            <button
+              onClick={() => { setEditingId(null);  setEventForm({
+        title: "",
+        date: getDateString(selectedDate),
+        time: "",
+        type: "Civil",
+        caseNo: "",
+        court: "",
+        status: "Pending",
+        notes: "",
+      }); setShowEventModal(true); }}
+              className="flex items-center gap-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-colors"
+            >
+              <Plus className="h-5 w-5" />
+              <span>Add Event</span>
+            </button>
+          </div>
+        )}
 
 
         {/* --- Top Control Bar --- */}
@@ -619,16 +623,18 @@ export default function CalendarView() {
                           </span>
 
                           {/* Quick add trigger on cell hover */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenAddModal(dateStr);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-blue-50 text-[#2563EB] rounded-lg transition"
-                            title="Add event here"
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                          </button>
+                          {hasPermission("Calendar", "add") && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenAddModal(dateStr);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-blue-50 text-[#2563EB] rounded-lg transition"
+                              title="Add event here"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                         </div>
 
                         {/* Events list within cell */}
@@ -722,13 +728,15 @@ export default function CalendarView() {
                       <h4 className="text-sm font-bold text-[#64748B]">
                         Agenda for {formatMonthDay(selectedDate)}
                       </h4>
-                      <button
-                        onClick={() => handleOpenAddModal(getDateString(selectedDate))}
-                        className="text-xs text-[#2563EB] hover:text-blue-800 font-bold flex items-center gap-1"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Add Event</span>
-                      </button>
+                      {hasPermission("Calendar", "add") && (
+                        <button
+                          onClick={() => handleOpenAddModal(getDateString(selectedDate))}
+                          className="text-xs text-[#2563EB] hover:text-blue-800 font-bold flex items-center gap-1"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add Event</span>
+                        </button>
+                      )}
                     </div>
 
                     {events.filter((e) => e.date === getDateString(selectedDate)).length === 0 ? (
@@ -769,20 +777,24 @@ export default function CalendarView() {
                               </div>
 
                               <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                                <button
-                                  onClick={(e) => handleOpenEditModal(evt, e)}
-                                  className="p-1.5 bg-[#F8FAFC] text-[#64748B] rounded-lg hover:text-[#2563EB]"
-                                  title="Edit"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={(e) => handleDeleteEvent(evt.id, e)}
-                                  className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
-                                  title="Delete"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+                                {hasPermission("Calendar", "edit") && (
+                                  <button
+                                    onClick={(e) => handleOpenEditModal(evt, e)}
+                                    className="p-1.5 bg-[#F8FAFC] text-[#64748B] rounded-lg hover:text-[#2563EB]"
+                                    title="Edit"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                {hasPermission("Calendar", "delete") && (
+                                  <button
+                                    onClick={(e) => handleDeleteEvent(evt.id, e)}
+                                    className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -910,20 +922,24 @@ export default function CalendarView() {
                       )}
 
                       <div className="flex gap-2 pt-2">
-                        <button
-                          onClick={(e) => handleOpenEditModal(selectedEventDetails, e)}
-                          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 border border-[#E2E8F0] hover:border-slate-300 text-[#64748B] rounded-xl text-xs font-bold transition"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                          <span>Edit</span>
-                        </button>
-                        <button
-                          onClick={(e) => handleDeleteEvent(selectedEventDetails.id, e)}
-                          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-xs font-bold transition"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Delete</span>
-                        </button>
+                        {hasPermission("Calendar", "edit") && (
+                          <button
+                            onClick={(e) => handleOpenEditModal(selectedEventDetails, e)}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 border border-[#E2E8F0] hover:border-slate-300 text-[#64748B] rounded-xl text-xs font-bold transition"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+                        )}
+                        {hasPermission("Calendar", "delete") && (
+                          <button
+                            onClick={(e) => handleDeleteEvent(selectedEventDetails.id, e)}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-xs font-bold transition"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -970,13 +986,15 @@ export default function CalendarView() {
                               {day.getDate()}
                             </h3>
                           </div>
-                          <button
-                            onClick={() => handleOpenAddModal(dateStr)}
-                            className="p-1 bg-white border border-[#E2E8F0] text-[#64748B] hover:text-[#2563EB] rounded-lg hover:scale-105 transition"
-                            title="Add event"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
+                          {hasPermission("Calendar", "add") && (
+                            <button
+                              onClick={() => handleOpenAddModal(dateStr)}
+                              className="p-1 bg-white border border-[#E2E8F0] text-[#64748B] hover:text-[#2563EB] rounded-lg hover:scale-105 transition"
+                              title="Add event"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
 
                         {/* Event List in Week Day */}
@@ -1006,20 +1024,24 @@ export default function CalendarView() {
                                 
                                 {/* Hover quick actions */}
                                 <div className="absolute right-1 bottom-1 opacity-0 group-hover:opacity-100 flex gap-0.5 transition">
-                                  <button
-                                    onClick={(e) => handleOpenEditModal(evt, e)}
-                                    className="p-1 bg-white/80 hover:bg-white text-[#64748B] rounded shadow-sm"
-                                    title="Edit"
-                                  >
-                                    <Edit2 className="w-2.5 h-2.5" />
-                                  </button>
-                                  <button
-                                    onClick={(e) => handleDeleteEvent(evt.id, e)}
-                                    className="p-1 bg-white/80 hover:bg-red-50 text-red-600 rounded shadow-sm"
-                                    title="Delete"
-                                  >
-                                    <Trash2 className="w-2.5 h-2.5" />
-                                  </button>
+                                  {hasPermission("Calendar", "edit") && (
+                                    <button
+                                      onClick={(e) => handleOpenEditModal(evt, e)}
+                                      className="p-1 bg-white/80 hover:bg-white text-[#64748B] rounded shadow-sm"
+                                      title="Edit"
+                                    >
+                                      <Edit2 className="w-2.5 h-2.5" />
+                                    </button>
+                                  )}
+                                  {hasPermission("Calendar", "delete") && (
+                                    <button
+                                      onClick={(e) => handleDeleteEvent(evt.id, e)}
+                                      className="p-1 bg-white/80 hover:bg-red-50 text-red-600 rounded shadow-sm"
+                                      title="Delete"
+                                    >
+                                      <Trash2 className="w-2.5 h-2.5" />
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             ))
@@ -1086,15 +1108,17 @@ export default function CalendarView() {
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenAddModal(dateStr);
-                            }}
-                            className="p-2 bg-white border border-[#E2E8F0] text-[#2563EB] rounded-xl"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
+                          {hasPermission("Calendar", "add") && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenAddModal(dateStr);
+                              }}
+                              className="p-2 bg-white border border-[#E2E8F0] text-[#2563EB] rounded-xl"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -1127,18 +1151,22 @@ export default function CalendarView() {
                               </div>
 
                               <div className="flex items-center gap-1.5 ml-2">
-                                <button
-                                  onClick={(e) => handleOpenEditModal(evt, e)}
-                                  className="p-1.5 bg-white text-[#64748B] rounded-lg shadow-sm"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={(e) => handleDeleteEvent(evt.id, e)}
-                                  className="p-1.5 bg-white text-red-600 rounded-lg shadow-sm"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+                                {hasPermission("Calendar", "edit") && (
+                                  <button
+                                    onClick={(e) => handleOpenEditModal(evt, e)}
+                                    className="p-1.5 bg-white text-[#64748B] rounded-lg shadow-sm"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                {hasPermission("Calendar", "delete") && (
+                                  <button
+                                    onClick={(e) => handleDeleteEvent(evt.id, e)}
+                                    className="p-1.5 bg-white text-red-600 rounded-lg shadow-sm"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                               </div>
                             </div>
                           ))
@@ -1165,13 +1193,15 @@ export default function CalendarView() {
                   </p>
                 </div>
                 
-                <button
-                  onClick={() => handleOpenAddModal(getDateString(selectedDate))}
-                  className="flex items-center gap-1 px-4 py-2.5 bg-blue-50 text-[#2563EB] hover:bg-blue-100 rounded-xl font-bold text-sm transition"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>New Event</span>
-                </button>
+                {hasPermission("Calendar", "add") && (
+                  <button
+                    onClick={() => handleOpenAddModal(getDateString(selectedDate))}
+                    className="flex items-center gap-1 px-4 py-2.5 bg-blue-50 text-[#2563EB] hover:bg-blue-100 rounded-xl font-bold text-sm transition"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>New Event</span>
+                  </button>
+                )}
               </div>
 
               {activeEvents.length === 0 ? (
@@ -1181,12 +1211,14 @@ export default function CalendarView() {
                   <p className="text-sm text-[#64748B] mt-1 max-w-xs mx-auto">
                     You have no scheduled court hearings, agendas, or meetings for this day.
                   </p>
-                  <button
-                    onClick={() => handleOpenAddModal(getDateString(selectedDate))}
-                    className="mt-4 px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-[#2563EB]/10"
-                  >
-                    Schedule First Event
-                  </button>
+                  {hasPermission("Calendar", "add") && (
+                    <button
+                      onClick={() => handleOpenAddModal(getDateString(selectedDate))}
+                      className="mt-4 px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-[#2563EB]/10"
+                    >
+                      Schedule First Event
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1239,21 +1271,25 @@ export default function CalendarView() {
 
                         {/* Action buttons */}
                         <div className="flex items-center justify-end gap-2 border-t md:border-t-0 border-[#E2E8F0] pt-3 md:pt-0">
-                          <button
-                            onClick={(e) => handleOpenEditModal(event, e)}
-                            className="flex items-center gap-1 px-3 py-2 bg-white hover:bg-slate-50 border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#64748B] transition"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                            <span>Edit</span>
-                          </button>
+                          {hasPermission("Calendar", "edit") && (
+                            <button
+                              onClick={(e) => handleOpenEditModal(event, e)}
+                              className="flex items-center gap-1 px-3 py-2 bg-white hover:bg-slate-50 border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#64748B] transition"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                              <span>Edit</span>
+                            </button>
+                          )}
                           
-                          <button
-                            onClick={(e) => handleDeleteEvent(event.id, e)}
-                            className="flex items-center gap-1 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold transition"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Delete</span>
-                          </button>
+                          {hasPermission("Calendar", "delete") && (
+                            <button
+                              onClick={(e) => handleDeleteEvent(event.id, e)}
+                              className="flex items-center gap-1 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold transition"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1376,20 +1412,24 @@ export default function CalendarView() {
                             <span className={`px-3 py-1 rounded-xl text-xs font-bold mr-2 ${getStatusColor(evt.status)}`}>
                               {evt.status}
                             </span>
-                            <button
-                              onClick={(e) => handleOpenEditModal(evt, e)}
-                              className="p-2.5 bg-white border border-[#E2E8F0] text-[#64748B] hover:text-[#2563EB] rounded-xl transition shadow-sm hover:scale-105"
-                              title="Edit Agenda"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={(e) => handleDeleteEvent(evt.id, e)}
-                              className="p-2.5 bg-white border border-[#E2E8F0] text-red-600 hover:bg-red-50 rounded-xl transition shadow-sm hover:scale-105"
-                              title="Delete Agenda"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {hasPermission("Calendar", "edit") && (
+                              <button
+                                onClick={(e) => handleOpenEditModal(evt, e)}
+                                className="p-2.5 bg-white border border-[#E2E8F0] text-[#64748B] hover:text-[#2563EB] rounded-xl transition shadow-sm hover:scale-105"
+                                title="Edit Agenda"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                            )}
+                            {hasPermission("Calendar", "delete") && (
+                              <button
+                                onClick={(e) => handleDeleteEvent(evt.id, e)}
+                                className="p-2.5 bg-white border border-[#E2E8F0] text-red-600 hover:bg-red-50 rounded-xl transition shadow-sm hover:scale-105"
+                                title="Delete Agenda"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
 
                         </div>
@@ -1469,20 +1509,24 @@ export default function CalendarView() {
                         </td>
                         <td className="p-4 whitespace-nowrap text-center">
                           <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              onClick={(e) => handleOpenEditModal(item, e)}
-                              className="p-1.5 text-[#64748B] hover:text-[#2563EB] bg-[#F8FAFC] rounded-lg transition"
-                              title="Edit"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={(e) => handleDeleteEvent(item.id, e)}
-                              className="p-1.5 text-red-500 hover:text-red-700 bg-red-50 rounded-lg transition"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {hasPermission("Calendar", "edit") && (
+                              <button
+                                onClick={(e) => handleOpenEditModal(item, e)}
+                                className="p-1.5 text-[#64748B] hover:text-[#2563EB] bg-[#F8FAFC] rounded-lg transition"
+                                title="Edit"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {hasPermission("Calendar", "delete") && (
+                              <button
+                                onClick={(e) => handleDeleteEvent(item.id, e)}
+                                className="p-1.5 text-red-500 hover:text-red-700 bg-red-50 rounded-lg transition"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

@@ -62,7 +62,7 @@ export function usePermissions() {
       return !!rolePermissions[moduleKey][action];
     }
 
-    return true; // fallback
+    return false; // fallback
   };
 
   return { user, hasPermission, loading };

@@ -57,92 +57,90 @@ const ACTIONS = ["view", "add", "edit", "delete"];
 
 // Base module keys (internal, used for localStorage storage)
 const ALL_MODULES = [
-  // Advocate Section
   "Dashboard",
+  "Junior Dashboard",
+  "Client Dashboard",
   "Law Firm Management",
   "Client Management",
   "Case Management",
   "Consultations",
   "Finance Management",
   "Calendar",
+  "Junior Calendar",
   "Profile",
-
-  // Junior Advocate
   "Assigned Cases",
   "Client Section",
-
-  // Client Section
   "Consultation",
   "Case Tracking",
   "Documents",
   "Payments",
-
-  // System
   "User Roles",
   "Roles",
   "Users",
   "Permissions",
 ];
 
-const getModuleCategories = (roleName) => {
-  const normRole = (roleName || "").toLowerCase().replace(/\s+/g, "");
-  let dashboardLabel = "Dashboard";
-  if (normRole.includes("senior")) {
-    dashboardLabel = "Dashboard (Senior Advocate)";
-  } else if (normRole.includes("junior")) {
-    dashboardLabel = "Dashboard (Junior Advocate)";
-  } else if (normRole.includes("client")) {
-    dashboardLabel = "Dashboard (Client)";
+const SENIOR_JUNIOR_MODULES = [
+  {
+    category: "Senior Advocate / Law Firm Features",
+    modules: [
+      { key: "Dashboard", label: "Dashboard" },
+      { key: "Law Firm Management", label: "Law Firm Management" },
+      { key: "Client Management", label: "Client Management" },
+      { key: "Case Management", label: "Case Management" },
+      { key: "Consultations", label: "Case Discussion (Senior)" },
+      { key: "Finance Management", label: "Finance Management" },
+      { key: "Calendar", label: "Calendar" },
+      { key: "Profile", label: "Profile" }
+    ]
+  },
+  {
+    category: "Junior Advocate Features",
+    modules: [
+      { key: "Junior Dashboard", label: "Dashboard (Junior)" },
+      { key: "Assigned Cases", label: "Assigned Cases" },
+      { key: "Junior Calendar", label: "Calendar (Junior)" }
+    ]
+  },
+  {
+    category: "Client Section Features",
+    modules: [
+      { key: "Client Dashboard", label: "Dashboard (Client)" },
+      { key: "Consultation", label: "Case Discussion (Client)" },
+      { key: "Case Tracking", label: "Case Tracking" },
+      { key: "Documents", label: "Documents" },
+      { key: "Payments", label: "Payments" }
+    ]
+  },
+  {
+    category: "System / Administration",
+    modules: [
+      { key: "User Roles", label: "User Roles" },
+      { key: "Roles", label: "Roles" },
+      { key: "Users", label: "Users" },
+      { key: "Permissions", label: "Permissions" }
+    ]
   }
+];
 
-  return [
-    {
-      category: "General",
-      modules: [
-        { key: "Dashboard", label: dashboardLabel }
-      ]
-    },
-    {
-      category: "Senior Advocate / Law Firm Features",
-      modules: [
-        { key: "Law Firm Management", label: "Law Firm Management" },
-        { key: "Client Management", label: "Client Management" },
-        { key: "Case Management", label: "Case Management" },
-        { key: "Consultations", label: "Case Discussion (Senior)" },
-        { key: "Finance Management", label: "Finance Management" },
-        { key: "Calendar", label: "Calendar" },
-        { key: "Profile", label: "Profile" }
-      ]
-    },
-    {
-      category: "Junior Advocate Features",
-      modules: [
-        { key: "Assigned Cases", label: "Assigned Cases" },
-        { key: "Client Section", label: "Client Section (Junior)" }
-      ]
-    },
-    {
-      category: "Client Features",
-      modules: [
-        { key: "Consultation", label: "Case Discussion (Client)" },
-        { key: "Case Tracking", label: "Case Tracking" },
-        { key: "Documents", label: "Documents" },
-        { key: "Payments", label: "Payments" }
-      ]
-    },
-    {
-      category: "System / Law Firm Administration",
-      modules: [
-        { key: "User Roles", label: "User Roles" },
-        { key: "Roles", label: "Roles" },
-        { key: "Users", label: "Users" },
-        { key: "Permissions", label: "Permissions" }
-      ]
-    }
-  ];
+const CLIENT_MODULES = [
+  {
+    category: "Client Section Features",
+    modules: [
+      { key: "Client Dashboard", label: "Dashboard (Client)" },
+      { key: "Consultation", label: "Case Discussion (Client)" },
+      { key: "Case Tracking", label: "Case Tracking" },
+      { key: "Documents", label: "Documents" },
+      { key: "Payments", label: "Payments" }
+    ]
+  }
+];
+
+const getModuleCategories = (roleName) => {
+  const normalized = (roleName || "").toLowerCase().replace(/\s+/g, "");
+  if (normalized === "client") return CLIENT_MODULES;
+  return SENIOR_JUNIOR_MODULES; // Senior Advocate & Junior Advocate see all sections
 };
-
-
 
 const DEFAULT_DOCUMENTS = [
   { docId: "doc_1", name: "Smith v. State - Case Brief.pdf", type: "Case File", view: true, upload: true, edit: false, delete: false },
@@ -156,6 +154,7 @@ export default function UsersView() {
   const [roles, setRoles] = useState([]);
   const [selectedRole, setSelectedRole] = useState("");
   const [users, setUsers] = useState([]);
+  const [rolePermissions, setRolePermissions] = useState({}); // default permissions per role
 
   // Form Fields
   const [firstName, setFirstName] = useState("");
@@ -258,9 +257,22 @@ export default function UsersView() {
     };
 
     loadData();
-    setTimeout(() => {
-      setMounted(true);
-    }, 0);
+    setMounted(true);
+  }, []);
+
+  // Fetch global role permissions (used to pre-populate Direct Permissions)
+  useEffect(() => {
+    const loadPermissions = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/permissions");
+        if (res.ok) {
+          setRolePermissions(await res.json());
+        }
+      } catch (e) {
+        // silently ignore — checkboxes will just start empty
+      }
+    };
+    loadPermissions();
   }, []);
 
   // Show notification toast helper
@@ -277,12 +289,32 @@ export default function UsersView() {
       showToast("Please select a role from the tabs above", "error");
       return;
     }
+    if (!firstName.trim()) {
+      showToast("First name is required", "error");
+      return;
+    }
+    if (!lastName.trim()) {
+      showToast("Last name is required", "error");
+      return;
+    }
+    if (!phoneNumber.trim()) {
+      showToast("Phone number is required", "error");
+      return;
+    }
+    if (!/^[6-9][0-9]{9}$/.test(phoneNumber.trim())) {
+      showToast("Please enter a valid Indian mobile number", "error");
+      return;
+    }
     if (!username.trim()) {
       showToast("Username is required", "error");
       return;
     }
     if (!emailAddress.trim()) {
       showToast("Email address is required", "error");
+      return;
+    }
+    if (!tempPassword.trim()) {
+      showToast("Temporary password is required", "error");
       return;
     }
 
@@ -368,8 +400,8 @@ export default function UsersView() {
     }
   };
 
-  // Modal actions
-  const handleOpenDetails = (user) => {
+  // Modal actions — fetch fresh role permissions every time modal opens
+  const handleOpenDetails = async (user) => {
     setActiveUser(user);
     setEditFirstName(user.firstName || "");
     setEditLastName(user.lastName || "");
@@ -377,19 +409,53 @@ export default function UsersView() {
     setEditUsername(user.username || "");
     setEditEmail(user.email || "");
     setEditPassword(user.tempPassword || "");
-    
-    // Ensure customPermissions is set
-    setEditCustomPerms(user.customPermissions || {});
-    
-    // Ensure documentAccess is set (fallback to default dummy documents)
-    setEditDocAccess(user.documentAccess && user.documentAccess.length > 0 
-      ? user.documentAccess 
+
+    setEditDocAccess(user.documentAccess && user.documentAccess.length > 0
+      ? user.documentAccess
       : DEFAULT_DOCUMENTS
     );
-    
+
+    // Always fetch latest role permissions from API to stay in sync with PermissionView
+    try {
+      const res = await fetch("http://localhost:8000/permissions");
+      let basePerms = {};
+      if (res.ok) {
+        const freshPerms = await res.json();
+        setRolePermissions(freshPerms); // also update cached state
+        basePerms = freshPerms[user.role] || {};
+      } else {
+        basePerms = rolePermissions[user.role] || {};
+      }
+
+      const hasCustom = user.customPermissions && Object.keys(user.customPermissions).length > 0;
+      if (hasCustom) {
+        // Deep merge role defaults with user's custom overrides
+        const merged = JSON.parse(JSON.stringify(basePerms));
+        for (const mod in user.customPermissions) {
+          merged[mod] = { ...(merged[mod] || {}), ...user.customPermissions[mod] };
+        }
+        setEditCustomPerms(merged);
+      } else {
+        setEditCustomPerms(basePerms);
+      }
+    } catch (_) {
+      const fallbackBase = rolePermissions[user.role] || {};
+      const hasCustom = user.customPermissions && Object.keys(user.customPermissions).length > 0;
+      if (hasCustom) {
+        const merged = JSON.parse(JSON.stringify(fallbackBase));
+        for (const mod in user.customPermissions) {
+          merged[mod] = { ...(merged[mod] || {}), ...user.customPermissions[mod] };
+        }
+        setEditCustomPerms(merged);
+      } else {
+        setEditCustomPerms(fallbackBase);
+      }
+    }
+
     setModalTab("profile");
     setIsDetailsOpen(true);
   };
+
 
   const handleSaveModal = async () => {
     if (!editUsername.trim() || !editEmail.trim()) {
@@ -398,6 +464,37 @@ export default function UsersView() {
     }
 
     try {
+      // Fetch fresh role defaults to compute diff
+      let currentRolePerms = {};
+      try {
+        const resRole = await fetch("http://localhost:8000/permissions");
+        if (resRole.ok) {
+          const allPerms = await resRole.json();
+          currentRolePerms = allPerms[activeUser.role] || {};
+        }
+      } catch (_) {
+        currentRolePerms = rolePermissions[activeUser.role] || {};
+      }
+
+      // Compute diff: Only save what differs from the global role defaults
+      const diffPerms = {};
+      for (const mod in editCustomPerms) {
+        const modPerms = editCustomPerms[mod];
+        const baseModPerms = currentRolePerms[mod] || { view: false, add: false, edit: false, delete: false };
+        
+        let hasDiff = false;
+        const modDiff = {};
+        for (const act of ["view", "add", "edit", "delete"]) {
+          if (modPerms[act] !== baseModPerms[act]) {
+            hasDiff = true;
+            modDiff[act] = modPerms[act];
+          }
+        }
+        if (hasDiff) {
+          diffPerms[mod] = modDiff;
+        }
+      }
+
       const res = await fetch(`http://localhost:8000/permissions/users/${activeUser.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -408,7 +505,7 @@ export default function UsersView() {
           username: editUsername.trim(),
           email: editEmail.trim(),
           tempPassword: editPassword.trim(),
-          customPermissions: editCustomPerms,
+          customPermissions: diffPerms,
           documentAccess: editDocAccess
         })
       });
@@ -539,12 +636,13 @@ export default function UsersView() {
     {/* First Name */}
     <div className="flex flex-col">
       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-        First Name
+        First Name *
       </label>
       <input
         type="text"
         value={firstName}
         onChange={(e) => setFirstName(e.target.value)}
+        required
         className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
       />
     </div>
@@ -552,12 +650,13 @@ export default function UsersView() {
     {/* Last Name */}
     <div className="flex flex-col">
       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-        Last Name
+        Last Name *
       </label>
       <input
         type="text"
         value={lastName}
         onChange={(e) => setLastName(e.target.value)}
+        required
         className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
       />
     </div>
@@ -565,7 +664,7 @@ export default function UsersView() {
     {/* Phone Number */}
     <div className="flex flex-col">
       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-        Phone Number
+        Phone Number *
       </label>
 
       <input
@@ -579,6 +678,7 @@ export default function UsersView() {
           }
         }}
         maxLength={10}
+        required
         className={`w-full rounded-xl border px-4 py-3 text-slate-800 placeholder:text-slate-700 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all text-sm font-medium ${
           phoneNumber &&
           !/^[6-9][0-9]{9}$/.test(phoneNumber)
@@ -626,7 +726,7 @@ export default function UsersView() {
     {/* Temp Password */}
     <div className="flex flex-col">
       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-        Temp Password
+        Temp Password *
       </label>
 
       <div className="relative">
@@ -634,6 +734,7 @@ export default function UsersView() {
           type={showPassword ? "text" : "password"}
           value={tempPassword}
           onChange={(e) => setTempPassword(e.target.value)}
+          required
           className="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-4 pr-24 py-3 text-slate-800 placeholder:text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
         />
 
@@ -892,7 +993,7 @@ export default function UsersView() {
               
               {/* Profile */}
               {modalTab === "profile" && (
-                <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
                   {[
                     ["First Name", editFirstName, setEditFirstName],
                     ["Last Name", editLastName, setEditLastName],
@@ -901,13 +1002,13 @@ export default function UsersView() {
                     ["Email Address", editEmail, setEditEmail],
                   ].map(([label, value, setter]) => (
                     <div key={label}>
-                      <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">
+                      <label className="text-[11px] font-bold text-[#64748B] uppercase tracking-widest mb-2 block">
                         {label}
                       </label>
                       <input
                         value={value}
                         onChange={(e) => setter(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"
+                        className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-[#0F172A] placeholder:text-[#94A3B8] focus:bg-white focus:ring-4 focus:ring-blue-50 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
                       />
                     </div>
                   ))}
@@ -917,13 +1018,13 @@ export default function UsersView() {
               {/* Permissions */}
               {modalTab === "permissions" && (
                 <div className="p-8">
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
-                    <table className="w-full">
+                  <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 overflow-x-auto">
+                    <table className="w-full border-collapse text-left">
                       <thead>
-                        <tr className="bg-slate-800 text-white">
-                          <th className="py-3 px-4 text-left">Module</th>
+                        <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
+                          <th className="py-4 px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest">Module</th>
                           {ACTIONS.map((act) => (
-                            <th key={act} className="py-3 px-4 text-center">
+                            <th key={act} className="py-4 px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest text-center w-28">
                               {act}
                             </th>
                           ))}
@@ -937,7 +1038,7 @@ export default function UsersView() {
                             <tr>
                               <td
                                 colSpan={5}
-                                className="py-2.5 px-4 font-bold text-xs uppercase tracking-wider text-slate-600 bg-slate-100 border-y border-slate-200"
+                                className="py-3 px-6 font-bold text-[11px] uppercase tracking-[0.2em] text-[#64748B] bg-gradient-to-r from-[#F8FAFC] to-white border-y border-[#E2E8F0] border-l-4 border-l-[#2563EB]"
                               >
                                 {cat.category}
                               </td>
@@ -946,21 +1047,29 @@ export default function UsersView() {
                             {cat.modules.map(({ key, label }) => {
                               const perms = editCustomPerms[key] || {};
                               return (
-                                <tr key={key} className="border-b hover:bg-slate-50">
-                                  <td className="py-3 px-6 font-medium text-slate-800 text-sm pl-8">
+                                <tr key={key} className="hover:bg-[#F8FAFC] transition-colors duration-200 border-b border-[#F1F5F9] group/row">
+                                  <td className="py-4 px-6 font-semibold text-[#1E293B] text-sm pl-8 flex items-center gap-3">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-[#CBD5E1] group-hover/row:bg-[#2563EB] transition-colors" />
                                     {label}
                                   </td>
 
                                   {ACTIONS.map((action) => (
-                                    <td key={action} className="text-center py-3">
-                                      <input
-                                        type="checkbox"
-                                        checked={perms[action] || false}
-                                        onChange={() =>
-                                          handleCustomPermissionToggle(key, action)
-                                        }
-                                        className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 accent-indigo-600 cursor-pointer"
-                                      />
+                                    <td key={action} className="text-center py-4">
+                                      <label className="relative inline-flex items-center justify-center cursor-pointer group/check">
+                                        <input
+                                          type="checkbox"
+                                          checked={perms[action] || false}
+                                          onChange={() => handleCustomPermissionToggle(key, action)}
+                                          className="peer sr-only"
+                                        />
+                                        <div className={`w-5 h-5 rounded-[6px] flex items-center justify-center transition-all duration-200 border 
+                                          ${perms[action] 
+                                            ? "bg-[#2563EB] border-[#2563EB] shadow-sm shadow-blue-500/30" 
+                                            : "bg-white border-[#CBD5E1] group-hover/check:border-[#2563EB]"}
+                                        `}>
+                                          {perms[action] && <Check size={13} className="text-white stroke-[3.5]" />}
+                                        </div>
+                                      </label>
                                     </td>
                                   ))}
                                 </tr>
@@ -1018,17 +1127,17 @@ export default function UsersView() {
             </div>
 
             {/* Footer */}
-            <div className="px-8 py-5 border-t border-slate-100 bg-white flex justify-end gap-3">
+            <div className="px-8 py-6 border-t border-[#E2E8F0] bg-white flex justify-end gap-4 rounded-b-3xl">
               <button
                 onClick={() => setIsDetailsOpen(false)}
-                className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"
+                className="px-8 py-3.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[#475569] text-xs font-bold uppercase tracking-wider transition-colors"
               >
                 Cancel
               </button>
 
               <button
                 onClick={handleSaveModal}
-                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold"
+                className="px-8 py-3.5 rounded-full bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98]"
               >
                 Save Changes
               </button>

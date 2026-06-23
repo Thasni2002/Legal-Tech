@@ -13,6 +13,8 @@ import {
   File,
   Gavel,
 } from "lucide-react";
+import useModulePermission from "@/utils/useModulePermission";
+
 
 const assignedCases = [
   {
@@ -92,11 +94,25 @@ const getStatusBadgeClass = (status) => {
 };
 
 export default function AssignedCasesView() {
+  const { perms, loading } = useModulePermission("Assigned Cases");
   const [cases, setCases] = useState(assignedCases);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCase, setSelectedCase] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
-  const [modalViewMode, setModalViewMode] = useState("full"); // "full" or "document"
+  const [modalViewMode, setModalViewMode] = useState("full");
+
+  // No view access
+  if (!loading && !perms.view) {
+    return (
+      <div className="w-full min-h-[400px] flex items-center justify-center">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-10 max-w-sm text-center">
+          <div className="text-4xl mb-3">🔒</div>
+          <h2 className="text-xl font-bold text-slate-800">Access Restricted</h2>
+          <p className="text-slate-500 text-sm mt-2">You do not have permission to view Assigned Cases.</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleOpenDetails = (caseItem, viewMode = "full") => {
     setSelectedCase(caseItem);
@@ -110,6 +126,7 @@ export default function AssignedCasesView() {
   };
 
   const handleStatusChange = (caseNo, newStatus) => {
+    if (!perms.edit) return; // blocked if no edit permission
     setCases((prevCases) =>
       prevCases.map((c) =>
         c.caseNo === caseNo ? { ...c, status: newStatus } : c
@@ -240,17 +257,23 @@ export default function AssignedCasesView() {
                       </td>
 
                       <td className="px-5 py-4">
-                        <select
-                          value={item.status}
-                          onChange={(e) => handleStatusChange(item.caseNo, e.target.value)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold border-0 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 cursor-pointer transition-colors ${getStatusSelectClass(item.status)}`}
-                        >
-                          <option value="Completed" className="bg-white text-[#0F172A]">Completed</option>
-                          <option value="Closed" className="bg-white text-[#0F172A]">Closed</option>
-                          <option value="In Progress" className="bg-white text-[#0F172A]">In Progress</option>
-                          <option value="Active" className="bg-white text-[#0F172A]">Active</option>
-                          <option value="To Do" className="bg-white text-[#0F172A]">To Do</option>
-                        </select>
+                        {perms.edit ? (
+                          <select
+                            value={item.status}
+                            onChange={(e) => handleStatusChange(item.caseNo, e.target.value)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border-0 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 cursor-pointer transition-colors ${getStatusSelectClass(item.status)}`}
+                          >
+                            <option value="Completed" className="bg-white text-[#0F172A]">Completed</option>
+                            <option value="Closed" className="bg-white text-[#0F172A]">Closed</option>
+                            <option value="In Progress" className="bg-white text-[#0F172A]">In Progress</option>
+                            <option value="Active" className="bg-white text-[#0F172A]">Active</option>
+                            <option value="To Do" className="bg-white text-[#0F172A]">To Do</option>
+                          </select>
+                        ) : (
+                          <span className={`px-3 py-1.5 rounded-lg text-xs font-bold inline-block ${getStatusBadgeClass(item.status)}`}>
+                            {item.status}
+                          </span>
+                        )}
                       </td>
 
                       <td className="px-5 py-4">

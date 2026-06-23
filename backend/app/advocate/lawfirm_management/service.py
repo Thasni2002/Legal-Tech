@@ -137,3 +137,26 @@ def delete_assigned_case(
     return {
         "message": "Assigned case deleted successfully"
     }
+
+
+# Update assigned case
+def update_assigned_case(
+    db: Session,
+    case_id: int,
+    case_data
+):
+    assigned_case = get_assigned_case_by_id(
+        db,
+        case_id
+    )
+
+    if not assigned_case:
+        return None
+
+    for key, value in case_data.model_dump().items():
+        setattr(assigned_case, key, value)
+
+    db.commit()
+    db.refresh(assigned_case)
+
+    return assigned_case
