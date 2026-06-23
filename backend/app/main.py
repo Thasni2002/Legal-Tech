@@ -11,6 +11,7 @@ from app.advocate.consultations import router as consultations_router
 from app.advocate.finance_management import router as finance_router
 from app.advocate.permissions import router as permissions_router
 from app.advocate.lawfirm_management.routes import router as lawfirm_router
+from app.advocate.case_management.routes import router as case_router
 app = FastAPI()
 
 # CORS setup
@@ -39,3 +40,4 @@ app.include_router(finance_router)
 app.include_router(client_router)
 app.include_router(lawfirm_router)
 app.include_router(permissions_router)
+

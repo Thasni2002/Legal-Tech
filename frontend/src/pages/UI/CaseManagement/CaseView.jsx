@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 
 import {
   Menu,
@@ -12,67 +13,61 @@ import {
   MoreVertical,
 } from "lucide-react";
 
-const cases = [
-  {
-    title: "State of U.P. vs. Rajesh Kumar",
-    caseNo: "CR/1234/2023",
-    client: "Rajesh Kumar",
-    court: "CJM Court, Prayagraj",
-    hearing: "28 May 2024",
-    status: "Active",
-  },
-  {
-    title: "Anita Verma vs. Suresh Verma",
-    caseNo: "FA/567/2023",
-    client: "Anita Verma",
-    court: "Family Court",
-    hearing: "30 May 2024",
-    status: "Active",
-  },
-  {
-    title: "ABC Pvt. Ltd. vs. XYZ Corp.",
-    caseNo: "CS/890/2023",
-    client: "ABC Pvt. Ltd.",
-    court: "High Court",
-    hearing: "04 Jun 2024",
-    status: "Active",
-  },
-  {
-    title: "Neha Singh vs. RTO Dept.",
-    caseNo: "MA/334/2023",
-    client: "Neha Singh",
-    court: "Motor Accident Tribunal",
-    hearing: "12 Jun 2024",
-    status: "Pending",
-  },
-];
-
 import { usePermissions } from "@/utils/usePermissions";
 
 export default function CaseView() {
   const router = useRouter();
   const { hasPermission } = usePermissions();
-  return (
-    <div className="w-full space-y-6 md:space-y-8">
-      {/* Page Header */}
-      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6">
-        <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
-          Case Management
-        </h1>
-        <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
-          Track legal cases, hearings and case progress
-        </p>
-      </div>
 
-      {/* Top Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-         <Card
-           title="AI Legal Assistant"
-           description="Get intelligent legal answers and recommendations."
-           buttonText="Open Assistant"
-           color="bg-[#7C3AED] hover:bg-[#6d28d9]"
-           onClick={() => router.push("/ai-assistant")}
-         />
+  const [cases, setCases] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    fetchCases();
+  }, []);
+
+  const fetchCases = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/case-management/");
+      const data = await response.json();
+      setCases(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // SEARCH FILTER
+  const filteredCases = cases.filter((item) =>
+    item.case_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.case_no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.court_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="p-6 bg-gray-50 min-h-screen">
+      
+      {/* HEADER */}
+      <h1
+        className="text-[#0F172A] font-bold"
+        style={{ fontSize: "40px", fontWeight: 700, lineHeight: 1.2 }}
+      >
+        Case Management
+      </h1>
+
+      <p className="text-[#64748B] mt-1.5" style={{ fontSize: "18px" }}>
+        Track legal cases, hearings and case progress
+      </p>
+
+      {/* TOP CARDS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mt-6">
+        <Card
+          title="AI Legal Assistant"
+          description="Get intelligent legal answers and recommendations."
+          buttonText="Open Assistant"
+          color="bg-[#7C3AED] hover:bg-[#6d28d9]"
+          onClick={() => router.push("/ai-assistant")}
+        />
 
         <Card
           title="Judgment Summary"
@@ -99,63 +94,68 @@ export default function CaseView() {
         />
       </div>
 
-      <div className="grid grid-cols-12 gap-6">
-        {/* Cases Section */}
-        <div className="col-span-12 bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm">
-          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
-            <h2 className="font-bold text-lg text-[#0F172A]">My Cases</h2>
+      {/* CASES SECTION */}
+      <div className="mt-6 bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm">
+        
+        {/* HEADER ROW */}
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+          <h2 className="font-bold text-lg text-[#0F172A]">My Cases</h2>
 
-            {hasPermission("Case Management", "add") && (
-              <button
-                onClick={() => router.push("/case-management/case-add")}
-                className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-4 py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 shadow-sm transition-all duration-200 cursor-pointer"
-              >
-                <Plus size={16} />
-                Add Case
-              </button>
-            )}
-          </div>
+          {hasPermission("Case Management", "add") && (
+            <button
+              onClick={() => router.push("/case-management/case-add")}
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-4 py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 shadow-sm transition-all duration-200 cursor-pointer"
+            >
+              <Plus size={16} />
+              Add Case
+            </button>
+          )}
+        </div>
 
-          <div className="relative mb-6">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <Search size={18} className="text-[#94A3B8]" />
-            </span>
-            <input
-              type="text"
-              placeholder="Search by case title..."
-              className="w-full rounded-lg border border-[#E2E8F0] bg-white pl-10 pr-4 py-2.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-            />
-          </div>
+        {/* SEARCH BAR */}
+        <div className="relative mb-6">
+          <Search size={18} className="absolute left-3 top-3 text-[#94A3B8]" />
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-[#E2E8F0] text-xs font-semibold text-[#64748B] uppercase tracking-wider">
-                  <th className="pb-3 font-medium">Case Title</th>
-                  <th className="pb-3 font-medium">Case No</th>
-                  <th className="pb-3 font-medium">Client</th>
-                  <th className="pb-3 font-medium">Court</th>
-                  <th className="pb-3 font-medium">Next Hearing</th>
-                  <th className="pb-3 font-medium">Status</th>
-                  <th className="pb-3 font-medium">Actions</th>
-                </tr>
-              </thead>
+          <input
+            type="text"
+            placeholder="Search by title, case no, client, court..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full rounded-lg border border-[#E2E8F0] pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none"
+          />
+        </div>
 
-              <tbody className="divide-y divide-[#F1F5F9]">
-                {cases.map((item, index) => (
-                  <tr key={index} className="hover:bg-[#F8FAFC] transition-colors duration-150">
-                    <td className="py-4 text-sm font-medium text-[#1E293B]">{item.title}</td>
-                    <td className="py-4 text-sm text-[#1E293B]">{item.caseNo}</td>
-                    <td className="py-4 text-sm text-[#1E293B]">{item.client}</td>
-                    <td className="py-4 text-sm text-[#64748B]">{item.court}</td>
+        {/* TABLE */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b text-xs font-semibold text-[#64748B] uppercase">
+                <th className="pb-3">Case Title</th>
+                <th className="pb-3">Case No</th>
+                <th className="pb-3">Client</th>
+                <th className="pb-3">Court</th>
+                <th className="pb-3">Next Hearing</th>
+                <th className="pb-3">Status</th>
+                <th className="pb-3">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {filteredCases.length > 0 ? (
+                filteredCases.map((item, index) => (
+                  <tr key={index} className="hover:bg-[#F8FAFC]">
+                    <td className="py-4 text-sm font-medium">{item.case_title}</td>
+                    <td className="py-4 text-sm">{item.case_no}</td>
+                    <td className="py-4 text-sm">{item.client_name}</td>
+                    <td className="py-4 text-sm text-[#64748B]">{item.court_name}</td>
                     <td className="py-4 text-sm text-[#64748B]">{item.hearing}</td>
 
                     <td className="py-4 text-sm">
                       <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
+                        className={`px-2 py-1 text-xs rounded-full border ${
                           item.status === "Active"
-                            ? "bg-green-50 text-green-700 border-green-200/50"
-                            : "bg-amber-50 text-amber-700 border-amber-200/50"
+                            ? "bg-green-50 text-green-700 border-green-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
                         }`}
                       >
                         {item.status}
@@ -172,48 +172,35 @@ export default function CaseView() {
                       </div>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="7" className="text-center py-8 text-[#64748B]">
+                    No cases found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   );
 }
 
+/* CARD COMPONENT */
 function Card({ title, description, buttonText, color, onClick }) {
   return (
-    <div className="bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col justify-between h-full">
-      <div>
-        <h3 className="font-bold text-base text-[#0F172A] mb-1.5">{title}</h3>
-        <p className="text-xs text-[#64748B] mb-4">
-          {description}
-        </p>
-      </div>
+    <div className="bg-white p-5 rounded-xl border shadow-sm">
+      <h3 className="font-semibold text-[#0F172A]">{title}</h3>
+      <p className="text-sm text-[#64748B] mt-1">{description}</p>
 
       <button
         onClick={onClick}
-        className={`${color} text-white text-xs font-semibold px-4 py-2 rounded-lg w-full transition-all duration-200 shadow-sm cursor-pointer`}
+        className={`${color} text-white text-xs font-semibold px-4 py-2 rounded-lg w-full mt-4`}
       >
         {buttonText}
       </button>
-    </div>
-  );
-}
-
-function QuickAction({ text }) {
-  return (
-    <button className="w-full border rounded-lg p-3 text-left hover:bg-gray-50">
-      {text}
-    </button>
-  );
-}
-
-function DocumentItem({ name }) {
-  return (
-    <div className="flex justify-between items-center border-b pb-2">
-      <span>{name}</span>
     </div>
   );
 }
