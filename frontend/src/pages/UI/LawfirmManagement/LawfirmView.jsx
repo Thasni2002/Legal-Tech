@@ -13,9 +13,11 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { usePermissions } from "@/utils/usePermissions";
 
 export default function LawfirmView() {
   const router = useRouter();
+  const { hasPermission } = usePermissions();
 
   const [advocates, setAdvocates] = useState([]);
   const [search, setSearch] = useState("");
@@ -26,6 +28,7 @@ export default function LawfirmView() {
   const [caseSearch, setCaseSearch] = useState("");
   const [caseFilter, setCaseFilter] = useState("All");
   const [selectedCaseId, setSelectedCaseId] = useState(null);
+  
   const actions = [
     {
       title: "Add Advocate",
@@ -33,6 +36,7 @@ export default function LawfirmView() {
       button: "Add Advocate",
       color: "bg-blue-600",
       path: "/lawfirm-management/add-manage-firm",
+      permissionAction: "add"
     },
     {
       title: "Assign Advocate",
@@ -40,8 +44,11 @@ export default function LawfirmView() {
       button: "Assign Advocate",
       color: "bg-green-600",
       path: "/lawfirm-management/assign-advocate",
+      permissionAction: "add"
     },
   ];
+
+  const allowedActions = actions.filter(item => hasPermission("Law Firm Management", item.permissionAction));
 
   useEffect(() => {
     const fetchAdvocates = async () => {
@@ -141,35 +148,37 @@ const handleCaseDelete = async (id) => {
       </div>
 
       {/* Action Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {actions.map((item, index) => {
-          const Icon = item.icon;
+      {allowedActions.length > 0 && (
+        <div className={`grid grid-cols-1 md:grid-cols-${allowedActions.length} gap-5`}>
+          {allowedActions.map((item, index) => {
+            const Icon = item.icon;
 
-          return (
-            <div
-              key={index}
-              className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6"
-            >
-              <div>
-                <div className="w-12 h-12 bg-blue-50 text-[#2563EB] rounded-full flex items-center justify-center mb-4 border border-blue-100">
-                  <Icon className="w-6 h-6" />
+            return (
+              <div
+                key={index}
+                className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6"
+              >
+                <div>
+                  <div className="w-12 h-12 bg-blue-50 text-[#2563EB] rounded-full flex items-center justify-center mb-4 border border-blue-100">
+                    <Icon className="w-6 h-6" />
+                  </div>
+
+                  <h3 className="font-bold text-[#0F172A] mb-4">
+                    {item.title}
+                  </h3>
                 </div>
 
-                <h3 className="font-bold text-[#0F172A] mb-4">
-                  {item.title}
-                </h3>
+                <button
+                  onClick={() => router.push(item.path)}
+                  className={`${item.color} text-white w-full py-2.5 rounded-lg`}
+                >
+                  {item.button}
+                </button>
               </div>
-
-              <button
-                onClick={() => router.push(item.path)}
-                className={`${item.color} text-white w-full py-2.5 rounded-lg`}
-              >
-                {item.button}
-              </button>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Stats Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
@@ -330,12 +339,14 @@ const handleCaseDelete = async (id) => {
                             <Eye size={18} />
                           </button>
 
-                          <button
-                            onClick={() => handleAdvocateDelete(item.id)}
-                            className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition"
-                          >
-                            <Trash2 size={18} />
-                          </button>
+                           {hasPermission("Law Firm Management", "delete") && (
+                            <button
+                              onClick={() => handleAdvocateDelete(item.id)}
+                              className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -459,23 +470,27 @@ const handleCaseDelete = async (id) => {
                 {/* Actions */}
                 <td className="px-6 py-4">
                   <div className="flex justify-center gap-3">
-                    <button
-                      onClick={() =>
-                        router.push(
-                          `/lawfirm-management/assign-advocate?id=${item.id}`
-                        )
-                      }
-                      className="p-2 rounded-lg bg-yellow-100 text-yellow-600 hover:bg-yellow-200 transition"
-                    >
-                      Edit
-                    </button>
+                    {hasPermission("Law Firm Management", "edit") && (
+                      <button
+                        onClick={() =>
+                          router.push(
+                            `/lawfirm-management/assign-advocate?id=${item.id}`
+                          )
+                        }
+                        className="p-2 rounded-lg bg-yellow-100 text-yellow-600 hover:bg-yellow-200 transition"
+                      >
+                        Edit
+                      </button>
+                    )}
 
-                    <button
-                      onClick={() => handleCaseDelete(item.id)}
-                      className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    {hasPermission("Law Firm Management", "delete") && (
+                      <button
+                        onClick={() => handleCaseDelete(item.id)}
+                        className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
