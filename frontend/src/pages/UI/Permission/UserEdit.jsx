@@ -7,12 +7,15 @@ const ACTIONS = ["view", "add", "edit", "delete"];
 
 const ALL_MODULES = [
   "Dashboard",
+  "Junior Dashboard",
+  "Client Dashboard",
   "Law Firm Management",
   "Client Management",
   "Case Management",
   "Consultations",
   "Finance Management",
   "Calendar",
+  "Junior Calendar",
   "Profile",
   "Assigned Cases",
   "Client Section",

@@ -206,13 +206,13 @@ export default function ConsultationsView() {
     const chatConsultations = history.filter(item => item.type === "Chat" || item.type === "Chat Consultation").length;
 
     return (
-        <div className="w-full space-y-6 md:space-y-8">
+        <div className="w-full space-y-8 max-w-7xl mx-auto">
             {/* Page Header */}
-            <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6 mb-6">
-                <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
-                    Case Disussion
+            <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 mb-8">
+                <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
+                    Case Discussion
                 </h1>
-                <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
+                <p className="text-[#64748B] mt-2 text-lg font-medium">
                     Schedule and manage client consultations
                 </p>
             </div>
@@ -271,43 +271,52 @@ export default function ConsultationsView() {
 
             {/* Top Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-sm">
-                    <h3 className="text-lg font-semibold text-[#0F172A]">
-                        Accept Appointments
-                    </h3>
-                    <p className="text-[#64748B] text-sm mt-2">
-                        View and manage consultation requests
-                    </p>
+                <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300">
+                    <div>
+                        <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center text-xl mb-4">📅</div>
+                        <h3 className="text-xl font-extrabold text-[#0F172A]">
+                            Accept Appointments
+                        </h3>
+                        <p className="text-[#64748B] text-sm mt-2 font-medium">
+                            View and manage consultation requests
+                        </p>
+                    </div>
                     <button
                         onClick={() => setShowAppointments(!showAppointments)}
-                        className="w-full mt-4 bg-[#16A34A] hover:bg-[#15803d] text-white py-3 rounded-xl transition"
+                        className="w-full mt-6 bg-[#16A34A] hover:bg-[#15803d] text-white py-3.5 rounded-full font-bold uppercase tracking-wider text-xs transition-colors shadow-md hover:shadow-lg active:scale-[0.98]"
                     >
                         {showAppointments ? "Hide Appointments" : "View Appointments"}
                     </button>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-sm">
-                    <h3 className="text-lg font-semibold text-[#0F172A]">
-                        Video / Chat Consultation
-                    </h3>
-                    <p className="text-[#64748B] text-sm mt-2">
-                        Start a new consultation
-                    </p>
-                    <button className="w-full mt-4 bg-[#2563EB] hover:bg-[#1d4ed8] text-white py-3 rounded-xl transition">
+                <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300">
+                    <div>
+                        <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-xl mb-4">📹</div>
+                        <h3 className="text-xl font-extrabold text-[#0F172A]">
+                            Video / Chat Consultation
+                        </h3>
+                        <p className="text-[#64748B] text-sm mt-2 font-medium">
+                            Start a new consultation
+                        </p>
+                    </div>
+                    <button className="w-full mt-6 bg-[#2563EB] hover:bg-[#1d4ed8] text-white py-3.5 rounded-full font-bold uppercase tracking-wider text-xs transition-colors shadow-md hover:shadow-lg active:scale-[0.98]">
                         Start Consultation
                     </button>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-sm sm:col-span-2 xl:col-span-1">
-                    <h3 className="text-lg font-semibold text-[#0F172A]">
-                        Consultation History
-                    </h3>
-                    <p className="text-[#64748B] text-sm mt-2">
-                        View previous consultations
-                    </p>
+                <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 flex flex-col justify-between sm:col-span-2 xl:col-span-1 transition-transform hover:scale-[1.02] duration-300">
+                    <div>
+                        <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center text-xl mb-4">📜</div>
+                        <h3 className="text-xl font-extrabold text-[#0F172A]">
+                            Consultation History
+                        </h3>
+                        <p className="text-[#64748B] text-sm mt-2 font-medium">
+                            View previous consultations
+                        </p>
+                    </div>
                     <button
                         onClick={() => setShowHistory(!showHistory)}
-                        className="w-full mt-4 bg-[#D97706] hover:bg-[#b45309] text-white py-3 rounded-xl transition"
+                        className="w-full mt-6 bg-[#D97706] hover:bg-[#b45309] text-white py-3.5 rounded-full font-bold uppercase tracking-wider text-xs transition-colors shadow-md hover:shadow-lg active:scale-[0.98]"
                     >
                         {showHistory ? "Hide History" : "View History"}
                     </button>
@@ -316,53 +325,53 @@ export default function ConsultationsView() {
 
             {/* Appointment Requests */}
             {showAppointments && (
-                <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6 mb-8">
-                    <h2 className="text-xl font-semibold text-[#0F172A] mb-6">
+                <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 mb-8 overflow-hidden">
+                    <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">
                         Appointment Requests
                     </h2>
-                    <div className="w-full overflow-x-auto">
-                        <table className="min-w-full">
-                            <thead>
-                                <tr className="bg-[#F8FAFC]">
-                                    <th className="p-3 text-left whitespace-nowrap">Client Name</th>
-                                    <th className="p-3 text-left whitespace-nowrap">Date</th>
-                                    <th className="p-3 text-left whitespace-nowrap">Time</th>
-                                    <th className="p-3 text-left whitespace-nowrap">Type</th>
-                                    <th className="p-3 text-left whitespace-nowrap">Issue</th>
-                                    <th className="p-3 text-left whitespace-nowrap">Fee</th>
-                                    <th className="p-3 text-left whitespace-nowrap">Status</th>
-                                    <th className="p-3 text-left whitespace-nowrap">Action</th>
+                    <div className="w-full overflow-x-auto rounded-xl border border-[#E2E8F0]">
+                        <table className="min-w-full divide-y divide-[#E2E8F0]">
+                            <thead className="bg-[#F8FAFC]">
+                                <tr>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client Name</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Issue</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Fee</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Action</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y divide-[#E2E8F0] bg-white">
                                 {appointments.length === 0 ? (
                                     <tr>
-                                        <td colSpan="8" className="p-4 text-center text-slate-500">
+                                        <td colSpan="8" className="p-8 text-center text-[#64748B] font-medium">
                                             No pending appointment requests.
                                         </td>
                                     </tr>
                                 ) : (
                                     appointments.map((item) => (
-                                        <tr key={item.id} className="border-b border-[#E2E8F0]">
-                                            <td className="p-3 whitespace-nowrap capitalize">{item.client}</td>
-                                            <td className="p-3 whitespace-nowrap">{formatDateString(item.date)}</td>
-                                            <td className="p-3 whitespace-nowrap">{formatTimeString(item.time)}</td>
-                                            <td className="p-3 whitespace-nowrap">{item.type}</td>
-                                            <td className="p-3 whitespace-nowrap">{item.issue || "General Consultation"}</td>
-                                            <td className="p-3 text-[#16A34A] font-semibold whitespace-nowrap">{item.fee || "₹500"}</td>
-                                            <td className="p-3 whitespace-nowrap">
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200/50">
+                                        <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors">
+                                            <td className="p-4 whitespace-nowrap font-bold text-[#0F172A] capitalize">{item.client}</td>
+                                            <td className="p-4 whitespace-nowrap text-[#475569] text-sm">{formatDateString(item.date)}</td>
+                                            <td className="p-4 whitespace-nowrap text-[#475569] text-sm font-medium">{formatTimeString(item.time)}</td>
+                                            <td className="p-4 whitespace-nowrap text-[#475569] text-sm">{item.type}</td>
+                                            <td className="p-4 whitespace-nowrap text-[#475569] text-sm">{item.issue || "General Consultation"}</td>
+                                            <td className="p-4 text-[#16A34A] font-bold whitespace-nowrap text-sm">{item.fee || "₹500"}</td>
+                                            <td className="p-4 whitespace-nowrap">
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">
                                                     {item.status || "Pending"}
                                                 </span>
                                             </td>
-                                            <td className="p-3">
+                                            <td className="p-4">
                                                 <div className="flex flex-wrap gap-2 items-center">
                                                     <button
                                                         onClick={() => {
                                                             setSelectedAppointment(item);
                                                             setShowAcceptModal(true);
                                                         }}
-                                                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                                                        className="px-4 py-2 bg-[#16A34A] hover:bg-[#15803d] text-white rounded-full transition-colors text-xs font-bold uppercase tracking-wider shadow-sm active:scale-95"
                                                     >
                                                         Accept
                                                     </button>
@@ -371,13 +380,13 @@ export default function ConsultationsView() {
                                                             setSelectedAppointment(item);
                                                             setShowDeclineModal(true);
                                                         }}
-                                                        className="px-4 py-2 bg-[#DC2626] hover:bg-[#b91c1c] text-white rounded-lg transition-colors text-sm font-medium"
+                                                        className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-full transition-colors text-xs font-bold uppercase tracking-wider shadow-sm active:scale-95"
                                                     >
                                                         Reschedule
                                                     </button>
                                                     <button
                                                         onClick={() => handleDeleteConsultation(item.id)}
-                                                        className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg transition-colors text-xs font-medium"
+                                                        className="px-4 py-2 bg-slate-100 hover:bg-rose-100 text-[#475569] hover:text-rose-600 rounded-full transition-colors text-xs font-bold uppercase tracking-wider active:scale-95"
                                                     >
                                                         Delete
                                                     </button>
@@ -394,36 +403,36 @@ export default function ConsultationsView() {
 
             {/* Consultation History */}
             {showHistory && (
-                <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6 mb-8 transition-all duration-300">
-                    <h2 className="text-xl font-semibold text-[#0F172A] mb-6 flex items-center justify-between">
+                <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 mb-8 transition-all duration-300">
+                    <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8 flex items-center justify-between">
                         <span>Consultation History</span>
-                        <span className="text-sm font-normal text-[#64748B]">{history.length} total</span>
+                        <span className="text-sm font-bold bg-[#F1F5F9] text-[#64748B] px-4 py-1.5 rounded-full">{history.length} total</span>
                     </h2>
                     {history.length === 0 ? (
-                        <div className="text-center py-8 text-[#64748B]">
+                        <div className="text-center py-12 text-[#64748B] font-medium bg-[#F8FAFC] rounded-2xl border border-dashed border-[#E2E8F0]">
                             No consultations found. Start a new one below.
                         </div>
                     ) : (
-                        <div className="w-full overflow-x-auto">
-                            <table className="min-w-full">
-                                <thead>
-                                    <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-                                        <th className="p-4 text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Client Name</th>
-                                        <th className="p-4 text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Date</th>
-                                        <th className="p-4 text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Time</th>
-                                        <th className="p-4 text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Type</th>
-                                        <th className="p-4 text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Status</th>
-                                        <th className="p-4 text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Action</th>
+                        <div className="w-full overflow-x-auto rounded-xl border border-[#E2E8F0]">
+                            <table className="min-w-full divide-y divide-[#E2E8F0]">
+                                <thead className="bg-[#F8FAFC]">
+                                    <tr>
+                                        <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client Name</th>
+                                        <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
+                                        <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
+                                        <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
+                                        <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                                        <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100">
+                                <tbody className="divide-y divide-[#E2E8F0] bg-white">
                                     {history.map((item) => (
                                         <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors">
-                                            <td className="p-4 whitespace-nowrap font-medium text-[#0F172A] capitalize">{item.client}</td>
-                                            <td className="p-4 whitespace-nowrap text-sm text-[#64748B]">{formatDateString(item.date)}</td>
-                                            <td className="p-4 whitespace-nowrap text-sm text-[#64748B]">{formatTimeString(item.time)}</td>
+                                            <td className="p-4 whitespace-nowrap font-bold text-[#0F172A] capitalize">{item.client}</td>
+                                            <td className="p-4 whitespace-nowrap text-sm text-[#475569]">{formatDateString(item.date)}</td>
+                                            <td className="p-4 whitespace-nowrap text-sm font-medium text-[#475569]">{formatTimeString(item.time)}</td>
                                             <td className="p-4 whitespace-nowrap">
-                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
                                                     item.type === "Video Call" || item.type === "Video Consultation"
                                                         ? "bg-blue-50 text-blue-700 border border-blue-200"
                                                         : item.type === "Chat" || item.type === "Chat Consultation"
@@ -434,7 +443,7 @@ export default function ConsultationsView() {
                                                 </span>
                                             </td>
                                             <td className="p-4 whitespace-nowrap">
-                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
                                                     item.status === "Completed"
                                                         ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                                         : item.status === "Approved"
@@ -451,7 +460,7 @@ export default function ConsultationsView() {
                                             <td className="p-4 whitespace-nowrap">
                                                 <button
                                                     onClick={() => handleDeleteConsultation(item.id)}
-                                                    className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg transition-colors text-xs font-medium"
+                                                    className="px-4 py-2 bg-slate-100 hover:bg-rose-100 text-[#475569] hover:text-rose-600 rounded-full transition-colors text-xs font-bold uppercase tracking-wider active:scale-95"
                                                 >
                                                     Delete
                                                 </button>
@@ -466,71 +475,96 @@ export default function ConsultationsView() {
             )}
 
             {/* Consultation Form */}
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6 mb-8">
-                <h2 className="text-xl font-semibold text-[#0F172A] mb-6">
-                    Consultation
+            <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 mb-8">
+                <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">
+                    Schedule Consultation
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <input
-                        type="text"
-                        placeholder="Client Name"
-                        value={clientName}
-                        onChange={(e) => setClientName(e.target.value)}
-                        className="w-full border border-[#E2E8F0] rounded-xl p-3 text-black placeholder:text-[#64748B]"
-                    />
-                    <select
-                        value={consultationType}
-                        onChange={(e) => setConsultationType(e.target.value)}
-                        className="w-full border border-[#E2E8F0] rounded-xl p-3 text-black"
-                    >
-                        <option>Consultation Type</option>
-                        <option value="Video Call">Video Call</option>
-                        <option value="Chat">Chat</option>
-                        <option value="Person to Person">Person to Person</option>
-                    </select>
-                    <input
-                        type="date"
-                        value={consultationDate}
-                        onChange={(e) => setConsultationDate(e.target.value)}
-                        className="w-full border border-[#E2E8F0] rounded-xl p-3 text-black"
-                    />
-                    <DatePicker
-                        selected={selectedTimeDate}
-                        onChange={handleTimeChange}
-                        showTimeSelect
-                        showTimeSelectOnly
-                        timeIntervals={15}
-                        timeCaption="Time"
-                        dateFormat="h:mm aa"
-                        placeholderText="Select Time"
-                        className="w-full border border-[#E2E8F0] rounded-xl p-3 text-black"
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="flex flex-col">
+                        <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">Client Name</label>
+                        <input
+                            type="text"
+                            placeholder="Enter Name"
+                            value={clientName}
+                            onChange={(e) => setClientName(e.target.value)}
+                            className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all placeholder:text-[#94A3B8] text-sm font-medium"
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">Type</label>
+                        <select
+                            value={consultationType}
+                            onChange={(e) => setConsultationType(e.target.value)}
+                            className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium cursor-pointer"
+                        >
+                            <option>Consultation Type</option>
+                            <option value="Video Call">Video Call</option>
+                            <option value="Chat">Chat</option>
+                            <option value="Person to Person">Person to Person</option>
+                        </select>
+                    </div>
+                    <div className="flex flex-col">
+                        <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">Date</label>
+                        <input
+                            type="date"
+                            value={consultationDate}
+                            onChange={(e) => setConsultationDate(e.target.value)}
+                            className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium cursor-pointer"
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">Time</label>
+                        <div className="w-full border border-[#E2E8F0] rounded-xl bg-[#F8FAFC] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#2563EB]/20 focus-within:border-[#2563EB] transition-all cursor-pointer">
+                            <DatePicker
+                                selected={selectedTimeDate}
+                                onChange={handleTimeChange}
+                                showTimeSelect
+                                showTimeSelectOnly
+                                timeIntervals={15}
+                                timeCaption="Time"
+                                dateFormat="h:mm aa"
+                                placeholderText="Select Time"
+                                className="w-full p-3.5 text-[#0F172A] bg-transparent outline-none text-sm font-medium cursor-pointer"
+                            />
+                        </div>
+                    </div>
                 </div>
-                <button
-                    onClick={handleStartConsultation}
-                    className="mt-6 bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-6 py-3 rounded-xl transition"
-                >
-                    Start Consultation
-                </button>
+                <div className="mt-8 flex justify-end">
+                    <button
+                        onClick={handleStartConsultation}
+                        className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white px-8 py-3.5 rounded-full font-bold uppercase tracking-wider text-xs transition-all shadow-lg hover:shadow-xl active:scale-95 w-full md:w-auto"
+                    >
+                        Schedule Consultation
+                    </button>
+                </div>
             </div>
 
             {/* Statistics */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm">
-                    <p className="text-[#64748B]">Total Consultations</p>
-                    <h3 className="text-3xl font-bold mt-2 text-[#0F172A]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
+                <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0]">
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-xl">📊</div>
+                        <p className="text-[#64748B] font-bold uppercase tracking-wider text-xs">Total Consultations</p>
+                    </div>
+                    <h3 className="text-4xl font-extrabold text-[#0F172A] tracking-tight">
                         {totalConsultations}
                     </h3>
                 </div>
-                <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm">
-                    <p className="text-[#64748B]">Video Calls</p>
-                    <h3 className="text-3xl font-bold mt-2 text-[#0F172A]">
+                <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0]">
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center text-xl">📹</div>
+                        <p className="text-[#64748B] font-bold uppercase tracking-wider text-xs">Video Calls</p>
+                    </div>
+                    <h3 className="text-4xl font-extrabold text-[#0F172A] tracking-tight">
                         {videoCalls}
                     </h3>
                 </div>
-                <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm">
-                    <p className="text-[#64748B]">Chat Consultations</p>
-                    <h3 className="text-3xl font-bold mt-2 text-[#0F172A]">
+                <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0]">
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center text-xl">💬</div>
+                        <p className="text-[#64748B] font-bold uppercase tracking-wider text-xs">Chat Consultations</p>
+                    </div>
+                    <h3 className="text-4xl font-extrabold text-[#0F172A] tracking-tight">
                         {chatConsultations}
                     </h3>
                 </div>
@@ -538,47 +572,45 @@ export default function ConsultationsView() {
 
             {/* Accept Approval Modal */}
             {mounted && showAcceptModal && typeof document !== "undefined" ? createPortal(
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-                        <div className="text-center">
-                            <div className="w-20 h-20 mx-auto bg-green-100 rounded-full flex items-center justify-center text-4xl">
-                                ✅
-                            </div>
-                            <h2 className="text-2xl font-bold text-[#0F172A] mt-4">
-                                Appointment Approved
-                            </h2>
-                            {selectedAppointment && (
-                                <p className="text-[#64748B] mt-3">
-                                    Appointment request from{" "}
-                                    <span className="font-semibold">
-                                        {selectedAppointment.client}
-                                    </span>{" "}
-                                    has been approved successfully.
-                                </p>
-                            )}
-                            <button
-                                onClick={async () => {
-                                    try {
-                                        const res = await fetch(`http://localhost:8000/consultations/${selectedAppointment.id}/status`, {
-                                            method: "PUT",
-                                            headers: { "Content-Type": "application/json" },
-                                            body: JSON.stringify({ status: "Approved" })
-                                        });
-                                        if (res.ok) {
-                                            fetchConsultations(user);
-                                        } else {
-                                            alert("Failed to approve appointment");
-                                        }
-                                    } catch (err) {
-                                        console.error(err);
-                                    }
-                                    setShowAcceptModal(false);
-                                }}
-                                className="mt-6 px-6 py-3 bg-[#16A34A] hover:bg-[#15803d] text-white rounded-xl"
-                            >
-                                OK
-                            </button>
+                <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 text-center border border-[#E2E8F0]">
+                        <div className="w-20 h-20 mx-auto bg-green-50 rounded-full flex items-center justify-center text-4xl mb-6 shadow-inner">
+                            ✅
                         </div>
+                        <h2 className="text-2xl font-extrabold text-[#0F172A]">
+                            Appointment Approved
+                        </h2>
+                        {selectedAppointment && (
+                            <p className="text-[#64748B] mt-4 font-medium leading-relaxed">
+                                Appointment request from{" "}
+                                <span className="font-bold text-[#0F172A]">
+                                    {selectedAppointment.client}
+                                </span>{" "}
+                                has been approved successfully.
+                            </p>
+                        )}
+                        <button
+                            onClick={async () => {
+                                try {
+                                    const res = await fetch(`http://localhost:8000/consultations/${selectedAppointment.id}/status`, {
+                                        method: "PUT",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ status: "Approved" })
+                                    });
+                                    if (res.ok) {
+                                        fetchConsultations(user);
+                                    } else {
+                                        alert("Failed to approve appointment");
+                                    }
+                                } catch (err) {
+                                    console.error(err);
+                                }
+                                setShowAcceptModal(false);
+                            }}
+                            className="mt-8 w-full py-4 bg-[#16A34A] hover:bg-[#15803d] text-white rounded-full font-bold uppercase tracking-wider text-xs transition-all shadow-lg active:scale-95"
+                        >
+                            OK, Continue
+                        </button>
                     </div>
                 </div>,
                 document.body
@@ -586,34 +618,49 @@ export default function ConsultationsView() {
 
             {/* Decline/Reschedule Modal */}
             {mounted && showDeclineModal && typeof document !== "undefined" ? createPortal(
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
-                        <h2 className="text-2xl font-bold text-[#0F172A] mb-6">
-                            Reschedule Appointment
-                        </h2>
+                <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg p-8 border border-[#E2E8F0]">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-2xl font-extrabold text-[#0F172A]">
+                                Reschedule Appointment
+                            </h2>
+                            <button
+                                onClick={() => {
+                                    setShowDeclineModal(false);
+                                    setRescheduleReason("");
+                                }}
+                                className="w-10 h-10 rounded-full bg-[#F8FAFC] text-[#64748B] hover:bg-rose-100 hover:text-rose-600 flex items-center justify-center transition-colors"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        
                         {selectedAppointment && (
-                            <div className="mb-4 p-3 bg-[#F8FAFC] rounded-lg">
-                                <p className="font-medium">
-                                    Client: {selectedAppointment.client}
+                            <div className="mb-8 p-4 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">
+                                <p className="font-bold text-[#0F172A] text-sm">
+                                    <span className="text-[#64748B] font-semibold uppercase tracking-wider text-xs mr-2">Client:</span>
+                                    {selectedAppointment.client}
                                 </p>
                             </div>
                         )}
-                        <div className="space-y-4">
+                        <div className="space-y-6">
                             <div>
-                                <label className="block mb-2 font-medium text-gray-700">
+                                <label className="block mb-2 font-bold text-xs uppercase tracking-wider text-[#475569]">
                                     Next Available Date & Time
                                 </label>
-                                <DatePicker
-                                    selected={selectedDate}
-                                    onChange={(date) => setSelectedDate(date)}
-                                    showTimeSelect
-                                    timeIntervals={15}
-                                    dateFormat="MMMM d, yyyy h:mm aa"
-                                    className="w-full border border-[#E2E8F0] rounded-xl p-3 text-black"
-                                />
+                                <div className="w-full border border-[#E2E8F0] rounded-xl bg-[#F8FAFC] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#2563EB]/20 focus-within:border-[#2563EB] transition-all cursor-pointer">
+                                    <DatePicker
+                                        selected={selectedDate}
+                                        onChange={(date) => setSelectedDate(date)}
+                                        showTimeSelect
+                                        timeIntervals={15}
+                                        dateFormat="MMMM d, yyyy h:mm aa"
+                                        className="w-full p-4 text-[#0F172A] bg-transparent outline-none text-sm font-medium cursor-pointer"
+                                    />
+                                </div>
                             </div>
                             <div>
-                                <label className="block mb-2 font-medium text-gray-700">
+                                <label className="block mb-2 font-bold text-xs uppercase tracking-wider text-[#475569]">
                                     Message / Reason
                                 </label>
                                 <textarea
@@ -621,17 +668,17 @@ export default function ConsultationsView() {
                                     placeholder="Enter reason for rescheduling..."
                                     value={rescheduleReason}
                                     onChange={(e) => setRescheduleReason(e.target.value)}
-                                    className="w-full border border-[#E2E8F0] rounded-xl p-3 text-black"
+                                    className="w-full border border-[#E2E8F0] rounded-xl p-4 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium placeholder:text-[#94A3B8]"
                                 />
                             </div>
                         </div>
-                        <div className="flex justify-end gap-3 mt-6">
+                        <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-[#F1F5F9]">
                             <button
                                 onClick={() => {
                                     setShowDeclineModal(false);
                                     setRescheduleReason("");
                                 }}
-                                className="px-5 py-2 bg-gray-300 text-[#0F172A] rounded-lg"
+                                className="px-6 py-3.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[#475569] text-xs font-bold uppercase tracking-wider transition-colors"
                             >
                                 Cancel
                             </button>
@@ -641,7 +688,6 @@ export default function ConsultationsView() {
                                         alert("Please select a valid date.");
                                         return;
                                     }
-                                    // Extract components safely
                                     const yyyy = selectedDate.getFullYear();
                                     const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
                                     const dd = String(selectedDate.getDate()).padStart(2, '0');
@@ -673,9 +719,9 @@ export default function ConsultationsView() {
                                     setShowDeclineModal(false);
                                     setRescheduleReason("");
                                 }}
-                                className="px-5 py-2 bg-red-600 text-white rounded-lg"
+                                className="px-8 py-3.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full font-bold uppercase tracking-wider text-xs transition-all shadow-lg active:scale-95"
                             >
-                                Submit
+                                Submit Reschedule
                             </button>
                         </div>
                     </div>

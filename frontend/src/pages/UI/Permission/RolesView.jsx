@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, Search, Shield, Info, AlertTriangle } from "lucide-react";
+import { Plus, Edit2, Trash2, Search, Shield, Info, AlertTriangle, Check } from "lucide-react";
+import { createPortal } from "react-dom";
 
 const DEFAULT_ROLES = [
   { id: "senioradvocate", name: "Senior Advocate", description: "Full system access" },
@@ -16,6 +17,15 @@ export default function RolesView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingRole, setEditingRole] = useState(null);
   const [notification, setNotification] = useState(null);
+  
+  const [mounted, setMounted] = useState(false);
+  const [provisionedRole, setProvisionedRole] = useState(null);
+  const [deletedRoleName, setDeletedRoleName] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Load roles from backend on mount
   useEffect(() => {
@@ -92,7 +102,7 @@ export default function RolesView() {
         if (res.ok) {
           const newRole = await res.json();
           setRoles((prev) => [...prev, newRole]);
-          showToast(`Role "${roleName}" created successfully!`);
+          setProvisionedRole(newRole);
           setRoleName("");
           setRoleDescription("");
         } else {
@@ -127,28 +137,26 @@ export default function RolesView() {
       return;
     }
 
-    if (confirm(`Are you sure you want to delete the "${roleName}" role?`)) {
-      try {
-        const res = await fetch(`http://localhost:8000/permissions/roles/${roleId}`, {
-          method: "DELETE"
-        });
-        if (res.ok) {
-          setRoles((prev) => prev.filter((r) => r.id !== roleId));
-          showToast(`Role "${roleName}" deleted.`);
+    try {
+      const res = await fetch(`http://localhost:8000/permissions/roles/${roleId}`, {
+        method: "DELETE"
+      });
+      if (res.ok) {
+        setRoles((prev) => prev.filter((r) => r.id !== roleId));
+        setDeletedRoleName(roleName);
 
-          // Clear edit state if we just deleted the role being edited
-          if (editingRole && editingRole.id === roleId) {
-            setEditingRole(null);
-            setRoleName("");
-            setRoleDescription("");
-          }
-        } else {
-          const errData = await res.json();
-          showToast(errData.detail || "Error deleting role", "error");
+        // Clear edit state if we just deleted the role being edited
+        if (editingRole && editingRole.id === roleId) {
+          setEditingRole(null);
+          setRoleName("");
+          setRoleDescription("");
         }
-      } catch (err) {
-        showToast("Unable to connect to backend", "error");
+      } else {
+        const errData = await res.json();
+        showToast(errData.detail || "Error deleting role", "error");
       }
+    } catch (err) {
+      showToast("Unable to connect to backend", "error");
     }
   };
 
@@ -333,7 +341,7 @@ export default function RolesView() {
                             <Edit2 size={14} />
                           </button>
                           <button
-                            onClick={() => handleDeleteRole(role.id, role.name)}
+                            onClick={() => setDeleteTarget({ id: role.id, name: role.name })}
                             className={`p-1 transition-colors cursor-pointer ${
                               role.id === "senioradvocate" ||
                               role.id === "junioradvocate" ||
@@ -380,6 +388,163 @@ export default function RolesView() {
           </div>
         </div>
       </div>
+
+      {/* ─── Success Modal for Provisioned Role ─── */}
+      {mounted && typeof window !== "undefined" && provisionedRole ? createPortal(
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-md px-4 py-6 overflow-y-auto"
+          onClick={() => setProvisionedRole(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-100 flex flex-col animate-in fade-in zoom-in-95 duration-200"
+          >
+            {/* Header Success Section */}
+            <div className="bg-emerald-50 py-8 px-6 flex flex-col items-center border-b border-slate-100 text-center">
+              <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center text-white mb-4 shadow-lg shadow-emerald-200">
+                <Check size={32} strokeWidth={3} />
+              </div>
+              <h3 className="text-slate-900 font-extrabold text-2xl text-center">
+                Role Created Successfully
+              </h3>
+              <p className="text-slate-500 text-xs mt-1.5 font-medium max-w-xs text-center">
+                The security role has been successfully created. You can now configure its permissions in the Permissions matrix.
+              </p>
+            </div>
+
+            {/* Info Section */}
+            <div className="p-6 space-y-4 text-slate-700">
+              <div className="space-y-3">
+                <div>
+                  <span className="block text-slate-400 text-[10px] font-bold uppercase tracking-wider">Role Name</span>
+                  <span className="text-slate-900 font-extrabold text-sm block mt-1">
+                    {provisionedRole.name}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-slate-400 text-[10px] font-bold uppercase tracking-wider">Description</span>
+                  <span className="text-slate-800 text-xs font-medium block mt-1 leading-relaxed">
+                    {provisionedRole.description || <span className="text-slate-300 italic">No description provided</span>}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => setProvisionedRole(null)}
+                className="bg-black hover:bg-slate-800 text-white text-xs font-bold uppercase py-3 px-6 rounded-full cursor-pointer tracking-wider transition-all shadow-md active:scale-95"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      ) : null}
+
+      {/* ─── Success Modal for Deleted Role ─── */}
+      {mounted && typeof window !== "undefined" && deletedRoleName ? createPortal(
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-md px-4 py-6 overflow-y-auto"
+          onClick={() => setDeletedRoleName(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-100 flex flex-col animate-in fade-in zoom-in-95 duration-200"
+          >
+            {/* Header Success Section */}
+            <div className="bg-red-50 py-8 px-6 flex flex-col items-center border-b border-slate-100 text-center">
+              <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center text-white mb-4 shadow-lg shadow-red-200">
+                <Trash2 size={32} strokeWidth={2.5} />
+              </div>
+              <h3 className="text-slate-900 font-extrabold text-2xl text-center">
+                Role Deleted Successfully
+              </h3>
+              <p className="text-slate-500 text-xs mt-1.5 font-medium max-w-xs text-center">
+                The role has been completely removed from the system, along with its associated permission configuration.
+              </p>
+            </div>
+
+            {/* Info Section */}
+            <div className="p-6 space-y-4 text-slate-700">
+              <div className="space-y-3">
+                <div>
+                  <span className="block text-slate-400 text-[10px] font-bold uppercase tracking-wider">Deleted Role Name</span>
+                  <span className="text-slate-900 font-extrabold text-sm block mt-1 line-through decoration-red-500 decoration-2">
+                    {deletedRoleName}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => setDeletedRoleName(null)}
+                className="bg-black hover:bg-slate-800 text-white text-xs font-bold uppercase py-3 px-6 rounded-full cursor-pointer tracking-wider transition-all shadow-md active:scale-95"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      ) : null}
+
+      {/* ─── Delete Confirmation Modal ─── */}
+      {mounted && typeof window !== "undefined" && deleteTarget ? createPortal(
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-md px-4 py-6 overflow-y-auto"
+          onClick={() => setDeleteTarget(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-100 flex flex-col animate-in fade-in zoom-in-95 duration-200"
+          >
+            {/* Header Warning Section */}
+            <div className="bg-red-50 py-8 px-6 flex flex-col items-center border-b border-slate-100 text-center">
+              <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center text-white mb-4 shadow-lg shadow-red-200">
+                <AlertTriangle size={32} strokeWidth={2.5} />
+              </div>
+              <h3 className="text-slate-900 font-extrabold text-2xl text-center">
+                Delete Role
+              </h3>
+              <p className="text-slate-500 text-xs mt-1.5 font-medium max-w-xs text-center">
+                Are you sure you want to delete the "{deleteTarget.name}" role? This action cannot be undone.
+              </p>
+            </div>
+
+            {/* Info Section */}
+            <div className="p-6 text-slate-700 text-center text-sm font-medium">
+              <p className="text-slate-500">
+                Deleting this role will permanently clear all its mapped permissions. Any users assigned to this role may lose their primary role access.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold uppercase py-3.5 px-6 rounded-full cursor-pointer tracking-wider transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  handleDeleteRole(deleteTarget.id, deleteTarget.name);
+                  setDeleteTarget(null);
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase py-3.5 px-6 rounded-full cursor-pointer tracking-wider transition-all shadow-md active:scale-95 animate-pulse-subtle"
+              >
+                Delete Role
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      ) : null}
     </div>
   );
 }

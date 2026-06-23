@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Shield, ShieldAlert, CheckSquare, Save, Users, AlertTriangle, HelpCircle, UserCheck } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { Shield, ShieldAlert, Save, HelpCircle, Check } from "lucide-react";
 
 const DEFAULT_ROLES = [
   { id: "senioradvocate", name: "Senior Advocate", description: "Full system access" },
@@ -50,50 +50,70 @@ const DEFAULT_USERS = [
 
 const ACTIONS = ["view", "add", "edit", "delete"];
 
-const BASE_MODULES = [
-  "Dashboard",
-  "Law Firm Management",
-  "Client Management",
-  "Case Management",
-  "Consultations",
-  "Finance Management",
-  "Calendar",
-  "Profile",
-  "Assigned Cases",
-  "Client Section",
-  "Consultation",
-  "Case Tracking",
-  "Documents",
-  "Payments",
-  "User Roles",
-  "Roles",
-  "Users",
-  "Permissions",
+// All feature groups — used for Senior Advocate & Junior Advocate
+const ALL_GROUPS = [
+  {
+    category: "Senior Advocate / Law Firm Features",
+    modules: [
+      { key: "Dashboard", label: "Dashboard" },
+      { key: "Law Firm Management", label: "Law Firm Management" },
+      { key: "Client Management", label: "Client Management" },
+      { key: "Case Management", label: "Case Management" },
+      { key: "Consultations", label: "Case Discussion (Senior)" },
+      { key: "Finance Management", label: "Finance Management" },
+      { key: "Calendar", label: "Calendar" },
+      { key: "Profile", label: "Profile" },
+    ],
+  },
+  {
+    category: "Junior Advocate Features",
+    modules: [
+      { key: "Junior Dashboard", label: "Dashboard (Junior)" },
+      { key: "Assigned Cases", label: "Assigned Cases" },
+      { key: "Junior Calendar", label: "Calendar (Junior)" },
+    ],
+  },
+  {
+    category: "Client Section Features",
+    modules: [
+      { key: "Client Dashboard", label: "Dashboard (Client)" },
+      { key: "Consultation", label: "Case Discussion (Client)" },
+      { key: "Case Tracking", label: "Case Tracking" },
+      { key: "Documents", label: "Documents" },
+      { key: "Payments", label: "Payments" },
+    ],
+  },
+  {
+    category: "System / Administration",
+    modules: [
+      { key: "User Roles", label: "User Roles" },
+      { key: "Roles", label: "Roles" },
+      { key: "Users", label: "Users" },
+      { key: "Permissions", label: "Permissions" },
+    ],
+  },
 ];
 
-// Role-specific display label overrides for module names
-const ROLE_MODULE_LABELS = {
-  "Senior Advocate": { "Dashboard": "Adv Dashboard" },
-  "Junior Advocate": { "Dashboard": "User Dashboard" },
-  "Client":          { "Dashboard": "Client Dashboard" },
+// Client-only group
+const CLIENT_GROUPS = [
+  {
+    category: "Client Section Features",
+    modules: [
+      { key: "Client Dashboard", label: "Dashboard (Client)" },
+      { key: "Consultation", label: "Case Discussion (Client)" },
+      { key: "Case Tracking", label: "Case Tracking" },
+      { key: "Documents", label: "Documents" },
+      { key: "Payments", label: "Payments" },
+    ],
+  },
+];
+
+const getGroupsForRole = (roleName) => {
+  const normalized = (roleName || "").toLowerCase().replace(/\s+/g, "");
+  if (normalized === "client") return CLIENT_GROUPS;
+  return ALL_GROUPS; // Senior Advocate & Junior Advocate see all sections
 };
 
-// Returns modules with display labels resolved for a given role name
-const getModulesForRole = (roleName, isDirectPermission = false) => {
-  let resolvedRoleName = roleName;
-  if (isDirectPermission) {
-    if (roleName === "Senior Advocate") {
-      resolvedRoleName = "Junior Advocate";
-    } else if (roleName === "Junior Advocate") {
-      resolvedRoleName = "Client";
-    }
-  }
-  const overrides = ROLE_MODULE_LABELS[resolvedRoleName] || {};
-  return BASE_MODULES.map((mod) => ({
-    key: mod,                                    // internal storage key
-    label: overrides[mod] || mod,               // display label
-  }));
-};
 
 // Pre-configured default permission matrices for standard roles
 const DEFAULT_PERMISSIONS = {
@@ -131,50 +151,36 @@ const DEFAULT_PERMISSIONS = {
 
 export default function PermissionView() {
   const [roles, setRoles] = useState([]);
-  const [users, setUsers] = useState([]);
   const [selectedRole, setSelectedRole] = useState("");
-  const [selectedUser, setSelectedUser] = useState(""); // username of selected user for override
   const [permissions, setPermissions] = useState({});
   const [notification, setNotification] = useState(null);
 
-  // Load configuration on mount
+  // Load roles and permissions on mount
   useEffect(() => {
     const loadConfig = async () => {
       try {
         const resRoles = await fetch("http://localhost:8000/permissions/roles");
-        let currentRoles = DEFAULT_ROLES;
         if (resRoles.ok) {
-          currentRoles = await resRoles.json();
-          setRoles(currentRoles);
-          if (currentRoles.length > 0) {
-            setSelectedRole(currentRoles[0].name);
-          }
+          const rolesData = await resRoles.json();
+          setRoles(rolesData);
+          if (rolesData.length > 0) setSelectedRole(rolesData[0].name);
+        } else {
+          setRoles(DEFAULT_ROLES);
+          setSelectedRole(DEFAULT_ROLES[0].name);
         }
       } catch (e) {
-        console.error("Error fetching roles", e);
         setRoles(DEFAULT_ROLES);
-        if (DEFAULT_ROLES.length > 0) setSelectedRole(DEFAULT_ROLES[0].name);
-      }
-
-      try {
-        const resUsers = await fetch("http://localhost:8000/permissions/users");
-        if (resUsers.ok) {
-          const usersData = await resUsers.json();
-          setUsers(usersData);
-        }
-      } catch (e) {
-        console.error("Error fetching users", e);
-        setUsers(DEFAULT_USERS);
+        setSelectedRole(DEFAULT_ROLES[0].name);
       }
 
       try {
         const resPerms = await fetch("http://localhost:8000/permissions");
         if (resPerms.ok) {
-          const permsData = await resPerms.json();
-          setPermissions(permsData);
+          setPermissions(await resPerms.json());
+        } else {
+          setPermissions(DEFAULT_PERMISSIONS);
         }
       } catch (e) {
-        console.error("Error fetching permissions matrix", e);
         setPermissions(DEFAULT_PERMISSIONS);
       }
     };
@@ -183,217 +189,68 @@ export default function PermissionView() {
   }, []);
 
 
-
   // Show toast utility
   const showToast = (message, type = "success") => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 3000);
   };
 
-  // Get active matrix for currently selected configuration (either user override or role default)
-  const getActivePermissionsMatrix = () => {
-    if (!selectedRole) return {};
+  // Active matrix is always the selected role's defaults
+  const getActivePermissionsMatrix = () => permissions[selectedRole] || {};
 
-    // Direct User Override selected
-    if (selectedUser) {
-      const targetUser = users.find((u) => u.username === selectedUser);
-      if (targetUser && targetUser.customPermissions && Object.keys(targetUser.customPermissions).length > 0) {
-        return targetUser.customPermissions;
-      }
-      // Fallback: If user has no custom permissions configured yet, return role defaults as a starting point
-      return permissions[selectedRole] || {};
-    }
-
-    // Configure role-wide matrix
-    return permissions[selectedRole] || {};
-  };
-
-  // Checkbox toggling handler
+  // Toggle a single checkbox
   const handlePermissionToggle = (module, action) => {
     if (!selectedRole) return;
-
-    if (selectedUser) {
-      // Direct User Override toggle
-      const updatedUsers = users.map((u) => {
-        if (u.username === selectedUser) {
-          // Fallback to role defaults if customPermissions are empty
-          const currentCustom = u.customPermissions && Object.keys(u.customPermissions).length > 0
-            ? u.customPermissions
-            : JSON.parse(JSON.stringify(permissions[selectedRole] || {}));
-
-          const modulePermissions = currentCustom[module] || {
-            view: false,
-            add: false,
-            edit: false,
-            delete: false,
-          };
-
-          return {
-            ...u,
-            customPermissions: {
-              ...currentCustom,
-              [module]: {
-                ...modulePermissions,
-                [action]: !modulePermissions[action],
-              },
-            },
-          };
-        }
-        return u;
-      });
-      setUsers(updatedUsers);
-    } else {
-      // Role-wide toggle
-      setPermissions((prev) => {
-        const rolePermissions = prev[selectedRole] || {};
-        const modulePermissions = rolePermissions[module] || {
-          view: false,
-          add: false,
-          edit: false,
-          delete: false,
-        };
-
-        const updated = {
-          ...prev,
-          [selectedRole]: {
-            ...rolePermissions,
-            [module]: {
-              ...modulePermissions,
-              [action]: !modulePermissions[action],
-            },
-          },
-        };
-
-        return updated;
-      });
-    }
-  };
-
-  // Toggle ALL actions for a module
-  const handleToggleModuleAll = (module) => {
-    if (!selectedRole) return;
-
-    const activeMatrix = getActivePermissionsMatrix();
-    const modulePermissions = activeMatrix[module] || {
-      view: false,
-      add: false,
-      edit: false,
-      delete: false,
-    };
-
-    const anyFalse = ACTIONS.some(act => !modulePermissions[act]);
-    const targetValue = anyFalse;
-
-    if (selectedUser) {
-      // User Override
-      const updatedUsers = users.map((u) => {
-        if (u.username === selectedUser) {
-          const currentCustom = u.customPermissions && Object.keys(u.customPermissions).length > 0
-            ? u.customPermissions
-            : JSON.parse(JSON.stringify(permissions[selectedRole] || {}));
-
-          return {
-            ...u,
-            customPermissions: {
-              ...currentCustom,
-              [module]: {
-                view: targetValue,
-                add: targetValue,
-                edit: targetValue,
-                delete: targetValue,
-              }
-            }
-          };
-        }
-        return u;
-      });
-      setUsers(updatedUsers);
-    } else {
-      // Role-wide
-      const rolePermissions = permissions[selectedRole] || {};
-      setPermissions((prev) => ({
+    setPermissions((prev) => {
+      const rolePerms = prev[selectedRole] || {};
+      const modPerms = rolePerms[module] || { view: false, add: false, edit: false, delete: false };
+      return {
         ...prev,
         [selectedRole]: {
-          ...rolePermissions,
-          [module]: {
-            view: targetValue,
-            add: targetValue,
-            edit: targetValue,
-            delete: targetValue,
-          }
-        }
-      }));
-    }
+          ...rolePerms,
+          [module]: { ...modPerms, [action]: !modPerms[action] },
+        },
+      };
+    });
   };
 
-  // Save current states back to API
+  // Toggle ALL actions for a module row
+  const handleToggleModuleAll = (module) => {
+    if (!selectedRole) return;
+    const activeMatrix = getActivePermissionsMatrix();
+    const modPerms = activeMatrix[module] || { view: false, add: false, edit: false, delete: false };
+    const targetValue = ACTIONS.some(act => !modPerms[act]); // if any is off → turn all on
+    const rolePerms = permissions[selectedRole] || {};
+    setPermissions((prev) => ({
+      ...prev,
+      [selectedRole]: {
+        ...rolePerms,
+        [module]: { view: targetValue, add: targetValue, edit: targetValue, delete: targetValue },
+      },
+    }));
+  };
+
+  // Save role defaults to API
   const handleSavePermissions = async () => {
     if (!selectedRole) return;
-
-    if (selectedUser) {
-      // Save User Override
-      const targetUserObj = users.find((u) => u.username === selectedUser);
-      if (!targetUserObj) {
-        showToast("Selected user not found", "error");
-        return;
+    try {
+      const res = await fetch(`http://localhost:8000/permissions/role/${selectedRole}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(permissions[selectedRole] || {}),
+      });
+      if (res.ok) {
+        showToast(`Default permissions for "${selectedRole}" saved!`);
+      } else {
+        showToast("Error saving permissions", "error");
       }
-
-      try {
-        const res = await fetch(`http://localhost:8000/permissions/users/${targetUserObj.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            customPermissions: targetUserObj.customPermissions
-          })
-        });
-        if (res.ok) {
-          showToast(`Direct permissions for user "${selectedUser}" saved successfully!`);
-        } else {
-          showToast("Error saving user override permissions", "error");
-        }
-      } catch (err) {
-        showToast("Unable to connect to backend", "error");
-      }
-    } else {
-      // Save Role defaults
-      try {
-        const res = await fetch(`http://localhost:8000/permissions/role/${selectedRole}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(permissions[selectedRole] || {})
-        });
-        if (res.ok) {
-          showToast(`Default permissions for "${selectedRole}" saved successfully!`);
-        } else {
-          showToast("Error saving role permissions matrix", "error");
-        }
-      } catch (err) {
-        showToast("Unable to connect to backend", "error");
-      }
+    } catch (err) {
+      showToast("Unable to connect to backend", "error");
     }
-  };
-
-  // Count active users for a specific role name
-  const getUserCountForRole = (roleName) => {
-    return users.filter((u) => u.role.toLowerCase() === roleName.toLowerCase()).length;
-  };
-
-  // Get users belonging to the active role
-  const getRoleSpecificUsers = () => {
-    return users.filter((u) => u.role.toLowerCase() === selectedRole.toLowerCase());
   };
 
   const activeMatrix = getActivePermissionsMatrix();
-  const roleUsers = getRoleSpecificUsers();
-  const selectedUserObj = users.find(u => u.username === selectedUser);
-
-  // Resolve which role's module labels to use:
-  // - In direct override mode, use the overridden user's own role
-  // - Otherwise use the selected role card
-  const effectiveRoleForModules = selectedUser && selectedUserObj
-    ? selectedUserObj.role
-    : selectedRole;
-  const activeModules = getModulesForRole(effectiveRoleForModules, !!selectedUser);
+  const activeGroups = getGroupsForRole(selectedRole);
 
   return (
     <div className="w-full space-y-6 md:space-y-8">
@@ -433,16 +290,12 @@ export default function PermissionView() {
         <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
           {roles.map((role) => {
             const active = selectedRole === role.name;
-            const userCount = getUserCountForRole(role.name);
 
             return (
               <button
                 key={role.id}
                 type="button"
-                onClick={() => {
-                  setSelectedRole(role.name);
-                  setSelectedUser("");
-                }}
+                onClick={() => setSelectedRole(role.name)}
                 className={`flex flex-col text-left p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${
                   active
                     ? "border-[#2563EB] bg-blue-50/25 ring-2 ring-[#2563EB]/10 shadow-sm"
@@ -457,15 +310,6 @@ export default function PermissionView() {
                   >
                     <Shield size={16} />
                   </div>
-                  <span
-                    className={`text-xxs font-bold px-2 py-0.5 rounded-full ${
-                      userCount > 0
-                        ? "bg-slate-900 text-white"
-                        : "bg-slate-100 text-slate-400"
-                    }`}
-                  >
-                    {userCount} {userCount === 1 ? "user" : "users"}
-                  </span>
                 </div>
 
                 <h3 className="font-extrabold text-slate-900 mt-4 text-sm truncate w-full">
@@ -482,144 +326,104 @@ export default function PermissionView() {
 
       {/* Permissions Matrix Panel */}
       {selectedRole ? (
-        <div className="space-y-6">
-          {/* User selector override dropdown */}
-          <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <h3 className="font-bold text-slate-800 text-sm">Configure Direct User Override (Optional)</h3>
-              <p className="text-xxs text-slate-400 font-semibold uppercase tracking-wider">
-                Select a specific user holding the &quot;{selectedRole}&quot; role to edit their individual direct permissions.
+        <div className="bg-white rounded-[24px] border border-[#E2E8F0] p-8 shadow-xl shadow-slate-200/40">
+          {/* Title and Save button */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-[#E2E8F0] pb-6">
+            <div>
+              <h2 className="text-2xl font-extrabold text-[#0F172A] flex items-center gap-2">
+                <div className="p-2 bg-blue-50 rounded-xl text-[#2563EB]">
+                  <ShieldAlert size={22} />
+                </div>
+                <span>Default Permissions: {selectedRole}</span>
+              </h2>
+              <p className="text-sm text-[#64748B] mt-1.5">
+                Configure specific module rights and clearance levels. Click &quot;Save Permissions&quot; to commit changes.
               </p>
             </div>
-            
-            <select
-              value={selectedUser}
-              onChange={(e) => setSelectedUser(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-50 outline-none w-full md:w-72"
+            <button
+              onClick={handleSavePermissions}
+              className="bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-bold uppercase py-3.5 px-8 rounded-full cursor-pointer tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] flex items-center gap-2"
             >
-              <option value="">Config Role Defaults (None Selected)</option>
-              {roleUsers.map(user => (
-                <option key={user.id} value={user.username}>
-                  {user.firstName} {user.lastName} ({user.username})
-                </option>
-              ))}
-            </select>
+              <Save size={16} />
+              <span>Save Permissions</span>
+            </button>
           </div>
 
-          {/* Override Warning Banner */}
-          {selectedUser && selectedUserObj && (
-            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 text-blue-800 flex items-start gap-3.5">
-              <UserCheck size={20} className="text-blue-600 flex-shrink-0 mt-0.5" />
-              <div className="text-xs font-semibold">
-                <p className="font-bold uppercase tracking-wider">Direct User Override Mode Active</p>
-                <p className="mt-1 text-blue-700/90 font-medium normal-case">
-                  You are editing direct override permissions for user <strong className="font-bold text-blue-900">{selectedUserObj.firstName} {selectedUserObj.lastName} ({selectedUserObj.username})</strong>.
-                  These changes will affect only this specific user account and override standard defaults for the <strong className="font-bold text-blue-900">{selectedRole}</strong> role.
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm">
-            {/* Title and Save button */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-slate-100 pb-5">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                  <ShieldAlert size={20} className="text-[#2563EB]" />
-                  <span>
-                    {selectedUser 
-                      ? `Override Permissions: ${selectedUserObj ? `${selectedUserObj.firstName} ${selectedUserObj.lastName}` : selectedUser}` 
-                      : `Default Permissions: ${selectedRole}`
-                    }
-                  </span>
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Configure specific module rights and clearance levels. Click &quot;Save Permissions&quot; to commit changes.
-                </p>
-              </div>
-
-              <button
-                onClick={handleSavePermissions}
-                className="bg-black hover:bg-slate-800 text-white text-xs font-bold uppercase py-3.5 px-7 rounded-full cursor-pointer tracking-wider transition-all shadow-md active:scale-95 flex items-center gap-2"
-              >
-                <Save size={16} />
-                <span>Save Permissions</span>
-              </button>
-            </div>
-
-            {/* Table Matrix */}
-            <div className="overflow-x-auto rounded-2xl border border-slate-100">
-              <table className="w-full border-collapse text-left">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-100">
-                    <th className="py-4.5 px-6 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                      Module Name
+          {/* Grouped Table Matrix */}
+          <div className="overflow-x-auto rounded-2xl border border-[#E2E8F0] bg-white">
+            <table className="w-full border-collapse text-left">
+              <thead>
+                <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
+                  <th className="py-4 px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest">Module Name</th>
+                  {ACTIONS.map((action) => (
+                    <th key={action} className="py-4 px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest text-center w-28">
+                      {action}
                     </th>
-                    {ACTIONS.map((action) => (
-                      <th
-                        key={action}
-                        className="py-4.5 px-6 text-xs font-bold text-slate-400 uppercase tracking-wider text-center w-32"
+                  ))}
+                  <th className="py-4 px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest text-center w-28">All</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activeGroups.map(({ category, modules }) => (
+                  <React.Fragment key={category}>
+                    {/* Category header row */}
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="py-3 px-6 font-bold text-[11px] uppercase tracking-[0.2em] text-[#64748B] bg-gradient-to-r from-[#F8FAFC] to-white border-y border-[#E2E8F0] border-l-4 border-l-[#2563EB]"
                       >
-                        {action}
-                      </th>
-                    ))}
-                    <th className="py-4.5 px-6 text-xs font-bold text-slate-400 uppercase tracking-wider text-center w-24">
-                      All
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {activeModules.map(({ key, label }) => {
-                    const moduleMatrix = activeMatrix[key] || {
-                      view: false,
-                      add: false,
-                      edit: false,
-                      delete: false,
-                    };
-                    const allSelected = ACTIONS.every(act => moduleMatrix[act]);
-
-                    return (
-                      <tr
-                        key={key}
-                        className="hover:bg-slate-50/50 transition-colors"
-                      >
-                        <td className="py-4.5 px-6 font-bold text-slate-800 text-sm">
-                          {label}
-                        </td>
-
-                        {ACTIONS.map((action) => (
-                          <td key={action} className="py-4.5 px-6 text-center">
-                            <label className="inline-flex items-center justify-center p-2 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors group">
-                              <input
-                                type="checkbox"
-                                checked={moduleMatrix[action] || false}
-                                onChange={() => handlePermissionToggle(key, action)}
-                                className="w-4.5 h-4.5 text-emerald-600 rounded border-slate-300 focus:ring-blue-500 focus:ring-2 accent-[#2563EB] cursor-pointer"
-                              />
-                            </label>
+                        {category}
+                      </td>
+                    </tr>
+                    {/* Module rows */}
+                    {modules.map(({ key, label }) => {
+                      const modPerms = activeMatrix[key] || { view: false, add: false, edit: false, delete: false };
+                      const allSelected = ACTIONS.every(act => modPerms[act]);
+                      return (
+                        <tr key={key} className="hover:bg-[#F8FAFC] transition-colors duration-200 border-b border-[#F1F5F9] group/row">
+                          <td className="py-4 px-6 font-semibold text-[#1E293B] text-sm pl-8 flex items-center gap-3">
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#CBD5E1] group-hover/row:bg-[#2563EB] transition-colors" />
+                            {label}
                           </td>
-                        ))}
-
-                        {/* Toggle All */}
-                        <td className="py-4.5 px-6 text-center bg-slate-50/20">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleModuleAll(key)}
-                            className={`text-xxs font-bold px-2 py-1 rounded transition-all cursor-pointer ${
-                              allSelected
-                                ? "bg-emerald-50 text-[#2563EB] hover:bg-emerald-100 border border-emerald-200"
-                                : "bg-slate-100 text-slate-500 hover:bg-slate-200 border border-slate-200"
-                            }`}
-                          >
-                            {allSelected ? "DESELECT" : "SELECT ALL"}
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          {ACTIONS.map((action) => (
+                            <td key={action} className="py-4 px-6 text-center">
+                              <label className="relative inline-flex items-center justify-center cursor-pointer group/check">
+                                <input
+                                  type="checkbox"
+                                  checked={modPerms[action] || false}
+                                  onChange={() => handlePermissionToggle(key, action)}
+                                  className="peer sr-only"
+                                />
+                                <div className={`w-5 h-5 rounded-[6px] flex items-center justify-center transition-all duration-200 border 
+                                  ${modPerms[action] 
+                                    ? "bg-[#2563EB] border-[#2563EB] shadow-sm shadow-blue-500/30" 
+                                    : "bg-white border-[#CBD5E1] group-hover/check:border-[#2563EB]"}
+                                `}>
+                                  {modPerms[action] && <Check size={13} className="text-white stroke-[3.5]" />}
+                                </div>
+                              </label>
+                            </td>
+                          ))}
+                          <td className="py-4 px-6 text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleModuleAll(key)}
+                              className={`text-[11px] font-bold px-4 py-1.5 rounded-full transition-all duration-200 cursor-pointer shadow-sm
+                                ${allSelected
+                                  ? "bg-white text-[#EF4444] hover:bg-red-50 border border-red-200"
+                                  : "bg-white text-[#2563EB] hover:bg-blue-50 border border-blue-200"
+                                }`}
+                            >
+                              {allSelected ? "DESELECT" : "SELECT ALL"}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       ) : (

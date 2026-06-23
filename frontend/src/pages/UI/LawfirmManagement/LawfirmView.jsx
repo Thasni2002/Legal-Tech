@@ -136,41 +136,43 @@ const handleCaseDelete = async (id) => {
   });
 
   return (
-    <div className="w-full space-y-6 md:space-y-8">
+    <div className="w-full space-y-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6">
-        <h1 className="text-[#0F172A] font-bold text-[40px]">
-          Law Firm Management
-        </h1>
-        <p className="text-[#64748B] mt-1.5 text-[18px]">
-          Manage law firms, branches and firm information
-        </p>
+      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h1 className="text-[#0F172A] font-extrabold text-3xl tracking-tight">
+            Law Firm Management
+          </h1>
+          <p className="text-[#64748B] mt-2 font-medium">
+            Manage law firms, branches and firm information
+          </p>
+        </div>
       </div>
 
       {/* Action Cards */}
       {allowedActions.length > 0 && (
-        <div className={`grid grid-cols-1 md:grid-cols-${allowedActions.length} gap-5`}>
+        <div className={`grid grid-cols-1 md:grid-cols-${allowedActions.length} gap-6`}>
           {allowedActions.map((item, index) => {
             const Icon = item.icon;
 
             return (
               <div
                 key={index}
-                className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6"
+                className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-8 hover:-translate-y-1 transition-transform duration-300 flex flex-col justify-between"
               >
                 <div>
-                  <div className="w-12 h-12 bg-blue-50 text-[#2563EB] rounded-full flex items-center justify-center mb-4 border border-blue-100">
-                    <Icon className="w-6 h-6" />
+                  <div className="w-14 h-14 bg-blue-50 text-[#2563EB] rounded-2xl flex items-center justify-center mb-6 border border-blue-100 shadow-sm">
+                    <Icon className="w-7 h-7" />
                   </div>
 
-                  <h3 className="font-bold text-[#0F172A] mb-4">
+                  <h3 className="font-extrabold text-xl text-[#0F172A] mb-6">
                     {item.title}
                   </h3>
                 </div>
 
                 <button
                   onClick={() => router.push(item.path)}
-                  className={`${item.color} text-white w-full py-2.5 rounded-lg`}
+                  className={`px-8 py-3.5 rounded-full text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] w-full ${item.color}`}
                 >
                   {item.button}
                 </button>
@@ -181,60 +183,69 @@ const handleCaseDelete = async (id) => {
       )}
 
       {/* Stats Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-          <div className="w-11 h-11 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-            <Users className="w-5 h-5 text-purple-600" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-8 hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-full blur-3xl opacity-60 -mr-10 -mt-10"></div>
+          <div className="relative z-10">
+            <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center mb-6 border border-purple-200">
+              <Users className="w-6 h-6 text-purple-600" />
+            </div>
+            <p className="text-[#64748B] text-sm font-semibold uppercase tracking-wider">Total Advocates</p>
+            <h3 className="text-4xl md:text-5xl font-extrabold mt-3 text-[#0F172A]">
+              {advocates.length}
+            </h3>
           </div>
-          <p className="text-[#64748B] text-sm">Total Advocates</p>
-          <h3 className="text-3xl md:text-4xl font-bold mt-2 text-[#0F172A]">
-            {advocates.length}
-          </h3>
         </div>
 
-        <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-          <div className="w-11 h-11 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-            <Users className="w-5 h-5 text-green-600" />
+        <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-8 hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-full blur-3xl opacity-60 -mr-10 -mt-10"></div>
+          <div className="relative z-10">
+            <div className="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center mb-6 border border-green-200">
+              <Users className="w-6 h-6 text-green-600" />
+            </div>
+            <p className="text-[#64748B] text-sm font-semibold uppercase tracking-wider">Active Advocates</p>
+            <h3 className="text-4xl md:text-5xl font-extrabold mt-3 text-[#0F172A]">
+              {advocates.filter((a) => a.status === "Active" || !a.status).length}
+            </h3>
           </div>
-          <p className="text-[#64748B] text-sm">Active Advocates</p>
-          <h3 className="text-3xl md:text-4xl font-bold mt-2 text-[#0F172A]">
-            {advocates.filter((a) => a.status === "Active" || !a.status).length}
-          </h3>
         </div>
 
-        <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-          <div className="w-11 h-11 bg-red-100 rounded-lg flex items-center justify-center mb-4">
-            <Users className="w-5 h-5 text-red-600" />
+        <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-8 hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl opacity-60 -mr-10 -mt-10"></div>
+          <div className="relative z-10">
+            <div className="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center mb-6 border border-red-200">
+              <Users className="w-6 h-6 text-red-600" />
+            </div>
+            <p className="text-[#64748B] text-sm font-semibold uppercase tracking-wider">Inactive</p>
+            <h3 className="text-4xl md:text-5xl font-extrabold mt-3 text-[#0F172A]">
+              {advocates.filter((a) => a.status === "Inactive").length}
+            </h3>
           </div>
-          <p className="text-[#64748B] text-sm">Inactive Advocates</p>
-          <h3 className="text-3xl md:text-4xl font-bold mt-2 text-[#0F172A]">
-            {advocates.filter((a) => a.status === "Inactive").length}
-          </h3>
         </div>
       </div>
 
       {/* Search + Filter + Table Card */}
       {!loading && advocates.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 overflow-hidden">
           {/* Header with Search + Filter */}
-          <div className="p-5 border-b border-gray-100 flex flex-col md:flex-row gap-4 justify-between items-center bg-white">
-            <div className="flex items-center border border-gray-300 rounded-xl px-4 py-2 w-full md:w-96 bg-gray-50">
-              <Search className="w-4 h-4 text-gray-400" />
+          <div className="p-8 border-b border-[#F1F5F9] flex flex-col md:flex-row gap-6 justify-between items-center bg-white">
+            <div className="flex items-center border border-[#E2E8F0] rounded-full px-5 py-3 w-full md:w-[400px] bg-[#F8FAFC] focus-within:ring-2 focus-within:ring-[#2563EB]/20 focus-within:border-[#2563EB] transition-all">
+              <Search className="w-5 h-5 text-[#94A3B8]" />
               <input
                 type="text"
                 placeholder="Search advocate..."
-                className="w-full ml-3 bg-transparent outline-none text-sm"
+                className="w-full ml-3 bg-transparent outline-none text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
 
             <select
-              className="border border-gray-300 rounded-xl px-4 py-2 text-sm bg-white"
+              className="border border-[#E2E8F0] rounded-full px-6 py-3 text-sm bg-[#F8FAFC] text-[#0F172A] font-medium outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
             >
-              <option value="All">All</option>
+              <option value="All">All Statuses</option>
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
             </select>
@@ -244,81 +255,79 @@ const handleCaseDelete = async (id) => {
           {filteredAdvocates.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b">
+                <thead className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
                   <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+                    <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                       Profile
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+                    <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                       Name
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+                    <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                       Specialization
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+                    <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                       Phone
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+                    <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                       City
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+                    <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                       Status
                     </th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-600">
+                    <th className="px-8 py-5 text-center text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                       Actions
                     </th>
                   </tr>
                 </thead>
 
-                <tbody>
+                <tbody className="divide-y divide-[#F1F5F9]">
                   {filteredAdvocates.map((item) => (
                     <tr
                       key={item.id}
-                      className="border-b last:border-0 hover:bg-gray-50 transition duration-200"
+                      className="hover:bg-slate-50/50 transition duration-200 group"
                     >
                       {/* Profile */}
-                      {/* Profile */}
-                      <td className="px-6 py-4">
-                        <Image
+                      <td className="px-8 py-5">
+                        <img
                           src={
                             item.profileImage?.trim()
                               ? item.profileImage
-                              : "https://images.unsplash.com/photo-1500648767791-00dcc994a43?w=400"
+                              : `https://ui-avatars.com/api/?name=${item.advocateName || 'Advocate'}&background=E2E8F0&color=64748B&rounded=true&bold=true`
                           }
                           alt={item.advocateName || "Advocate"}
-                          width={64}
-                          height={64}
-                          className="rounded-full object-cover border border-gray-200"
+                          className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm ring-1 ring-[#E2E8F0] group-hover:ring-[#CBD5E1] transition-all"
                         />
                       </td>
 
                       {/* Name */}
-                      <td className="px-6 py-4">
+                      <td className="px-8 py-5">
                         <div>
-                          <p className="font-semibold text-gray-900 text-sm">
+                          <p className="font-bold text-[#0F172A] text-sm">
                             {item.advocateName}
                           </p>
-                          <p className="text-sm text-gray-500">
-                            {item.email}
+                          <p className="text-xs text-[#64748B] mt-1 font-medium">
+                            {item.emailAddress || item.email || "No Email"}
                           </p>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-gray-700">
-                        {item.specialization}
+                      <td className="px-8 py-5 text-sm font-medium text-[#475569]">
+                        {item.specialization || "-"}
                       </td>
 
-                      <td className="px-6 py-4 text-gray-700">
-                        {item.phoneNumber}
+                      <td className="px-8 py-5 text-sm font-medium text-[#475569]">
+                        {item.phoneNumber || "-"}
                       </td>
 
-                      <td className="px-6 py-4 text-gray-700">
-                        {item.city}
+                      <td className="px-8 py-5 text-sm font-medium text-[#475569]">
+                        {item.city || "-"}
                       </td>
 
                       {/* Status */}
-                      <td className="px-6 py-4">
+                      {/* Status */}
+                      <td className="px-8 py-5">
                         <span
-                          className={`px-4 py-1 rounded-full text-xs font-medium ${item.status === "Active"
+                          className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${item.status === "Active" || !item.status
                             ? "bg-green-100 text-green-700"
                             : "bg-red-100 text-red-700"
                             }`}
@@ -328,23 +337,23 @@ const handleCaseDelete = async (id) => {
                       </td>
 
                       {/* Actions */}
-                      <td className="px-6 py-4">
-                        <div className="flex justify-center gap-3">
+                      <td className="px-8 py-5">
+                        <div className="flex justify-center gap-2">
                           <button
                             onClick={() =>
                               router.push(`/lawfirm-management/view?id=${item.id}`)
                             }
-                            className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition"
+                            className="w-9 h-9 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-blue-100 hover:text-blue-600 flex items-center justify-center transition-colors"
                           >
-                            <Eye size={18} />
+                            <Eye size={16} />
                           </button>
 
                            {hasPermission("Law Firm Management", "delete") && (
                             <button
                               onClick={() => handleAdvocateDelete(item.id)}
-                              className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition"
+                              className="w-9 h-9 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors"
                             >
-                              <Trash2 size={18} />
+                              <Trash2 size={16} />
                             </button>
                           )}
                         </div>
@@ -355,29 +364,33 @@ const handleCaseDelete = async (id) => {
               </table>
             </div>
           ) : (
-            <div className="p-8 text-center text-gray-500 text-sm">
-              No advocates found matching the filters.
+            <div className="p-12 text-center flex flex-col items-center">
+              <div className="w-16 h-16 bg-[#F8FAFC] rounded-full flex items-center justify-center mb-4 border border-[#E2E8F0]">
+                <Search className="w-8 h-8 text-[#94A3B8]" />
+              </div>
+              <h3 className="text-lg font-bold text-[#0F172A] mb-1">No advocates found</h3>
+              <p className="text-[#64748B] text-sm">Try adjusting your search or filters.</p>
             </div>
           )}
         </div>
       )}
 
  {assignedCases.length > 0 && (
-  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mt-8">
+  <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 overflow-hidden mt-8">
 
     {/* Header */}
-    <div className="p-5 border-b border-gray-100 flex flex-col md:flex-row gap-4 justify-between items-center bg-white">
-      <h2 className="text-lg font-bold text-[#0F172A]">
+    <div className="p-8 border-b border-[#F1F5F9] flex flex-col md:flex-row gap-6 justify-between items-center bg-white">
+      <h2 className="text-xl font-extrabold text-[#0F172A]">
         Assigned Cases
       </h2>
 
       {/* Search */}
-      <div className="flex items-center border border-gray-300 rounded-xl px-4 py-2 w-full md:w-80 bg-gray-50">
-        <Search className="w-4 h-4 text-gray-400" />
+      <div className="flex items-center border border-[#E2E8F0] rounded-full px-5 py-3 w-full md:w-80 bg-[#F8FAFC] focus-within:ring-2 focus-within:ring-[#2563EB]/20 focus-within:border-[#2563EB] transition-all">
+        <Search className="w-5 h-5 text-[#94A3B8]" />
         <input
           type="text"
           placeholder="Search case..."
-          className="w-full ml-3 bg-transparent outline-none text-sm"
+          className="w-full ml-3 bg-transparent outline-none text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
           value={caseSearch}
           onChange={(e) => setCaseSearch(e.target.value)}
         />
@@ -385,7 +398,7 @@ const handleCaseDelete = async (id) => {
 
       {/* Filter */}
       <select
-        className="border border-gray-300 rounded-xl px-4 py-2 text-sm bg-white"
+        className="border border-[#E2E8F0] rounded-full px-6 py-3 text-sm bg-[#F8FAFC] text-[#0F172A] font-medium outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
         value={caseFilter}
         onChange={(e) => setCaseFilter(e.target.value)}
       >
@@ -399,33 +412,33 @@ const handleCaseDelete = async (id) => {
     {/* Table */}
     <div className="overflow-x-auto">
       <table className="w-full">
-        <thead className="bg-gray-50 border-b">
+        <thead className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
           <tr>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+            <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
               Case Name
             </th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+            <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
               Case Number
             </th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+            <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
               Case Title
             </th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+            <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
               Advocate Name
             </th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+            <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
               Priority
             </th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+            <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
               Due Date
             </th>
-            <th className="px-6 py-4 text-center text-sm font-semibold text-gray-600">
+            <th className="px-8 py-5 text-center text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
               Actions
             </th>
           </tr>
         </thead>
 
-        <tbody>
+        <tbody className="divide-y divide-[#F1F5F9]">
           {assignedCases
             .filter((item) => {
               const matchesSearch =
@@ -444,16 +457,21 @@ const handleCaseDelete = async (id) => {
             .map((item) => (
               <tr
                 key={item.id}
-                className="border-b last:border-0 hover:bg-gray-50"
+                className="hover:bg-slate-50/50 transition duration-200 group"
               >
-                <td className="px-6 py-4">{item.case_name}</td>
-                <td className="px-6 py-4">{item.case_number}</td>
-                <td className="px-6 py-4">{item.case_title}</td>
-                <td className="px-6 py-4">{item.advocate_name}</td>
+                <td className="px-8 py-5 text-sm font-bold text-[#0F172A]">{item.case_name}</td>
+                <td className="px-8 py-5 text-sm font-medium text-[#475569]">{item.case_number}</td>
+                <td className="px-8 py-5 text-sm font-medium text-[#475569]">{item.case_title}</td>
+                <td className="px-8 py-5 text-sm font-medium text-[#475569]">
+                  <div className="flex items-center gap-2">
+                    <img src={`https://ui-avatars.com/api/?name=${item.advocate_name || 'Advocate'}&background=E2E8F0&color=64748B&rounded=true&bold=true`} className="w-6 h-6 rounded-full" />
+                    {item.advocate_name}
+                  </div>
+                </td>
 
-                <td className="px-6 py-4">
+                <td className="px-8 py-5">
                   <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
                       item.priority === "High"
                         ? "bg-red-100 text-red-700"
                         : item.priority === "Medium"
@@ -465,11 +483,11 @@ const handleCaseDelete = async (id) => {
                   </span>
                 </td>
 
-                <td className="px-6 py-4">{item.due_date}</td>
+                <td className="px-8 py-5 text-sm font-medium text-[#475569]">{item.due_date}</td>
 
                 {/* Actions */}
-                <td className="px-6 py-4">
-                  <div className="flex justify-center gap-3">
+                <td className="px-8 py-5">
+                  <div className="flex justify-center gap-2">
                     {hasPermission("Law Firm Management", "edit") && (
                       <button
                         onClick={() =>
@@ -477,7 +495,7 @@ const handleCaseDelete = async (id) => {
                             `/lawfirm-management/assign-advocate?id=${item.id}`
                           )
                         }
-                        className="p-2 rounded-lg bg-yellow-100 text-yellow-600 hover:bg-yellow-200 transition"
+                        className="px-4 py-1.5 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-yellow-100 hover:text-yellow-600 text-[11px] font-bold uppercase tracking-widest transition-colors"
                       >
                         Edit
                       </button>
@@ -486,9 +504,9 @@ const handleCaseDelete = async (id) => {
                     {hasPermission("Law Firm Management", "delete") && (
                       <button
                         onClick={() => handleCaseDelete(item.id)}
-                        className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition"
+                        className="w-8 h-8 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={14} />
                       </button>
                     )}
                   </div>

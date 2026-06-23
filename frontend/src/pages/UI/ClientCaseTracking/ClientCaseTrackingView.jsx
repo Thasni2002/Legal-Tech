@@ -10,10 +10,26 @@ import {
   Circle,
   ChevronRight,
 } from "lucide-react";
+import useModulePermission from "@/utils/useModulePermission";
+
 
 export default function ClientCaseTrackingView() {
+  const { perms, loading } = useModulePermission("Case Tracking");
   const [advocateName, setAdvocateName] = useState("");
   const [caseNumber, setCaseNumber] = useState("");
+
+  // No view access
+  if (!loading && !perms.view) {
+    return (
+      <div className="w-full min-h-[400px] flex items-center justify-center">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-10 max-w-sm text-center">
+          <div className="text-4xl mb-3">🔒</div>
+          <h2 className="text-xl font-bold text-slate-800">Access Restricted</h2>
+          <p className="text-slate-500 text-sm mt-2">You do not have permission to view Case Tracking.</p>
+        </div>
+      </div>
+    );
+  }
 
   const cases = [
     {

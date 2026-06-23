@@ -28,56 +28,55 @@ export default function LawfirmTableView({ advocate }) {
   }
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-6">
-      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6">
-
+    <div className="w-full space-y-8 max-w-6xl mx-auto">
+      {/* Header */}
+      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
         {/* Top buttons */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-8">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-600"
+            className="flex items-center justify-center w-12 h-12 rounded-full border border-[#E2E8F0] hover:bg-[#F1F5F9] transition-colors shrink-0"
           >
-            <ArrowLeft size={18} />
-            Back
+            <ArrowLeft size={20} className="text-[#0F172A]" />
           </button>
 
           <button
             onClick={() => setEditMode(true)}
-            className="bg-yellow-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-yellow-600"
+            className="px-8 py-3.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] cursor-pointer flex items-center gap-2"
           >
             <Pencil size={16} />
-            Edit
+            Edit Profile
           </button>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-8 items-center border-b border-[#F1F5F9] pb-6 mb-6">
+        <div className="flex flex-col md:flex-row gap-8 items-center border-b border-[#F1F5F9] pb-8 mb-8">
           {/* Profile Image */}
-          <div>
+          <div className="shrink-0">
             <img
-              src={advocate.profileImage || "https://images.unsplash.com/photo-1500648767791-00dcc994a43?w=400"}
+              src={advocate.profileImage?.trim() ? advocate.profileImage : `https://ui-avatars.com/api/?name=${advocate.advocateName || 'Advocate'}&background=E2E8F0&color=64748B&rounded=true&bold=true&size=150`}
               alt="Profile"
-              className="w-32 h-32 md:w-36 md:h-36 rounded-full object-cover border-4 border-blue-50 shadow-sm"
+              className="w-36 h-36 rounded-full object-cover border-[6px] border-white shadow-xl shadow-slate-300/50 bg-white"
             />
           </div>
 
           {/* Title Info */}
           <div className="text-center md:text-left flex-1">
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-[#0F172A] font-extrabold text-4xl tracking-tight">
               {advocate.advocateName}
             </h2>
-            <p className="text-gray-500 mt-1 text-[16px]">
+            <p className="text-[#64748B] mt-2 text-lg font-medium">
               {advocate.specialization || "Advocate"} • {advocate.lawFirmName || "Independent"}
             </p>
-            <div className="mt-3 flex flex-wrap gap-2 justify-center md:justify-start">
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                advocate.status === "Active"
+            <div className="mt-4 flex flex-wrap gap-2 justify-center md:justify-start">
+              <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                advocate.status === "Active" || !advocate.status
                   ? "bg-green-100 text-green-700"
                   : "bg-red-100 text-red-700"
               }`}>
                 {advocate.status || "Active"}
               </span>
               {advocate.yearsOfExperience && (
-                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                <span className="px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-blue-100 text-blue-700">
                   {advocate.yearsOfExperience} Years Exp
                 </span>
               )}
@@ -88,11 +87,12 @@ export default function LawfirmTableView({ advocate }) {
         {/* Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Personal Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold text-gray-800 border-b border-gray-100 pb-2">
+          <div className="space-y-6">
+            <h3 className="text-lg font-extrabold text-[#0F172A] flex items-center gap-2">
+               <span className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-sm">👤</span>
               Personal Information
             </h3>
-            <div className="space-y-3">
+            <div className="bg-[#F8FAFC] rounded-2xl p-6 border border-[#E2E8F0] space-y-4">
               <InfoRow label="Phone Number" value={advocate.phoneNumber} />
               <InfoRow label="Email Address" value={advocate.emailAddress} />
               <InfoRow label="Date of Birth" value={advocate.dateOfBirth} />
@@ -106,11 +106,12 @@ export default function LawfirmTableView({ advocate }) {
           </div>
 
           {/* Professional Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold text-gray-800 border-b border-gray-100 pb-2">
+          <div className="space-y-6">
+            <h3 className="text-lg font-extrabold text-[#0F172A] flex items-center gap-2">
+               <span className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm">⚖️</span>
               Professional Information
             </h3>
-            <div className="space-y-3">
+            <div className="bg-[#F8FAFC] rounded-2xl p-6 border border-[#E2E8F0] space-y-4">
               <InfoRow label="Bar Council ID" value={advocate.barCouncilId} />
               <InfoRow label="Enrollment Number" value={advocate.enrollmentNumber} />
               <InfoRow label="Practice Area" value={advocate.practiceArea} />
@@ -124,17 +125,27 @@ export default function LawfirmTableView({ advocate }) {
 
         {/* Address */}
         {advocate.chambersAddress && (
-          <div className="mt-8 border-t border-gray-100 pt-6">
-            <h3 className="text-lg font-bold text-gray-800 mb-2">Chambers Address</h3>
-            <p className="text-gray-600 whitespace-pre-line leading-relaxed">{advocate.chambersAddress}</p>
+          <div className="mt-8 border-t border-[#F1F5F9] pt-8">
+            <h3 className="text-lg font-extrabold text-[#0F172A] flex items-center gap-2 mb-4">
+               <span className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm">🏢</span>
+              Chambers Address
+            </h3>
+            <p className="text-[#475569] whitespace-pre-line leading-relaxed text-sm bg-[#F8FAFC] p-6 rounded-2xl border border-[#E2E8F0]">
+              {advocate.chambersAddress}
+            </p>
           </div>
         )}
 
         {/* About */}
         {advocate.about && (
-          <div className="mt-6 border-t border-gray-100 pt-6">
-            <h3 className="text-lg font-bold text-gray-800 mb-2">About Advocate</h3>
-            <p className="text-gray-600 whitespace-pre-line leading-relaxed">{advocate.about}</p>
+          <div className="mt-8 border-t border-[#F1F5F9] pt-8">
+            <h3 className="text-lg font-extrabold text-[#0F172A] flex items-center gap-2 mb-4">
+              <span className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center text-sm">📝</span>
+              About Advocate
+            </h3>
+            <p className="text-[#475569] whitespace-pre-line leading-relaxed text-sm bg-[#F8FAFC] p-6 rounded-2xl border border-[#E2E8F0]">
+              {advocate.about}
+            </p>
           </div>
         )}
       </div>
@@ -144,9 +155,9 @@ export default function LawfirmTableView({ advocate }) {
 
 function InfoRow({ label, value }) {
   return (
-    <div className="flex justify-between border-b border-gray-50 pb-2 text-sm">
-      <span className="font-medium text-gray-500">{label}</span>
-      <span className="text-gray-900 font-semibold">{value || "-"}</span>
+    <div className="flex justify-between items-center py-1">
+      <span className="font-semibold text-[#64748B] text-xs uppercase tracking-wider">{label}</span>
+      <span className="text-[#0F172A] font-bold text-sm text-right ml-4 break-words">{value || "-"}</span>
     </div>
   );
 }

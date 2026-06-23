@@ -32,6 +32,9 @@ export default function ClientConsultationView() {
   const [user, setUser] = useState(null);
   const [mounted, setMounted] = useState(false);
 
+  // Permission state for Consultation module
+  const [canAddConsultation, setCanAddConsultation] = useState(true); // default allow until loaded
+
   const [formData, setFormData] = useState({
     name: "",
     advocate: "",
@@ -48,7 +51,7 @@ export default function ClientConsultationView() {
       const minutes = String(date.getMinutes()).padStart(2, '0');
       const ampm = hours >= 12 ? 'PM' : 'AM';
       hours = hours % 12;
-      hours = hours ? hours : 12; // the hour '0' should be '12'
+      hours = hours ? hours : 12;
       const timeString = `${hours}:${minutes} ${ampm}`;
       setFormData((prev) => ({ ...prev, time: timeString }));
     } else {
@@ -75,7 +78,6 @@ export default function ClientConsultationView() {
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        // Separate appointments (upcoming: Pending, Approved, Rescheduled, Scheduled, Pending Client) and history
         const upcoming = data.filter(
           (item) =>
             item.status === "Pending" ||
@@ -100,6 +102,40 @@ export default function ClientConsultationView() {
     }
   };
 
+  // Resolve effective permission for Consultation → add
+  const resolveConsultationAddPermission = async (loggedInUser) => {
+    if (!loggedInUser) return;
+    try {
+      // 1. Try user's custom permissions first
+      const resUser = await fetch(`http://localhost:8000/permissions/users/${loggedInUser.id}`);
+      if (resUser.ok) {
+        const userData = await resUser.json();
+        const custom = userData.customPermissions || {};
+        if (custom["Consultation"] !== undefined) {
+          setCanAddConsultation(custom["Consultation"].add === true);
+          return;
+        }
+      }
+    } catch (_) {}
+
+    try {
+      // 2. Fall back to role defaults
+      const resPerms = await fetch("http://localhost:8000/permissions");
+      if (resPerms.ok) {
+        const allPerms = await resPerms.json();
+        const rolePerms = allPerms[loggedInUser.role] || {};
+        const consultPerm = rolePerms["Consultation"];
+        if (consultPerm !== undefined) {
+          setCanAddConsultation(consultPerm.add === true);
+          return;
+        }
+      }
+    } catch (_) {}
+
+    // 3. Default: allow (no restriction configured)
+    setCanAddConsultation(true);
+  };
+
   // Load user details on mount and fetch consultations
   useEffect(() => {
     setMounted(true);
@@ -112,7 +148,9 @@ export default function ClientConsultationView() {
       }));
     }
     fetchConsultations(loggedIn);
+    resolveConsultationAddPermission(loggedIn);
   }, []);
+
 
   const triggerSuccess = (message) => {
     setSuccessToast({ show: true, message });
@@ -122,6 +160,10 @@ export default function ClientConsultationView() {
   };
 
   const handleBookAppointment = async () => {
+    if (!canAddConsultation) {
+      alert("You do not have permission to book a consultation.");
+      return;
+    }
     if (
       !formData.name ||
       !formData.advocate ||
@@ -258,57 +300,73 @@ export default function ClientConsultationView() {
   };
 
   return (
-    <div className="w-full space-y-6 md:space-y-8">
+    <div className="w-full space-y-8 max-w-7xl mx-auto">
       {/* Page Header */}
-      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6">
-        <h1 className="text-[#0F172A] font-bold" style={{ fontSize: "40px", fontWeight: 700, lineHeight: 1.2 }}>
-          Consultations
+      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 mb-8">
+        <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
+          Case Discussion
         </h1>
-        <p className="text-[#64748B] mt-1.5" style={{ fontSize: "18px" }}>
+        <p className="text-[#64748B] mt-2 text-lg font-medium">
           Book an appointment or join a consultation
         </p>
       </div>
 
       {/* Top Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {/* Book Appointment */}
-        <div className="bg-white rounded-2xl border p-6">
-          <h2 className="text-2xl font-semibold text-[#0F172A]">Book Appointment</h2>
-          <p className="text-[#64748B] mt-3">Choose a date and time to meet your advocate.</p>
-          <button
-            onClick={() => {
-              setRescheduleId(null);
-              setFormData({
-                name: user ? user.username : "",
-                advocate: "",
-                date: "",
-                time: "",
-                type: "",
-              });
-              setShowModal(true);
-            }}
-            className="mt-6 bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-6 py-3 rounded-xl cursor-pointer"
-          >
-            Book Appointment
-          </button>
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300">
+          <div>
+            <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-xl mb-4">📅</div>
+            <h2 className="text-xl font-extrabold text-[#0F172A]">Book Appointment</h2>
+            <p className="text-[#64748B] mt-2 text-sm font-medium">Choose a date and time to meet your advocate.</p>
+          </div>
+          {canAddConsultation ? (
+            <button
+              onClick={() => {
+                setRescheduleId(null);
+                setFormData({
+                  name: user ? user.username : "",
+                  advocate: "",
+                  date: "",
+                  time: "",
+                  type: "",
+                });
+                setShowModal(true);
+              }}
+              className="w-full mt-6 bg-[#2563EB] hover:bg-[#1D4ED8] text-white py-3.5 rounded-full font-bold uppercase tracking-wider text-xs transition-colors shadow-md hover:shadow-lg active:scale-[0.98]"
+            >
+              Book Appointment
+            </button>
+          ) : (
+            <div className="w-full mt-6 inline-flex items-center justify-center gap-2 px-4 py-3.5 bg-red-50 border border-red-200 text-red-600 rounded-full text-xs font-bold uppercase tracking-wider">
+              <span>🔒</span>
+              <span>Booking not permitted</span>
+            </div>
+          )}
         </div>
 
         {/* Video Consultation */}
-        <div className="bg-white rounded-2xl border p-6">
-          <h2 className="text-2xl font-semibold text-[#0F172A]">Video Consultation</h2>
-          <p className="text-[#64748B] mt-3">Join a video consultation with your advocate.</p>
-          <button className="mt-6 bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-6 py-3 rounded-xl cursor-pointer">
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300">
+          <div>
+            <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-xl mb-4">📹</div>
+            <h2 className="text-xl font-extrabold text-[#0F172A]">Video Consultation</h2>
+            <p className="text-[#64748B] mt-2 text-sm font-medium">Join a video consultation with your advocate.</p>
+          </div>
+          <button className="w-full mt-6 bg-[#4F46E5] hover:bg-[#4338CA] text-white py-3.5 rounded-full font-bold uppercase tracking-wider text-xs transition-colors shadow-md hover:shadow-lg active:scale-[0.98]">
             Join Consultation
           </button>
         </div>
 
         {/* Consultation History */}
-        <div className="bg-white rounded-2xl border p-6">
-          <h2 className="text-2xl font-semibold text-[#0F172A]">Consultation History</h2>
-          <p className="text-[#64748B] mt-3">View your previous consultations and logs.</p>
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300">
+          <div>
+            <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center text-xl mb-4">📜</div>
+            <h2 className="text-xl font-extrabold text-[#0F172A]">Consultation History</h2>
+            <p className="text-[#64748B] mt-2 text-sm font-medium">View your previous consultations and logs.</p>
+          </div>
           <Link
             href="/client-consultation/history"
-            className="inline-block mt-6 bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-6 py-3 rounded-xl transition cursor-pointer"
+            className="w-full mt-6 bg-[#D97706] hover:bg-[#B45309] text-white py-3.5 rounded-full font-bold uppercase tracking-wider text-xs transition-colors shadow-md hover:shadow-lg active:scale-[0.98] text-center"
           >
             View History
           </Link>
@@ -316,48 +374,48 @@ export default function ClientConsultationView() {
       </div>
 
       {/* Consultation Requests */}
-      <div className="bg-white rounded-2xl border p-6">
-        <h2 className="text-xl font-semibold mb-6">Consultation Requests</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-[#F8FAFC]">
-                <th className="p-3 font-semibold text-[#0F172A]">Client Name</th>
-                <th className="p-3 font-semibold text-[#0F172A]">Advocate</th>
-                <th className="p-3 font-semibold text-[#0F172A]">Date</th>
-                <th className="p-3 font-semibold text-[#0F172A]">Time</th>
-                <th className="p-3 font-semibold text-[#0F172A]">Type</th>
-                <th className="p-3 font-semibold text-[#0F172A]">Fee</th>
-                <th className="p-3 font-semibold text-[#0F172A]">Status</th>
-                <th className="p-3 font-semibold text-[#0F172A]">Action</th>
+      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 mb-8 overflow-hidden">
+        <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">Consultation Requests</h2>
+        <div className="w-full overflow-x-auto rounded-xl border border-[#E2E8F0]">
+          <table className="min-w-full divide-y divide-[#E2E8F0]">
+            <thead className="bg-[#F8FAFC]">
+              <tr>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client Name</th>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Advocate</th>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Fee</th>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Action</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-[#E2E8F0] bg-white">
               {appointments.filter(item => item.status === "Pending Client").length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="p-4 text-center text-slate-500">
+                  <td colSpan="8" className="p-8 text-center text-[#64748B] font-medium">
                     No pending consultation requests.
                   </td>
                 </tr>
               ) : (
                 appointments.filter(item => item.status === "Pending Client").map((item) => (
-                  <tr key={item.id} className="border-b hover:bg-[#F8FAFC] transition-colors duration-150">
-                    <td className="p-3 font-medium text-[#1E293B] capitalize">{item.client_name || item.client}</td>
-                    <td className="p-3 text-sm text-[#64748B] capitalize">{item.advocate_name || item.advocate}</td>
-                    <td className="p-3 text-sm text-[#64748B]">{item.date}</td>
-                    <td className="p-3 text-sm text-[#64748B]">{item.time}</td>
-                    <td className="p-3 text-sm text-[#64748B]">{item.type}</td>
-                    <td className="p-3 text-sm text-[#16A34A] font-semibold">{item.fee || "₹500"}</td>
-                    <td className="p-3 text-sm">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-purple-50 text-purple-700 border-purple-200/50">
+                  <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors duration-150">
+                    <td className="p-4 font-bold text-[#0F172A] capitalize whitespace-nowrap">{item.client_name || item.client}</td>
+                    <td className="p-4 text-sm text-[#475569] capitalize whitespace-nowrap font-medium">{item.advocate_name || item.advocate}</td>
+                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.date}</td>
+                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">{item.time}</td>
+                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.type}</td>
+                    <td className="p-4 text-sm text-[#16A34A] font-bold whitespace-nowrap">{item.fee || "₹500"}</td>
+                    <td className="p-4 text-sm whitespace-nowrap">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">
                         {item.status}
                       </span>
                     </td>
-                    <td className="p-3 text-sm">
+                    <td className="p-4 text-sm whitespace-nowrap">
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleApproveAppointment(item.id)}
-                          className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-xs font-medium cursor-pointer"
+                          className="px-4 py-2 bg-[#16A34A] hover:bg-[#15803d] text-white rounded-full transition-colors text-xs font-bold uppercase tracking-wider shadow-sm active:scale-95"
                         >
                           Approve
                         </button>
@@ -373,7 +431,7 @@ export default function ClientConsultationView() {
                             });
                             setShowModal(true);
                           }}
-                          className="px-3 py-1.5 bg-[#D97706] hover:bg-[#b45309] text-white rounded-lg transition-colors text-xs font-medium cursor-pointer"
+                          className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-full transition-colors text-xs font-bold uppercase tracking-wider shadow-sm active:scale-95"
                         >
                           Reschedule
                         </button>
@@ -388,37 +446,37 @@ export default function ClientConsultationView() {
       </div>
 
       {/* Upcoming Hearings */}
-      <div className="bg-white rounded-2xl border p-6">
-        <h2 className="text-xl font-semibold mb-6">Upcoming Hearings</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-[#F8FAFC]">
-                <th className="p-3 text-left">Case No</th>
-                <th className="p-3 text-left">Type</th>
-                <th className="p-3 text-left">Next Hearing</th>
-                <th className="p-3 text-left">Advocate</th>
-                <th className="p-3 text-left">Status</th>
+      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 mb-8 overflow-hidden">
+        <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">Upcoming Hearings</h2>
+        <div className="w-full overflow-x-auto rounded-xl border border-[#E2E8F0]">
+          <table className="min-w-full divide-y divide-[#E2E8F0]">
+            <thead className="bg-[#F8FAFC]">
+              <tr>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case No</th>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Next Hearing</th>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Advocate</th>
+                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-[#E2E8F0] bg-white">
               {hearings.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="p-4 text-center text-slate-500">
+                  <td colSpan="5" className="p-8 text-center text-[#64748B] font-medium">
                     No upcoming hearings.
                   </td>
                 </tr>
               ) : (
                 hearings.map((item, index) => (
-                  <tr key={index} className="border-b">
-                    <td className="p-3 font-medium text-[#1E293B]">{item.caseNo}</td>
-                    <td className="p-3">{item.type}</td>
-                    <td className="p-3">{item.hearing}</td>
-                    <td className="p-3">{item.advocate}</td>
-                    <td className="p-3">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${item.status === 'Active'
-                          ? 'bg-green-50 text-green-700 border-green-200/50'
-                          : 'bg-blue-50 text-blue-700 border-blue-200/50'
+                  <tr key={index} className="hover:bg-[#F8FAFC] transition-colors duration-150">
+                    <td className="p-4 font-bold text-[#0F172A] whitespace-nowrap">{item.caseNo}</td>
+                    <td className="p-4 text-[#475569] text-sm whitespace-nowrap">{item.type}</td>
+                    <td className="p-4 text-[#475569] text-sm font-medium whitespace-nowrap">{item.hearing}</td>
+                    <td className="p-4 text-[#475569] text-sm whitespace-nowrap font-medium">{item.advocate}</td>
+                    <td className="p-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${item.status === 'Active'
+                          ? 'bg-green-50 text-green-700 border-green-200'
+                          : 'bg-blue-50 text-blue-700 border-blue-200'
                         }`}>
                         {item.status}
                       </span>
@@ -433,111 +491,126 @@ export default function ClientConsultationView() {
 
       {/* Modal */}
       {mounted && showModal && typeof document !== "undefined" ? createPortal(
-        <div className="fixed inset-0 bg-[#0F172A]/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl relative animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center gap-3 mb-6">
-              <button
-                onClick={() => setShowModal(false)}
-                className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-slate-100 text-[#64748B] transition-colors cursor-pointer"
-                aria-label="Back"
-              >
-                <ArrowLeft size={20} />
-              </button>
-              <h2 className="text-2xl font-bold text-[#0F172A]">
+        <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-3xl p-8 md:p-10 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl relative animate-in fade-in zoom-in duration-200 border border-[#E2E8F0]">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-extrabold text-[#0F172A]">
                 {rescheduleId ? "Reschedule Consultation" : "Book Appointment"}
               </h2>
+              <button
+                onClick={() => setShowModal(false)}
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-[#F8FAFC] text-[#64748B] hover:bg-rose-100 hover:text-rose-600 transition-colors"
+                aria-label="Close"
+              >
+                <span className="text-xl font-bold">✕</span>
+              </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               {!rescheduleId && (
                 <>
-                  <input
-                    type="text"
-                    placeholder="Client Name"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        name: e.target.value,
-                      })
-                    }
-                    className="w-full border rounded-xl p-3 text-[#0F172A]"
-                  />
+                  <div>
+                    <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2 block">Client Name</label>
+                    <input
+                      type="text"
+                      placeholder="Enter your name"
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          name: e.target.value,
+                        })
+                      }
+                      className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all placeholder:text-[#94A3B8] text-sm font-medium"
+                    />
+                  </div>
 
-                  <input
-                    type="text"
-                    placeholder="Advocate Name"
-                    value={formData.advocate}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        advocate: e.target.value,
-                      })
-                    }
-                    className="w-full border rounded-xl p-3 text-[#0F172A]"
-                  />
+                  <div>
+                    <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2 block">Advocate Name</label>
+                    <input
+                      type="text"
+                      placeholder="Enter advocate's name"
+                      value={formData.advocate}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          advocate: e.target.value,
+                        })
+                      }
+                      className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all placeholder:text-[#94A3B8] text-sm font-medium"
+                    />
+                  </div>
                 </>
               )}
 
-              <input
-                type="date"
-                value={formData.date}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    date: e.target.value,
-                  })
-                }
-                className="w-full border rounded-xl p-3 text-[#0F172A]"
-              />
-
-              <div className="w-full">
-                <DatePicker
-                  selected={selectedTimeDate}
-                  onChange={handleTimeChange}
-                  showTimeSelect
-                  showTimeSelectOnly
-                  timeIntervals={15}
-                  timeCaption="Time"
-                  dateFormat="h:mm aa"
-                  placeholderText="Select Time"
-                  wrapperClassName="w-full"
-                  className="w-full border rounded-xl p-3 text-[#0F172A]"
-                />
-              </div>
-
-              {!rescheduleId && (
-                <select
-                  value={formData.type}
+              <div>
+                <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2 block">Date</label>
+                <input
+                  type="date"
+                  value={formData.date}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      type: e.target.value,
+                      date: e.target.value,
                     })
                   }
-                  className="w-full border rounded-xl p-3 text-[#0F172A]"
-                >
-                  <option value="">Select Consultation Type</option>
-                  <option value="Video Consultation">Video Consultation</option>
-                  <option value="Chat Consultation">Chat Consultation</option>
-                  <option value="Person to Person">Person to Person</option>
-                </select>
+                  className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2 block">Time</label>
+                <div className="w-full border border-[#E2E8F0] rounded-xl bg-[#F8FAFC] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#2563EB]/20 focus-within:border-[#2563EB] transition-all cursor-pointer">
+                  <DatePicker
+                    selected={selectedTimeDate}
+                    onChange={handleTimeChange}
+                    showTimeSelect
+                    showTimeSelectOnly
+                    timeIntervals={15}
+                    timeCaption="Time"
+                    dateFormat="h:mm aa"
+                    placeholderText="Select Time"
+                    wrapperClassName="w-full"
+                    className="w-full p-3.5 text-[#0F172A] bg-transparent outline-none text-sm font-medium cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {!rescheduleId && (
+                <div>
+                  <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2 block">Consultation Type</label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        type: e.target.value,
+                      })
+                    }
+                    className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+                  >
+                    <option value="">Select Type</option>
+                    <option value="Video Consultation">Video Consultation</option>
+                    <option value="Chat Consultation">Chat Consultation</option>
+                    <option value="Person to Person">Person to Person</option>
+                  </select>
+                </div>
               )}
             </div>
 
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="flex justify-end gap-3 mt-10 pt-8 border-t border-[#F1F5F9]">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-5 py-2 bg-slate-200 rounded-xl cursor-pointer"
+                className="px-6 py-3.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[#475569] text-xs font-bold uppercase tracking-wider transition-colors"
               >
                 Cancel
               </button>
 
               <button
                 onClick={rescheduleId ? handleReschedule : handleBookAppointment}
-                className="px-5 py-2 bg-blue-600 text-white rounded-xl cursor-pointer"
+                className="px-8 py-3.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98]"
               >
-                {rescheduleId ? "Reschedule" : "Book"}
+                {rescheduleId ? "Reschedule" : "Book Appointment"}
               </button>
             </div>
           </div>

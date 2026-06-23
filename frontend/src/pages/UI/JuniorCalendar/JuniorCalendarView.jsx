@@ -13,6 +13,8 @@ import {
   Search,
   Filter,
 } from "lucide-react";
+import useModulePermission from "@/utils/useModulePermission";
+
 
 // --- Date Utilities ---
 const WEEKDAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -161,7 +163,9 @@ const getStatusColor = (status) => {
 };
 
 export default function JuniorCalendarView() {
-  // --- Hearings State (Assigned cases/hearings for Junior lawyer) ---
+  const { perms, loading } = useModulePermission("Junior Calendar");
+
+  // --- Hearings State ---
   const hearings = useMemo(() => {
     const today = new Date();
     const currentYear = today.getFullYear();
@@ -401,6 +405,19 @@ export default function JuniorCalendarView() {
     }
     return upcomingHearings[0] || hearings[0] || null;
   }, [hearings, selectedEventId, upcomingHearings]);
+
+  // No view access
+  if (!loading && !perms.view) {
+    return (
+      <div className="w-full min-h-[400px] flex items-center justify-center">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-10 max-w-sm text-center">
+          <div className="text-4xl mb-3">🔒</div>
+          <h2 className="text-xl font-bold text-slate-800">Access Restricted</h2>
+          <p className="text-slate-500 text-sm mt-2">You do not have permission to view the Calendar.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full space-y-6 md:space-y-8">

@@ -15,8 +15,11 @@ import {
   Globe
 } from "lucide-react";
 import jsPDF from "jspdf";
+import useModulePermission from "@/utils/useModulePermission";
+
 
 export default function ClientPayments() {
+  const { perms, loading: permsLoading } = useModulePermission("Payments");
   const [invoices, setInvoices] = useState([]);
   const [clientEmail, setClientEmail] = useState("");
   const [clientName, setClientName] = useState("");
@@ -115,6 +118,10 @@ export default function ClientPayments() {
 
   // Handle Payment Submit
   const handlePaymentSubmit = async () => {
+    if (!perms.add) {
+      alert("You do not have permission to make payments.");
+      return;
+    }
     if (!selectedInvoice || !isFormValid()) return;
     setIsProcessing(true);
 
@@ -255,6 +262,22 @@ export default function ClientPayments() {
   const totalDue = dueInvoices.reduce((sum, inv) => sum + inv.grand_total, 0);
 
   // If there's an authentication/session issue, render a detailed clean warning card
+  // No view access
+  if (!permsLoading && !perms.view) {
+    return (
+      <div className="w-full min-h-[500px] flex items-center justify-center p-4">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-8 max-w-md text-center">
+          <div className="text-4xl mb-4">🔒</div>
+          <h2 className="text-xl font-bold text-slate-800">Access Restricted</h2>
+          <p className="text-slate-500 text-sm mt-2 leading-relaxed">
+            You do not have permission to view Payments.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Auth error
   if (authError) {
     return (
       <div className="w-full min-h-[500px] flex items-center justify-center p-4">
@@ -405,15 +428,21 @@ export default function ClientPayments() {
                 <Download className="w-4 h-4" />
               </button>
 
-              <button
-                onClick={() => {
-                  setSelectedInvoice(inv);
-                  setShowPaymentModal(true);
-                }}
-                className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm"
-              >
-                Pay Now
-              </button>
+              {perms.add ? (
+                <button
+                  onClick={() => {
+                    setSelectedInvoice(inv);
+                    setShowPaymentModal(true);
+                  }}
+                  className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm"
+                >
+                  Pay Now
+                </button>
+              ) : (
+                <span className="px-3 py-2 bg-slate-100 text-slate-400 rounded-lg text-sm font-semibold flex items-center gap-1">
+                  🔒 Restricted
+                </span>
+              )}
             </div>
           </td>
         </tr>

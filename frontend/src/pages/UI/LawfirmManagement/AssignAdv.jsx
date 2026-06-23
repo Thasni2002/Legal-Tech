@@ -160,10 +160,15 @@ export default function AssignAdv({ isOpen, onClose }) {
     };
 
     try {
+      const url = caseId
+        ? `http://localhost:8000/lawfirm-management/assigned-cases/${caseId}`
+        : "http://localhost:8000/lawfirm-management/assign-case";
+      const method = caseId ? "PUT" : "POST";
+
       const response = await fetch(
-        "http://localhost:8000/lawfirm-management/assign-case",
+        url,
         {
-          method: "POST",
+          method: method,
           headers: {
             "Content-Type": "application/json",
           },
@@ -208,9 +213,13 @@ export default function AssignAdv({ isOpen, onClose }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
             </svg>
           </div>
-          <h3 className="text-xl font-bold text-[#0F172A] mb-2">Assign Successful</h3>
+          <h3 className="text-xl font-bold text-[#0F172A] mb-2">
+            {caseId ? "Update Successful" : "Assign Successful"}
+          </h3>
           <p className="text-[#64748B] text-sm mb-6">
-            The case has been successfully assigned to the advocate.
+            {caseId
+              ? "The case assignment has been successfully updated."
+              : "The case has been successfully assigned to the advocate."}
           </p>
           <button
             type="button"
@@ -228,35 +237,35 @@ export default function AssignAdv({ isOpen, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white w-full max-w-4xl rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] max-h-[90vh] overflow-y-auto border border-[#E2E8F0]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/40 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl shadow-slate-900/20 max-h-[90vh] overflow-y-auto border border-[#E2E8F0] overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#E2E8F0] px-6 py-5 sticky top-0 bg-white/95 backdrop-blur z-10">
-          <h2 className="text-xl font-bold text-[#0F172A]">
-            Assign Case to Advocate
+        <div className="flex items-center justify-between border-b border-[#F1F5F9] px-8 py-6 sticky top-0 bg-white/95 backdrop-blur z-10">
+          <h2 className="text-2xl font-extrabold text-[#0F172A]">
+            {caseId ? "Update Assigned Case" : "Assign Case to Advocate"}
           </h2>
           <button
             onClick={onClose}
-            className="text-[#64748B] hover:text-[#DC2626]"
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-[#F8FAFC] text-[#64748B] hover:bg-rose-100 hover:text-rose-600 transition-colors"
           >
-            <span className="text-2xl">✕</span>
+            <span className="text-xl font-bold">✕</span>
           </button>
         </div>
 
         {/* Form */}
-<form onSubmit={handleSubmit} className="p-6">
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+<form onSubmit={handleSubmit} className="p-8">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
     {/* Case Name */}
     <div>
-      <label className="block mb-2 text-sm font-medium text-[#0F172A]">
+      <label className="block mb-2 text-sm font-bold text-[#0F172A]">
         Case Name
       </label>
       <select
         value={formData.caseName}
         onChange={handleCaseSelect}
-        className="w-full rounded-lg border border-[#E2E8F0] px-4 py-2.5"
+        className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
         required
       >
         <option value="">Select Case</option>
@@ -270,40 +279,40 @@ export default function AssignAdv({ isOpen, onClose }) {
 
     {/* Case Number */}
     <div>
-      <label className="block mb-2 text-sm font-medium text-[#0F172A]">
+      <label className="block mb-2 text-sm font-bold text-[#0F172A]">
         Case Number
       </label>
       <input
         type="text"
         value={formData.caseNumber}
         readOnly
-        className="w-full rounded-lg border border-[#E2E8F0] px-4 py-2.5 bg-gray-50"
+        className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3.5 bg-slate-100 text-[#475569] text-sm outline-none cursor-not-allowed"
       />
     </div>
 
     {/* Case Title */}
     <div>
-      <label className="block mb-2 text-sm font-medium text-[#0F172A]">
+      <label className="block mb-2 text-sm font-bold text-[#0F172A]">
         Case Title
       </label>
       <input
         type="text"
         value={formData.caseTitle}
         readOnly
-        className="w-full rounded-lg border border-[#E2E8F0] px-4 py-2.5 bg-gray-50"
+        className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3.5 bg-slate-100 text-[#475569] text-sm outline-none cursor-not-allowed"
       />
     </div>
 
     {/* Advocate Name */}
     <div>
-      <label className="block mb-2 text-sm font-medium text-[#0F172A]">
+      <label className="block mb-2 text-sm font-bold text-[#0F172A]">
         Advocate Name
       </label>
    <select
   name="advocateName"
   value={formData.advocateName}
   onChange={handleChange}
-  className="w-full rounded-lg border border-[#E2E8F0] px-4 py-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500"
+  className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
   required
 >
         <option value="">Select Advocate</option>
@@ -321,14 +330,14 @@ export default function AssignAdv({ isOpen, onClose }) {
 
     {/* Practice Area */}
     <div>
-      <label className="block mb-2 text-sm font-medium text-[#0F172A]">
+      <label className="block mb-2 text-sm font-bold text-[#0F172A]">
         Practice Area
       </label>
       <select
         name="practiceArea"
         value={formData.practiceArea}
         onChange={handleChange}
-        className="w-full rounded-lg border border-[#E2E8F0] px-4 py-2.5"
+        className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
         required
       >
         <option value="">Select Practice Area</option>
@@ -342,14 +351,14 @@ export default function AssignAdv({ isOpen, onClose }) {
 
     {/* Priority */}
     <div>
-      <label className="block mb-2 text-sm font-medium text-[#0F172A]">
+      <label className="block mb-2 text-sm font-bold text-[#0F172A]">
         Priority
       </label>
       <select
         name="priority"
         value={formData.priority}
         onChange={handleChange}
-        className="w-full rounded-lg border border-[#E2E8F0] px-4 py-2.5"
+        className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
         required
       >
         <option value="">Select Priority</option>
@@ -363,7 +372,7 @@ export default function AssignAdv({ isOpen, onClose }) {
 
     {/* Due Date */}
     <div>
-      <label className="block mb-2 text-sm font-medium text-[#0F172A]">
+      <label className="block mb-2 text-sm font-bold text-[#0F172A]">
         Due Date
       </label>
       <input
@@ -371,15 +380,15 @@ export default function AssignAdv({ isOpen, onClose }) {
         name="dueDate"
         value={formData.dueDate}
         onChange={handleChange}
-        className="w-full rounded-lg border border-[#E2E8F0] px-4 py-2.5"
+        className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
         required
       />
     </div>
   </div>
 
   {/* Notes */}
-  <div className="mt-6">
-    <label className="block mb-2 text-sm font-medium text-[#0F172A]">
+  <div className="mt-8">
+    <label className="block mb-2 text-sm font-bold text-[#0F172A]">
       Assignment Notes / Instructions
     </label>
     <textarea
@@ -388,23 +397,23 @@ export default function AssignAdv({ isOpen, onClose }) {
       onChange={handleChange}
       rows={4}
       placeholder="Enter instructions for the advocate..."
-      className="w-full rounded-lg border border-[#E2E8F0] px-4 py-3"
+      className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
     />
   </div>
 
   {/* Footer */}
-  <div className="flex justify-end gap-3 mt-8 border-t border-[#E2E8F0] pt-5">
+  <div className="flex justify-end gap-3 mt-10 border-t border-[#F1F5F9] pt-8">
     <button
       type="button"
       onClick={onClose}
-      className="px-6 py-2.5 border border-[#E2E8F0] rounded-lg"
+      className="px-8 py-3.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[#475569] text-xs font-bold uppercase tracking-wider transition-colors w-full sm:w-auto"
     >
       Cancel
     </button>
 
     <button
       type="submit"
-      className="px-6 py-2.5 bg-[#2563EB] text-white rounded-lg"
+      className="px-8 py-3.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] w-full sm:w-auto"
     >
       Assign Case
     </button>

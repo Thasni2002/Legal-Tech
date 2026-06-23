@@ -203,42 +203,51 @@ export default function AdvDashboardView() {
     ];
 
     return (
-        <div className="w-full space-y-6 md:space-y-8 animate-fade-in">
+        <div className="w-full space-y-8 max-w-7xl mx-auto animate-in fade-in zoom-in-95 duration-500">
 
             {/* Page Header */}
-            <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
+                    <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
                         {greeting}, {displayName}
                     </h1>
-                    <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
+                    <p className="text-[#64748B] mt-2 text-lg font-medium">
                         {displayRole}
                     </p>
                 </div>
-                <div className="text-left md:text-right">
-                    <p className="text-[#64748B] font-medium" style={{ fontSize: '16px' }}>{currentDate}</p>
+                <div className="text-left md:text-right bg-[#F8FAFC] px-6 py-4 rounded-2xl border border-[#E2E8F0]">
+                    <p className="text-[#475569] font-bold text-sm uppercase tracking-wider">Today's Date</p>
+                    <p className="text-[#0F172A] font-extrabold text-lg mt-1">{currentDate}</p>
                 </div>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {stats.map((item, index) => {
                     const Icon = item.icon;
+                    // Provide a unique soft color for each stat card based on index
+                    const colors = [
+                        { bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-200" },
+                        { bg: "bg-emerald-50", text: "text-emerald-600", border: "border-emerald-200" },
+                        { bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-200" },
+                        { bg: "bg-amber-50", text: "text-amber-600", border: "border-amber-200" },
+                    ];
+                    const color = colors[index % colors.length];
 
                     return (
                         <div
                             key={index}
-                            className="bg-white rounded-xl border border-[#E2E8F0] p-5 md:p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
+                            className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-6 md:p-8 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 cursor-pointer group"
                         >
-                            <div className="w-11 h-11 md:w-12 md:h-12 bg-[#2563EB] rounded-lg flex items-center justify-center mb-4">
-                                <Icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                            <div className={`w-14 h-14 md:w-16 md:h-16 ${color.bg} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-sm border ${color.border}`}>
+                                <Icon className={`w-7 h-7 md:w-8 md:h-8 ${color.text}`} />
                             </div>
 
-                            <p className="text-[#64748B] text-sm md:text-base">
+                            <p className="text-[#475569] text-xs font-bold uppercase tracking-wider mb-2">
                                 {item.title}
                             </p>
 
-                            <h2 className="text-3xl md:text-4xl font-bold mt-2 text-[#0F172A]">
+                            <h2 className="text-4xl md:text-5xl font-black text-[#0F172A] tracking-tight">
                                 {item.value}
                             </h2>
                         </div>
@@ -247,92 +256,108 @@ export default function AdvDashboardView() {
             </div>
 
             {/* Case Overview + Activities */}
-            <div className="grid grid-cols-12 gap-6">
+            <div className="grid grid-cols-12 gap-8">
 
-                <div className="col-span-12 lg:col-span-8 bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 md:p-6">
-                    <h2 className="text-lg md:text-xl font-semibold mb-4 md:mb-6 text-[#0F172A]">
-                        Case Overview
-                    </h2>
+                <div className="col-span-12 lg:col-span-8 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
+                    <div className="flex justify-between items-center mb-8">
+                        <h2 className="text-2xl font-extrabold text-[#0F172A]">
+                            Case Overview
+                        </h2>
+                        <button className="text-xs font-bold text-[#2563EB] uppercase tracking-wider hover:text-[#1d4ed8] transition-colors">
+                            View All
+                        </button>
+                    </div>
 
-                    <div className="overflow-x-auto -mx-5 md:mx-0">
-                        <div className="inline-block min-w-full align-middle px-5 md:px-0">
-                            <table className="w-full min-w-[500px]">
-                                <thead>
-                                    <tr className="border-b border-[#E2E8F0]">
-                                        <th className="text-left py-3 text-xs font-semibold text-[#64748B] uppercase tracking-wider">Case No</th>
-                                        <th className="text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client</th>
-                                        <th className="text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider">Type</th>
-                                        <th className="text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider">Court</th>
-                                        <th className="text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider">Status</th>
-                                    </tr>
-                                </thead>
+                    <div className="w-full overflow-x-auto rounded-2xl border border-[#E2E8F0]">
+                        <table className="min-w-full divide-y divide-[#E2E8F0]">
+                            <thead className="bg-[#F8FAFC]">
+                                <tr>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case No</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Court</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                                </tr>
+                            </thead>
 
-                                <tbody>
-                                    {data && data.cases.length > 0 ? (
-                                        data.cases.map((c, index) => (
-                                            <tr 
-                                                key={index}
-                                                className={`hover:bg-[#F8FAFC] transition-colors duration-150 ${
-                                                    index !== data.cases.length - 1 ? "border-b border-[#F1F5F9]" : ""
-                                                }`}
-                                            >
-                                                <td className="py-4 text-sm text-[#0F172A]">{c.case_no}</td>
-                                                <td className="text-sm text-[#1E293B]">{c.client_name}</td>
-                                                <td className="text-sm text-[#64748B]">{c.type}</td>
-                                                <td className="text-sm text-[#64748B]">{c.court}</td>
-                                                <td className="py-4">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                                        c.status === "Hearing" 
-                                                            ? "bg-[#2563EB]/10 text-[#2563EB]" 
-                                                            : c.status === "Active" 
-                                                            ? "bg-[#16A34A]/10 text-[#16A34A]" 
-                                                            : "bg-[#D97706]/10 text-[#D97706]"
-                                                    }`}>
-                                                        {c.status}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan="5" className="py-8 text-center text-sm text-[#64748B]">
-                                                No cases found.
+                            <tbody className="divide-y divide-[#E2E8F0] bg-white">
+                                {data && data.cases.length > 0 ? (
+                                    data.cases.map((c, index) => (
+                                        <tr 
+                                            key={index}
+                                            className="hover:bg-[#F8FAFC] transition-colors duration-150"
+                                        >
+                                            <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">{c.case_no}</td>
+                                            <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">{c.client_name}</td>
+                                            <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{c.type}</td>
+                                            <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{c.court}</td>
+                                            <td className="p-4 whitespace-nowrap">
+                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                                                    c.status === "Hearing" 
+                                                        ? "bg-blue-50 text-blue-700 border-blue-200" 
+                                                        : c.status === "Active" 
+                                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
+                                                        : "bg-amber-50 text-amber-700 border-amber-200"
+                                                }`}>
+                                                    {c.status}
+                                                </span>
                                             </td>
                                         </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="5" className="p-8 text-center text-sm font-medium text-[#64748B]">
+                                            No cases found.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <div className="col-span-12 lg:col-span-4 bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 md:p-6">
-                    <h2 className="text-lg md:text-xl font-semibold mb-4 md:mb-6 text-[#0F172A]">
-                        Recent Activities
-                    </h2>
+                <div className="col-span-12 lg:col-span-4 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
+                    <div className="flex justify-between items-center mb-8">
+                        <h2 className="text-2xl font-extrabold text-[#0F172A]">
+                            Recent Activities
+                        </h2>
+                    </div>
 
-                    <div className="space-y-4 md:space-y-5">
+                    <div className="space-y-6 flex-1 overflow-y-auto pr-2">
                         {data && data.activities.length > 0 ? (
                             data.activities.map((act, index) => {
-                                let borderColor = "border-[#2563EB]";
+                                let bgColor = "bg-blue-50";
+                                let textColor = "text-blue-600";
+                                let icon = "🔔";
+                                
                                 if (act.type === "hearing") {
-                                    borderColor = "border-[#D97706]";
+                                    bgColor = "bg-amber-50";
+                                    textColor = "text-amber-600";
+                                    icon = "⚖️";
                                 } else if (act.type === "meeting") {
-                                    borderColor = "border-[#16A34A]";
+                                    bgColor = "bg-emerald-50";
+                                    textColor = "text-emerald-600";
+                                    icon = "🤝";
                                 }
+                                
                                 return (
-                                    <div key={index} className={`border-l-[3px] ${borderColor} pl-4`}>
-                                        <h4 className="font-medium text-sm md:text-base text-[#0F172A]">
-                                            {act.title}
-                                        </h4>
-                                        <p className="text-xs md:text-sm text-[#64748B]">
-                                            {act.timestamp_str}
-                                        </p>
+                                    <div key={index} className="flex gap-4 items-start group">
+                                        <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-lg ${bgColor} ${textColor} shadow-sm group-hover:scale-110 transition-transform`}>
+                                            {icon}
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-sm text-[#0F172A] leading-tight mb-1 group-hover:text-[#2563EB] transition-colors">
+                                                {act.title}
+                                            </h4>
+                                            <p className="text-xs font-medium text-[#64748B]">
+                                                {act.timestamp_str}
+                                            </p>
+                                        </div>
                                     </div>
                                 );
                             })
                         ) : (
-                            <p className="text-sm text-[#64748B]">No recent activities.</p>
+                            <p className="text-sm font-medium text-[#64748B] text-center p-8 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">No recent activities.</p>
                         )}
                     </div>
                 </div>
@@ -340,79 +365,88 @@ export default function AdvDashboardView() {
             </div>
 
             {/* Upcoming Hearings + Documents */}
-            <div className="grid grid-cols-12 gap-6">
+            <div className="grid grid-cols-12 gap-8">
 
-                <div className="col-span-12 lg:col-span-8 bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 md:p-6">
-                    <h2 className="text-lg md:text-xl font-semibold mb-4 md:mb-6 text-[#0F172A]">
-                        Upcoming Hearings
-                    </h2>
+                <div className="col-span-12 lg:col-span-8 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
+                    <div className="flex justify-between items-center mb-8">
+                        <h2 className="text-2xl font-extrabold text-[#0F172A]">
+                            Upcoming Hearings
+                        </h2>
+                        <button className="text-xs font-bold text-[#2563EB] uppercase tracking-wider hover:text-[#1d4ed8] transition-colors">
+                            View Calendar
+                        </button>
+                    </div>
 
-                    <div className="overflow-x-auto -mx-5 md:mx-0">
-                        <div className="inline-block min-w-full align-middle px-5 md:px-0">
-                            <table className="w-full min-w-[500px]">
-                                <thead>
-                                    <tr className="border-b border-[#E2E8F0]">
-                                        <th className="text-left py-3 text-xs font-semibold text-[#64748B] uppercase tracking-wider">Date</th>
-                                        <th className="text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider">Case</th>
-                                        <th className="text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider">Court</th>
-                                        <th className="text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider">Advocate</th>
-                                        <th className="text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider">Time</th>
-                                    </tr>
-                                </thead>
+                    <div className="w-full overflow-x-auto rounded-2xl border border-[#E2E8F0]">
+                        <table className="min-w-full divide-y divide-[#E2E8F0]">
+                            <thead className="bg-[#F8FAFC]">
+                                <tr>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Court</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Advocate</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
+                                </tr>
+                            </thead>
 
-                                <tbody>
-                                    {data && data.hearings.length > 0 ? (
-                                        data.hearings.map((h, index) => (
-                                            <tr 
-                                                key={index} 
-                                                className={`hover:bg-[#F8FAFC] transition-colors duration-150 ${
-                                                    index !== data.hearings.length - 1 ? "border-b border-[#F1F5F9]" : ""
-                                                }`}
-                                            >
-                                                <td className="py-4 text-sm text-[#0F172A] font-medium">{h.date}</td>
-                                                <td className="text-sm text-[#1E293B]">{h.case_title}</td>
-                                                <td className="text-sm text-[#64748B]">{h.court}</td>
-                                                <td className="text-sm text-[#1E293B]">{h.advocate_name}</td>
-                                                <td className="text-sm text-[#64748B]">{h.time}</td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan="5" className="py-8 text-center text-sm text-[#64748B]">
-                                                No upcoming hearings found.
+                            <tbody className="divide-y divide-[#E2E8F0] bg-white">
+                                {data && data.hearings.length > 0 ? (
+                                    data.hearings.map((h, index) => (
+                                        <tr 
+                                            key={index} 
+                                            className="hover:bg-[#F8FAFC] transition-colors duration-150"
+                                        >
+                                            <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">
+                                                <div className="bg-[#F1F5F9] px-3 py-1.5 rounded-lg inline-block text-center border border-[#E2E8F0]">
+                                                    {h.date}
+                                                </div>
                                             </td>
+                                            <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">{h.case_title}</td>
+                                            <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{h.court}</td>
+                                            <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{h.advocate_name}</td>
+                                            <td className="p-4 text-sm font-bold text-[#2563EB] whitespace-nowrap">{h.time}</td>
                                         </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="5" className="p-8 text-center text-sm font-medium text-[#64748B]">
+                                            No upcoming hearings found.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <div className="col-span-12 lg:col-span-4 bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 md:p-6">
-                    <h2 className="text-lg md:text-xl font-semibold mb-4 md:mb-6 text-[#0F172A]">
-                        Recent Documents
-                    </h2>
+                <div className="col-span-12 lg:col-span-4 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
+                    <div className="flex justify-between items-center mb-8">
+                        <h2 className="text-2xl font-extrabold text-[#0F172A]">
+                            Recent Documents
+                        </h2>
+                    </div>
 
-                    <div className="space-y-2 md:space-y-3">
+                    <div className="space-y-4 flex-1 overflow-y-auto">
                         {data && data.documents.length > 0 ? (
                             data.documents.map((doc, index) => (
                                 <div
                                     key={index}
-                                    className="flex items-center justify-between p-3 rounded-lg hover:bg-[#F8FAFC] border border-transparent hover:border-[#E2E8F0] transition-all duration-200 cursor-pointer"
+                                    className="flex items-center justify-between p-4 rounded-2xl bg-[#F8FAFC] hover:bg-white border border-transparent hover:border-[#E2E8F0] hover:shadow-md transition-all duration-300 cursor-pointer group"
                                 >
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <FileText className="w-5 h-5 text-[#64748B] shrink-0" />
-                                        <span className="truncate text-sm text-[#1E293B]">{doc.filename}</span>
+                                    <div className="flex items-center gap-4 min-w-0">
+                                        <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                            <FileText className="w-5 h-5" />
+                                        </div>
+                                        <span className="truncate text-sm font-bold text-[#1E293B] group-hover:text-[#2563EB] transition-colors">{doc.filename}</span>
                                     </div>
 
-                                    <button className="font-medium text-sm text-[#2563EB] hover:text-[#1d4ed8] ml-2 shrink-0 transition-colors duration-150">
+                                    <button className="font-bold text-xs uppercase tracking-wider text-[#2563EB] hover:text-[#1d4ed8] ml-3 shrink-0 bg-blue-50 px-3 py-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-x-2 group-hover:translate-x-0">
                                         View
                                     </button>
                                 </div>
                             ))
                         ) : (
-                            <p className="text-sm text-[#64748B] p-2">No recent documents.</p>
+                            <p className="text-sm font-medium text-[#64748B] text-center p-8 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">No recent documents.</p>
                         )}
                     </div>
                 </div>

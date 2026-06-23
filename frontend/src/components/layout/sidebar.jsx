@@ -37,30 +37,39 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
   const [user, setUser] = useState(null);
   const [customPermissions, setCustomPermissions] = useState({});
   const [rolePermissions, setRolePermissions] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [profileImage, setProfileImage] = useState(null);
 
   useEffect(() => {
     const loggedIn = getLoggedInUser();
     setUser(loggedIn);
     setIsOpen(false);
+    
+    const savedProfile = localStorage.getItem("advocate_profile");
+    if (savedProfile) {
+      try {
+        const parsed = JSON.parse(savedProfile);
+        if (parsed.profileImage) {
+          setProfileImage(parsed.profileImage);
+        }
+      } catch (e) {}
+    }
     if (pathname?.startsWith("/permissions")) {
       setUserRolesOpen(true);
     }
 
     if (loggedIn && loggedIn.id) {
-      // Fetch details including customPermissions
-      fetch(`http://localhost:8000/permissions/users/${loggedIn.id}`)
-        .then((res) => res.json())
-        .then((data) => {
-          setCustomPermissions(data.customPermissions || {});
+      Promise.all([
+        fetch(`http://localhost:8000/permissions/users/${loggedIn.id}`).then((res) => {
+          return res.status === 200 ? res.json() : { customPermissions: {} };
+        }),
+        fetch("http://localhost:8000/permissions").then((res) => {
+          return res.status === 200 ? res.json() : {};
         })
-        .catch((err) => {
-          console.error("Error fetching user permissions:", err);
-        });
-
-      // Fetch permissions matrix
-      fetch("http://localhost:8000/permissions")
-        .then((res) => res.json())
-        .then((matrix) => {
+      ])
+        .then(([userData, matrix]) => {
+          setCustomPermissions(userData.customPermissions || {});
+          
           const roleKey = Object.keys(matrix).find(
             (k) => k.toLowerCase().replace(/\s+/g, "") === loggedIn.role.toLowerCase().replace(/\s+/g, "")
           );
@@ -71,8 +80,13 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
           }
         })
         .catch((err) => {
-          console.error("Error fetching permissions matrix:", err);
+          console.error("Error loading permissions in sidebar:", err);
+        })
+        .finally(() => {
+          setLoading(false);
         });
+    } else {
+      setLoading(false);
     }
   }, [pathname]);
 
@@ -91,31 +105,12 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
       return !!rolePermissions[moduleKey].view;
     }
 
-    return true;
+    return false; // fallback
   };
 
   const isItemAllowedForRole = (item, roleName) => {
-    const normRole = (roleName || "").toLowerCase().replace(/\s+/g, "");
-    
-    // Filter Dashboard by role
-    if (item.moduleKey === "Dashboard") {
-      if (normRole.includes("client")) return item.path === "/client-dashboard";
-      if (normRole.includes("junior")) return item.path === "/junior-dashboard";
-      if (normRole.includes("senior") || normRole.includes("admin")) {
-        return item.path === "/" || item.path === "/junior-dashboard";
-      }
-      return item.path === "/";
-    }
-    
-    // Filter Calendar by role
-    if (item.moduleKey === "Calendar") {
-      if (normRole.includes("junior")) return item.path === "/junior-calendar";
-      if (normRole.includes("senior") || normRole.includes("admin")) {
-        return item.path === "/calendar" || item.path === "/junior-calendar";
-      }
-      return item.path === "/calendar";
-    }
-    
+    // We now rely purely on the dynamic database permissions.
+    // If an admin grants view access to a module, it should render regardless of hardcoded role names.
     return true;
   };
 
@@ -139,9 +134,9 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
     {
       title: "Junior Advocate",
       items: [
-        { name: "Dashboard", path: "/junior-dashboard", icon: Home, moduleKey: "Dashboard" },
+        { name: "Dashboard", path: "/junior-dashboard", icon: Home, moduleKey: "Junior Dashboard" },
         { name: "Assigned Cases", path: "/assigned-cases", icon: Folder, moduleKey: "Assigned Cases" },
-        { name: "Calendar", path: "/junior-calendar", icon: Calendar, moduleKey: "Calendar" },
+        { name: "Calendar", path: "/junior-calendar", icon: Calendar, moduleKey: "Junior Calendar" },
       ],
     },
   ];
@@ -151,7 +146,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
       title: "Client Section",
       moduleKey: "Client Section",
       items: [
-        { name: "Dashboard", path: "/client-dashboard", icon: Home, moduleKey: "Dashboard" },
+        { name: "Dashboard", path: "/client-dashboard", icon: Home, moduleKey: "Client Dashboard" },
         { name: "Case Discussion", path: "/client-consultation", icon: BookOpen, moduleKey: "Consultation" },
         { name: "Case Tracking", path: "/client-case-tracking", icon: Folder, moduleKey: "Case Tracking" },
         { name: "Documents", path: "/client-documents", icon: Settings, moduleKey: "Documents" },
@@ -185,10 +180,6 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
 
     // Filter menu items by view permissions and role relevance
     filteredMenuItems = baseMenu.map((section) => {
-      if (section.moduleKey && !hasViewPermission(section.moduleKey)) {
-        return null;
-      }
-
       const filteredItems = section.items
         .map((item) => {
           if (item.isDropdown) {
@@ -198,7 +189,9 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
             if (filteredSubmenu.length === 0) return null;
             return { ...item, submenu: filteredSubmenu };
           }
-          if (!hasViewPermission(item.moduleKey) || !isItemAllowedForRole(item, user.role)) return null;
+          const hasItemViewPerm = hasViewPermission(item.moduleKey);
+
+          if (!hasItemViewPerm || !isItemAllowedForRole(item, user.role)) return null;
           return item;
         })
         .filter(Boolean);
@@ -207,6 +200,24 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
     })
     .filter(Boolean)
     .filter((section) => section.items.length > 0);
+  }
+
+  if (loading) {
+    return (
+      <aside className={`fixed top-0 left-0 h-screen bg-white border-r border-[#E2E8F0] z-50 ${isCollapsed ? "w-[72px]" : "w-[280px]"}`}>
+        <div className="flex flex-col h-full">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-[#E2E8F0]">
+            <div className="flex items-center gap-2">
+              <Scale size={22} className="text-[#2563EB]" />
+              <h2 className={`text-xl font-bold tracking-tight ${isCollapsed ? "hidden" : "block"} text-[#0F172A]`}>LEGAL-TECH</h2>
+            </div>
+          </div>
+          <div className="flex-1 px-4 py-5 flex items-center justify-center text-slate-400">
+            <span className="animate-pulse text-xs">Loading...</span>
+          </div>
+        </div>
+      </aside>
+    );
   }
 
   return (
@@ -335,13 +346,17 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
             href="/profile-management"
             className="px-6 py-5 border-t border-[#E2E8F0] flex items-center hover:bg-[#F8FAFC] transition"
           >
-            <Image
-              src="https://i.pravatar.cc/150?img=12"
-              alt="Profile"
-              width={36}
-              height={36}
-              className="rounded-full object-cover ring-2 ring-[#E2E8F0]"
-            />
+            {user ? (
+              <img
+                src={profileImage || `https://ui-avatars.com/api/?name=${user.firstName || user.username}&background=2563EB&color=fff&rounded=true&bold=true&size=150`}
+                alt="Profile"
+                className="w-9 h-9 rounded-full object-cover ring-2 ring-blue-100 shadow-sm flex-shrink-0 transition-transform group-hover:scale-105"
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold ring-2 ring-slate-200 flex-shrink-0">
+                ?
+              </div>
+            )}
 
             {!isCollapsed && (
               <div className="ml-3 text-left">

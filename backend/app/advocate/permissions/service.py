@@ -12,15 +12,17 @@ from .schemas import RoleCreate, RoleUpdate, UserProvision, UserUpdate
 # All system modules that can have permissions configured
 BASE_MODULES = [
     "Dashboard",
+    "Junior Dashboard",
+    "Client Dashboard",
     "Law Firm Management",
     "Client Management",
     "Case Management",
     "Consultations",
     "Finance Management",
     "Calendar",
+    "Junior Calendar",
     "Profile",
     "Assigned Cases",
-    "Client Section",
     "Consultation",
     "Case Tracking",
     "Documents",
@@ -35,15 +37,17 @@ BASE_MODULES = [
 DEFAULT_ROLE_PERMISSIONS = {
     "senioradvocate": {
         "Dashboard": {"view": True, "add": True, "edit": True, "delete": True},
+        "Junior Dashboard": {"view": True, "add": True, "edit": True, "delete": True},
+        "Client Dashboard": {"view": True, "add": True, "edit": True, "delete": True},
         "Law Firm Management": {"view": True, "add": True, "edit": True, "delete": True},
         "Client Management": {"view": True, "add": True, "edit": True, "delete": True},
         "Case Management": {"view": True, "add": True, "edit": True, "delete": True},
         "Consultations": {"view": True, "add": True, "edit": True, "delete": True},
         "Finance Management": {"view": True, "add": True, "edit": True, "delete": True},
         "Calendar": {"view": True, "add": True, "edit": True, "delete": True},
+        "Junior Calendar": {"view": True, "add": True, "edit": True, "delete": True},
         "Profile": {"view": True, "add": True, "edit": True, "delete": True},
         "Assigned Cases": {"view": True, "add": True, "edit": True, "delete": True},
-        "Client Section": {"view": True, "add": True, "edit": True, "delete": True},
         "Consultation": {"view": True, "add": True, "edit": True, "delete": True},
         "Case Tracking": {"view": True, "add": True, "edit": True, "delete": True},
         "Documents": {"view": True, "add": True, "edit": True, "delete": True},
@@ -54,16 +58,18 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Permissions": {"view": True, "add": True, "edit": True, "delete": True},
     },
     "junioradvocate": {
-        "Dashboard": {"view": True, "add": False, "edit": False, "delete": False},
+        "Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
+        "Junior Dashboard": {"view": True, "add": False, "edit": False, "delete": False},
+        "Client Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
         "Law Firm Management": {"view": True, "add": False, "edit": False, "delete": False},
         "Client Management": {"view": True, "add": True, "edit": True, "delete": False},
         "Case Management": {"view": True, "add": True, "edit": True, "delete": False},
         "Consultations": {"view": True, "add": True, "edit": False, "delete": False},
         "Finance Management": {"view": False, "add": False, "edit": False, "delete": False},
-        "Calendar": {"view": True, "add": True, "edit": True, "delete": False},
+        "Calendar": {"view": False, "add": False, "edit": False, "delete": False},
+        "Junior Calendar": {"view": True, "add": True, "edit": True, "delete": False},
         "Profile": {"view": True, "add": False, "edit": True, "delete": False},
         "Assigned Cases": {"view": True, "add": False, "edit": False, "delete": False},
-        "Client Section": {"view": False, "add": False, "edit": False, "delete": False},
         "Consultation": {"view": True, "add": False, "edit": False, "delete": False},
         "Case Tracking": {"view": True, "add": False, "edit": False, "delete": False},
         "Documents": {"view": True, "add": False, "edit": False, "delete": False},
@@ -74,16 +80,18 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Permissions": {"view": False, "add": False, "edit": False, "delete": False},
     },
     "client": {
-        "Dashboard": {"view": True, "add": False, "edit": False, "delete": False},
+        "Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
+        "Junior Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
+        "Client Dashboard": {"view": True, "add": False, "edit": False, "delete": False},
         "Law Firm Management": {"view": False, "add": False, "edit": False, "delete": False},
         "Client Management": {"view": False, "add": False, "edit": False, "delete": False},
         "Case Management": {"view": False, "add": False, "edit": False, "delete": False},
         "Consultations": {"view": False, "add": False, "edit": False, "delete": False},
         "Finance Management": {"view": False, "add": False, "edit": False, "delete": False},
-        "Calendar": {"view": True, "add": False, "edit": False, "delete": False},
+        "Calendar": {"view": False, "add": False, "edit": False, "delete": False},
+        "Junior Calendar": {"view": False, "add": False, "edit": False, "delete": False},
         "Profile": {"view": True, "add": False, "edit": True, "delete": False},
         "Assigned Cases": {"view": False, "add": False, "edit": False, "delete": False},
-        "Client Section": {"view": True, "add": False, "edit": False, "delete": False},
         "Consultation": {"view": True, "add": True, "edit": False, "delete": False},
         "Case Tracking": {"view": True, "add": False, "edit": False, "delete": False},
         "Documents": {"view": True, "add": False, "edit": False, "delete": False},
@@ -462,7 +470,7 @@ def update_user(
             )
         db_user.email = data.email
 
-    if data.tempPassword is not None:
+    if data.tempPassword is not None and data.tempPassword.strip() != "":
         db_user.temp_password = data.tempPassword
         db_user.password = hash_password(
             data.tempPassword
