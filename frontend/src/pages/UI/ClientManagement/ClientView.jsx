@@ -18,8 +18,11 @@ import {
   Briefcase,
   Plus
 } from "lucide-react";
+import { usePermissions } from "@/utils/usePermissions";
+
 export default function ClientView() {
   const router = useRouter();
+  const { hasPermission } = usePermissions();
   const [clients, setClients] = useState([]);
   const fetchClients = async () => {
     try {
@@ -158,26 +161,30 @@ export default function ClientView() {
                         >
                           History
                         </button>
-                        <button
-                          onClick={() => {
-                            localStorage.setItem("clientData", JSON.stringify({
-                              clientId: client.clientId,
-                              fullName: client.clientName,
-                              email: client.emailId,
-                              phone: client.contactNumber
-                            }));
-                            router.push("/client-management/edit-client");
-                          }}
-                          className="px-2.5 py-1 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded text-xs font-semibold cursor-pointer transition"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(client.clientId)}
-                          className="px-2.5 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs font-semibold cursor-pointer transition"
-                        >
-                          Delete
-                        </button>
+                        {hasPermission("Client Management", "edit") && (
+                          <button
+                            onClick={() => {
+                              localStorage.setItem("clientData", JSON.stringify({
+                                clientId: client.clientId,
+                                fullName: client.clientName,
+                                email: client.emailId,
+                                phone: client.contactNumber
+                              }));
+                              router.push("/client-management/edit-client");
+                            }}
+                            className="px-2.5 py-1 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded text-xs font-semibold cursor-pointer transition"
+                          >
+                            Edit
+                          </button>
+                        )}
+                        {hasPermission("Client Management", "delete") && (
+                          <button
+                            onClick={() => handleDelete(client.clientId)}
+                            className="px-2.5 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs font-semibold cursor-pointer transition"
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

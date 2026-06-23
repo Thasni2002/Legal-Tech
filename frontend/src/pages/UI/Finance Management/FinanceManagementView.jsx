@@ -4,8 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import { History } from "lucide-react";
 import { jsPDF } from "jspdf";
 import InvoiceHistoryView from "./InvoiceHistoryView";
+import { usePermissions } from "@/utils/usePermissions";
+
 
 export default function CourtFeeCalView() {
+  const { hasPermission } = usePermissions();
 
 
   // Dynamic list of invoices and stats from the backend
@@ -83,7 +86,9 @@ export default function CourtFeeCalView() {
   }, []);
 
   useEffect(() => {
-    fetchInvoicesAndStats();
+    Promise.resolve().then(() => {
+      fetchInvoicesAndStats();
+    });
   }, [fetchInvoicesAndStats]);
   const handleGenerateInvoice = async () => {
     if (!clientName) {
@@ -425,6 +430,7 @@ export default function CourtFeeCalView() {
         handleDownloadInvoicePDF={handleDownloadInvoicePDF}
         handleDeleteInvoice={handleDeleteInvoice}
         onBack={() => setIsHistoryOpen(false)}
+        hasPermission={hasPermission}
       />
     );
   }
@@ -814,14 +820,16 @@ export default function CourtFeeCalView() {
             ).toFixed(2)}
           </span>
         </div>
-        <div className="mt-6 flex flex-wrap gap-3 justify-end">
-          <button
-            onClick={handleGenerateInvoice}
-            className="px-4 py-2 bg-[#16A34A] text-white rounded-lg hover:bg-[#15803d] transition-colors"
-          >
-            Generate Invoice
-          </button>
-        </div>
+        {hasPermission("Finance Management", "add") && (
+          <div className="mt-6 flex flex-wrap gap-3 justify-end">
+            <button
+              onClick={handleGenerateInvoice}
+              className="px-4 py-2 bg-[#16A34A] text-white rounded-lg hover:bg-[#15803d] transition-colors"
+            >
+              Generate Invoice
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Actions */}
