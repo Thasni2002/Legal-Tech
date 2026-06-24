@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Calendar as CalendarIcon,
+  X,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -12,6 +14,7 @@ import {
   AlertCircle,
   Search,
   Filter,
+  Briefcase,
 } from "lucide-react";
 import useModulePermission from "@/utils/useModulePermission";
 
@@ -165,60 +168,46 @@ const getStatusColor = (status) => {
 export default function JuniorCalendarView() {
   const { perms, loading } = useModulePermission("Junior Calendar");
 
-  // --- Hearings State ---
-  const hearings = useMemo(() => {
-    const today = new Date();
-    const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth(); // 0-indexed
+  // --- Dynamic Hearings State ---
+  const [hearings, setHearings] = useState([]);
 
-    const pad = (n) => String(n).padStart(2, "0");
-    const formatDateStr = (day) =>
-      `${currentYear}-${pad(currentMonth + 1)}-${pad(day)}`;
-
-    return [
-      {
-        id: "1",
-        title: "Property Dispute",
-        date: formatDateStr(22),
-        time: "10:30",
-        type: "Civil",
-        caseNo: "CS/890/2023",
-        court: "Civil Court, Prayagraj",
-        senior: "Adv. Rahul Sharma",
-        status: "In Progress",
-        notes: "Hearing for property division and injunction request.",
-      },
-      {
-        id: "2",
-        title: "Bail Application",
-        date: formatDateStr(24),
-        time: "14:00",
-        type: "Criminal",
-        caseNo: "CR/456/2023",
-        court: "High Court, Lucknow",
-        senior: "Adv. Rahul Sharma",
-        status: "Pending",
-        notes: "Arguments on regular bail application.",
-      },
-      {
-        id: "3",
-        title: "Family Settlement",
-        date: formatDateStr(25),
-        time: "11:00",
-        type: "Family",
-        caseNo: "FA/890/2024",
-        court: "Family Court, Kanpur",
-        senior: "Adv. Rahul Sharma",
-        status: "Completed",
-        notes: "Family settlement partition cross examination of the main witness.",
-      },
-    ];
+  useEffect(() => {
+    fetchAssignedCases();
   }, []);
+
+  const fetchAssignedCases = async () => {
+    try {
+      const res = await fetch("http://localhost:8000/lawfirm-management/assigned-cases");
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        const mappedHearings = data
+          .filter((c) => c.due_date) // Only cases with a due_date
+          .map((c) => ({
+            id: String(c.id),
+            title: c.case_title || "Untitled Case",
+            date: c.due_date ? c.due_date.split("T")[0] : "",
+            time: "10:00", // Default time as requested
+            type: c.practice_area || "Civil",
+            caseNo: c.case_number || "Unknown",
+            court: "Assigned Court", // court not directly available in assigned cases model
+            senior: c.advocate_name || "Unknown",
+            status: c.status || "Pending",
+            notes: c.assignment_notes || "",
+          }));
+        setHearings(mappedHearings);
+      }
+    } catch (error) {
+      console.error("Error fetching assigned cases:", error);
+    }
+  };
 
   // --- States ---
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState("month"); // "month" | "week" | "day" | "agenda"
   const [selectedEventId, setSelectedEventId] = useState(null);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   // Search & Filter state for Agenda View
   const [searchQuery, setSearchQuery] = useState("");
@@ -554,6 +543,7 @@ export default function JuniorCalendarView() {
                         onClick={() => {
                           setSelectedDate(date);
                           setSelectedEventId(dayEvents[0]?.id || null);
+                          if (dayEvents[0]?.id) setShowViewModal(true);
                         }}
                         className={`min-h-[110px] p-2 hover:bg-[#F8FAFC]/50 transition cursor-pointer flex flex-col justify-between group ${
                           isCurrentMonth ? "bg-white" : "bg-[#F8FAFC]/30 text-[#64748B]"
@@ -582,6 +572,7 @@ export default function JuniorCalendarView() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedEventId(evt.id);
+                                setShowViewModal(true);
                               }}
                               className={`px-2 py-1 text-[10px] md:text-xs rounded-lg border flex items-center justify-between font-medium cursor-pointer transition ${getTypeColor(
                                 evt.type
@@ -676,7 +667,7 @@ export default function JuniorCalendarView() {
                           .map((evt) => (
                             <div
                               key={evt.id}
-                              onClick={() => setSelectedEventId(evt.id)}
+                              onClick={() => { setSelectedEventId(evt.id); setShowViewModal(true); }}
                               className="bg-white p-3 rounded-2xl border border-[#E2E8F0] flex items-center justify-between shadow-sm cursor-pointer hover:border-slate-300 transition"
                             >
                               <div className="flex gap-2.5 items-center min-w-0">
@@ -1225,7 +1216,118 @@ export default function JuniorCalendarView() {
 
         </div>
 
-      </div>
+      {/* --- VIEW EVENT MODAL --- */}
+      {showViewModal && selectedEventDetails && mounted && typeof document !== "undefined" && createPortal(
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fade-in"
+          onClick={() => setShowViewModal(false)}
+        >
+          <div
+            className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-6 border-b border-[#F1F5F9] bg-gradient-to-r from-[#2563EB] to-[#1d4ed8]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                  <FileText size={20} className="text-white" />
+                </div>
+                <div>
+                  <h2 className="text-white font-bold text-xl leading-tight">
+                    {selectedEventDetails.title}
+                  </h2>
+                  <p className="text-white/70 text-xs mt-0.5 font-mono uppercase tracking-wider">
+                    Case #{selectedEventDetails.caseNo || "N/A"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowViewModal(false)}
+                  className="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white transition"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              <div className="flex items-center gap-3">
+                <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${getStatusColor(selectedEventDetails.status)}`}>
+                  {selectedEventDetails.status}
+                </span>
+                <span className="text-xs text-[#94A3B8] font-medium">
+                  {selectedEventDetails.type}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-[#F8FAFC] rounded-2xl p-5 border border-[#F1F5F9] space-y-4">
+                  <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Schedule Details</h4>
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 w-8 h-8 rounded-lg bg-[#F1F5F9] flex items-center justify-center text-[#2563EB] flex-shrink-0">
+                      <Clock size={14} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">Date & Time</p>
+                      <p className="text-sm font-semibold text-[#0F172A] mt-0.5">
+                        {formatFullDate(selectedEventDetails.date)} at {formatTime(selectedEventDetails.time)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 w-8 h-8 rounded-lg bg-[#F1F5F9] flex items-center justify-center text-[#2563EB] flex-shrink-0">
+                      <MapPin size={14} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">Court / Venue</p>
+                      <p className="text-sm font-semibold text-[#0F172A] mt-0.5">{selectedEventDetails.court || "Not Specified"}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-[#F8FAFC] rounded-2xl p-5 border border-[#F1F5F9] space-y-4">
+                   <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Case Details</h4>
+                   <div className="flex items-start gap-3">
+                    <div className="mt-0.5 w-8 h-8 rounded-lg bg-[#F1F5F9] flex items-center justify-center text-[#2563EB] flex-shrink-0">
+                      <Briefcase size={14} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">Case Type</p>
+                      <p className="text-sm font-semibold text-[#0F172A] mt-0.5">{selectedEventDetails.type}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {selectedEventDetails.notes && (
+                <div className="bg-[#FFFBEB] border border-amber-100 rounded-2xl p-5">
+                  <h4 className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <FileText size={13} /> Agenda Notes
+                  </h4>
+                  <p className="text-sm text-[#475569] leading-relaxed">
+                    {selectedEventDetails.notes}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-5 border-t border-[#F1F5F9] bg-[#F8FAFC] flex justify-between items-center">
+              <div className="text-xs text-[#94A3B8] font-medium">
+                Event ID: <span className="font-mono text-[#64748B]">{selectedEventDetails.id}</span>
+              </div>
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="px-6 py-2.5 bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+    </div>
   )
 }
 

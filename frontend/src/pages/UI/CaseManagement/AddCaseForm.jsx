@@ -70,7 +70,7 @@ const editId = params?.id;
   async function fetchCaseForEdit(id) {
     setLoadingEdit(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/case-management/${id}`);
+      const res = await fetch(`http://localhost:8000/case-management/${id}`);
       if (!res.ok) throw new Error("Case not found");
       const data = await res.json();
       setFormData({
@@ -259,8 +259,8 @@ const handleSubmit = async (e) => {
 
   try {
     const url = isEditMode
-      ? `http://127.0.0.1:8000/case-management/${editId}`
-      : "http://127.0.0.1:8000/case-management/";
+      ? `http://localhost:8000/case-management/${editId}`
+      : "http://localhost:8000/case-management/";
 
     const method = isEditMode ? "PUT" : "POST";
 

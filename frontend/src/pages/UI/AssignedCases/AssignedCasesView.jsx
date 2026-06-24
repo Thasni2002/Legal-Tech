@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Eye,
   FileText,
@@ -12,6 +13,7 @@ import {
   Briefcase,
   File,
   Gavel,
+  Trash2,
 } from "lucide-react";
 import useModulePermission from "@/utils/useModulePermission";
 
@@ -59,6 +61,8 @@ const [cases, setCases] = useState([]);
   const [selectedCase, setSelectedCase] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [modalViewMode, setModalViewMode] = useState("full");
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // No view access
   if (!loading && !perms.view) {
@@ -96,6 +100,26 @@ const [cases, setCases] = useState([]);
     }
   };
 
+  const handleDelete = async (id) => {
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`http://localhost:8000/lawfirm-management/assigned-cases/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setCases((prev) => prev.filter((c) => c.id !== id));
+        setDeleteConfirm(null);
+      } else {
+        alert("Failed to delete case.");
+      }
+    } catch (e) {
+      console.error("Error deleting case:", e);
+      alert("Error deleting case.");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
 
 useEffect(() => {
   fetchAssignedCases();
@@ -104,11 +128,12 @@ useEffect(() => {
 const fetchAssignedCases = async () => {
   try {
     const res = await fetch(
-      "http://127.0.0.1:8000/lawfirm-management/assigned-cases"
+      "http://localhost:8000/lawfirm-management/assigned-cases"
     );
     const data = await res.json();
 
     const formattedCases = data.map((item) => ({
+      id: item.id,
       title: item.case_title,
       caseNo: item.case_number,
       client: item.advocate_name,
@@ -283,6 +308,17 @@ const fetchAssignedCases = async () => {
                             <FileText size={14} />
                             Docs
                           </button>
+
+                          {perms.delete && (
+                            <button
+                              onClick={() => setDeleteConfirm(item.id)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors cursor-pointer"
+                              title="Delete Case"
+                            >
+                              <Trash2 size={14} />
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -303,8 +339,8 @@ const fetchAssignedCases = async () => {
         </div>
 
       {/* Case Details Modal */}
-      {selectedCase && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {selectedCase && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           {/* Backdrop */}
           <div
             className="fixed inset-0 bg-[#F8FAFC]/60 backdrop-blur-sm transition-opacity"
@@ -521,7 +557,40 @@ return (
 
           </div>
         </div>
-      )}
+      , document.body)}
+
+      {/* ══════════════════════════════════════════════
+          DELETE CONFIRM DIALOG
+      ══════════════════════════════════════════════ */}
+      {deleteConfirm && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
+          <div className="relative bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl z-10 text-center">
+            <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={24} className="text-red-500" />
+            </div>
+            <h3 className="text-lg font-bold text-[#0F172A] mb-2">Delete Assigned Case?</h3>
+            <p className="text-sm text-[#64748B] mb-6">
+              This action cannot be undone. The case assignment will be permanently removed.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="flex-1 py-2.5 rounded-xl border border-[#E2E8F0] text-[#64748B] font-semibold text-sm hover:bg-[#F8FAFC] transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(deleteConfirm)}
+                disabled={deleteLoading}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm transition disabled:opacity-70"
+              >
+                {deleteLoading ? "Deleting..." : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      , document.body)}
     </div>
   );
 }
