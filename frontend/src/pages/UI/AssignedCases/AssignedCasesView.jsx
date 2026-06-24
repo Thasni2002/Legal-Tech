@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Eye,
   FileText,
@@ -16,48 +16,7 @@ import {
 import useModulePermission from "@/utils/useModulePermission";
 
 
-const assignedCases = [
-  {
-    title: "State of U.P. vs. Rajesh Kumar",
-    caseNo: "CR/1234/2023",
-    client: "Rajesh Kumar",
-    court: "CJM Court, Prayagraj",
-    hearing: "28 May 2026",
-    status: "Active",
-    documents: [
-      { name: "Charge_Sheet_Rajesh.pdf", size: "2.4 MB", type: "pdf", content: "IN THE CJM COURT, PRAYAGRAJ\n\nSTATE OF U.P.\nVS.\nRAJESH KUMAR\n\nCHARGE SHEET\nFiled under Section 302 of the IPC.\n\nAccused Rajesh Kumar stands charged with committing the offense of culpable homicide amounting to murder on the night of November 14, 2023. The prosecution submits that the circumstantial evidence and witness reports place the accused at the scene of crime with clear motive.\n\nKey witnesses scheduled for examination:\n1. Inspector Suresh Mishra (Investigating Officer)\n2. Dr. Ramesh Gupta (Medical Examiner)\n\nPrepared by District Prosecution Office." },
-      { name: "Bail_Application_Filed.pdf", size: "1.1 MB", type: "pdf", content: "IN THE CJM COURT, PRAYAGRAJ\n\nIN THE MATTER OF BAIL APPLICATION FOR RAJESH KUMAR\n\nMay it please the court:\nThe applicant Rajesh Kumar submits this bail application under Section 439 of CrPC. The applicant has been in judicial custody since November 20, 2023. It is respectfully submitted that:\n1. The applicant has a clean record and no prior criminal history.\n2. The applicant is willing to cooperate with the investigations and comply with all court restrictions.\n3. There is no risk of the applicant absconding or tampering with witness testimony.\n\nHence, it is prayed that the applicant be released on bail." },
-      { name: "Witness_1_Statement.pdf", size: "850 KB", type: "pdf", content: "STATEMENT OF WITNESS NO. 1\n(Under Section 161 of CrPC)\n\nName: Amit Singh\nAge: 34\nOccupation: Shopkeeper\n\nStatement:\n'On the night of Nov 14, 2023, around 10:15 PM, I was closing my shop near the town square. I saw a person matching Rajesh Kumar's height and clothing walking hastily towards the victim's residential lane. He looked agitated. I cannot confirm if he was carrying any object, but I recognize him as the accused who lives in the neighborhood.'" }
-    ],
-    notes: "Client has provided the primary alibi witnesses. Need to prepare cross-examination for Prosecution Witness 1 and verify timestamps from local CCTV."
-  },
-  {
-    title: "ABC Pvt. Ltd. vs. XYZ Corp.",
-    caseNo: "CS/890/2023",
-    client: "ABC Pvt. Ltd.",
-    court: "High Court",
-    hearing: "04 Jun 2026",
-    status: "Active",
-    documents: [
-      { name: "Commercial_Agreement.pdf", size: "5.2 MB", type: "pdf", content: "COMMERCIAL AGREEMENT\n\nBetween:\nABC Private Limited (Plaintiff)\nAnd:\nXYZ Corporation (Defendant)\n\nDate: 12th October 2021\n\nSubject: Dispute pertains to Clause 14 (Force Majeure) and outstanding rentals for the commercial space at Tech Plaza. Plaintiff claims arrears of INR 45,00,000 for the pandemic period. Defendant invokes Force Majeure claiming complete shutdown of corporate offices." },
-      { name: "Written_Statement_XYZ.pdf", size: "1.8 MB", type: "pdf", content: "IN THE HIGH COURT OF JUDICATURE\n\nABC PVT. LTD. VS. XYZ CORP.\n\nWRITTEN STATEMENT OF THE DEFENDANT\n\nXYZ Corp. denies all allegations of breach and willful default. The defendant asserts that:\n1. The space was completely inaccessible due to government lockdowns, triggering Clause 14 of the Commercial Agreement.\n2. ABC Pvt. Ltd. failed to provide essential maintenance during the lockdown period, breaching its own landlord covenants.\n\nTherefore, the defendant prays for dismissal of the suit with costs." }
-    ],
-    notes: "Arbitration clause is invoked by respondent. Next hearing scheduled for oral arguments on interim relief request. Check recent SC judgments on arbitration scope during lockdowns."
-  },
-  {
-    title: "Neha Singh vs. RTO Dept.",
-    caseNo: "MA/334/2023",
-    client: "Neha Singh",
-    court: "Motor Accident Tribunal",
-    hearing: "12 Jun 2026",
-    status: "To Do",
-    documents: [
-      { name: "FIR_Accident_Report.pdf", size: "1.2 MB", type: "pdf", content: "FIRST INFORMATION REPORT\n\nFIR No: 442/2023\nDate of Incident: 03/11/2023\nTime: 14:30 Hours\nLocation: Sector 62 Crossing\n\nDetails:\nA collision was reported between a private hatchback (RTO registration DL-3C-XX-XXXX) driven by Neha Singh and a public bus. Eye-witness accounts indicate that the bus ran a red light. Immediate transport of the driver to City Hospital was arranged." },
-      { name: "Medical_Certificate.pdf", size: "900 KB", type: "pdf", content: "MEDICAL CERTIFICATE & EVALUATION REPORT\n\nPatient Name: Neha Singh\nDate of Admission: 03/11/2023\nHospital: City Emergency Care\n\nInjuries Found:\n1. Fracture of left humerus requiring orthopedic intervention.\n2. Lacerations on face and shoulder.\n3. Mild concussion.\nDisability index: assessed at 15% temporary physical impairment." }
-    ],
-    notes: "Verify the insurance policy validity of the offending public bus. Request additional medical receipts for hospital stays and rehabilitation expenses."
-  },
-];
+
 
 const getStatusSelectClass = (status) => {
   switch (status) {
@@ -95,7 +54,7 @@ const getStatusBadgeClass = (status) => {
 
 export default function AssignedCasesView() {
   const { perms, loading } = useModulePermission("Assigned Cases");
-  const [cases, setCases] = useState(assignedCases);
+const [cases, setCases] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCase, setSelectedCase] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
@@ -137,6 +96,35 @@ export default function AssignedCasesView() {
     }
   };
 
+
+useEffect(() => {
+  fetchAssignedCases();
+}, []);
+
+const fetchAssignedCases = async () => {
+  try {
+    const res = await fetch(
+      "http://127.0.0.1:8000/lawfirm-management/assigned-cases"
+    );
+    const data = await res.json();
+
+    const formattedCases = data.map((item) => ({
+      title: item.case_title,
+      caseNo: item.case_number,
+      client: item.advocate_name,
+      court: item.practice_area,
+      hearing: item.due_date || "No hearing date",
+      status: item.status || "Active",
+      documents: item.assigned_documents || [],
+      notes: item.assignment_notes || "",
+    }));
+
+    setCases(formattedCases);
+  } catch (error) {
+    console.error("Error fetching assigned cases:", error);
+  }
+};
+
   const filteredCases = cases.filter((item) => {
     const query = searchQuery.toLowerCase();
     return (
@@ -168,7 +156,7 @@ export default function AssignedCasesView() {
               Total Assigned Cases
             </h3>
             <p className="text-3xl font-bold text-[#0F172A] mt-2">
-              12
+            {cases.length}
             </p>
           </div>
 
@@ -177,7 +165,7 @@ export default function AssignedCasesView() {
               Active Cases
             </h3>
             <p className="text-3xl font-bold text-[#16A34A] mt-2">
-              8
+             {cases.filter((c) => c.status === "Active").length}
             </p>
           </div>
 
@@ -186,7 +174,7 @@ export default function AssignedCasesView() {
               Upcoming Hearings
             </h3>
             <p className="text-3xl font-bold text-[#2563EB] mt-2">
-              4
+              {cases.filter((c) => c.hearing !== "No hearing date").length}
             </p>
           </div>
 
@@ -411,8 +399,8 @@ export default function AssignedCasesView() {
                   </h4>
                   <div className={`space-y-2 overflow-y-auto flex-1 pr-1 ${modalViewMode === "full" ? "max-h-[220px]" : ""}`}>
                     {selectedCase.documents?.map((doc, idx) => {
-                      const isSelected = selectedDocument?.name === doc.name;
-                      return (
+const isSelected = selectedDocument?.file === doc.file;
+return (
                         <div
                           key={idx}
                           className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
@@ -425,9 +413,9 @@ export default function AssignedCasesView() {
                             <FileText size={18} className={isSelected ? "text-[#2563EB]" : "text-[#64748B]"} />
                             <div>
                               <p className="text-xs font-bold truncate max-w-[160px] sm:max-w-[260px]">
-                                {doc.name}
+                                {doc.file}
                               </p>
-                              <p className="text-[10px] text-[#64748B] mt-0.5">{doc.size}</p>
+                              <p className="text-[10px] text-[#64748B] mt-0.5">{doc.documentType}</p>
                             </div>
                           </div>
                           
@@ -458,11 +446,11 @@ export default function AssignedCasesView() {
                     <div className="p-3.5 bg-[#F8FAFC]/80 border-b border-[#E2E8F0]/60 flex items-center justify-between text-xs font-bold text-[#64748B]">
                       <span className="truncate pr-4 flex items-center gap-1.5">
                         <File size={14} className="text-blue-500" />
-                        {selectedDocument.name}
+                       {selectedDocument.file}
                       </span>
                       <button
                         className="flex items-center gap-1 p-1 px-2.5 rounded-lg hover:bg-slate-200 text-[#64748B] hover:text-[#0F172A] transition-colors text-xxs font-bold uppercase tracking-wider bg-white/80 border border-[#E2E8F0]/40 cursor-pointer"
-                        onClick={() => alert(`Downloading ${selectedDocument.name}...`)}
+                        onClick={() =>alert(`Downloading ${selectedDocument.file}...`) }
                       >
                         <Download size={12} />
                         <span>Download</span>
@@ -485,12 +473,12 @@ export default function AssignedCasesView() {
 
                         {/* Document Title */}
                         <h5 className="font-bold text-center underline text-xs mb-3 uppercase text-[#0F172A]">
-                          {selectedDocument.name.replace('.pdf', '').replaceAll('_', ' ')}
+                          {selectedDocument.file?.replace('.pdf', '').replaceAll('_', ' ')}
                         </h5>
 
                         {/* Document Simulated Body Text */}
                         <div className="whitespace-pre-wrap flex-1 text-[#64748B] font-serif italic border-l border-[#E2E8F0] pl-2">
-                          {selectedDocument.content}
+                         Document Type: {selectedDocument.documentType}
                         </div>
 
                         {/* Bottom stamp marker */}

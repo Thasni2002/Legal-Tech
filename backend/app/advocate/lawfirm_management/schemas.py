@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 
 class AdvocateBase(BaseModel):
@@ -59,6 +59,7 @@ class AssignedCaseCreate(BaseModel):
     due_date: str
     assignment_notes: str
     status: Optional[str] = "Active"
+    assigned_documents: Optional[List[Dict[str, Any]]] = []
 
 
 class AssignedCaseOut(AssignedCaseCreate):

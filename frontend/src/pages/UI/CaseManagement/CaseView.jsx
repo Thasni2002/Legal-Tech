@@ -164,6 +164,7 @@ export default function CaseView() {
           due_date: "",
           assignment_notes: `Assigned from Case Management - Case #${selectedCase.case_no}`,
           status: "Active",
+          assigned_documents: selectedCase.documents || []
         }),
       });
       setAssignSuccess(true);
@@ -699,24 +700,21 @@ export default function CaseView() {
                       </table>
                     </div>
                   ) : (
-                    <div className="rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-8 text-center">
-                      <div className="w-14 h-14 rounded-2xl bg-white border border-[#E2E8F0] flex items-center justify-center mx-auto mb-4 shadow-sm">
-                        <FileText size={24} className="text-[#94A3B8]" />
-                      </div>
-                      <h4 className="font-bold text-[#0F172A] text-sm mb-1">No Documents Uploaded Yet</h4>
-                      <p className="text-[#64748B] text-xs max-w-xs mx-auto">
-                        Documents uploaded for this case will appear here. Use the Add Case form to attach documents.
-                      </p>
-                      <button
-                        onClick={() => {
-                          setIsModalOpen(false);
-                          router.push(`/case-management/edit/${selectedCase.id}`);
-                        }}
-                        className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded-xl transition"
-                      >
-                        <Plus size={13} /> Add Documents
-                      </button>
-                    </div>
+                 
+                 <div className="rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-8 text-center">
+  <div className="w-14 h-14 rounded-2xl bg-white border border-[#E2E8F0] flex items-center justify-center mx-auto mb-4 shadow-sm">
+    <FileText size={24} className="text-[#94A3B8]" />
+  </div>
+
+  <h4 className="font-bold text-[#0F172A] text-sm mb-1">
+    No Documents Found
+  </h4>
+
+  <p className="text-[#64748B] text-xs max-w-xs mx-auto">
+    This case has no uploaded documents.
+  </p>
+</div>
+                   
                   )}
                 </div>
               )}

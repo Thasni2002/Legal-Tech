@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+import json
 from .models import Advocate, AssignedCase
 from .schemas import AdvocateCreate, AdvocateUpdate
 
@@ -85,37 +86,56 @@ def create_assigned_case(
     db: Session,
     case_data
 ):
-    new_case = AssignedCase(
-        **case_data.model_dump()
+    case_dict = case_data.model_dump()
+
+    case_dict["assigned_documents"] = json.dumps(
+        case_dict.get("assigned_documents", [])
     )
+
+    new_case = AssignedCase(**case_dict)
 
     db.add(new_case)
     db.commit()
     db.refresh(new_case)
 
-    return new_case
+    new_case.assigned_documents = json.loads(
+        new_case.assigned_documents or "[]"
+    )
 
+    return new_case
 
 # Get all assigned cases
 def get_assigned_cases(
     db: Session
 ):
-    return db.query(
+    assigned_cases = db.query(
         AssignedCase
     ).all()
 
+    for case in assigned_cases:
+        case.assigned_documents = json.loads(
+            case.assigned_documents or "[]"
+        )
+
+    return assigned_cases
 
 # Get single assigned case
 def get_assigned_case_by_id(
     db: Session,
     case_id: int
 ):
-    return db.query(
+    assigned_case = db.query(
         AssignedCase
     ).filter(
         AssignedCase.id == case_id
     ).first()
 
+    if assigned_case:
+        assigned_case.assigned_documents = json.loads(
+            assigned_case.assigned_documents or "[]"
+        )
+
+    return assigned_case
 
 # Delete assigned case
 def delete_assigned_case(
@@ -153,10 +173,20 @@ def update_assigned_case(
     if not assigned_case:
         return None
 
-    for key, value in case_data.model_dump().items():
+    case_dict = case_data.model_dump()
+
+    case_dict["assigned_documents"] = json.dumps(
+        case_dict.get("assigned_documents", [])
+    )
+
+    for key, value in case_dict.items():
         setattr(assigned_case, key, value)
 
     db.commit()
     db.refresh(assigned_case)
+
+    assigned_case.assigned_documents = json.loads(
+        assigned_case.assigned_documents or "[]"
+    )
 
     return assigned_case
