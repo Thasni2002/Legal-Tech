@@ -105,7 +105,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
       return !!rolePermissions[moduleKey].view;
     }
 
-    return false; // fallback
+    return true; // fallback — show item if no permission rule is found
   };
 
   const isItemAllowedForRole = (item, roleName) => {

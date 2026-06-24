@@ -54,8 +54,12 @@ export default function LawfirmView() {
     const fetchAdvocates = async () => {
       try {
         const response = await fetch("http://localhost:8000/lawfirm-management/");
+        if (!response.ok) {
+          console.error("fetchAdvocates failed:", response.status);
+          setAdvocates([]);
+          return;
+        }
         const data = await response.json();
-
         setAdvocates(Array.isArray(data) ? data : data.data || []);
       } catch (error) {
         console.error("Error fetching advocates:", error);
@@ -70,11 +74,16 @@ export default function LawfirmView() {
         const response = await fetch(
           "http://localhost:8000/lawfirm-management/assigned-cases"
         );
-
+        if (!response.ok) {
+          console.error("fetchAssignedCases failed:", response.status);
+          setAssignedCases([]);
+          return;
+        }
         const data = await response.json();
-        setAssignedCases(data);
+        setAssignedCases(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Error fetching assigned cases:", error);
+        setAssignedCases([]);
       }
     };
 
