@@ -1,25 +1,23 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
-
+from datetime import date
 
 class AdvocateBase(BaseModel):
-    advocate_name: str = Field(alias="advocateName")
-    bar_council_id: str = Field(alias="barCouncilId")
-    enrollment_number: str = Field(alias="enrollmentNumber")
-    phone_number: str = Field(alias="phoneNumber")
-    email_address: str = Field(alias="emailAddress")
-    specialization: str
-    city: str
+    advocate_name: Optional[str] = Field(None, alias="advocateName")
+    bar_council_id: Optional[str] = Field(None, alias="barCouncilId")
+    enrollment_number: Optional[str] = Field(None, alias="enrollmentNumber")
+    phone_number: Optional[str] = Field(None, alias="phoneNumber")
+    email_address: Optional[str] = Field(None, alias="emailAddress")
+    specialization: Optional[str] = None
+    city: Optional[str] = None
     status: Optional[str] = "Active"
 
-    # New fields
-    date_of_birth: Optional[str] = Field(None, alias="dateOfBirth")
+    # Extended fields
     gender: Optional[str] = Field(None, alias="gender")
     aadhaar_number: Optional[str] = Field(None, alias="aadhaarNumber")
     pan_number: Optional[str] = Field(None, alias="panNumber")
     practice_area: Optional[str] = Field(None, alias="practiceArea")
     court_type: Optional[str] = Field(None, alias="courtType")
-    years_of_experience: Optional[str] = Field(None, alias="yearsOfExperience")
     languages_known: Optional[str] = Field(None, alias="languagesKnown")
     law_firm_name: Optional[str] = Field(None, alias="lawFirmName")
     state: Optional[str] = Field(None, alias="state")
@@ -27,7 +25,8 @@ class AdvocateBase(BaseModel):
     chambers_address: Optional[str] = Field(None, alias="chambersAddress")
     about: Optional[str] = Field(None, alias="about")
     profile_image: Optional[str] = Field(None, alias="profileImage")
-
+    date_of_birth: Optional[date] = Field(None, alias="dateOfBirth")
+    years_of_experience: Optional[int] = Field(None, alias="yearsOfExperience")
     class Config:
         populate_by_name = True
         from_attributes = True
@@ -51,13 +50,13 @@ class AdvocateOut(AdvocateBase):
 
 class AssignedCaseCreate(BaseModel):
     case_name: Optional[str] = None
-    case_number: str
-    case_title: str
-    advocate_name: str
-    practice_area: str
-    priority: str
-    due_date: str
-    assignment_notes: str
+    case_number: Optional[str] = None
+    case_title: Optional[str] = None
+    advocate_name: Optional[str] = None
+    practice_area: Optional[str] = None
+    priority: Optional[str] = None
+    due_date: Optional[str] = None
+    assignment_notes: Optional[str] = None
     status: Optional[str] = "Active"
     assigned_documents: Optional[List[Dict[str, Any]]] = []
 
