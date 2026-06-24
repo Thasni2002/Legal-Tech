@@ -18,6 +18,7 @@ class Invoice(Base):
     email = Column(String(150), nullable=True)
 
     # Payment Details
+    payment_method = Column(String(50), nullable=True)
     gpay_number = Column(String(50), nullable=True)
     upi_id = Column(String(100), nullable=True)
 

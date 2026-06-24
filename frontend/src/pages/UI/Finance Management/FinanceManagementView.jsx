@@ -56,6 +56,10 @@ export default function CourtFeeCalView() {
   const [filteredClients, setFilteredClients] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
+  const [paymentMethod, setPaymentMethod] = useState("gpay");
+const [gpayNumber, setGpayNumber] = useState("");
+const [upiId, setUpiId] = useState("");
+
   const total =
     Number(courtFee || 0) +
     Number(stampDuty || 0) +
@@ -90,73 +94,81 @@ export default function CourtFeeCalView() {
       fetchInvoicesAndStats();
     });
   }, [fetchInvoicesAndStats]);
-  const handleGenerateInvoice = async () => {
-    if (!clientName) {
-      alert("Please select a client first.");
-      return;
-    }
 
-    try {
-      const payload = {
-        client_name: clientName,
-        case_number: caseNumber,
-        mobile_number: mobileNumber,
-        email: email,
-        court_fee_case_type: courtFeeCaseType || "N/A",
-        court_fee_amount: Number(courtFee || 0),
-        court_fee_jurisdiction: courtFeeJurisdiction || "N/A",
-        stamp_duty_doc_type: stampDutyDocType || "N/A",
-        stamp_duty_amount: Number(stampDuty || 0),
-        stamp_duty_state: stampDutyState || "N/A",
-        advocate_fee_case_type: advocateFeeCaseType || "N/A",
-        advocate_fee_amount: Number(advocateFee || 0),
-        advocate_fee_remarks: advocateFeeRemarks || "N/A",
-        filing_cost_pages: Number(filingCostPages || 0),
-        filing_cost_amount: Number(filingCost || 0),
-        filing_cost_notes: filingCostNotes || "N/A",
-        status: "Sent"
-      };
+  const handleSendPayment = async () => {
+  if (!clientName) {
+    alert("Please select a client first.");
+    return;
+  }
 
-      const res = await fetch("http://localhost:8000/finance/invoices", {
+  try {
+    const grandTotal = (
+      Number(total) +
+      Number((total * 18) / 100)
+    ).toFixed(2);
+
+    const payload = {
+      client_name: clientName,
+      case_number: caseNumber,
+      mobile_number: mobileNumber,
+      email: email,
+
+      court_fee_case_type: courtFeeCaseType || "N/A",
+      court_fee_amount: Number(courtFee || 0),
+      court_fee_jurisdiction: courtFeeJurisdiction || "N/A",
+
+      stamp_duty_doc_type: stampDutyDocType || "N/A",
+      stamp_duty_amount: Number(stampDuty || 0),
+      stamp_duty_state: stampDutyState || "N/A",
+
+      advocate_fee_case_type: advocateFeeCaseType || "N/A",
+      advocate_fee_amount: Number(advocateFee || 0),
+      advocate_fee_remarks: advocateFeeRemarks || "N/A",
+
+      filing_cost_pages: Number(filingCostPages || 0),
+      filing_cost_amount: Number(filingCost || 0),
+      filing_cost_notes: filingCostNotes || "N/A",
+
+      payment_method: paymentMethod,
+      gpay_number: gpayNumber,
+      upi_id: upiId,
+
+      status: "Sent"
+    };
+
+    const res = await fetch("http://localhost:8000/finance/invoices", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+        const savedInvoice = await res.json();
+      await fetch("http://localhost:8000/finance/send-payment-email", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          email,
+          client_name: clientName,
+          amount: grandTotal,
+          payment_method: paymentMethod,
+          gpay_number: gpayNumber,
+          upi_id: upiId,
+            payment_link: `http://localhost:3000/client-payments?invoice_id=${savedInvoice.id}`
+        })
       });
 
-      if (res.ok) {
-        alert(`Invoice generated and sent successfully to ${clientName}!`);
-
-        // Clear all inputs
-        setCourtFeeCaseType("");
-        setCourtFee("");
-        setCourtFeeJurisdiction("");
-        setStampDutyDocType("");
-        setStampDuty("");
-        setStampDutyState("");
-        setAdvocateFeeCaseType("");
-        setAdvocateFee("");
-        setAdvocateFeeRemarks("");
-        setFilingCostPages("");
-        setFilingCost("");
-        setFilingCostNotes("");
-        setClientName("");
-        setCaseNumber("");
-        setMobileNumber("");
-        setEmail("");
-        setSearchTerm("");
-
-        fetchInvoicesAndStats();
-      } else {
-        alert("Failed to generate invoice.");
-      }
-    } catch (error) {
-      console.error("Error generating invoice:", error);
-      alert("Error generating invoice.");
+      alert("Payment request sent successfully!");
+      fetchInvoicesAndStats();
     }
-  };
-
+  } catch (error) {
+    console.error(error);
+  }
+};
   const handleClientSearch = (value) => {
     setSearchTerm(value);
     setClientName(value);
@@ -809,6 +821,8 @@ export default function CourtFeeCalView() {
           </div>
         </div>
 
+
+
         <hr className="my-4" />
 
         <div className="flex justify-between font-bold text-xl">
@@ -823,10 +837,10 @@ export default function CourtFeeCalView() {
         {hasPermission("Finance Management", "add") && (
           <div className="mt-6 flex flex-wrap gap-3 justify-end">
             <button
-              onClick={handleGenerateInvoice}
+              onClick={handleSendPayment}
               className="px-4 py-2 bg-[#16A34A] text-white rounded-lg hover:bg-[#15803d] transition-colors"
             >
-              Generate Invoice
+          Send Payment Request
             </button>
           </div>
         )}

@@ -12,6 +12,7 @@ class InvoiceBase(BaseModel):
     email: Optional[str] = None
 
     # Payment Details
+    payment_method: Optional[str] = None
     gpay_number: Optional[str] = None
     upi_id: Optional[str] = None
 
