@@ -1416,7 +1416,7 @@ export default function CalendarView() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
               <h2 className="text-lg md:text-xl font-extrabold text-[#0F172A]">
-                Dynamic Schedule Registry
+                Schedule Registry
               </h2>
               <p className="text-sm text-[#64748B] mt-0.5">
                 Overview of court hearings and lawyer timetables.

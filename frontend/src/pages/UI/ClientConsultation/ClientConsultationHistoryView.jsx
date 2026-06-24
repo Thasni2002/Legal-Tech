@@ -180,7 +180,6 @@ export default function ClientConsultationHistoryView() {
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Advocate</th>
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Duration</th>
-                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Fee</th>
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Summary</th>
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Action</th>
@@ -208,7 +207,6 @@ export default function ClientConsultationHistoryView() {
                     <td className="p-4 text-sm text-[#0F172A] font-bold capitalize whitespace-nowrap">{item.advocate_name || item.advocate}</td>
                     <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.type}</td>
                     <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.duration || "30 mins"}</td>
-                    <td className="p-4 text-sm text-[#16A34A] font-bold whitespace-nowrap">{item.fee || "₹500"}</td>
                     <td className="p-4 text-sm whitespace-nowrap">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
                         item.status === 'Completed'
@@ -227,13 +225,6 @@ export default function ClientConsultationHistoryView() {
                     </td>
                     <td className="p-4 text-sm whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        {item.status === "Approved" ? (
-                          <span className="text-blue-600 font-bold uppercase tracking-wider text-xs">Approved</span>
-                        ) : item.status === "Rescheduled" ? (
-                          <span className="text-[#D97706] font-bold uppercase tracking-wider text-xs">Rescheduled</span>
-                        ) : (
-                          <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">No Action</span>
-                        )}
                         <button
                           onClick={() => handleDeleteConsultation(item.id)}
                           className="px-4 py-2 bg-slate-100 hover:bg-rose-100 text-[#475569] hover:text-rose-600 rounded-full transition-colors text-xs font-bold uppercase tracking-wider active:scale-95 shadow-sm"

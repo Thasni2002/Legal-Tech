@@ -31,9 +31,29 @@ export default function ClientConsultationView() {
   const [history, setHistory] = useState([]);
   const [user, setUser] = useState(null);
   const [mounted, setMounted] = useState(false);
+  const [dismissedNotifications, setDismissedNotifications] = useState([]);
+
+  const formatDateString = (dateStr) => {
+      if (!dateStr) return "N/A";
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString("en-US", { year: 'numeric', month: 'long', day: 'numeric' });
+  };
+
+  const formatTimeString = (timeStr) => {
+      if (!timeStr) return "N/A";
+      return timeStr;
+  };
+
+  const handleDismissNotification = (id) => {
+      const newDismissed = [...dismissedNotifications, id];
+      setDismissedNotifications(newDismissed);
+      localStorage.setItem("client_dismissed_consultation_notifications", JSON.stringify(newDismissed));
+  };
 
   // Permission state for Consultation module
   const [canAddConsultation, setCanAddConsultation] = useState(true); // default allow until loaded
+  const [advocates, setAdvocates] = useState([]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -148,7 +168,23 @@ export default function ClientConsultationView() {
       }));
     }
     fetchConsultations(loggedIn);
-    resolveConsultationAddPermission(loggedIn);
+    if (loggedIn) {
+      resolveConsultationAddPermission(loggedIn);
+    }
+    const dismissed = JSON.parse(localStorage.getItem("client_dismissed_consultation_notifications") || "[]");
+    setDismissedNotifications(dismissed);
+
+    const loadAdvocates = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/lawfirm-management/");
+        if (res.ok) {
+          setAdvocates(await res.json());
+        }
+      } catch (err) {
+        console.error("Failed to fetch advocates:", err);
+      }
+    };
+    loadAdvocates();
   }, []);
 
 
@@ -267,7 +303,7 @@ export default function ClientConsultationView() {
       });
 
       if (res.ok) {
-        triggerSuccess("booking successfully");
+        triggerSuccess("Approved successfully");
         fetchConsultations(user);
       } else {
         alert("Failed to approve appointment");
@@ -310,6 +346,58 @@ export default function ClientConsultationView() {
           Book an appointment or join a consultation
         </p>
       </div>
+
+      {/* Notifications */}
+      {mounted && history.filter(item => {
+          if (dismissedNotifications.includes(item.id)) return false;
+          const isApprovedByAdvocate = item.status === "Approved" && item.reschedule_reason === "Approved by advocate";
+          const isRescheduledByAdvocate = item.status === "Rescheduled" && item.reschedule_reason?.includes("advocate");
+          return isApprovedByAdvocate || isRescheduledByAdvocate;
+      }).length > 0 && (
+          <div className="space-y-3 mb-6">
+              {history.filter(item => {
+                  if (dismissedNotifications.includes(item.id)) return false;
+                  const isApprovedByAdvocate = item.status === "Approved" && item.reschedule_reason === "Approved by advocate";
+                  const isRescheduledByAdvocate = item.status === "Rescheduled" && item.reschedule_reason?.includes("advocate");
+                  return isApprovedByAdvocate || isRescheduledByAdvocate;
+              }).map(item => {
+                  const isApproved = item.status === "Approved";
+                  return (
+                      <div
+                          key={item.id}
+                          className={`flex items-start justify-between p-4 rounded-xl border transition-all duration-300 ${
+                              isApproved 
+                                  ? "bg-emerald-50 border-emerald-200 text-emerald-900" 
+                                  : "bg-amber-50 border-amber-200 text-amber-900"
+                          }`}
+                      >
+                          <div className="flex gap-3 items-center">
+                              <span className="text-xl">{isApproved ? "✅" : "🗓️"}</span>
+                              <div>
+                                  <p className="font-semibold text-sm">
+                                      {isApproved 
+                                          ? `Your consultation request has been approved` 
+                                          : `Your consultation has been rescheduled`}
+                                  </p>
+                                  <p className="text-xs mt-0.5 opacity-90">
+                                      Scheduled for: <span className="font-medium">{formatDateString(item.date)}</span> at <span className="font-medium">{formatTimeString(item.time)}</span> ({item.type})
+                                      {!isApproved && item.reschedule_reason && (
+                                          <span className="block mt-1 font-medium italic">Reason: {item.reschedule_reason}</span>
+                                      )}
+                                  </p>
+                              </div>
+                          </div>
+                          <button
+                              onClick={() => handleDismissNotification(item.id)}
+                              className="text-gray-400 hover:text-gray-700 font-bold ml-4 text-sm leading-none focus:outline-none cursor-pointer"
+                          >
+                              ✕
+                          </button>
+                      </div>
+                  );
+              })}
+          </div>
+      )}
 
       {/* Top Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -385,7 +473,6 @@ export default function ClientConsultationView() {
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
-                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Fee</th>
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Action</th>
               </tr>
@@ -405,7 +492,6 @@ export default function ClientConsultationView() {
                     <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.date}</td>
                     <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">{item.time}</td>
                     <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.type}</td>
-                    <td className="p-4 text-sm text-[#16A34A] font-bold whitespace-nowrap">{item.fee || "₹500"}</td>
                     <td className="p-4 text-sm whitespace-nowrap">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">
                         {item.status}
@@ -527,9 +613,7 @@ export default function ClientConsultationView() {
 
                   <div>
                     <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2 block">Advocate Name</label>
-                    <input
-                      type="text"
-                      placeholder="Enter advocate's name"
+                    <select
                       value={formData.advocate}
                       onChange={(e) =>
                         setFormData({
@@ -537,8 +621,18 @@ export default function ClientConsultationView() {
                           advocate: e.target.value,
                         })
                       }
-                      className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all placeholder:text-[#94A3B8] text-sm font-medium"
-                    />
+                      className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+                    >
+                      <option value="">Select Advocate</option>
+                      {advocates.map((adv) => {
+                        const advName = adv.advocateName || adv.advocate_name || "Unknown Advocate";
+                        return (
+                          <option key={adv.id} value={advName}>
+                            {advName}
+                          </option>
+                        );
+                      })}
+                    </select>
                   </div>
                 </>
               )}

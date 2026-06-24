@@ -17,7 +17,7 @@ import {
   Briefcase,
 } from "lucide-react";
 import useModulePermission from "@/utils/useModulePermission";
-
+import { getLoggedInUser } from "@/utils/auth";
 
 // --- Date Utilities ---
 const WEEKDAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -177,10 +177,21 @@ export default function JuniorCalendarView() {
 
   const fetchAssignedCases = async () => {
     try {
+      const user = getLoggedInUser();
       const res = await fetch("http://localhost:8000/lawfirm-management/assigned-cases");
       const data = await res.json();
       if (Array.isArray(data)) {
-        const mappedHearings = data
+        // Filter based on user session if they are a Junior Advocate
+        let casesToShow = data;
+        if (user && user.role && user.role.toLowerCase().includes("junior")) {
+          casesToShow = data.filter((c) => {
+            if (!c.advocate_name) return false;
+            const normalizedAssignedName = c.advocate_name.toLowerCase().replace(/[^a-z0-9]/g, "");
+            return normalizedAssignedName === user.username;
+          });
+        }
+
+        const mappedHearings = casesToShow
           .filter((c) => c.due_date) // Only cases with a due_date
           .map((c) => ({
             id: String(c.id),
