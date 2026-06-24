@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Upload, X, Eye, CheckCircle, Edit3 } from "lucide-react";
 
 // Error message component
@@ -15,12 +15,16 @@ function ErrorMsg({ message }) {
   );
 }
 
-export default function AddCaseForm({ editId }) {
+export default function AddCaseForm() {
+const router = useRouter();
+  const params = useParams();
+const editId = params?.id;
+
   const isEditMode = !!editId;
   const [documents, setDocuments] = useState([
     { documentType: "", advocate: "", file: null },
   ]);
-  const router = useRouter();
+  
 
   const [formData, setFormData] = useState({
     caseId: "",
