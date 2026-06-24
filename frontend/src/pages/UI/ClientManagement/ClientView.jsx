@@ -26,44 +26,43 @@ export default function ClientView() {
   const [clients, setClients] = useState([]);
   const fetchClients = async () => {
     try {
-      const res = await fetch("http://localhost:8000/clients");
+      const res = await fetch("http://127.0.0.1:8000/case-management/");
       if (res.ok) {
-        const data = await res.json();
-        // Map backend client schema (client_id, full_name, email, phone) to view expected names if needed
-        const mapped = data.map(c => ({
-          clientId: c.client_id,
-          clientName: c.full_name,
-          contactNumber: c.phone,
-          emailId: c.email,
-          activeCases: 1,
-          courtName: "District Court",
-          status: "Active"
-        }));
-        setClients(mapped);
+        const casesData = await res.json();
+        const clientMap = {};
+        let idCounter = 1;
+
+        casesData.forEach(c => {
+          const name = c.client_name;
+          if (!name) return;
+
+          if (!clientMap[name]) {
+            clientMap[name] = {
+              clientId: `CUST-${String(idCounter).padStart(4, '0')}`,
+              clientName: name,
+              contactNumber: c.contact_number || "N/A",
+              emailId: c.email_id || "N/A",
+              activeCases: 1,
+              courtName: c.court_name || "N/A",
+              status: c.status === "Closed" ? "Inactive" : "Active",
+            };
+            idCounter++;
+          } else {
+            clientMap[name].activeCases += 1;
+          }
+        });
+        
+        setClients(Object.values(clientMap));
       }
     } catch (err) {
-      console.error("Failed to fetch clients from backend:", err);
+      console.error("Failed to fetch clients from case-management:", err);
     }
   };
   useEffect(() => {
     fetchClients();
   }, []);
   const handleDelete = async (clientId) => {
-    if (!window.confirm("Are you sure you want to delete this client?")) {
-      return;
-    }
-    try {
-      const res = await fetch(`http://localhost:8000/clients/${clientId}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        fetchClients();
-      } else {
-        alert("Failed to delete client");
-      }
-    } catch (err) {
-      console.error("Error deleting client:", err);
-    }
+    alert("Client deletion is currently disabled as clients are derived from active cases.");
   };
   return (
     <div className="w-full space-y-6 md:space-y-8">

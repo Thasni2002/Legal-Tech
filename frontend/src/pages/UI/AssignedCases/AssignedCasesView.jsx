@@ -101,6 +101,46 @@ const [cases, setCases] = useState([]);
     }
   };
 
+  const handleDownloadDocument = (doc) => {
+    if (!doc) return;
+    const url = doc.url || doc.file_path;
+    if (url) {
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = doc.file || "document";
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      // Dummy download if no real URL
+      const content = `Mock content for ${doc.file}\nDocument Type: ${doc.documentType}`;
+      const blob = new Blob([content], { type: "text/plain" });
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = doc.file || "mock_document.txt";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    }
+  };
+
+  const handleViewDocument = (doc) => {
+    setSelectedDocument(doc);
+    const url = doc.url || doc.file_path;
+    if (url) {
+      window.open(url, "_blank");
+    } else {
+      // Dummy view in new tab if no real URL
+      const content = `Mock preview content for ${doc.file}\nDocument Type: ${doc.documentType}`;
+      const blob = new Blob([content], { type: "text/plain" });
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, "_blank");
+    }
+  };
+
   const handleDelete = async (id) => {
     setDeleteLoading(true);
     try {
@@ -467,7 +507,7 @@ return (
                           </div>
                           
                           <button
-                            onClick={() => setSelectedDocument(doc)}
+                            onClick={() => handleViewDocument(doc)}
                             className={`px-4 py-1.5 rounded-xl text-xxs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                               isSelected
                                 ? "bg-[#2563EB] text-white shadow-sm"
@@ -497,44 +537,52 @@ return (
                       </span>
                       <button
                         className="flex items-center gap-1 p-1 px-2.5 rounded-lg hover:bg-slate-200 text-[#64748B] hover:text-[#0F172A] transition-colors text-xxs font-bold uppercase tracking-wider bg-white/80 border border-[#E2E8F0]/40 cursor-pointer"
-                        onClick={() =>alert(`Downloading ${selectedDocument.file}...`) }
+                        onClick={() => handleDownloadDocument(selectedDocument)}
                       >
                         <Download size={12} />
                         <span>Download</span>
                       </button>
                     </div>
 
-                    {/* Doc Preview Content (Simulated Document Sheet) */}
+                    {/* Doc Preview Content */}
                     <div className="flex-1 p-4 overflow-y-auto bg-slate-200/30 flex justify-center items-start">
-                      <div className="bg-white w-full shadow-sm border border-[#E2E8F0] rounded-xl p-5 min-h-[320px] font-serif text-[#0F172A] text-[11px] leading-relaxed flex flex-col relative select-none">
-                        
-                        {/* Decorative Legal Document Top Header */}
-                        <div className="border-b border-double border-slate-300 pb-2 mb-3 text-center">
-                          <p className="uppercase tracking-widest text-[8px] font-sans font-bold text-[#64748B]">IN THE COURT OF THE LAW</p>
-                          <p className="font-sans font-bold text-[9px] text-[#64748B] mt-0.5 uppercase">{selectedCase.court}</p>
-                          <div className="flex justify-between text-[7px] font-sans text-[#64748B] mt-1.5">
-                            <span>CASE: {selectedCase.caseNo}</span>
-                            <span>OFFICIAL PREVIEW</span>
+                      {selectedDocument.url || selectedDocument.file_path ? (
+                        <iframe 
+                          src={selectedDocument.url || selectedDocument.file_path} 
+                          title={selectedDocument.file} 
+                          className="w-full min-h-[320px] rounded-xl border border-[#E2E8F0] shadow-sm bg-white" 
+                        />
+                      ) : (
+                        <div className="bg-white w-full shadow-sm border border-[#E2E8F0] rounded-xl p-5 min-h-[320px] font-serif text-[#0F172A] text-[11px] leading-relaxed flex flex-col relative select-none">
+                          
+                          {/* Decorative Legal Document Top Header */}
+                          <div className="border-b border-double border-slate-300 pb-2 mb-3 text-center">
+                            <p className="uppercase tracking-widest text-[8px] font-sans font-bold text-[#64748B]">IN THE COURT OF THE LAW</p>
+                            <p className="font-sans font-bold text-[9px] text-[#64748B] mt-0.5 uppercase">{selectedCase.court}</p>
+                            <div className="flex justify-between text-[7px] font-sans text-[#64748B] mt-1.5">
+                              <span>CASE: {selectedCase.caseNo}</span>
+                              <span>OFFICIAL PREVIEW</span>
+                            </div>
                           </div>
+
+                          {/* Document Title */}
+                          <h5 className="font-bold text-center underline text-xs mb-3 uppercase text-[#0F172A]">
+                            {selectedDocument.file?.replace('.pdf', '').replaceAll('_', ' ')}
+                          </h5>
+
+                          {/* Document Simulated Body Text */}
+                          <div className="whitespace-pre-wrap flex-1 text-[#64748B] font-serif italic border-l border-[#E2E8F0] pl-2">
+                           Document Type: {selectedDocument.documentType}
+                          </div>
+
+                          {/* Bottom stamp marker */}
+                          <div className="mt-6 border-t border-[#E2E8F0] pt-3 flex justify-between items-center text-[7px] font-sans text-[#64748B]">
+                            <span>VERIFIED VIA LEGALPORTAL</span>
+                            <span className="bg-blue-50 text-[#2563EB] px-1.5 py-0.5 rounded font-mono font-bold uppercase tracking-wider border border-blue-100">PREVIEW ONLY</span>
+                          </div>
+
                         </div>
-
-                        {/* Document Title */}
-                        <h5 className="font-bold text-center underline text-xs mb-3 uppercase text-[#0F172A]">
-                          {selectedDocument.file?.replace('.pdf', '').replaceAll('_', ' ')}
-                        </h5>
-
-                        {/* Document Simulated Body Text */}
-                        <div className="whitespace-pre-wrap flex-1 text-[#64748B] font-serif italic border-l border-[#E2E8F0] pl-2">
-                         Document Type: {selectedDocument.documentType}
-                        </div>
-
-                        {/* Bottom stamp marker */}
-                        <div className="mt-6 border-t border-[#E2E8F0] pt-3 flex justify-between items-center text-[7px] font-sans text-[#64748B]">
-                          <span>VERIFIED VIA LEGALPORTAL</span>
-                          <span className="bg-blue-50 text-[#2563EB] px-1.5 py-0.5 rounded font-mono font-bold uppercase tracking-wider border border-blue-100">PREVIEW ONLY</span>
-                        </div>
-
-                      </div>
+                      )}
                     </div>
                   </div>
                 ) : (

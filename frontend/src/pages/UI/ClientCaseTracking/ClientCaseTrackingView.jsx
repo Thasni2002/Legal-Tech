@@ -11,7 +11,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import useModulePermission from "@/utils/useModulePermission";
-
+import { getLoggedInUser } from "@/utils/auth";
 
 export default function ClientCaseTrackingView() {
   const { perms, loading } = useModulePermission("Case Tracking");
@@ -38,26 +38,39 @@ export default function ClientCaseTrackingView() {
   useEffect(() => {
     const fetchCases = async () => {
       try {
-        const res = await fetch("http://localhost:8000/clients/cases");
+        const user = getLoggedInUser();
+        const res = await fetch("http://127.0.0.1:8000/case-management/");
         const data = await res.json();
         
-        const mappedCases = data.map(item => {
+        let clientCases = data;
+        if (user) {
+          const role = (user.role || "").toLowerCase().replace(/\s+/g, "");
+          if (role === "client") {
+            clientCases = data.filter((c) => {
+              if (!c.client_name) return false;
+              const normalizedName = c.client_name.toLowerCase().replace(/[^a-z0-9]/g, "");
+              return normalizedName === user.username;
+            });
+          }
+        }
+
+        const mappedCases = clientCases.map(item => {
           let step = 0;
           const statusLower = (item.status || "").toLowerCase();
-          if (statusLower.includes("file")) step = 0;
+          if (statusLower.includes("submit") || statusLower.includes("file")) step = 0;
           else if (statusLower.includes("document")) step = 1;
           else if (statusLower.includes("schedule") || statusLower.includes("hearing")) step = 2;
           else if (statusLower.includes("progress") || statusLower.includes("active")) step = 3;
-          else if (statusLower.includes("resolve") || statusLower.includes("close")) step = 4;
+          else if (statusLower.includes("close") || statusLower.includes("resolve")) step = 4;
           else step = 0;
 
           return {
             caseId: item.case_no || "N/A",
-            title: item.title || "Untitled Case",
-            status: item.status || "Case Filed",
-            advocate: item.advocate_name || item.client_name || "Advocate",
-            court: item.court || "Civil Court",
-            nextHearing: item.nextHearing || "To be scheduled",
+            title: item.case_title || "Untitled Case",
+            status: item.status || "Case Submit",
+            advocate: item.selected_advocate || "Advocate",
+            court: item.court_name || "Civil Court",
+            nextHearing: item.next_hearing_date || "To be scheduled",
             currentStep: step,
           };
         });
@@ -74,11 +87,11 @@ export default function ClientCaseTrackingView() {
   }, [perms.view]);
 
   const statusSteps = [
-    "Case Filed",
-    "Documents Uploaded",
+    "Case Submit",
+    "Document Upload",
     "Hearing Scheduled",
     "In Progress",
-    "Resolved",
+    "Closed",
   ];
 
   // Filter cases based on inputs

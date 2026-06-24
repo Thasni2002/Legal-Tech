@@ -12,6 +12,7 @@ import {
   Clock,
   ArrowLeft,
   User,
+  X,
 } from "lucide-react";
 export default function CaseTracking() {
   const router = useRouter();
@@ -237,11 +238,18 @@ export default function CaseTracking() {
       )}
 
       {/* Case Details */}
-      {selectedCase && (
-        <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-[#0F172A] mb-5 border-b border-[#F1F5F9] pb-3">
-            Case Details Log
-          </h2>
+      {mounted && selectedCase && typeof document !== "undefined" ? createPortal(
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-xl w-full max-w-4xl p-6 shadow-xl relative max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setSelectedCase(null)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-black bg-gray-100 hover:bg-gray-200 rounded-full p-1.5 transition-colors"
+            >
+              <X size={18} />
+            </button>
+            <h2 className="text-xl font-bold text-[#0F172A] mb-5 border-b border-[#F1F5F9] pb-3 pr-10">
+              Case Details Log
+            </h2>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-4 text-sm text-[#64748B]">
@@ -335,41 +343,73 @@ export default function CaseTracking() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[#64748B] mb-2">
-                  Advocate Name
+                  Client Name
                 </label>
                 <div className="relative">
                   <User
                     size={18}
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]"
                   />
-                  <select
-                    className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none"
-                    value={selectedCase.selected_advocate || ""}
-                    disabled
-                  >
-                    <option value="">{selectedCase.selected_advocate || "No Advocate Assigned"}</option>
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-[#64748B]">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                  </div>
+                  <input
+                    type="text"
+                    list="client-options"
+                    className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-search-cancel-button]:hidden"
+                    defaultValue={selectedClient?.name || ""}
+                    placeholder="Search client..."
+                  />
+                  <datalist id="client-options">
+                    {clients.map(c => (
+                      <option key={c.id} value={c.name} />
+                    ))}
+                  </datalist>
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-[#64748B] mb-2">
-                  Case Number
+                  Status
                 </label>
                 <div className="relative">
-                  <Briefcase
+                  <CheckCircle
                     size={18}
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]"
                   />
                   <select
-                    className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none"
-                    value={selectedCase.case_no || ""}
-                    disabled
+                    className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none cursor-pointer"
+                    value={selectedCase?.status || "Active"}
+                    onChange={async (e) => {
+                      const newStatus = e.target.value;
+                      if (!selectedCase) return;
+                      try {
+                        const res = await fetch(`http://127.0.0.1:8000/case-management/${selectedCase.dbId}`, {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            status: newStatus,
+                          }),
+                        });
+                        if (res.ok) {
+                          // Update locally
+                          const updatedCase = { ...selectedCase, status: newStatus };
+                          setSelectedCase(updatedCase);
+                          // Update cases list locally
+                          setCases((prev) => 
+                            prev.map((c) => c.id === selectedCase.dbId ? { ...c, status: newStatus } : c)
+                          );
+                        } else {
+                          alert("Failed to update status");
+                        }
+                      } catch (err) {
+                        console.error(err);
+                      }
+                    }}
                   >
-                    <option value="">{selectedCase.case_no || "No Case Number"}</option>
+                    <option value="Case Submit">Case Submit</option>
+                    <option value="Document Upload">Document Upload</option>
+                    <option value="Hearing Scheduled">Hearing Scheduled</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Closed">Closed</option>
+                    <option value="Active">Active</option>
                   </select>
                   <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-[#64748B]">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -379,7 +419,9 @@ export default function CaseTracking() {
             </div>
           </div>
         </div>
-      ) /* Removed editing modal as it is irrelevant/unused dummy overlay code */}
+        </div>,
+        document.body
+      ) : null}
 
       {/* Edit Case Form */}
       {mounted && editingCase && typeof document !== "undefined" ? createPortal(
