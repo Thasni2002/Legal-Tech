@@ -94,7 +94,7 @@ export default function CaseView() {
 
   const fetchCases = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/case-management/");
+      const response = await fetch("http://localhost:8000/case-management/");
       const data = await response.json();
       setCases(
         Array.isArray(data)
@@ -112,7 +112,7 @@ export default function CaseView() {
 
   const fetchAdvocates = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/lawfirm-management/");
+      const res = await fetch("http://localhost:8000/lawfirm-management/");
       const data = await res.json();
       setAdvocates(Array.isArray(data) ? data : []);
     } catch (e) {
@@ -123,7 +123,7 @@ export default function CaseView() {
   const handleDelete = async (id) => {
     setDeleteLoading(true);
     try {
-      await fetch(`http://127.0.0.1:8000/case-management/${id}`, {
+      await fetch(`http://localhost:8000/case-management/${id}`, {
         method: "DELETE",
       });
       await fetchCases();
@@ -151,7 +151,7 @@ export default function CaseView() {
     setAssignLoading(true);
     try {
       // Save assigned case to backend
-      await fetch("http://127.0.0.1:8000/lawfirm-management/assign-case", {
+      await fetch("http://localhost:8000/lawfirm-management/assign-case", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -161,7 +161,7 @@ export default function CaseView() {
           advocate_name: assignedAdvocate,
           practice_area: selectedCase.case_type || "",
           priority: "Normal",
-          due_date: "",
+          due_date: selectedCase.next_hearing_date || "",
           assignment_notes: `Assigned from Case Management - Case #${selectedCase.case_no}`,
           status: "Active",
           assigned_documents: selectedCase.documents || []
@@ -203,7 +203,7 @@ export default function CaseView() {
 
     // Call API to save changes
     try {
-      const response = await fetch(`http://127.0.0.1:8000/case-management/${selectedCase.id}`, {
+      const response = await fetch(`http://localhost:8000/case-management/${selectedCase.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"
