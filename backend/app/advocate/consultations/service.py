@@ -3,16 +3,41 @@ from typing import Optional
 from .models import Consultation
 from .schemas import ConsultationCreate, ConsultationReschedule, ConsultationStart
 from app.authapp.models import User
+from app.advocate.lawfirm_management.models import Advocate
+from app.advocate.case_management.models import Case
 
 def find_user_by_name(db: Session, name: str) -> Optional[User]:
     if not name:
         return None
-    # Lookup by exact username, email, or a partial match on username
-    return db.query(User).filter(
+    
+    clean_name = name.lower().replace(" ", "")
+    clean_name_underscore = name.lower().replace(" ", "_")
+    
+    user = db.query(User).filter(
         (User.username.ilike(name)) | 
         (User.email.ilike(name)) |
-        (User.username.ilike(name.replace(" ", "")))
+        (User.username.ilike(clean_name)) |
+        (User.username.ilike(clean_name_underscore))
     ).first()
+
+    if user:
+        return user
+        
+    # Fallback 1: Check Advocate table
+    advocate = db.query(Advocate).filter(Advocate.advocate_name.ilike(name)).first()
+    if advocate and advocate.email_address:
+        user_by_adv_email = db.query(User).filter(User.email.ilike(advocate.email_address)).first()
+        if user_by_adv_email:
+            return user_by_adv_email
+            
+    # Fallback 2: Check Case table (for clients)
+    client_case = db.query(Case).filter(Case.client_name.ilike(name)).first()
+    if client_case and client_case.email_id:
+        user_by_case_email = db.query(User).filter(User.email.ilike(client_case.email_id)).first()
+        if user_by_case_email:
+            return user_by_case_email
+
+    return None
 
 def get_consultations(
     db: Session,
@@ -24,14 +49,28 @@ def get_consultations(
     if client_id is not None:
         user = db.query(User).filter(User.id == client_id).first()
         if user:
+            clean_username = user.username.replace("_", " ")
             query = query.filter(
                 (Consultation.client_id == client_id) | 
-                (Consultation.client_name.ilike(user.username))
+                (Consultation.client_name.ilike(user.username)) |
+                (Consultation.client_name.ilike(clean_username)) |
+                (Consultation.client_name.ilike(user.username.replace(" ", "")))
             )
         else:
             query = query.filter(Consultation.client_id == client_id)
     if advocate_id is not None:
-        query = query.filter(Consultation.advocate_id == advocate_id)
+        user = db.query(User).filter(User.id == advocate_id).first()
+        if user and user.role != "Senior Advocate":
+            clean_username = user.username.replace("_", " ")
+            query = query.filter(
+                (Consultation.advocate_id == advocate_id) |
+                (Consultation.advocate_name.ilike(user.username)) |
+                (Consultation.advocate_name.ilike(clean_username)) |
+                (Consultation.advocate_name.ilike(user.username.replace(" ", "")))
+            )
+        elif not user:
+            query = query.filter(Consultation.advocate_id == advocate_id)
+        # If user.role == "Senior Advocate", we do NOT apply the filter, letting them see all cases
     if status is not None:
         query = query.filter(Consultation.status == status)
     return query.order_by(Consultation.date.desc(), Consultation.time.desc()).all()
@@ -88,8 +127,11 @@ def update_consultation_status(db: Session, consultation_id: int, status: str):
     consultation = get_consultation_by_id(db, consultation_id)
     if not consultation:
         return None
-    if status == "Approved" and consultation.status == "Pending Client":
-        consultation.reschedule_reason = "Approved by client"
+    if status == "Approved":
+        if consultation.status == "Pending Client":
+            consultation.reschedule_reason = "Approved by client"
+        elif consultation.status == "Pending":
+            consultation.reschedule_reason = "Approved by advocate"
     consultation.status = status
     db.commit()
     db.refresh(consultation)

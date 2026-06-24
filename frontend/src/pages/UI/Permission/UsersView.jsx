@@ -154,7 +154,16 @@ export default function UsersView() {
   const [roles, setRoles] = useState([]);
   const [selectedRole, setSelectedRole] = useState("");
   const [users, setUsers] = useState([]);
+  const [filterRole, setFilterRole] = useState("All");
   const [rolePermissions, setRolePermissions] = useState({}); // default permissions per role
+
+  // Advocate auto-fill states
+  const [advocates, setAdvocates] = useState([]);
+  const [selectedAdvocateId, setSelectedAdvocateId] = useState("");
+
+  // Client auto-fill states
+  const [clients, setClients] = useState([]);
+  const [selectedClientId, setSelectedClientId] = useState("");
 
   // Form Fields
   const [firstName, setFirstName] = useState("");
@@ -253,6 +262,40 @@ export default function UsersView() {
       } catch (e) {
         console.error("Error fetching users", e);
         setUsers(DEFAULT_USERS);
+      }
+
+      try {
+        const resAdv = await fetch("http://localhost:8000/lawfirm-management/");
+        if (resAdv.ok) {
+          setAdvocates(await resAdv.json());
+        }
+      } catch (e) {
+        console.error("Error fetching advocates", e);
+      }
+
+      try {
+        const resCases = await fetch("http://localhost:8000/case-management/");
+        if (resCases.ok) {
+          const casesData = await resCases.json();
+          const uniqueClientsMap = new Map();
+          casesData.forEach(c => {
+            const clientName = c.clientName || c.client_name;
+            const emailId = c.emailId || c.email_id;
+            const contactNumber = c.contactNumber || c.contact_number;
+            
+            if (clientName && emailId && !uniqueClientsMap.has(emailId)) {
+              uniqueClientsMap.set(emailId, {
+                id: emailId, // using email as unique id
+                clientName: clientName,
+                contactNumber: contactNumber,
+                emailId: emailId
+              });
+            }
+          });
+          setClients(Array.from(uniqueClientsMap.values()));
+        }
+      } catch (e) {
+        console.error("Error fetching cases for clients", e);
       }
     };
 
@@ -566,18 +609,15 @@ export default function UsersView() {
         </div>
       )}
 
-      {/* Page Header */}
-      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6">
-        <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
-          Users Management
-        </h1>
-        <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
-          Create and link user accounts with profile-specific cascading filters.
-        </p>
-      </div>
-
       {/* Main card containing Creation panel */}
-      <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm">
+      <div className="bg-white rounded-3xl border border-[#E2E8F0] p-8 shadow-sm">
+        {/* Page Header */}
+        <div className="mb-10 pb-6 border-b border-slate-100">
+          <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
+            Users Management
+          </h1>
+        </div>
+
         {/* Form header */}
         <div className="flex items-center gap-4 mb-8">
           <div className="w-11 h-11 bg-slate-100 text-slate-800 rounded-full flex items-center justify-center">
@@ -633,18 +673,96 @@ export default function UsersView() {
 <form onSubmit={handleProvisionUser} className="space-y-8">
   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 
-    {/* First Name */}
+    {/* First Name (Dynamic based on Role) */}
     <div className="flex flex-col">
       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
         First Name *
       </label>
-      <input
-        type="text"
-        value={firstName}
-        onChange={(e) => setFirstName(e.target.value)}
-        required
-        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
-      />
+      {(selectedRole || "").toUpperCase().includes("ADVOCATE") ? (
+        <select
+          value={selectedAdvocateId}
+          onChange={(e) => {
+            const advId = e.target.value;
+            setSelectedAdvocateId(advId);
+            if (!advId) {
+              setFirstName("");
+              setLastName("");
+              setPhoneNumber("");
+              setEmailAddress("");
+              setUsername("");
+              return;
+            }
+            const adv = advocates.find(a => a.id.toString() === advId);
+            if (adv) {
+              const nameParts = (adv.advocateName || adv.advocate_name || "").trim().split(" ");
+              setFirstName(nameParts[0] || "");
+              setLastName(nameParts.slice(1).join(" ") || "Advocate");
+              setPhoneNumber(adv.phoneNumber || adv.phone_number || "");
+              setEmailAddress(adv.emailAddress || adv.email_address || "");
+              const baseUsername = (adv.advocateName || adv.advocate_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+              setUsername(baseUsername);
+            }
+          }}
+          className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium cursor-pointer"
+          required
+        >
+          <option value="">-- Select Advocate --</option>
+          {advocates.map((adv) => {
+            const advName = adv.advocateName || adv.advocate_name || "Unknown Advocate";
+            return (
+              <option key={adv.id} value={adv.id}>
+                {advName}
+              </option>
+            );
+          })}
+        </select>
+      ) : (selectedRole || "").toUpperCase().includes("CLIENT") ? (
+        <select
+          value={selectedClientId}
+          onChange={(e) => {
+            const cId = e.target.value;
+            setSelectedClientId(cId);
+            if (!cId) {
+              setFirstName("");
+              setLastName("");
+              setPhoneNumber("");
+              setEmailAddress("");
+              setUsername("");
+              return;
+            }
+            const client = clients.find(c => c.id === cId);
+            if (client) {
+              const nameParts = (client.clientName || "").trim().split(" ");
+              setFirstName(nameParts[0] || "");
+              setLastName(nameParts.slice(1).join(" ") || "Client");
+              setPhoneNumber(client.contactNumber || "");
+              setEmailAddress(client.emailId || "");
+              const baseUsername = (client.clientName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+              setUsername(baseUsername);
+            }
+          }}
+          className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium cursor-pointer"
+          required
+        >
+          <option value="">-- Select Client --</option>
+          {clients.map((client) => {
+            const cName = client.clientName || "Unknown Client";
+            return (
+              <option key={client.id} value={client.id}>
+                {cName}
+              </option>
+            );
+          })}
+        </select>
+      ) : (
+        <input
+          type="text"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          required
+          className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+        />
+      )}
     </div>
 
     {/* Last Name */}
@@ -787,13 +905,32 @@ export default function UsersView() {
       {/* Provisioned Users Table */}
 {/* Provisioned Users Table */}
 <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-  <div className="px-8 py-6 border-b border-slate-100">
-    <h2 className="text-xl font-bold text-slate-900">
-      Active Provisioned Users
-    </h2>
-    <p className="text-xs text-slate-400 mt-1">
-      {users.length} user{users.length !== 1 ? "s" : ""} available
-    </p>
+  <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+    <div>
+      <h2 className="text-xl font-bold text-slate-900">
+        Active Provisioned Users
+      </h2>
+      <p className="text-xs text-slate-400 mt-1">
+        {(() => {
+          const filteredUsers = filterRole === "All" ? users : users.filter(u => u.role === filterRole);
+          return `${filteredUsers.length} user${filteredUsers.length !== 1 ? "s" : ""} available`;
+        })()}
+      </p>
+    </div>
+    
+    {/* Role Filter Dropdown */}
+    <div>
+      <select
+        value={filterRole}
+        onChange={(e) => setFilterRole(e.target.value)}
+        className="rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-slate-800 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-bold cursor-pointer"
+      >
+        <option value="All">All Roles</option>
+        {roles.map(role => (
+          <option key={role.id} value={role.name}>{role.name}</option>
+        ))}
+      </select>
+    </div>
   </div>
 
   <table className="w-full border-collapse text-left">
@@ -815,14 +952,18 @@ export default function UsersView() {
     </thead>
 
     <tbody>
-      {users.length === 0 ? (
-        <tr>
-          <td colSpan={4} className="py-12 text-center text-slate-400 text-sm">
-            No users available
-          </td>
-        </tr>
-      ) : (
-        users.map((user, idx) => {
+      {(() => {
+        const filteredUsers = filterRole === "All" ? users : users.filter(u => u.role === filterRole);
+        if (filteredUsers.length === 0) {
+          return (
+            <tr>
+              <td colSpan={4} className="py-12 text-center text-slate-400 text-sm">
+                No users available
+              </td>
+            </tr>
+          );
+        }
+        return filteredUsers.map((user, idx) => {
           const avatarColors = [
             "bg-indigo-600",
             "bg-blue-600",
@@ -891,8 +1032,8 @@ export default function UsersView() {
 
             </tr>
           );
-        })
-      )}
+        });
+      })()}
     </tbody>
   </table>
 </div>

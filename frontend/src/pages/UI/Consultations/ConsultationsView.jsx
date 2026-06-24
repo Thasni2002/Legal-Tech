@@ -13,6 +13,8 @@ export default function ConsultationsView() {
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [rescheduleReason, setRescheduleReason] = useState("");
     const [showAcceptModal, setShowAcceptModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteId, setDeleteId] = useState(null);
 
     const [showHistory, setShowHistory] = useState(false);
     const [clientName, setClientName] = useState("");
@@ -26,6 +28,7 @@ export default function ConsultationsView() {
     const [user, setUser] = useState(null);
     const [mounted, setMounted] = useState(false);
     const [dismissedNotifications, setDismissedNotifications] = useState([]);
+    const [clients, setClients] = useState([]);
 
     const fetchConsultations = async (currentUser) => {
         try {
@@ -79,6 +82,29 @@ export default function ConsultationsView() {
         fetchConsultations(loggedIn);
         const dismissed = JSON.parse(localStorage.getItem("dismissed_consultation_notifications") || "[]");
         setDismissedNotifications(dismissed);
+
+        const loadClients = async () => {
+            try {
+                const res = await fetch("http://localhost:8000/case-management/");
+                if (res.ok) {
+                    const casesData = await res.json();
+                    const uniqueClientsMap = new Map();
+                    casesData.forEach(c => {
+                        const cName = c.clientName || c.client_name;
+                        if (cName && !uniqueClientsMap.has(cName)) {
+                            uniqueClientsMap.set(cName, {
+                                id: cName, // use name as unique id since we dedupe by name
+                                clientName: cName
+                            });
+                        }
+                    });
+                    setClients(Array.from(uniqueClientsMap.values()));
+                }
+            } catch (err) {
+                console.error("Failed to fetch clients:", err);
+            }
+        };
+        loadClients();
     }, []);
 
     const formatDateString = (dateStr) => {
@@ -182,16 +208,16 @@ export default function ConsultationsView() {
         }
     };
 
-    const handleDeleteConsultation = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this consultation?")) {
-            return;
-        }
+    const handleDeleteConsultation = async () => {
+        if (!deleteId) return;
         try {
-            const res = await fetch(`http://localhost:8000/consultations/${id}`, {
+            const res = await fetch(`http://localhost:8000/consultations/${deleteId}`, {
                 method: "DELETE",
             });
             if (res.ok) {
                 fetchConsultations(user);
+                setShowDeleteModal(false);
+                setDeleteId(null);
             } else {
                 alert("Failed to delete consultation");
             }
@@ -338,7 +364,6 @@ export default function ConsultationsView() {
                                     <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
                                     <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
                                     <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Issue</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Fee</th>
                                     <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
                                     <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Action</th>
                                 </tr>
@@ -358,14 +383,13 @@ export default function ConsultationsView() {
                                             <td className="p-4 whitespace-nowrap text-[#475569] text-sm font-medium">{formatTimeString(item.time)}</td>
                                             <td className="p-4 whitespace-nowrap text-[#475569] text-sm">{item.type}</td>
                                             <td className="p-4 whitespace-nowrap text-[#475569] text-sm">{item.issue || "General Consultation"}</td>
-                                            <td className="p-4 text-[#16A34A] font-bold whitespace-nowrap text-sm">{item.fee || "₹500"}</td>
                                             <td className="p-4 whitespace-nowrap">
                                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">
                                                     {item.status || "Pending"}
                                                 </span>
                                             </td>
                                             <td className="p-4">
-                                                <div className="flex flex-wrap gap-2 items-center">
+                                                <div className="flex gap-2 items-center">
                                                     <button
                                                         onClick={() => {
                                                             setSelectedAppointment(item);
@@ -385,8 +409,11 @@ export default function ConsultationsView() {
                                                         Reschedule
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDeleteConsultation(item.id)}
-                                                        className="px-4 py-2 bg-slate-100 hover:bg-rose-100 text-[#475569] hover:text-rose-600 rounded-full transition-colors text-xs font-bold uppercase tracking-wider active:scale-95"
+                                                        onClick={() => {
+                                                            setDeleteId(item.id);
+                                                            setShowDeleteModal(true);
+                                                        }}
+                                                        className="px-4 py-2 bg-slate-100 hover:bg-rose-100 text-[#475569] hover:text-rose-600 rounded-full transition-colors text-xs font-bold uppercase tracking-wider active:scale-95 shadow-sm"
                                                     >
                                                         Delete
                                                     </button>
@@ -401,13 +428,30 @@ export default function ConsultationsView() {
                 </div>
             )}
 
-            {/* Consultation History */}
-            {showHistory && (
-                <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 mb-8 transition-all duration-300">
-                    <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8 flex items-center justify-between">
-                        <span>Consultation History</span>
-                        <span className="text-sm font-bold bg-[#F1F5F9] text-[#64748B] px-4 py-1.5 rounded-full">{history.length} total</span>
-                    </h2>
+            {/* Consultation History Modal */}
+            {mounted && showHistory && typeof document !== "undefined" ? createPortal(
+                <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto p-8 md:p-10 border border-[#E2E8F0] animate-in fade-in zoom-in duration-200">
+                        <div className="flex items-center justify-between mb-8">
+                            <h2 className="text-2xl font-extrabold text-[#0F172A] flex items-center gap-4">
+                                <button
+                                    onClick={() => setShowHistory(false)}
+                                    className="w-10 h-10 rounded-full flex items-center justify-center bg-[#F8FAFC] text-[#64748B] hover:bg-slate-200 hover:text-[#0F172A] transition-colors"
+                                    aria-label="Back"
+                                >
+                                    <span className="text-xl font-bold">←</span>
+                                </button>
+                                <span>Consultation History</span>
+                                <span className="text-sm font-bold bg-[#F1F5F9] text-[#64748B] px-4 py-1.5 rounded-full">{history.length} total</span>
+                            </h2>
+                            <button
+                                onClick={() => setShowHistory(false)}
+                                className="w-10 h-10 rounded-full flex items-center justify-center bg-[#F8FAFC] text-[#64748B] hover:bg-rose-100 hover:text-rose-600 transition-colors"
+                                aria-label="Close"
+                            >
+                                <span className="text-xl font-bold">✕</span>
+                            </button>
+                        </div>
                     {history.length === 0 ? (
                         <div className="text-center py-12 text-[#64748B] font-medium bg-[#F8FAFC] rounded-2xl border border-dashed border-[#E2E8F0]">
                             No consultations found. Start a new one below.
@@ -459,8 +503,11 @@ export default function ConsultationsView() {
                                             </td>
                                             <td className="p-4 whitespace-nowrap">
                                                 <button
-                                                    onClick={() => handleDeleteConsultation(item.id)}
-                                                    className="px-4 py-2 bg-slate-100 hover:bg-rose-100 text-[#475569] hover:text-rose-600 rounded-full transition-colors text-xs font-bold uppercase tracking-wider active:scale-95"
+                                                    onClick={() => {
+                                                        setDeleteId(item.id);
+                                                        setShowDeleteModal(true);
+                                                    }}
+                                                    className="px-4 py-2 bg-slate-100 hover:bg-rose-100 text-[#475569] hover:text-rose-600 rounded-full transition-colors text-xs font-bold uppercase tracking-wider active:scale-95 shadow-sm"
                                                 >
                                                     Delete
                                                 </button>
@@ -472,7 +519,9 @@ export default function ConsultationsView() {
                         </div>
                     )}
                 </div>
-            )}
+            </div>,
+            document.body
+        ) : null}
 
             {/* Consultation Form */}
             <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 mb-8">
@@ -482,13 +531,18 @@ export default function ConsultationsView() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="flex flex-col">
                         <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">Client Name</label>
-                        <input
-                            type="text"
-                            placeholder="Enter Name"
+                        <select
                             value={clientName}
                             onChange={(e) => setClientName(e.target.value)}
-                            className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all placeholder:text-[#94A3B8] text-sm font-medium"
-                        />
+                            className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+                        >
+                            <option value="">Select Client</option>
+                            {clients.map((client) => (
+                                <option key={client.id} value={client.clientName}>
+                                    {client.clientName}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                     <div className="flex flex-col">
                         <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">Type</label>
@@ -569,6 +623,41 @@ export default function ConsultationsView() {
                     </h3>
                 </div>
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {mounted && showDeleteModal && typeof document !== "undefined" ? createPortal(
+                <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 text-center border border-[#E2E8F0] animate-in fade-in zoom-in duration-200">
+                        <div className="w-20 h-20 mx-auto bg-rose-50 rounded-full flex items-center justify-center text-4xl mb-6 shadow-inner text-rose-500">
+                            🗑️
+                        </div>
+                        <h2 className="text-2xl font-extrabold text-[#0F172A]">
+                            Delete Consultation
+                        </h2>
+                        <p className="text-[#64748B] mt-4 font-medium leading-relaxed">
+                            Are you sure you want to delete this consultation? This action cannot be undone.
+                        </p>
+                        <div className="flex gap-4 mt-8">
+                            <button
+                                onClick={() => {
+                                    setShowDeleteModal(false);
+                                    setDeleteId(null);
+                                }}
+                                className="w-1/2 py-4 bg-slate-100 hover:bg-slate-200 text-[#475569] rounded-full font-bold uppercase tracking-wider text-xs transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDeleteConsultation}
+                                className="w-1/2 py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-full font-bold uppercase tracking-wider text-xs transition-all shadow-lg active:scale-95"
+                            >
+                                Yes, Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            ) : null}
 
             {/* Accept Approval Modal */}
             {mounted && showAcceptModal && typeof document !== "undefined" ? createPortal(

@@ -45,7 +45,7 @@ export default function LayoutWrapper({ children }) {
           }
         })
         .catch((err) => {
-          console.error("Failed to verify user status:", err);
+          console.warn("Backend offline or unable to verify user status:", err.message);
         });
     };
 

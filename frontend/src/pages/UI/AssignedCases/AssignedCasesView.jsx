@@ -16,6 +16,7 @@ import {
   Trash2,
 } from "lucide-react";
 import useModulePermission from "@/utils/useModulePermission";
+import { getLoggedInUser } from "@/utils/auth";
 
 
 
@@ -127,12 +128,22 @@ useEffect(() => {
 
 const fetchAssignedCases = async () => {
   try {
+    const user = getLoggedInUser();
     const res = await fetch(
       "http://localhost:8000/lawfirm-management/assigned-cases"
     );
     const data = await res.json();
 
-    const formattedCases = data.map((item) => ({
+    let casesToShow = data;
+    if (user && user.role && user.role.toLowerCase().includes("junior")) {
+      casesToShow = data.filter((item) => {
+        if (!item.advocate_name) return false;
+        const normalizedAssignedName = item.advocate_name.toLowerCase().replace(/[^a-z0-9]/g, "");
+        return normalizedAssignedName === user.username;
+      });
+    }
+
+    const formattedCases = casesToShow.map((item) => ({
       id: item.id,
       title: item.case_title,
       caseNo: item.case_number,
