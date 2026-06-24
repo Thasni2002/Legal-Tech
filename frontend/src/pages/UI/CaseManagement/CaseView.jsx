@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Search,
   Plus,
@@ -425,8 +426,8 @@ export default function CaseView() {
       {/* ══════════════════════════════════════════════
           DELETE CONFIRM DIALOG
       ══════════════════════════════════════════════ */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      {deleteConfirm && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
           <div className="relative bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl z-10 text-center">
             <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
@@ -452,14 +453,15 @@ export default function CaseView() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ══════════════════════════════════════════════
           CASE OVERVIEW MODAL
       ══════════════════════════════════════════════ */}
-      {isModalOpen && selectedCase && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {isModalOpen && selectedCase && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
           {/* Backdrop */}
           <div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm"
@@ -733,7 +735,8 @@ export default function CaseView() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
