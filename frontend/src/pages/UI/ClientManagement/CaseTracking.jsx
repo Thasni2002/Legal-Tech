@@ -11,53 +11,12 @@ import {
   CheckCircle,
   Clock,
   ArrowLeft,
+  User,
 } from "lucide-react";
 export default function CaseTracking() {
   const router = useRouter();
-  const clients = [
-    {
-      id: "CL001",
-      name: "Rahul Sharma",
-      cases: [
-        {
-          id: "C001",
-          name: "Property Dispute",
-          status: "Active",
-          court: "District Court",
-          hearing: "25 June 2026",
-        },
-      ],
-    },
-
-    {
-      id: "CL002",
-      name: "Anjali Menon",
-      cases: [
-        {
-          id: "C004",
-          name: "Divorce Petition",
-          status: "Active",
-          court: "Family Court",
-          hearing: "15 June 2026",
-        },
-      ],
-    },
-
-    {
-      id: "CL003",
-      name: "Arjun Nair",
-      cases: [
-        {
-          id: "C006",
-          name: "Cheque Bounce",
-          status: "Active",
-          court: "Magistrate Court",
-          hearing: "20 June 2026",
-        },
-      ],
-    },
-  ];
-
+  const [cases, setCases] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedClient, setSelectedClient] = useState(null);
   const [selectedCase, setSelectedCase] = useState(null);
   const [editingCase, setEditingCase] = useState(null);
@@ -65,8 +24,51 @@ export default function CaseTracking() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    async function loadCases() {
+      try {
+        const res = await fetch("http://127.0.0.1:8000/case-management/");
+        if (res.ok) {
+          const data = await res.json();
+          setCases(data);
+        }
+      } catch (err) {
+        console.error("Error fetching cases:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadCases();
+  }, []);
+
+  useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Build clients dynamically from cases
+  const clientsMap = {};
+  cases.forEach((c) => {
+    const name = c.client_name || "Unknown Client";
+    if (!clientsMap[name]) {
+      clientsMap[name] = {
+        id: `CL-${name.replace(/\s+/g, "").substring(0, 5).toUpperCase()}-${c.contact_number || "000"}`,
+        name: name,
+        cases: [],
+      };
+    }
+    clientsMap[name].cases.push({
+      id: c.case_id || `C-${c.id}`,
+      dbId: c.id,
+      name: c.case_title,
+      status: c.status,
+      court: c.court_name,
+      hearing: c.next_hearing_date || "N/A",
+      selected_advocate: c.selected_advocate,
+      case_no: c.case_no,
+      documents: c.documents || [],
+    });
+  });
+  const clients = Object.values(clientsMap);
+
   const filteredClients = clients.filter(
     (client) =>
       client.name
@@ -78,6 +80,18 @@ export default function CaseTracking() {
           .includes(searchTerm.toLowerCase())
       )
   );
+
+  if (loading) {
+    return (
+      <div className="min-h-[400px] flex items-center justify-center bg-white rounded-xl border border-[#E2E8F0]">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-[#64748B] font-medium">Loading cases...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative w-full space-y-6 md:space-y-8">
       {/* Header */}
@@ -242,6 +256,16 @@ export default function CaseTracking() {
               </div>
 
               <div className="grid grid-cols-3 gap-2 border-b border-[#F1F5F9] pb-2">
+                <span className="font-semibold text-[#1E293B]">Case Number</span>
+                <span className="col-span-2 text-[#0F172A] font-medium">{selectedCase.case_no || "N/A"}</span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 border-b border-[#F1F5F9] pb-2">
+                <span className="font-semibold text-[#1E293B]">Advocate Name</span>
+                <span className="col-span-2 text-[#0F172A] font-medium">{selectedCase.selected_advocate || "N/A"}</span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 border-b border-[#F1F5F9] pb-2">
                 <span className="font-semibold text-[#1E293B]">Status</span>
                 <span className="col-span-2">
                   <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/50">
@@ -270,38 +294,17 @@ export default function CaseTracking() {
                 </div>
 
                 <ul className="text-xs space-y-2.5">
-                  <li>
-                    <a
-                      href="/documents/Vakalatnama.pdf"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#2563EB] hover:underline flex items-center gap-1.5 font-medium"
-                    >
-                      📄 Vakalatnama.pdf
-                    </a>
-                  </li>
-
-                  <li>
-                    <a
-                      href="/documents/Evidence.pdf"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#2563EB] hover:underline flex items-center gap-1.5 font-medium"
-                    >
-                      📄 Evidence.pdf
-                    </a>
-                  </li>
-
-                  <li>
-                    <a
-                      href="/documents/CourtOrder.pdf"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#2563EB] hover:underline flex items-center gap-1.5 font-medium"
-                    >
-                      📄 CourtOrder.pdf
-                    </a>
-                  </li>
+                  {selectedCase.documents && selectedCase.documents.length > 0 ? (
+                    selectedCase.documents.map((doc, idx) => (
+                      <li key={idx}>
+                        <span className="text-[#2563EB] flex items-center gap-1.5 font-medium">
+                          📄 {doc.file || doc.documentType || "Unnamed Document"}
+                        </span>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-gray-500 italic">No documents uploaded</li>
+                  )}
                 </ul>
               </div>
 
@@ -313,47 +316,70 @@ export default function CaseTracking() {
                 </div>
 
                 <ul className="text-xs space-y-2 text-[#64748B] font-medium">
-                  <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A]"></span>
-                    10 May 2026 - Case Filed
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A]"></span>
-                    15 May 2026 - Notice Issued
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB]"></span>
-                    25 May 2026 - Hearing Scheduled
-                  </li>
+                  {selectedCase.hearing && selectedCase.hearing !== "N/A" ? (
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB]"></span>
+                      Next Hearing Scheduled: {selectedCase.hearing}
+                    </li>
+                  ) : (
+                    <li className="text-gray-500 italic">No timeline events</li>
+                  )}
                 </ul>
               </div>
+            </div>
+          </div>
 
-              {/* Payment */}
-              <div className="border border-[#E2E8F0] rounded-lg p-4 bg-[#F8FAFC]">
-                <div className="flex items-center gap-2 font-bold text-sm text-[#0F172A] mb-3">
-                  <CheckCircle size={16} className="text-[#2563EB]" />
-                  Payment Summary
+          {/* Added Dropdowns at the bottom of Case Details Log as requested */}
+          <div className="mt-8 border-t border-[#F1F5F9] pt-6">
+            <h3 className="text-sm font-bold text-[#0F172A] mb-4">Quick Filters / Assignment</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#64748B] mb-2">
+                  Advocate Name
+                </label>
+                <div className="relative">
+                  <User
+                    size={18}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]"
+                  />
+                  <select
+                    className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none"
+                    value={selectedCase.selected_advocate || ""}
+                    disabled
+                  >
+                    <option value="">{selectedCase.selected_advocate || "No Advocate Assigned"}</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-[#64748B]">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                  </div>
                 </div>
+              </div>
 
-                <div className="space-y-1.5 text-xs text-[#64748B]">
-                  <div className="flex justify-between">
-                    <span>Total Fee:</span>
-                    <span className="font-semibold text-[#0F172A]">₹50,000</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Paid:</span>
-                    <span className="font-semibold text-green-600">₹30,000</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Pending:</span>
-                    <span className="font-semibold text-red-600">₹20,000</span>
+              <div>
+                <label className="block text-sm font-medium text-[#64748B] mb-2">
+                  Case Number
+                </label>
+                <div className="relative">
+                  <Briefcase
+                    size={18}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]"
+                  />
+                  <select
+                    className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none"
+                    value={selectedCase.case_no || ""}
+                    disabled
+                  >
+                    <option value="">{selectedCase.case_no || "No Case Number"}</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-[#64748B]">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      )}
+      ) /* Removed editing modal as it is irrelevant/unused dummy overlay code */}
 
       {/* Edit Case Form */}
       {mounted && editingCase && typeof document !== "undefined" ? createPortal(
@@ -446,18 +472,60 @@ export default function CaseTracking() {
 
             <div className="flex justify-end gap-3 mt-6">
               <button
-                onClick={() => {
-                  alert("Case Updated Successfully");
-                  setEditingCase(null);
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`http://127.0.0.1:8000/case-management/${editingCase.dbId}`, {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        caseTitle: editingCase.name,
+                        status: editingCase.status,
+                        courtName: editingCase.court,
+                        nextHearingDate: editingCase.hearing,
+                      }),
+                    });
+                    if (res.ok) {
+                      alert("Case Updated Successfully");
+                      // Refresh cases
+                      const loadRes = await fetch("http://127.0.0.1:8000/case-management/");
+                      if (loadRes.ok) {
+                        const data = await loadRes.json();
+                        setCases(data);
+                        // Update active selectedCase if it was edited
+                        if (selectedCase && selectedCase.dbId === editingCase.dbId) {
+                          const updatedCase = data.find(c => c.id === editingCase.dbId);
+                          if (updatedCase) {
+                            setSelectedCase({
+                              id: updatedCase.case_id || `C-${updatedCase.id}`,
+                              dbId: updatedCase.id,
+                              name: updatedCase.case_title,
+                              status: updatedCase.status,
+                              court: updatedCase.court_name,
+                              hearing: updatedCase.next_hearing_date || "N/A",
+                              selected_advocate: updatedCase.selected_advocate,
+                              case_no: updatedCase.case_no,
+                              documents: updatedCase.documents || [],
+                            });
+                          }
+                        }
+                      }
+                      setEditingCase(null);
+                    } else {
+                      alert("Failed to update case");
+                    }
+                  } catch (err) {
+                    console.error(err);
+                    alert("Error updating case");
+                  }
                 }}
-                className="bg-blue-600 text-white px-5 py-2 rounded-lg"
+                className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-5 py-2 rounded-lg transition-colors cursor-pointer"
               >
                 Save Changes
               </button>
 
               <button
                 onClick={() => setEditingCase(null)}
-                className="border px-5 py-2 rounded-lg"
+                className="border border-[#E2E8F0] px-5 py-2 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>

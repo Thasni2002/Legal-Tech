@@ -39,7 +39,7 @@ def seed_database():
         role="Senior Advocate"
     )
     db.add(admin)
-    
+
     # Insert default roles and permissions
     role_names = {
         "senioradvocate": "Senior Advocate",

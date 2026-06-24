@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Calendar,
   User,
@@ -31,26 +31,47 @@ export default function ClientCaseTrackingView() {
     );
   }
 
-  const cases = [
-    {
-      caseId: "CS/890/2023",
-      title: "Property Dispute",
-      status: "In Progress",
-      advocate: "Adv. Rahul Sharma",
-      court: "Civil Court, Prayagraj",
-      nextHearing: "25 Jun 2026",
-      currentStep: 3, // 0-indexed: which step is currently active
-    },
-    {
-      caseId: "CR/567/2023",
-      title: "Bail Application",
-      status: "Pending",
-      advocate: "Adv. Ankit Verma",
-      court: "High Court",
-      nextHearing: "30 Jun 2026",
-      currentStep: 1,
-    },
-  ];
+  const [cases, setCases] = useState([]);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  // Fetch cases dynamically
+  useEffect(() => {
+    const fetchCases = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/clients/cases");
+        const data = await res.json();
+        
+        const mappedCases = data.map(item => {
+          let step = 0;
+          const statusLower = (item.status || "").toLowerCase();
+          if (statusLower.includes("file")) step = 0;
+          else if (statusLower.includes("document")) step = 1;
+          else if (statusLower.includes("schedule") || statusLower.includes("hearing")) step = 2;
+          else if (statusLower.includes("progress") || statusLower.includes("active")) step = 3;
+          else if (statusLower.includes("resolve") || statusLower.includes("close")) step = 4;
+          else step = 0;
+
+          return {
+            caseId: item.case_no || "N/A",
+            title: item.title || "Untitled Case",
+            status: item.status || "Case Filed",
+            advocate: item.advocate_name || item.client_name || "Advocate",
+            court: item.court || "Civil Court",
+            nextHearing: item.nextHearing || "To be scheduled",
+            currentStep: step,
+          };
+        });
+        setCases(mappedCases);
+      } catch (err) {
+        console.error("Error fetching case tracking data:", err);
+      } finally {
+        setDataLoading(false);
+      }
+    };
+    if (perms.view) {
+      fetchCases();
+    }
+  }, [perms.view]);
 
   const statusSteps = [
     "Case Filed",
@@ -64,12 +85,15 @@ export default function ClientCaseTrackingView() {
   const filteredCases = cases.filter((item) => {
     const matchAdvocate =
       advocateName.trim() === "" ||
-      item.advocate.toLowerCase().includes(advocateName.toLowerCase());
+      item.advocate.toLowerCase() === advocateName.toLowerCase();
     const matchCase =
       caseNumber.trim() === "" ||
-      item.caseId.toLowerCase().includes(caseNumber.toLowerCase());
+      item.caseId.toLowerCase() === caseNumber.toLowerCase();
     return matchAdvocate && matchCase;
   });
+
+  const uniqueAdvocates = [...new Set(cases.map(c => c.advocate))];
+  const uniqueCaseNumbers = [...new Set(cases.map(c => c.caseId))];
 
   return (
     <div className="w-full space-y-6 md:space-y-8">
@@ -84,7 +108,7 @@ export default function ClientCaseTrackingView() {
           </p>
         </div>
 
-        {/* Input Boxes — Advocate Name & Case Number */}
+        {/* Dropdown Boxes — Advocate Name & Case Number */}
         {/* <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 mb-8 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -96,13 +120,19 @@ export default function ClientCaseTrackingView() {
                   size={18}
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]"
                 />
-                <input
-                  type="text"
-                  placeholder="Enter advocate name"
+                <select
                   value={advocateName}
                   onChange={(e) => setAdvocateName(e.target.value)}
-                  className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
+                  className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none"
+                >
+                  <option value="">All Advocates</option>
+                  {uniqueAdvocates.map((adv, idx) => (
+                    <option key={idx} value={adv}>{adv}</option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-[#64748B]">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
               </div>
             </div>
 
@@ -115,20 +145,30 @@ export default function ClientCaseTrackingView() {
                   size={18}
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]"
                 />
-                <input
-                  type="text"
-                  placeholder="Enter case number"
+                <select
                   value={caseNumber}
                   onChange={(e) => setCaseNumber(e.target.value)}
-                  className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
+                  className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none"
+                >
+                  <option value="">All Case Numbers</option>
+                  {uniqueCaseNumbers.map((cno, idx) => (
+                    <option key={idx} value={cno}>{cno}</option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-[#64748B]">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
               </div>
             </div>
           </div>
         </div> */}
 
         {/* Case Cards with Status Flow */}
-        {filteredCases.length === 0 ? (
+        {dataLoading ? (
+          <div className="bg-white rounded-2xl border border-[#E2E8F0] p-12 text-center shadow-sm">
+            <p className="text-[#64748B] text-lg animate-pulse">Loading cases...</p>
+          </div>
+        ) : filteredCases.length === 0 ? (
           <div className="bg-white rounded-2xl border border-[#E2E8F0] p-12 text-center shadow-sm">
             <p className="text-[#64748B] text-lg">No cases found</p>
           </div>
