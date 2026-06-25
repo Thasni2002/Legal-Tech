@@ -70,34 +70,28 @@ export default function AssignAdv({ isOpen, onClose }) {
 
     fetchAdvocates();
   }, []);
-  // Dummy case data
-  const cases = [
-    {
-      name: "Property Dispute",
-      caseNumber: "CASE-2026-001",
-      caseTitle: "Ashraf vs ABC Pvt Ltd",
-    },
-    {
-      name: "Cyber Fraud Case",
-      caseNumber: "CASE-2026-002",
-      caseTitle: "Rahul vs XYZ Tech Solutions",
-    },
-    {
-      name: "Divorce Settlement",
-      caseNumber: "CASE-2026-003",
-      caseTitle: "Aisha vs Kareem",
-    },
-    {
-      name: "Cheque Bounce Case",
-      caseNumber: "CASE-2026-004",
-      caseTitle: "HDFC Bank vs Niyas",
-    },
-    {
-      name: "Land Ownership Dispute",
-      caseNumber: "CASE-2026-005",
-      caseTitle: "Salim vs Municipal Corporation",
-    },
-  ];
+  const [cases, setCases] = useState([]);
+
+  useEffect(() => {
+    const fetchCases = async () => {
+      try {
+        const res = await fetch("http://127.0.0.1:8000/case-management/");
+        if (res.ok) {
+          const data = await res.json();
+          const mappedCases = data.map((c) => ({
+            name: c.case_title || `Case ${c.id}`,
+            caseNumber: c.case_no || `CASE-${c.id}`,
+            caseTitle: c.case_title || `Case ${c.id}`,
+          }));
+          setCases(mappedCases);
+        }
+      } catch (error) {
+        console.error("Error fetching cases:", error);
+      }
+    };
+
+    fetchCases();
+  }, []);
 
   const practiceAreas = [
     "Civil Law",
@@ -269,8 +263,8 @@ export default function AssignAdv({ isOpen, onClose }) {
         required
       >
         <option value="">Select Case</option>
-        {cases.map((item) => (
-          <option key={item.caseNumber} value={item.name}>
+        {cases.map((item, index) => (
+          <option key={`${item.caseNumber}-${index}`} value={item.name}>
             {item.name}
           </option>
         ))}
