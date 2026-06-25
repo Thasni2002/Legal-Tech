@@ -6,7 +6,7 @@ import Link from "next/link";
 import { createPortal } from "react-dom";
 import {
   Eye,
-  Edit,
+
   Briefcase,
   CheckCircle,
   Clock,
@@ -20,7 +20,7 @@ export default function CaseTracking() {
   const [loading, setLoading] = useState(true);
   const [selectedClient, setSelectedClient] = useState(null);
   const [selectedCase, setSelectedCase] = useState(null);
-  const [editingCase, setEditingCase] = useState(null);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [mounted, setMounted] = useState(false);
 
@@ -165,7 +165,7 @@ export default function CaseTracking() {
                 onClick={() => {
                   setSelectedClient(client);
                   setSelectedCase(null);
-                  setEditingCase(null);
+                
                 }}
                 className="mt-5 w-full bg-[#2563EB] hover:bg-[#1d4ed8] text-white py-2 rounded-lg text-xs font-semibold shadow-sm transition-all duration-200 cursor-pointer"
               >
@@ -210,7 +210,7 @@ export default function CaseTracking() {
                         <button
                           onClick={() => {
                             setSelectedCase(item);
-                            setEditingCase(null);
+                            
                           }}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-[#16A34A] hover:bg-[#15803d] text-white text-xs font-semibold rounded-lg shadow-sm transition-colors duration-200 cursor-pointer"
                         >
@@ -218,15 +218,7 @@ export default function CaseTracking() {
                           View
                         </button>
 
-                        <button
-                          onClick={() =>
-                            setEditingCase({ ...item })
-                          }
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-semibold rounded-lg shadow-sm transition-colors duration-200 cursor-pointer"
-                        >
-                          <Edit size={14} />
-                          Edit
-                        </button>
+                        
                       </div>
                     </td>
                   </tr>
@@ -423,159 +415,7 @@ export default function CaseTracking() {
         document.body
       ) : null}
 
-      {/* Edit Case Form */}
-      {mounted && editingCase && typeof document !== "undefined" ? createPortal(
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[9999]">
-          <div className="bg-white rounded-xl w-full max-w-2xl p-6 shadow-xl relative">
-
-            <button
-              onClick={() => setEditingCase(null)}
-              className="absolute top-4 right-4 text-gray-500 hover:text-black"
-            >
-              ✕
-            </button>
-
-            <h2 className="text-lg font-bold text-[#0F172A] mb-6">
-              Edit Client Details
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className="block mb-2 text-xs font-semibold">
-                  client Name
-                </label>
-                <input
-                  type="text"
-                  value={editingCase.name}
-                  onChange={(e) =>
-                    setEditingCase({
-                      ...editingCase,
-                      name: e.target.value,
-                    })
-                  }
-                  className="w-full border rounded-lg px-4 py-2"
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2 text-xs font-semibold">
-                  Status
-                </label>
-                <select
-                  value={editingCase.status}
-                  onChange={(e) =>
-                    setEditingCase({
-                      ...editingCase,
-                      status: e.target.value,
-                    })
-                  }
-                  className="w-full border rounded-lg px-4 py-2"
-                >
-                  <option>Active</option>
-                  <option>Closed</option>
-                  <option>Hearing Scheduled</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block mb-2 text-xs font-semibold">
-                  Court Name
-                </label>
-                <input
-                  type="text"
-                  value={editingCase.court}
-                  onChange={(e) =>
-                    setEditingCase({
-                      ...editingCase,
-                      court: e.target.value,
-                    })
-                  }
-                  className="w-full border rounded-lg px-4 py-2"
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2 text-xs font-semibold">
-                  Hearing Date
-                </label>
-                <input
-                  type="text"
-                  value={editingCase.hearing}
-                  onChange={(e) =>
-                    setEditingCase({
-                      ...editingCase,
-                      hearing: e.target.value,
-                    })
-                  }
-                  className="w-full border rounded-lg px-4 py-2"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={async () => {
-                  try {
-                    const res = await fetch(`http://127.0.0.1:8000/case-management/${editingCase.dbId}`, {
-                      method: "PUT",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        caseTitle: editingCase.name,
-                        status: editingCase.status,
-                        courtName: editingCase.court,
-                        nextHearingDate: editingCase.hearing,
-                      }),
-                    });
-                    if (res.ok) {
-                      alert("Case Updated Successfully");
-                      // Refresh cases
-                      const loadRes = await fetch("http://127.0.0.1:8000/case-management/");
-                      if (loadRes.ok) {
-                        const data = await loadRes.json();
-                        setCases(data);
-                        // Update active selectedCase if it was edited
-                        if (selectedCase && selectedCase.dbId === editingCase.dbId) {
-                          const updatedCase = data.find(c => c.id === editingCase.dbId);
-                          if (updatedCase) {
-                            setSelectedCase({
-                              id: updatedCase.case_id || `C-${updatedCase.id}`,
-                              dbId: updatedCase.id,
-                              name: updatedCase.case_title,
-                              status: updatedCase.status,
-                              court: updatedCase.court_name,
-                              hearing: updatedCase.next_hearing_date || "N/A",
-                              selected_advocate: updatedCase.selected_advocate,
-                              case_no: updatedCase.case_no,
-                              documents: updatedCase.documents || [],
-                            });
-                          }
-                        }
-                      }
-                      setEditingCase(null);
-                    } else {
-                      alert("Failed to update case");
-                    }
-                  } catch (err) {
-                    console.error(err);
-                    alert("Error updating case");
-                  }
-                }}
-                className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-5 py-2 rounded-lg transition-colors cursor-pointer"
-              >
-                Save Changes
-              </button>
-
-              <button
-                onClick={() => setEditingCase(null)}
-                className="border border-[#E2E8F0] px-5 py-2 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      ) : null}
+      
     </div>
   );
 }
