@@ -94,7 +94,10 @@ export default function LawfirmAdd({ onCancel, initialData }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!/^\d{10}$/.test(formData.phoneNumber)) {
+    if (
+      formData.phoneNumber &&
+      !/^\d{10}$/.test(formData.phoneNumber)
+    ) {
       alert("Phone Number must be 10 digits");
       return;
     }
@@ -107,14 +110,6 @@ export default function LawfirmAdd({ onCancel, initialData }) {
       return;
     }
 
-    if (
-      formData.pincode &&
-      !/^\d{6}$/.test(formData.pincode)
-    ) {
-      alert("Pincode must be 6 digits");
-      return;
-    }
-
     try {
       const payload = {
         advocateName: formData.advocateName,
@@ -122,9 +117,6 @@ export default function LawfirmAdd({ onCancel, initialData }) {
         enrollmentNumber: formData.enrollmentNumber,
         phoneNumber: formData.phoneNumber,
         emailAddress: formData.emailAddress,
-        specialization: formData.specialization,
-        city: formData.city,
-        status: formData.status || "Active",
         dateOfBirth: formData.dateOfBirth,
         gender: formData.gender,
         aadhaarNumber: formData.aadhaarNumber,
@@ -134,11 +126,14 @@ export default function LawfirmAdd({ onCancel, initialData }) {
         yearsOfExperience: formData.yearsOfExperience,
         languagesKnown: formData.languagesKnown,
         lawFirmName: formData.lawFirmName,
+        specialization: formData.specialization,
+        city: formData.city,
         state: formData.state,
         pincode: formData.pincode,
         chambersAddress: formData.chambersAddress,
         about: formData.about,
         profileImage: formData.profileImage,
+        status: formData.status || "Active",
       };
 
       let response;
@@ -201,9 +196,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
           <h1 className="text-3xl font-extrabold text-[#0F172A] tracking-tight">
             Law Firm Management
           </h1>
-          <p className="text-[#64748B] mt-1 font-medium">
-            Create and manage advocate profiles affiliated with your firm.
-          </p>
+          
         </div>
       </div>
 
@@ -256,8 +249,8 @@ export default function LawfirmAdd({ onCancel, initialData }) {
             <InputField label="Advocate Name" name="advocateName" value={formData.advocateName} onChange={handleChange} />
             <InputField label="Bar Council ID" name="barCouncilId" value={formData.barCouncilId} onChange={handleChange} />
             <InputField label="Enrollment Number" name="enrollmentNumber" value={formData.enrollmentNumber} onChange={handleChange} />
-            <InputField label="Phone Number" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} maxLength={10} />
-            <InputField label="Email Address" name="emailAddress" value={formData.emailAddress} onChange={handleChange} />
+            <InputField label="Phone Number (Optional)" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} maxLength={10} />
+            <InputField label="Email Address (Optional)" type="email" name="emailAddress" value={formData.emailAddress} onChange={handleChange} />
             <InputField label="Date of Birth" type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} />
 
             <SelectField
@@ -268,9 +261,8 @@ export default function LawfirmAdd({ onCancel, initialData }) {
               onChange={handleChange}
             />
 
-            <InputField
-              label="Aadhaar Number" name="aadhaarNumber" value={formData.aadhaarNumber} onChange={handleChange} maxLength={12} />
-            <InputField label="PAN Number" name="panNumber" value={formData.panNumber} onChange={handleChange} />
+            <InputField label="Aadhaar Number (Optional)" name="aadhaarNumber" value={formData.aadhaarNumber} onChange={handleChange} maxLength={12} />
+            <InputField label="PAN Number (Optional)" name="panNumber" value={formData.panNumber} onChange={handleChange} />
           </div>
         </div>
 
@@ -282,12 +274,12 @@ export default function LawfirmAdd({ onCancel, initialData }) {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            <InputField label="Practice Area" name="practiceArea" value={formData.practiceArea} onChange={handleChange} />
-            <InputField label="Court Type" name="courtType" value={formData.courtType} onChange={handleChange} />
-            <InputField label="Years of Experience" name="yearsOfExperience" value={formData.yearsOfExperience} onChange={handleChange} />
-            <InputField label="Languages Known" name="languagesKnown" value={formData.languagesKnown} onChange={handleChange} />
-            <InputField label="Law Firm Name" name="lawFirmName" value={formData.lawFirmName} onChange={handleChange} />
-            <InputField label="Specialization" name="specialization" value={formData.specialization} onChange={handleChange} />
+            <SelectField label="Practice Area" options={["Civil Law", "Criminal Law", "Corporate Law", "Family Law", "Property Law"]} name="practiceArea" value={formData.practiceArea} onChange={handleChange} />
+            <SelectField label="Court Type" options={["District Court", "High Court", "Supreme Court"]} name="courtType" value={formData.courtType} onChange={handleChange} />
+            <InputField label="Years of Experience (Optional)" type="number" name="yearsOfExperience" value={formData.yearsOfExperience} onChange={handleChange} />
+            <InputField label="Languages Known (Optional)" placeholder="English, Hindi" name="languagesKnown" value={formData.languagesKnown} onChange={handleChange} />
+            <InputField label="Law Firm Name (Optional)" name="lawFirmName" value={formData.lawFirmName} onChange={handleChange} />
+            <InputField label="Specialization (Optional)" name="specialization" value={formData.specialization} onChange={handleChange} />
             <SelectField
               label="Status"
               options={["Active", "Inactive"]}
@@ -308,8 +300,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             <InputField label="City" name="city" value={formData.city} onChange={handleChange} />
             <InputField label="State" name="state" value={formData.state} onChange={handleChange} />
-            <InputField
-              label="Pincode" name="pincode" value={formData.pincode} onChange={handleChange} maxLength={6} />
+            <InputField label="Pincode" name="pincode" value={formData.pincode} onChange={handleChange} maxLength={6} />
           </div>
 
           <div className="mt-8">
@@ -331,7 +322,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
         <div className="bg-white rounded-3xl border border-[#E2E8F0] p-8 md:p-10 shadow-xl shadow-slate-200/40">
           <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
             <span className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">📝</span>
-            About Advocate
+            About Advocate (Optional)
           </h2>
 
           <textarea

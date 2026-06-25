@@ -29,13 +29,14 @@ def get_db():
         db.close()
 
 
-# Razorpay client
-client = razorpay.Client(
-    auth=(
-        os.getenv("RAZORPAY_KEY_ID"),
-        os.getenv("RAZORPAY_KEY_SECRET")
-    )
-)
+# Razorpay client (safe initialization)
+razorpay_key_id = os.getenv("RAZORPAY_KEY_ID")
+razorpay_key_secret = os.getenv("RAZORPAY_KEY_SECRET")
+
+if razorpay_key_id and razorpay_key_secret:
+    client = razorpay.Client(auth=(razorpay_key_id, razorpay_key_secret))
+else:
+    client = None
 
 
 # -----------------------------

@@ -3,6 +3,7 @@
 import ProfileManagement from '@/pages/UI/ProfileManagement/ProfileManagmentView'
 import ProfileView from "@/pages/UI/ProfileManagement/profileView";
 import React, { useState, useEffect } from 'react'
+import { getLoggedInUser } from "@/utils/auth";
 
 const Page = () => {
   const [profile, setProfile] = useState(null);
@@ -10,23 +11,78 @@ const Page = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedProfile = localStorage.getItem("advocate_profile");
-    if (savedProfile) {
+    const fetchProfile = async () => {
       try {
-        const parsed = JSON.parse(savedProfile);
-        setProfile(parsed);
-        setIsSubmitted(true);
+        const user = getLoggedInUser();
+        if (!user || !user.email) {
+          setIsLoading(false);
+          return;
+        }
+
+        const res = await fetch("http://localhost:8000/lawfirm-management/");
+        if (res.ok) {
+          const advocates = await res.json();
+          const myAdvocate = advocates.find(
+            (adv) => adv.emailAddress === user.email
+          );
+          if (myAdvocate) {
+            setProfile(myAdvocate);
+            setIsSubmitted(true);
+          } else {
+            // Profile not found in advocates table, pre-fill with user details
+            setProfile({
+              advocateName: user.username,
+              emailAddress: user.email,
+            });
+          }
+        }
       } catch (e) {
-        console.error("Error parsing saved profile data:", e);
+        console.error("Error fetching profile from backend:", e);
+      } finally {
+        setIsLoading(false);
       }
-    }
-    setIsLoading(false);
+    };
+
+    fetchProfile();
   }, []);
 
-  const handleSave = (updatedProfile) => {
-    localStorage.setItem("advocate_profile", JSON.stringify(updatedProfile));
-    setProfile(updatedProfile);
-    setIsSubmitted(true);
+  const handleSave = async (updatedProfile) => {
+    try {
+      const payload = { ...updatedProfile };
+      
+      // Clean empty strings for Pydantic validation
+      if (payload.dateOfBirth === "") {
+        payload.dateOfBirth = null;
+      }
+      if (payload.yearsOfExperience === "") {
+        payload.yearsOfExperience = null;
+      }
+
+      let response;
+      if (payload.id) {
+        response = await fetch(`http://localhost:8000/lawfirm-management/${payload.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        response = await fetch("http://localhost:8000/lawfirm-management/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (response.ok) {
+        const savedData = await response.json();
+        setProfile(savedData);
+        setIsSubmitted(true);
+      } else {
+        console.error("Failed to save profile to backend.");
+      }
+    } catch (error) {
+      console.error("Error saving profile:", error);
+    }
   };
 
   const handleCancel = () => {
