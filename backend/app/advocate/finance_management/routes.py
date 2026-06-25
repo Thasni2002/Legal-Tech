@@ -3,14 +3,24 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.database import SessionLocal
 from app.authapp.models import User
-from .schemas import InvoiceCreate, InvoiceUpdateStatus, InvoiceOut, InvoiceStats
+from .schemas import (
+    InvoiceCreate,
+    InvoiceUpdateStatus,
+    InvoiceOut,
+    InvoiceStats,
+    CreateOrderSchema,
+    VerifyPaymentSchema
+)
 from . import service
 from pydantic import BaseModel
 from app.utils.email import send_email
+import razorpay
+import os
 
 router = APIRouter(prefix="/finance", tags=["Finance Management"])
 
 
+# Database connection
 def get_db():
     db = SessionLocal()
     try:
@@ -19,6 +29,18 @@ def get_db():
         db.close()
 
 
+# Razorpay client
+client = razorpay.Client(
+    auth=(
+        os.getenv("RAZORPAY_KEY_ID"),
+        os.getenv("RAZORPAY_KEY_SECRET")
+    )
+)
+
+
+# -----------------------------
+# Schemas
+# -----------------------------
 class PaymentEmailSchema(BaseModel):
     email: str
     client_name: str
@@ -29,6 +51,11 @@ class PaymentEmailSchema(BaseModel):
     payment_link: str
 
 
+
+
+# -----------------------------
+# Invoice APIs
+# -----------------------------
 @router.get("/invoices", response_model=List[InvoiceOut])
 def get_invoices(
     advocate_id: Optional[int] = Query(None),
@@ -60,7 +87,11 @@ def create_invoice(data: InvoiceCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/invoices/{invoice_id}/status", response_model=InvoiceOut)
-def update_status(invoice_id: int, data: InvoiceUpdateStatus, db: Session = Depends(get_db)):
+def update_status(
+    invoice_id: int,
+    data: InvoiceUpdateStatus,
+    db: Session = Depends(get_db)
+):
     invoice = service.update_invoice_status(db, invoice_id, data.status)
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
@@ -83,6 +114,9 @@ def get_stats(
     return service.get_invoice_stats(db, advocate_id=advocate_id)
 
 
+# -----------------------------
+# Client API
+# -----------------------------
 @router.get("/clients")
 def get_registered_clients(db: Session = Depends(get_db)):
     users = db.query(User).all()
@@ -99,14 +133,11 @@ def get_registered_clients(db: Session = Depends(get_db)):
     return client_list
 
 
+# -----------------------------
+# Send Payment Email
+# -----------------------------
 @router.post("/send-payment-email")
 async def send_payment_email(data: PaymentEmailSchema):
-
-    payment_info = (
-        f"Google Pay Number: {data.gpay_number}"
-        if data.payment_method == "gpay"
-        else f"UPI ID: {data.upi_id}"
-    )
 
     html_content = f"""
     <h2>Legal Service Payment Request</h2>
@@ -115,11 +146,10 @@ async def send_payment_email(data: PaymentEmailSchema):
 
     <p>
         Your invoice has been generated successfully.
-        Please complete the payment using the method below.
+        Please complete the payment using the link below.
     </p>
 
     <p><strong>Total Amount:</strong> ₹{data.amount}</p>
-  
 
     <br>
 
@@ -147,3 +177,60 @@ async def send_payment_email(data: PaymentEmailSchema):
     )
 
     return {"message": "Email sent successfully"}
+
+
+# -----------------------------
+# Razorpay Create Order
+# -----------------------------
+@router.post("/payment/create-order")
+def create_order(data: CreateOrderSchema):
+    amount = int(data.amount * 100)
+
+    order = client.order.create({
+        "amount": amount,
+        "currency": "INR",
+        "payment_capture": 1
+    })
+
+    return {
+        "id": order["id"],
+        "amount": order["amount"],
+        "currency": order["currency"]
+    }
+
+
+# -----------------------------
+# Razorpay Verify Payment
+# -----------------------------
+@router.post("/payment/verify")
+def verify_payment(
+    data: VerifyPaymentSchema,
+    db: Session = Depends(get_db)
+):
+    try:
+        client.utility.verify_payment_signature({
+            "razorpay_order_id": data.razorpay_order_id,
+            "razorpay_payment_id": data.razorpay_payment_id,
+            "razorpay_signature": data.razorpay_signature
+        })
+
+        invoice = service.update_invoice_status(
+            db,
+            data.invoice_id,
+            "Paid"
+        )
+
+        if not invoice:
+            raise HTTPException(status_code=404, detail="Invoice not found")
+
+        return {
+            "success": True,
+            "message": "Payment verified successfully",
+            "invoice": invoice
+        }
+
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="Payment verification failed"
+        )

@@ -26,21 +26,11 @@ export default function ClientPayments() {
   const [authError, setAuthError] = useState("");
   
   // Payment modal state
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
-  // Form states and tabs
-  const [paymentMethod, setPaymentMethod] = useState("gpay"); // "gpay" or "upi"
-  const [gpayNumber, setGpayNumber] = useState("");
-  const [upiId, setUpiId] = useState("");
-  
-  // Validation errors
-  const [validationError, setValidationError] = useState("");
-
-
-
+ 
   // Decode user from JWT in localStorage
   const getLoggedInUser = () => {
     if (typeof window === "undefined") return null;
@@ -91,87 +81,88 @@ export default function ClientPayments() {
   }, [clientEmail]);
 
 
-  useEffect(() => {
-  const params = new URLSearchParams(window.location.search);
-  const invoiceId = params.get("invoice_id");
-
-  if (invoiceId && invoices.length > 0) {
-    const invoice = invoices.find(
-      (inv) => String(inv.id) === String(invoiceId)
-    );
-
-    if (invoice) {
-      setSelectedInvoice(invoice);
-      setShowPaymentModal(true);
-    }
-  }
-}, [invoices]);
-  // Validate GPay or UPI on input change
-  useEffect(() => {
-    setValidationError("");
-    
-    if (paymentMethod === "gpay") {
-      if (gpayNumber && !/^[6-9]\d{9}$/.test(gpayNumber)) {
-        setValidationError("Please enter a valid 10-digit mobile number starting with 6-9.");
-      }
-    } else if (paymentMethod === "upi") {
-      if (upiId && !/^[a-zA-Z0-9.\-_]+@[a-zA-Z0-9.\-_]+$/.test(upiId)) {
-        setValidationError("Enter a valid UPI ID (e.g. username@upi or mobile@bank).");
-      }
-    }
-  }, [gpayNumber, upiId, paymentMethod]);
-
-  const isFormValid = () => {
-    if (paymentMethod === "gpay") {
-      return gpayNumber && /^[6-9]\d{9}$/.test(gpayNumber);
-    } else {
-      return upiId && /^[a-zA-Z0-9.\-_]+@[a-zA-Z0-9.\-_]+$/.test(upiId);
-    }
-  };
 
   // Handle Payment Submit
-  const handlePaymentSubmit = async () => {
-    if (!perms.add) {
-      alert("You do not have permission to make payments.");
-      return;
-    }
-    if (!selectedInvoice || !isFormValid()) return;
-    setIsProcessing(true);
+const handlePaymentSubmit = async (invoice) => {
+  if (!invoice) return;
 
-    try {
-      const res = await fetch(`http://localhost:8000/finance/invoices/${selectedInvoice.id}/status`, {
-        method: "PUT",
+  setIsProcessing(true);
+
+  try {
+    // Create Razorpay order
+    const orderRes = await fetch(
+      "http://localhost:8000/finance/payment/create-order",
+      {
+        method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status: "Paid" })
-      });
+        body: JSON.stringify({
+          amount: Invoice.grand_total,
+          invoice_id:Invoice.id,
+        }),
+      }
+    );
 
-      if (res.ok) {
-        setTimeout(() => {
-          setIsProcessing(false);
+    const orderData = await orderRes.json();
+
+    const options = {
+      key: "rzp_test_your_key_id",
+      amount: orderData.amount,
+      currency: orderData.currency,
+      name: "Legal Tech",
+      description: `Invoice Payment #${Invoice.id}`,
+      order_id: orderData.id,
+
+      handler: async function (response) {
+        // Verify payment
+        const verifyRes = await fetch(
+          "http://localhost:8000/finance/payment/verify",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              invoice_id: Invoice.id,
+            }),
+          }
+        );
+
+        const verifyData = await verifyRes.json();
+
+        if (verifyRes.ok && verifyData.success) {
           setPaymentSuccess(true);
           setShowPaymentModal(false);
-          setGpayNumber("");
-          setUpiId("");
-          fetchInvoices(); // Refresh payments
+          fetchInvoices();
+        } else {
+          alert("Payment verification failed");
+        }
+      },
 
-          setTimeout(() => {
-            setPaymentSuccess(false);
-            setSelectedInvoice(null);
-          }, 3000);
-        }, 1500); // Simulate secure gateway processing delay
-      } else {
-        alert("Payment failed. Please try again.");
-        setIsProcessing(false);
-      }
-    } catch (err) {
-      console.error("Error processing payment:", err);
-      alert("Error contacting payment gateway.");
-      setIsProcessing(false);
-    }
-  };
+      prefill: {
+        name: Invoice.client_name,
+        email: Invoice.email,
+        contact: Invoice.mobile_number,
+      },
 
+      theme: {
+        color: "#2563EB",
+      },
+    };
+
+    const razorpay = new window.Razorpay(options);
+    razorpay.open();
+
+    setIsProcessing(false);
+  } catch (error) {
+    console.error("Payment error:", error);
+    setIsProcessing(false);
+  }
+};
   // PDF Generator for Receipt / Invoice
   const handleDownloadInvoicePDF = (inv) => {
     const doc = new jsPDF();
@@ -444,10 +435,7 @@ export default function ClientPayments() {
               {perms.add ? (
                 <button
                 type="button"
-                  onClick={() => {
-                    setSelectedInvoice(inv);
-                    setShowPaymentModal(true);
-                  }}
+                 onClick={() => handlePaymentSubmit(inv)}
                   className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm"
                 >
                   Pay Now
@@ -521,144 +509,7 @@ export default function ClientPayments() {
         )}
       </div>
 
-  {/* Payment Modal */}
-{showPaymentModal &&
-  selectedInvoice &&
-  createPortal(
-    <div className="fixed inset-0 z-[999999]">
 
-      {/* Full Page Blur Overlay */}
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-md"
-        onClick={() => setShowPaymentModal(false)}
-      ></div>
-
-      {/* Modal Wrapper */}
-      <div className="relative flex items-center justify-center min-h-screen p-4">
-
-        {/* Modal Box */}
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-[520px] overflow-hidden animate-in fade-in zoom-in duration-200">
-
-          {/* Header */}
-          <div className="bg-slate-50 p-5 border-b border-[#E2E8F0]">
-            <h3 className="text-lg font-bold text-slate-800">
-              Make Payment
-            </h3>
-            <p className="text-xs text-slate-400 mt-1">
-              Invoice ID: #{selectedInvoice.id} | Case:{" "}
-              {selectedInvoice.case_number || "Consultation"}
-            </p>
-          </div>
-
-          {/* Content */}
-          <div className="p-6 space-y-4">
-
-            {/* Total */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex justify-between items-center text-blue-900">
-              <span className="text-sm font-semibold">
-                Total Payable Amount
-              </span>
-              <span className="text-lg font-bold">
-                ₹{selectedInvoice.grand_total.toFixed(2)}
-              </span>
-            </div>
-
-            {/* Google Pay Number */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                Google Pay Number
-              </label>
-              <input
-                type="tel"
-                placeholder="Enter Google Pay Number"
-                value={gpayNumber}
-                onChange={(e) => setGpayNumber(e.target.value)}
-                disabled={isProcessing}
-                className={`w-full border rounded-lg p-2.5 text-sm outline-none transition-all ${
-                  validationError
-                    ? "border-red-400 focus:ring-2 focus:ring-red-200"
-                    : "border-slate-200 focus:ring-2 focus:ring-blue-500"
-                }`}
-              />
-            </div>
-
-            {/* UPI ID */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                UPI ID
-              </label>
-              <input
-                type="text"
-                placeholder="Enter UPI ID (e.g. name@upi)"
-                value={upiId}
-                onChange={(e) => setUpiId(e.target.value)}
-                disabled={isProcessing}
-                className={`w-full border rounded-lg p-2.5 text-sm outline-none transition-all ${
-                  validationError
-                    ? "border-red-400 focus:ring-2 focus:ring-red-200"
-                    : "border-slate-200 focus:ring-2 focus:ring-blue-500"
-                }`}
-              />
-            </div>
-
-            {/* Validation message */}
-            {validationError && (
-              <div className="text-red-500 text-xs flex items-center gap-1.5 mt-1">
-                <AlertCircle className="w-3.5 h-3.5" />
-                <span>{validationError}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Actions */}
-          <div className="bg-slate-50 px-6 py-4 border-t border-[#E2E8F0] flex justify-end gap-3">
-            <button
-              onClick={() => setShowPaymentModal(false)}
-              disabled={isProcessing}
-              className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-semibold transition-all disabled:opacity-50"
-            >
-              Cancel
-            </button>
-
-            <button
-              onClick={handlePaymentSubmit}
-              disabled={!isFormValid() || isProcessing}
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 text-white disabled:text-slate-400 rounded-lg text-sm font-bold flex items-center gap-2 transition-all"
-            >
-              {isProcessing ? (
-                <>
-                  <svg
-                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
-                  <span>Verifying...</span>
-                </>
-              ) : (
-                <span>Pay ₹{selectedInvoice.grand_total.toFixed(2)}</span>
-              )}
-            </button>
-          </div>
-
-        </div>
-      </div>
-    </div>,
-    document.body
-  )}
       
     </div>
   );

@@ -65,57 +65,27 @@ export default function ClientHistory() {
     const clientId = currentClient ? currentClient.clientId : "C-9874";
     const historyKey = `clientHistory_${clientId}`;
 
-    // 2. Load history data
+    // 2. Load custom history data manually added by user
     const savedHistory = localStorage.getItem(historyKey);
     if (savedHistory) {
       try {
-        setHistoryItems(JSON.parse(savedHistory));
+        // Only load manual logs (long timestamp IDs) and exclude dummy data ("1", "2", "3")
+        const parsed = JSON.parse(savedHistory).filter(item => item.id.length > 5 && !item.id.startsWith("db-"));
+        setHistoryItems(parsed);
       } catch (err) {
         console.error("Failed to parse history data:", err);
       }
-    } else {
-      // Seed initial default history items matching requested fields
-      const defaultHistory = [
-        {
-          id: "1",
-          type: "case",
-          title: "Case Status Updated",
-          desc: `Case status changed to '${currentClient?.caseStatus || "In Progress"}' for '${currentClient?.caseTitle || "Commercial Contract Dispute"}'.`,
-          date: "2026-05-10",
-          time: "10:30",
-          badge: "Active",
-        },
-        {
-          id: "2",
-          type: "document",
-          title: "Document Uploaded",
-          desc: "Wakalatnama (Power of Attorney) signed and uploaded. Client Identity Proof (Aadhaar) and contract agreement file archives generated.",
-          date: "2026-05-09",
-          time: "14:15",
-          badge: "3 Files",
-        },
-        {
-          id: "3",
-          type: "payment",
-          title: "₹15,000 Received",
-          desc: "Retainer fee of ₹15,000 received successfully via UPI payment. Transaction Reference: #UPI982348123.",
-          date: "2026-05-05",
-          time: "11:00",
-          badge: "Completed",
-        },
-      ];
-      setHistoryItems(defaultHistory);
-      localStorage.setItem(historyKey, JSON.stringify(defaultHistory));
     }
   }, []);
 
   useEffect(() => {
+    const targetName = (client?.fullName || client?.clientName || "John Doe (Demo Case)").trim().toLowerCase();
+
     const fetchDbConsultations = async () => {
       try {
         const res = await fetch("http://localhost:8000/consultations");
         if (res.ok) {
           const data = await res.json();
-          const targetName = (client?.fullName || client?.clientName || "John Doe (Demo Case)").trim().toLowerCase();
           
           const matchedConsultations = data.filter(item => {
             const itemClientName = (item.client_name || "").trim().toLowerCase();
@@ -142,7 +112,69 @@ export default function ClientHistory() {
       }
     };
 
+    const fetchDbCases = async () => {
+      try {
+        const res = await fetch("http://127.0.0.1:8000/case-management/");
+        if (res.ok) {
+          const data = await res.json();
+          const matchedCases = data.filter(item => {
+            const itemClientName = (item.client_name || "").trim().toLowerCase();
+            return itemClientName === targetName || targetName.includes(itemClientName) || itemClientName.includes(targetName);
+          });
+
+          const mapped = matchedCases.map(item => ({
+            id: `db-case-${item.id}`,
+            type: "case",
+            title: "Case Created / Updated",
+            desc: `Case '${item.case_title || item.case_no}' under court '${item.court_name}' is currently '${item.status}'.`,
+            date: item.created_at ? item.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
+            time: item.created_at ? item.created_at.split("T")[1].substring(0, 5) : "10:00",
+            badge: item.status || "Active",
+          }));
+
+          setHistoryItems(prev => {
+            const nonDb = prev.filter(i => !i.id.startsWith("db-case-"));
+            return [...mapped, ...nonDb];
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch cases in ClientHistory:", err);
+      }
+    };
+
+    const fetchDbInvoices = async () => {
+      try {
+        const res = await fetch("http://127.0.0.1:8000/finance/invoices");
+        if (res.ok) {
+          const data = await res.json();
+          const matchedInvoices = data.filter(item => {
+            const itemClientName = (item.client_name || "").trim().toLowerCase();
+            return itemClientName === targetName || targetName.includes(itemClientName) || itemClientName.includes(targetName);
+          });
+
+          const mapped = matchedInvoices.map(item => ({
+            id: `db-payment-${item.id}`,
+            type: "payment",
+            title: `₹${item.amount || 0} ${item.status === 'Paid' ? 'Received' : 'Pending'}`,
+            desc: `Invoice for '${item.service_details || "Services"}' with due date ${item.due_date}.`,
+            date: item.issue_date || item.created_at?.split("T")[0] || new Date().toISOString().split("T")[0],
+            time: item.created_at ? item.created_at.split("T")[1].substring(0, 5) : "12:00",
+            badge: item.status || "Pending",
+          }));
+
+          setHistoryItems(prev => {
+            const nonDb = prev.filter(i => !i.id.startsWith("db-payment-"));
+            return [...mapped, ...nonDb];
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch invoices in ClientHistory:", err);
+      }
+    };
+
     fetchDbConsultations();
+    fetchDbCases();
+    fetchDbInvoices();
   }, [client]);
 
   const handleAddLog = (e) => {
@@ -162,7 +194,8 @@ export default function ClientHistory() {
 
     const updatedHistory = [newHistoryItem, ...historyItems];
     setHistoryItems(updatedHistory);
-    localStorage.setItem(historyKey, JSON.stringify(updatedHistory));
+    // Only save custom logs to localStorage so we don't duplicate fetched data
+    localStorage.setItem(historyKey, JSON.stringify(updatedHistory.filter(item => !item.id.startsWith("db-"))));
 
     // Reset state and close modal
     setNewLog({

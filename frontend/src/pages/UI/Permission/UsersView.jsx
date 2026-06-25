@@ -526,15 +526,13 @@ export default function UsersView() {
         const baseModPerms = currentRolePerms[mod] || { view: false, add: false, edit: false, delete: false };
         
         let hasDiff = false;
-        const modDiff = {};
         for (const act of ["view", "add", "edit", "delete"]) {
           if (modPerms[act] !== baseModPerms[act]) {
             hasDiff = true;
-            modDiff[act] = modPerms[act];
           }
         }
         if (hasDiff) {
-          diffPerms[mod] = modDiff;
+          diffPerms[mod] = { ...modPerms };
         }
       }
 
@@ -557,6 +555,7 @@ export default function UsersView() {
         const updatedUser = await res.json();
         setUsers((prev) => prev.map((u) => u.id === activeUser.id ? updatedUser : u));
         showToast("User details and overrides updated successfully!");
+        window.dispatchEvent(new Event("permissions_updated"));
         setIsDetailsOpen(false);
       } else {
         const errData = await res.json();

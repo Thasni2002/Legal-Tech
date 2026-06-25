@@ -40,24 +40,8 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
   const [loading, setLoading] = useState(true);
   const [profileImage, setProfileImage] = useState(null);
 
-  useEffect(() => {
+  const fetchPermissions = () => {
     const loggedIn = getLoggedInUser();
-    setUser(loggedIn);
-    setIsOpen(false);
-    
-    const savedProfile = localStorage.getItem("advocate_profile");
-    if (savedProfile) {
-      try {
-        const parsed = JSON.parse(savedProfile);
-        if (parsed.profileImage) {
-          setProfileImage(parsed.profileImage);
-        }
-      } catch (e) {}
-    }
-    if (pathname?.startsWith("/permissions")) {
-      setUserRolesOpen(true);
-    }
-
     if (loggedIn && loggedIn.id) {
       Promise.all([
         fetch(`http://localhost:8000/permissions/users/${loggedIn.id}`).then((res) => {
@@ -88,7 +72,33 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
     } else {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    const loggedIn = getLoggedInUser();
+    setUser(loggedIn);
+    setIsOpen(false);
+    
+    const savedProfile = localStorage.getItem("advocate_profile");
+    if (savedProfile) {
+      try {
+        const parsed = JSON.parse(savedProfile);
+        if (parsed.profileImage) {
+          setProfileImage(parsed.profileImage);
+        }
+      } catch (e) {}
+    }
+    if (pathname?.startsWith("/permissions")) {
+      setUserRolesOpen(true);
+    }
+
+    fetchPermissions();
   }, [pathname]);
+
+  useEffect(() => {
+    window.addEventListener("permissions_updated", fetchPermissions);
+    return () => window.removeEventListener("permissions_updated", fetchPermissions);
+  }, []);
 
   const hasViewPermission = (moduleKey) => {
     if (!moduleKey) return true;

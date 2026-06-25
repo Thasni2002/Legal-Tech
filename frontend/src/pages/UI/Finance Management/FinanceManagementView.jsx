@@ -158,7 +158,7 @@ const [upiId, setUpiId] = useState("");
           payment_method: paymentMethod,
           gpay_number: gpayNumber,
           upi_id: upiId,
-            payment_link: `http://localhost:3000/client-payments?invoice_id=${savedInvoice.id}`
+          payment_link: `http://localhost:3000/client-payments/${savedInvoice.id}`
         })
       });
 
