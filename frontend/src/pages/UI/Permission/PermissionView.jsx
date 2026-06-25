@@ -241,6 +241,7 @@ export default function PermissionView() {
       });
       if (res.ok) {
         showToast(`Default permissions for "${selectedRole}" saved!`);
+        window.dispatchEvent(new Event("permissions_updated"));
       } else {
         showToast("Error saving permissions", "error");
       }

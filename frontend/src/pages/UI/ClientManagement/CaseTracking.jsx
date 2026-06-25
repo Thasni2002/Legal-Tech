@@ -436,13 +436,13 @@ export default function CaseTracking() {
             </button>
 
             <h2 className="text-lg font-bold text-[#0F172A] mb-6">
-              Edit Case Details
+              Edit Client Details
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <label className="block mb-2 text-xs font-semibold">
-                  Case Name
+                  client Name
                 </label>
                 <input
                   type="text"
