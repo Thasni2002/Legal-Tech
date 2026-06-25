@@ -69,3 +69,17 @@ class InvoiceStats(BaseModel):
     total_pending: float
     total_overdue: float
     invoice_count: int
+
+
+# Razorpay Order Create Schema
+class CreateOrderSchema(BaseModel):
+    amount: float
+    invoice_id: int
+
+
+# Razorpay Payment Verify Schema
+class VerifyPaymentSchema(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+    invoice_id: int

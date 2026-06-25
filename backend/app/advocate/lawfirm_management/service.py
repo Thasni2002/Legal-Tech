@@ -6,7 +6,16 @@ from .schemas import AdvocateCreate, AdvocateUpdate
 
 # Get all advocates
 def get_all_advocates(db: Session):
-    return db.query(Advocate).all()
+    advocates = db.query(Advocate).all()
+
+    # Fix old invalid DB values
+    for advocate in advocates:
+        if advocate.date_of_birth == "":
+            advocate.date_of_birth = None
+        if advocate.years_of_experience == "":
+            advocate.years_of_experience = None
+
+    return advocates
 
 
 # Get single advocate
@@ -14,9 +23,17 @@ def get_advocate_by_id(
     db: Session,
     advocate_id: int
 ):
-    return db.query(Advocate).filter(
+    advocate = db.query(Advocate).filter(
         Advocate.id == advocate_id
     ).first()
+
+    if advocate:
+        if advocate.date_of_birth == "":
+            advocate.date_of_birth = None
+        if advocate.years_of_experience == "":
+            advocate.years_of_experience = None
+
+    return advocate
 
 
 # Create advocate
@@ -24,8 +41,19 @@ def create_advocate(
     db: Session,
     advocate: AdvocateCreate
 ):
+    advocate_data = advocate.model_dump(
+        by_alias=False
+    )
+
+    # Convert empty strings to None
+    if advocate_data.get("date_of_birth") == "":
+        advocate_data["date_of_birth"] = None
+
+    if advocate_data.get("years_of_experience") == "":
+        advocate_data["years_of_experience"] = None
+
     new_advocate = Advocate(
-        **advocate.model_dump(by_alias=False)
+        **advocate_data
     )
 
     db.add(new_advocate)
@@ -49,9 +77,18 @@ def update_advocate(
     if not advocate:
         return None
 
-    for key, value in advocate_data.model_dump(
+    update_data = advocate_data.model_dump(
         by_alias=False
-    ).items():
+    )
+
+    # Convert empty strings to None
+    if update_data.get("date_of_birth") == "":
+        update_data["date_of_birth"] = None
+
+    if update_data.get("years_of_experience") == "":
+        update_data["years_of_experience"] = None
+
+    for key, value in update_data.items():
         setattr(advocate, key, value)
 
     db.commit()
@@ -104,6 +141,7 @@ def create_assigned_case(
 
     return new_case
 
+
 # Get all assigned cases
 def get_assigned_cases(
     db: Session
@@ -118,6 +156,7 @@ def get_assigned_cases(
         )
 
     return assigned_cases
+
 
 # Get single assigned case
 def get_assigned_case_by_id(
@@ -136,6 +175,7 @@ def get_assigned_case_by_id(
         )
 
     return assigned_case
+
 
 # Delete assigned case
 def delete_assigned_case(
