@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { 
-  History, Wallet, CheckCircle2, Clock, AlertCircle, 
-  Search, User, Phone, Mail, FileText, Send, 
+import {
+  History, Wallet, CheckCircle2, Clock, AlertCircle,
+  Search, User, Phone, Mail, FileText, Send,
   Briefcase, Scale, Receipt, Landmark
 } from "lucide-react";
 import { jsPDF } from "jspdf";
@@ -63,8 +63,8 @@ export default function CourtFeeCalView() {
   const [showDropdown, setShowDropdown] = useState(false);
 
   const [paymentMethod, setPaymentMethod] = useState("gpay");
-const [gpayNumber, setGpayNumber] = useState("");
-const [upiId, setUpiId] = useState("");
+  const [gpayNumber, setGpayNumber] = useState("");
+  const [upiId, setUpiId] = useState("");
 
   const total =
     Number(courtFee || 0) +
@@ -75,23 +75,33 @@ const [upiId, setUpiId] = useState("");
   // Fetch data from FastAPI backend
   const fetchInvoicesAndStats = useCallback(async () => {
     try {
-      const resInvoices = await fetch("http://127.0.0.1:8000/finance/invoices");
-      if (resInvoices.ok) {
-        const data = await resInvoices.json();
+      const res = await fetch("http://127.0.0.1:8000/finance/invoices");
+      if (res.ok) {
+        const data = await res.json();
         setInvoices(data);
       }
-      const resStats = await fetch("http://127.0.0.1:8000/finance/stats");
-      if (resStats.ok) {
-        const data = await resStats.json();
+    } catch (err) {
+      console.error("FAILED URL: http://127.0.0.1:8000/finance/invoices", err);
+    }
+
+    try {
+      const res = await fetch("http://127.0.0.1:8000/finance/stats");
+      if (res.ok) {
+        const data = await res.json();
         setStats(data);
       }
-      const resClients = await fetch("http://127.0.0.1:8000/finance/clients");
-      if (resClients.ok) {
-        const data = await resClients.json();
+    } catch (err) {
+      console.error("FAILED URL: http://127.0.0.1:8000/finance/stats", err);
+    }
+
+    try {
+      const res = await fetch("http://127.0.0.1:8000/finance/clients");
+      if (res.ok) {
+        const data = await res.json();
         setClients(data);
       }
     } catch (err) {
-      console.error("Error fetching finance data:", err);
+      console.error("FAILED URL: http://127.0.0.1:8000/finance/clients", err);
     }
   }, []);
 
@@ -102,79 +112,79 @@ const [upiId, setUpiId] = useState("");
   }, [fetchInvoicesAndStats]);
 
   const handleSendPayment = async () => {
-  if (!clientName) {
-    alert("Please select a client first.");
-    return;
-  }
+    if (!clientName) {
+      alert("Please select a client first.");
+      return;
+    }
 
-  try {
-    const grandTotal = (
-      Number(total) +
-      Number((total * 18) / 100)
-    ).toFixed(2);
+    try {
+      const grandTotal = (
+        Number(total) +
+        Number((total * 18) / 100)
+      ).toFixed(2);
 
-    const payload = {
-      client_name: clientName,
-      case_number: caseNumber,
-      mobile_number: mobileNumber,
-      email: email,
+      const payload = {
+        client_name: clientName,
+        case_number: caseNumber,
+        mobile_number: mobileNumber,
+        email: email,
 
-      court_fee_case_type: courtFeeCaseType || "N/A",
-      court_fee_amount: Number(courtFee || 0),
-      court_fee_jurisdiction: courtFeeJurisdiction || "N/A",
+        court_fee_case_type: courtFeeCaseType || "N/A",
+        court_fee_amount: Number(courtFee || 0),
+        court_fee_jurisdiction: courtFeeJurisdiction || "N/A",
 
-      stamp_duty_doc_type: stampDutyDocType || "N/A",
-      stamp_duty_amount: Number(stampDuty || 0),
-      stamp_duty_state: stampDutyState || "N/A",
+        stamp_duty_doc_type: stampDutyDocType || "N/A",
+        stamp_duty_amount: Number(stampDuty || 0),
+        stamp_duty_state: stampDutyState || "N/A",
 
-      advocate_fee_case_type: advocateFeeCaseType || "N/A",
-      advocate_fee_amount: Number(advocateFee || 0),
-      advocate_fee_remarks: advocateFeeRemarks || "N/A",
+        advocate_fee_case_type: advocateFeeCaseType || "N/A",
+        advocate_fee_amount: Number(advocateFee || 0),
+        advocate_fee_remarks: advocateFeeRemarks || "N/A",
 
-      filing_cost_pages: Number(filingCostPages || 0),
-      filing_cost_amount: Number(filingCost || 0),
-      filing_cost_notes: filingCostNotes || "N/A",
+        filing_cost_pages: Number(filingCostPages || 0),
+        filing_cost_amount: Number(filingCost || 0),
+        filing_cost_notes: filingCostNotes || "N/A",
 
-      payment_method: paymentMethod,
-      gpay_number: gpayNumber,
-      upi_id: upiId,
+        payment_method: paymentMethod,
+        gpay_number: gpayNumber,
+        upi_id: upiId,
 
-      status: "Sent"
-    };
+        status: "Sent"
+      };
 
-    const res = await fetch("http://127.0.0.1:8000/finance/invoices", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (res.ok) {
-        const savedInvoice = await res.json();
-      await fetch("http://127.0.0.1:8000/finance/send-payment-email", {
+      const res = await fetch("http://127.0.0.1:8000/finance/invoices", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          email,
-          client_name: clientName,
-          amount: grandTotal,
-          payment_method: paymentMethod,
-          gpay_number: gpayNumber,
-          upi_id: upiId,
-          payment_link: `http://localhost:3000/client-payments/${savedInvoice.id}`
-        })
+        body: JSON.stringify(payload)
       });
 
-      setShowSuccessModal(true);
-      fetchInvoicesAndStats();
+      if (res.ok) {
+        const savedInvoice = await res.json();
+        await fetch("http://127.0.0.1:8000/finance/send-payment-email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            email,
+            client_name: clientName,
+            amount: grandTotal,
+            payment_method: paymentMethod,
+            gpay_number: gpayNumber,
+            upi_id: upiId,
+            payment_link: `http://localhost:3000/client-payments/${savedInvoice.id}`
+          })
+        });
+
+        setShowSuccessModal(true);
+        fetchInvoicesAndStats();
+      }
+    } catch (error) {
+      console.error(error);
     }
-  } catch (error) {
-    console.error(error);
-  }
-};
+  };
   const handleClientSearch = (value) => {
     setSearchTerm(value);
     setClientName(value);
@@ -538,10 +548,10 @@ const [upiId, setUpiId] = useState("");
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         {/* Left Column: Data Entry */}
         <div className="lg:col-span-2 space-y-8">
-          
+
           {/* Client Details Section */}
           <div className="bg-white border border-[#E2E8F0] rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-8">
             <h3 className="text-xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-3">
@@ -643,7 +653,7 @@ const [upiId, setUpiId] = useState("");
 
           {/* Calculator Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
+
             {/* Court Fee */}
             <div className="bg-gradient-to-br from-blue-50/50 to-transparent border border-blue-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:opacity-40 transition-opacity pointer-events-none text-blue-600">
@@ -850,7 +860,7 @@ const [upiId, setUpiId] = useState("");
                 <span className="text-slate-300">Paper Filing</span>
                 <span className="font-bold">₹{filingCost || 0}</span>
               </div>
-              
+
               <div className="flex justify-between items-center pt-4 border-t border-dashed border-slate-700">
                 <span className="text-slate-400">Subtotal</span>
                 <span className="font-bold">₹{total}</span>
@@ -862,7 +872,7 @@ const [upiId, setUpiId] = useState("");
             </div>
 
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 -mx-8 px-8 py-6 mb-8 shadow-inner text-center relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-10"><Landmark size={80}/></div>
+              <div className="absolute top-0 right-0 p-4 opacity-10"><Landmark size={80} /></div>
               <p className="text-xs text-blue-200 uppercase tracking-wider font-bold mb-1 relative z-10">Grand Total</p>
               <p className="text-4xl font-black tracking-tight relative z-10">
                 ₹{(Number(total) + Number((total * 18) / 100)).toFixed(2)}
@@ -904,7 +914,7 @@ const [upiId, setUpiId] = useState("");
           </div>
         </div>
       </div>
-      
+
       {/* Success Modal */}
       {showSuccessModal && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
