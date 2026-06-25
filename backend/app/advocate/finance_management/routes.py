@@ -5,8 +5,11 @@ from app.database import SessionLocal
 from app.authapp.models import User
 from .schemas import InvoiceCreate, InvoiceUpdateStatus, InvoiceOut, InvoiceStats
 from . import service
+from pydantic import BaseModel
+from app.utils.email import send_email
 
 router = APIRouter(prefix="/finance", tags=["Finance Management"])
+
 
 def get_db():
     db = SessionLocal()
@@ -14,7 +17,17 @@ def get_db():
         yield db
     finally:
         db.close()
-# fetch all invoices from the database
+
+
+class PaymentEmailSchema(BaseModel):
+    email: str
+    client_name: str
+    amount: str
+    payment_method: str
+    gpay_number: str | None = None
+    upi_id: str | None = None
+    payment_link: str
+
 
 @router.get("/invoices", response_model=List[InvoiceOut])
 def get_invoices(
@@ -24,9 +37,14 @@ def get_invoices(
     email: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
-    return service.get_invoices(db, advocate_id=advocate_id, status=status, client_name=client_name, email=email)
+    return service.get_invoices(
+        db,
+        advocate_id=advocate_id,
+        status=status,
+        client_name=client_name,
+        email=email
+    )
 
-# get one invoice by ID
 
 @router.get("/invoices/{invoice_id}", response_model=InvoiceOut)
 def get_invoice(invoice_id: int, db: Session = Depends(get_db)):
@@ -35,13 +53,11 @@ def get_invoice(invoice_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Invoice not found")
     return invoice
 
-# create and save a new invoice in the database
 
 @router.post("/invoices", response_model=InvoiceOut)
 def create_invoice(data: InvoiceCreate, db: Session = Depends(get_db)):
     return service.create_invoice(db, data)
 
-# Status update = changing invoice payment condition
 
 @router.put("/invoices/{invoice_id}/status", response_model=InvoiceOut)
 def update_status(invoice_id: int, data: InvoiceUpdateStatus, db: Session = Depends(get_db)):
@@ -49,7 +65,7 @@ def update_status(invoice_id: int, data: InvoiceUpdateStatus, db: Session = Depe
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
     return invoice
-# used to delete an invoice by its ID.
+
 
 @router.delete("/invoices/{invoice_id}")
 def delete_invoice(invoice_id: int, db: Session = Depends(get_db)):
@@ -58,7 +74,6 @@ def delete_invoice(invoice_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Invoice not found")
     return {"message": "Invoice deleted successfully"}
 
-# dashboard summary for invoices.
 
 @router.get("/stats", response_model=InvoiceStats)
 def get_stats(
@@ -67,18 +82,68 @@ def get_stats(
 ):
     return service.get_invoice_stats(db, advocate_id=advocate_id)
 
-# frontend to fetch client data for invoice creation
 
 @router.get("/clients")
 def get_registered_clients(db: Session = Depends(get_db)):
     users = db.query(User).all()
     client_list = []
+
     for user in users:
         client_list.append({
             "id": user.id,
             "name": user.username,
             "email": user.email,
             "mobile": user.mobile_number if hasattr(user, "mobile_number") else None
-
         })
+
     return client_list
+
+
+@router.post("/send-payment-email")
+async def send_payment_email(data: PaymentEmailSchema):
+
+    payment_info = (
+        f"Google Pay Number: {data.gpay_number}"
+        if data.payment_method == "gpay"
+        else f"UPI ID: {data.upi_id}"
+    )
+
+    html_content = f"""
+    <h2>Legal Service Payment Request</h2>
+
+    <p>Dear {data.client_name},</p>
+
+    <p>
+        Your invoice has been generated successfully.
+        Please complete the payment using the method below.
+    </p>
+
+    <p><strong>Total Amount:</strong> ₹{data.amount}</p>
+  
+
+    <br>
+
+    <a href="{data.payment_link}"
+       style="
+         background:#2563EB;
+         color:white;
+         padding:12px 20px;
+         text-decoration:none;
+         border-radius:8px;
+       ">
+       Open Payment
+    </a>
+
+    <br><br>
+
+    <p>Thank you for choosing our legal services.</p>
+    <p>Senior Advocate Team</p>
+    """
+
+    await send_email(
+        to_email=data.email,
+        subject="Legal Payment Request",
+        body=html_content
+    )
+
+    return {"message": "Email sent successfully"}

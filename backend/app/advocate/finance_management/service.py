@@ -56,6 +56,7 @@ def create_invoice(db: Session, data: InvoiceCreate) -> Invoice:
         email=data.email,
 
         # Payment details
+        payment_method=data.payment_method,
         gpay_number=data.gpay_number,
         upi_id=data.upi_id,
 

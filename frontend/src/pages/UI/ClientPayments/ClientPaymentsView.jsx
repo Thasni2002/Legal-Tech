@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import jsPDF from "jspdf";
 import useModulePermission from "@/utils/useModulePermission";
-
+  import { createPortal } from "react-dom";
 
 export default function ClientPayments() {
   const { perms, loading: permsLoading } = useModulePermission("Payments");
@@ -38,6 +38,8 @@ export default function ClientPayments() {
   
   // Validation errors
   const [validationError, setValidationError] = useState("");
+
+
 
   // Decode user from JWT in localStorage
   const getLoggedInUser = () => {
@@ -62,14 +64,9 @@ export default function ClientPayments() {
       return;
     }
 
-    // if (user.role.toLowerCase() !== "client") {
-    //   setAuthError(`Authorized role: Client. Your current logged role is: ${user.role}.`);
-    //   return;
-    // }
-
+ 
     setClientEmail(user.email);
-    // Since name is not inside the token, we can show a placeholder or look it up.
-    // For visual excellence, let's format the username from their email or token.
+  
     const namePart = user.email.split("@")[0];
     const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
     setClientName(formattedName);
@@ -93,6 +90,22 @@ export default function ClientPayments() {
     fetchInvoices();
   }, [clientEmail]);
 
+
+  useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const invoiceId = params.get("invoice_id");
+
+  if (invoiceId && invoices.length > 0) {
+    const invoice = invoices.find(
+      (inv) => String(inv.id) === String(invoiceId)
+    );
+
+    if (invoice) {
+      setSelectedInvoice(invoice);
+      setShowPaymentModal(true);
+    }
+  }
+}, [invoices]);
   // Validate GPay or UPI on input change
   useEffect(() => {
     setValidationError("");
@@ -430,6 +443,7 @@ export default function ClientPayments() {
 
               {perms.add ? (
                 <button
+                type="button"
                   onClick={() => {
                     setSelectedInvoice(inv);
                     setShowPaymentModal(true);
@@ -508,128 +522,143 @@ export default function ClientPayments() {
       </div>
 
   {/* Payment Modal */}
-{showPaymentModal && selectedInvoice && (
-  <div className="fixed inset-0 bg-[#0F172A]/50 flex justify-center items-center z-50 p-4">
-    <div className="bg-white rounded-xl shadow-2xl w-full max-w-[420px] overflow-hidden animate-in fade-in zoom-in duration-200">
+{showPaymentModal &&
+  selectedInvoice &&
+  createPortal(
+    <div className="fixed inset-0 z-[999999]">
 
-      {/* Header */}
-      <div className="bg-slate-50 p-5 border-b border-[#E2E8F0]">
-        <h3 className="text-lg font-bold text-slate-800">
-          Make Payment
-        </h3>
-        <p className="text-xs text-slate-400 mt-1">
-          Invoice ID: #{selectedInvoice.id} | Case:{" "}
-          {selectedInvoice.case_number || "Consultation"}
-        </p>
-      </div>
+      {/* Full Page Blur Overlay */}
+      <div
+        className="absolute inset-0 bg-black/40 backdrop-blur-md"
+        onClick={() => setShowPaymentModal(false)}
+      ></div>
 
-      {/* Content */}
-      <div className="p-6 space-y-4">
+      {/* Modal Wrapper */}
+      <div className="relative flex items-center justify-center min-h-screen p-4">
 
-        {/* Total */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex justify-between items-center text-blue-900">
-          <span className="text-sm font-semibold">
-            Total Payable Amount
-          </span>
-          <span className="text-lg font-bold">
-            ₹{selectedInvoice.grand_total.toFixed(2)}
-          </span>
-        </div>
+        {/* Modal Box */}
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-[520px] overflow-hidden animate-in fade-in zoom-in duration-200">
 
-        {/* Google Pay Number */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-            Google Pay Number
-          </label>
-          <input
-            type="tel"
-            placeholder="Enter Google Pay Number"
-            value={gpayNumber}
-            onChange={(e) => setGpayNumber(e.target.value)}
-            disabled={isProcessing}
-            className={`w-full border rounded-lg p-2.5 text-sm outline-none transition-all ${
-              validationError
-                ? "border-red-400 focus:ring-2 focus:ring-red-200"
-                : "border-slate-200 focus:ring-2 focus:ring-blue-500"
-            }`}
-          />
-        </div>
-
-        {/* UPI ID */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-            UPI ID
-          </label>
-          <input
-            type="text"
-            placeholder="Enter UPI ID (e.g. name@upi)"
-            value={upiId}
-            onChange={(e) => setUpiId(e.target.value)}
-            disabled={isProcessing}
-            className={`w-full border rounded-lg p-2.5 text-sm outline-none transition-all ${
-              validationError
-                ? "border-red-400 focus:ring-2 focus:ring-red-200"
-                : "border-slate-200 focus:ring-2 focus:ring-blue-500"
-            }`}
-          />
-        </div>
-
-        {/* Validation message */}
-        {validationError && (
-          <div className="text-red-500 text-xs flex items-center gap-1.5 mt-1">
-            <AlertCircle className="w-3.5 h-3.5" />
-            <span>{validationError}</span>
+          {/* Header */}
+          <div className="bg-slate-50 p-5 border-b border-[#E2E8F0]">
+            <h3 className="text-lg font-bold text-slate-800">
+              Make Payment
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">
+              Invoice ID: #{selectedInvoice.id} | Case:{" "}
+              {selectedInvoice.case_number || "Consultation"}
+            </p>
           </div>
-        )}
+
+          {/* Content */}
+          <div className="p-6 space-y-4">
+
+            {/* Total */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex justify-between items-center text-blue-900">
+              <span className="text-sm font-semibold">
+                Total Payable Amount
+              </span>
+              <span className="text-lg font-bold">
+                ₹{selectedInvoice.grand_total.toFixed(2)}
+              </span>
+            </div>
+
+            {/* Google Pay Number */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                Google Pay Number
+              </label>
+              <input
+                type="tel"
+                placeholder="Enter Google Pay Number"
+                value={gpayNumber}
+                onChange={(e) => setGpayNumber(e.target.value)}
+                disabled={isProcessing}
+                className={`w-full border rounded-lg p-2.5 text-sm outline-none transition-all ${
+                  validationError
+                    ? "border-red-400 focus:ring-2 focus:ring-red-200"
+                    : "border-slate-200 focus:ring-2 focus:ring-blue-500"
+                }`}
+              />
+            </div>
+
+            {/* UPI ID */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                UPI ID
+              </label>
+              <input
+                type="text"
+                placeholder="Enter UPI ID (e.g. name@upi)"
+                value={upiId}
+                onChange={(e) => setUpiId(e.target.value)}
+                disabled={isProcessing}
+                className={`w-full border rounded-lg p-2.5 text-sm outline-none transition-all ${
+                  validationError
+                    ? "border-red-400 focus:ring-2 focus:ring-red-200"
+                    : "border-slate-200 focus:ring-2 focus:ring-blue-500"
+                }`}
+              />
+            </div>
+
+            {/* Validation message */}
+            {validationError && (
+              <div className="text-red-500 text-xs flex items-center gap-1.5 mt-1">
+                <AlertCircle className="w-3.5 h-3.5" />
+                <span>{validationError}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="bg-slate-50 px-6 py-4 border-t border-[#E2E8F0] flex justify-end gap-3">
+            <button
+              onClick={() => setShowPaymentModal(false)}
+              disabled={isProcessing}
+              className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-semibold transition-all disabled:opacity-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={handlePaymentSubmit}
+              disabled={!isFormValid() || isProcessing}
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 text-white disabled:text-slate-400 rounded-lg text-sm font-bold flex items-center gap-2 transition-all"
+            >
+              {isProcessing ? (
+                <>
+                  <svg
+                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                  <span>Verifying...</span>
+                </>
+              ) : (
+                <span>Pay ₹{selectedInvoice.grand_total.toFixed(2)}</span>
+              )}
+            </button>
+          </div>
+
+        </div>
       </div>
-
-      {/* Actions */}
-      <div className="bg-slate-50 px-6 py-4 border-t border-[#E2E8F0] flex justify-end gap-3">
-        <button
-          onClick={() => setShowPaymentModal(false)}
-          disabled={isProcessing}
-          className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-semibold transition-all disabled:opacity-50"
-        >
-          Cancel
-        </button>
-
-        <button
-          onClick={handlePaymentSubmit}
-          disabled={!isFormValid() || isProcessing}
-          className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 text-white disabled:text-slate-400 rounded-lg text-sm font-bold flex items-center gap-2 transition-all"
-        >
-          {isProcessing ? (
-            <>
-              <svg
-                className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                />
-              </svg>
-              <span>Verifying...</span>
-            </>
-          ) : (
-            <span>Pay ₹{selectedInvoice.grand_total.toFixed(2)}</span>
-          )}
-        </button>
-      </div>
-
-    </div>
-  </div>
-)}
+    </div>,
+    document.body
+  )}
       
     </div>
   );
