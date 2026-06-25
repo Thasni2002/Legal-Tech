@@ -174,6 +174,7 @@ export default function CalendarView() {
   const [editingId, setEditingId] = useState(null);
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState(null);
   
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -405,10 +406,29 @@ export default function CalendarView() {
 
   const handleDeleteEvent = (eventId, e) => {
     if (e) e.stopPropagation();
-    if (confirm("Are you sure you want to delete this event/hearing?")) {
-      setEvents(events.filter((item) => item.id !== eventId));
-      if (selectedEventId === eventId) {
-        setSelectedEventId(null);
+    setEventToDelete(eventId);
+  };
+
+  const confirmDeleteEvent = async () => {
+    if (eventToDelete) {
+      try {
+        const res = await fetch(`http://localhost:8000/case-management/${eventToDelete}`, {
+          method: 'DELETE',
+        });
+        
+        if (res.ok) {
+          setEvents(events.filter((item) => item.id !== eventToDelete));
+          if (selectedEventId === eventToDelete) {
+            setSelectedEventId(null);
+            setShowViewModal(false);
+          }
+        } else {
+          console.error("Failed to delete the event from server.");
+        }
+      } catch (err) {
+        console.error("Error deleting event:", err);
+      } finally {
+        setEventToDelete(null);
       }
     }
   };
@@ -1605,12 +1625,25 @@ export default function CalendarView() {
                 <div className="text-xs text-[#94A3B8] font-medium">
                   Event ID: <span className="font-mono text-[#64748B]">{selectedEventDetails.id}</span>
                 </div>
-                <button
-                  onClick={() => setShowViewModal(false)}
-                  className="px-6 py-2.5 bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition"
-                >
-                  Close
-                </button>
+                <div className="flex gap-2">
+                  {hasPermission("Calendar", "delete") && (
+                    <button
+                      onClick={(e) => {
+                        handleDeleteEvent(selectedEventDetails.id, e);
+                      }}
+                      className="flex items-center gap-1.5 px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold uppercase tracking-wider rounded-xl transition"
+                    >
+                      <Trash2 size={14} />
+                      Delete
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowViewModal(false)}
+                    className="px-6 py-2.5 bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           </div>,
@@ -1790,6 +1823,42 @@ export default function CalendarView() {
                 </div>
 
               </form>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {/* --- DELETE CONFIRMATION MODAL --- */}
+        {eventToDelete && mounted && createPortal(
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4 animate-fade-in"
+            onClick={() => setEventToDelete(null)}
+          >
+            <div
+              className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-[#E2E8F0] flex flex-col text-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-[#0F172A] mb-2">Delete Event</h3>
+              <p className="text-[#64748B] text-sm mb-6">
+                Are you sure you want to delete this event/hearing? This action cannot be undone.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={() => setEventToDelete(null)}
+                  className="px-5 py-2.5 bg-[#F8FAFC] text-[#64748B] hover:bg-slate-200 rounded-xl font-bold text-sm transition flex-1"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteEvent}
+                  className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm transition shadow-lg shadow-red-500/20 flex-1"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </div>,
           document.body

@@ -65,6 +65,45 @@ const [cases, setCases] = useState([]);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  useEffect(() => {
+    fetchAssignedCases();
+  }, []);
+
+  const fetchAssignedCases = async () => {
+    try {
+      const user = getLoggedInUser();
+      const res = await fetch(
+        "http://localhost:8000/lawfirm-management/assigned-cases"
+      );
+      const data = await res.json();
+
+      let casesToShow = data;
+      if (user && user.role && user.role.toLowerCase().includes("junior")) {
+        casesToShow = data.filter((item) => {
+          if (!item.advocate_name) return false;
+          const normalizedAssignedName = item.advocate_name.toLowerCase().replace(/[^a-z0-9]/g, "");
+          return normalizedAssignedName === user.username;
+        });
+      }
+
+      const formattedCases = casesToShow.map((item) => ({
+        id: item.id,
+        title: item.case_title,
+        caseNo: item.case_number,
+        client: item.advocate_name,
+        court: item.practice_area,
+        hearing: item.due_date || "No hearing date",
+        status: item.status || "Active",
+        documents: item.assigned_documents || [],
+        notes: item.assignment_notes || "",
+      }));
+
+      setCases(formattedCases);
+    } catch (error) {
+      console.error("Error fetching assigned cases:", error);
+    }
+  };
+
   // No view access
   if (!loading && !perms.view) {
     return (
@@ -162,44 +201,7 @@ const [cases, setCases] = useState([]);
   };
 
 
-useEffect(() => {
-  fetchAssignedCases();
-}, []);
 
-const fetchAssignedCases = async () => {
-  try {
-    const user = getLoggedInUser();
-    const res = await fetch(
-      "http://localhost:8000/lawfirm-management/assigned-cases"
-    );
-    const data = await res.json();
-
-    let casesToShow = data;
-    if (user && user.role && user.role.toLowerCase().includes("junior")) {
-      casesToShow = data.filter((item) => {
-        if (!item.advocate_name) return false;
-        const normalizedAssignedName = item.advocate_name.toLowerCase().replace(/[^a-z0-9]/g, "");
-        return normalizedAssignedName === user.username;
-      });
-    }
-
-    const formattedCases = casesToShow.map((item) => ({
-      id: item.id,
-      title: item.case_title,
-      caseNo: item.case_number,
-      client: item.advocate_name,
-      court: item.practice_area,
-      hearing: item.due_date || "No hearing date",
-      status: item.status || "Active",
-      documents: item.assigned_documents || [],
-      notes: item.assignment_notes || "",
-    }));
-
-    setCases(formattedCases);
-  } catch (error) {
-    console.error("Error fetching assigned cases:", error);
-  }
-};
 
   const filteredCases = cases.filter((item) => {
     const query = searchQuery.toLowerCase();
