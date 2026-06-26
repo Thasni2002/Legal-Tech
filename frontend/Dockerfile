@@ -25,23 +25,27 @@ RUN npm ci --prefer-offline
 COPY . .
 RUN npm run build
 
-# ── Stage 2: Serve with Nginx ────────────────────────────────
-FROM nginx:1.27-alpine AS serve
+# ── Stage 2: Serve with Node.js ──────────────────────────────
+FROM node:22-alpine AS serve
 
-# Remove default nginx config
-RUN rm /etc/nginx/conf.d/default.conf
+WORKDIR /app
 
-# Copy custom nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Only need the production env file and public directory statically
+COPY --from=builder /app/public ./public
 
-# Copy the built static files from Stage 1 (Next.js static export → 'out/')
-COPY --from=builder /app/out /usr/share/nginx/html
+# Automatically leverage output traces to reduce image size
+# https://nextjs.org/docs/advanced-features/output-file-tracing
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
 # Expose HTTP port
-EXPOSE 80
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget -qO- http://localhost:80/ || exit 1
+    CMD wget -qO- http://localhost:3000/ || exit 1
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["node", "server.js"]

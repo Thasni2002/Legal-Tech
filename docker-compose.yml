@@ -70,10 +70,10 @@ services:
       - legaltech_network
 
     ports:
-      - "7500:80"
+      - "7500:3000"
 
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
       interval: 30s
       timeout: 5s
       retries: 3
