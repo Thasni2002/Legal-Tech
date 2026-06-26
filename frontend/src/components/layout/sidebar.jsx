@@ -3,7 +3,6 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { getLoggedInUser } from "@/utils/auth";
 import {
-import { API_BASE_URL } from "@/utils/api";
   Home,
   Scale,
   Folder,
