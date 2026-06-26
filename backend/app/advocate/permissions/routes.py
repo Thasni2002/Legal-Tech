@@ -144,7 +144,10 @@ def update_user_details(user_id: int, data: UserUpdate, db: Session = Depends(ge
 
 @router.delete("/users/{user_id}")
 def delete_user_account(user_id: int, db: Session = Depends(get_db)):
-    success = service.delete_user(db, user_id)
-    if not success:
-        raise HTTPException(status_code=400, detail="Cannot delete administrative user or user not found")
-    return {"message": "User de-provisioned successfully"}
+    try:
+        success = service.delete_user(db, user_id)
+        if not success:
+            raise HTTPException(status_code=400, detail="Cannot delete administrative user or user not found")
+        return {"message": "User de-provisioned successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

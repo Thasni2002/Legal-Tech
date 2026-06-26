@@ -509,8 +509,13 @@ def delete_user(
     if not db_user:
         return False
 
-    db.delete(db_user)
-    db.commit()
+    from sqlalchemy.exc import IntegrityError
+    try:
+        db.delete(db_user)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ValueError("Cannot delete user because they have associated records (cases, clients, invoices, etc.). Please reassign or remove their records first.")
 
     return True
 
