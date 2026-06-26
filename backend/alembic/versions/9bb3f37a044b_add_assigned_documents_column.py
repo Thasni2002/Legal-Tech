@@ -28,7 +28,10 @@ def upgrade() -> None:
         op.drop_table('case_management_cases')
     except Exception:
         pass
-    op.add_column('assigned_cases', sa.Column('assigned_documents', sa.Text(), nullable=True))
+    try:
+        op.add_column('assigned_cases', sa.Column('assigned_documents', sa.Text(), nullable=True))
+    except Exception as e:
+        print(f"Skipping add_column assigned_documents: {e}")
     # ### end Alembic commands ###
 
 
