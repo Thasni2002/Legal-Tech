@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/utils/api";
+
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 export default function AssignAdv({ isOpen, onClose }) {
@@ -27,7 +29,7 @@ export default function AssignAdv({ isOpen, onClose }) {
     const fetchCase = async () => {
       try {
         const res = await fetch(
-          `http://localhost:8000/lawfirm-management/assigned-cases/${caseId}`
+          `${API_BASE_URL}/lawfirm-management/assigned-cases/${caseId}`
         );
 
         const data = await res.json();
@@ -58,7 +60,7 @@ export default function AssignAdv({ isOpen, onClose }) {
     const fetchAdvocates = async () => {
       try {
         const res = await fetch(
-          "http://localhost:8000/lawfirm-management/"
+          `${API_BASE_URL}/lawfirm-management/`
         );
 
         const data = await res.json();
@@ -155,8 +157,8 @@ export default function AssignAdv({ isOpen, onClose }) {
 
     try {
       const url = caseId
-        ? `http://localhost:8000/lawfirm-management/assigned-cases/${caseId}`
-        : "http://localhost:8000/lawfirm-management/assign-case";
+        ? `${API_BASE_URL}/lawfirm-management/assigned-cases/${caseId}`
+        : `${API_BASE_URL}/lawfirm-management/assign-case`;
       const method = caseId ? "PUT" : "POST";
 
       const response = await fetch(

@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/utils/api";
+
 import { useState, useEffect } from "react";
 import { getLoggedInUser } from "@/utils/auth";
 import Link from "next/link";
@@ -84,7 +86,7 @@ export default function ClientConsultationView() {
 
   const fetchConsultations = async (currentUser) => {
     try {
-      let url = "http://localhost:8000/consultations";
+      let url = `${API_BASE_URL}/consultations`;
       if (currentUser) {
         if (currentUser.role === "Client") {
           url += `?client_id=${currentUser.id}`;
@@ -127,7 +129,7 @@ export default function ClientConsultationView() {
     if (!loggedInUser) return;
     try {
       // 1. Try user's custom permissions first
-      const resUser = await fetch(`http://localhost:8000/permissions/users/${loggedInUser.id}`);
+      const resUser = await fetch(`${API_BASE_URL}/permissions/users/${loggedInUser.id}`);
       if (resUser.ok) {
         const userData = await resUser.json();
         const custom = userData.customPermissions || {};
@@ -140,7 +142,7 @@ export default function ClientConsultationView() {
 
     try {
       // 2. Fall back to role defaults
-      const resPerms = await fetch("http://localhost:8000/permissions");
+      const resPerms = await fetch(`${API_BASE_URL}/permissions`);
       if (resPerms.ok) {
         const allPerms = await resPerms.json();
         const rolePerms = allPerms[loggedInUser.role] || {};
@@ -176,7 +178,7 @@ export default function ClientConsultationView() {
 
     const loadAdvocates = async () => {
       try {
-        const res = await fetch("http://localhost:8000/lawfirm-management/");
+        const res = await fetch(`${API_BASE_URL}/lawfirm-management/`);
         if (res.ok) {
           setAdvocates(await res.json());
         }
@@ -223,7 +225,7 @@ export default function ClientConsultationView() {
     };
 
     try {
-      const res = await fetch("http://localhost:8000/consultations/book", {
+      const res = await fetch(`${API_BASE_URL}/consultations/book`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(bookData),
@@ -264,7 +266,7 @@ export default function ClientConsultationView() {
 
     try {
       const res = await fetch(
-        `http://localhost:8000/consultations/${rescheduleId}/reschedule`,
+        `${API_BASE_URL}/consultations/${rescheduleId}/reschedule`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -296,7 +298,7 @@ export default function ClientConsultationView() {
 
   const handleApproveAppointment = async (id) => {
     try {
-      const res = await fetch(`http://localhost:8000/consultations/${id}/status`, {
+      const res = await fetch(`${API_BASE_URL}/consultations/${id}/status`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "Approved" }),
@@ -319,7 +321,7 @@ export default function ClientConsultationView() {
       return;
     }
     try {
-      const res = await fetch(`http://localhost:8000/consultations/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/consultations/${id}`, {
         method: "DELETE",
       });
 

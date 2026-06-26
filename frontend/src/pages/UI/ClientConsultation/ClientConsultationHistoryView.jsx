@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/utils/api";
+
 import { useState, useEffect } from "react";
 import { getLoggedInUser } from "@/utils/auth";
 import Link from "next/link";
@@ -41,7 +43,7 @@ export default function ClientConsultationHistoryView() {
 
   const fetchHistory = async (currentUser) => {
     try {
-      let url = "http://localhost:8000/consultations";
+      let url = `${API_BASE_URL}/consultations`;
       if (currentUser) {
         if (currentUser.role === "Client") {
           url += `?client_id=${currentUser.id}`;
@@ -100,7 +102,7 @@ export default function ClientConsultationHistoryView() {
 
     try {
       const res = await fetch(
-        `http://localhost:8000/consultations/${rescheduleId}/reschedule`,
+        `${API_BASE_URL}/consultations/${rescheduleId}/reschedule`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -132,7 +134,7 @@ export default function ClientConsultationHistoryView() {
       return;
     }
     try {
-      const res = await fetch(`http://localhost:8000/consultations/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/consultations/${id}`, {
         method: "DELETE",
       });
 

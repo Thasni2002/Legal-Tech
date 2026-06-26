@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getLoggedInUser } from "./auth";
+import { API_BASE_URL } from "./api";
 
 export function usePermissions() {
   const [user, setUser] = useState(null);
@@ -15,10 +16,10 @@ export function usePermissions() {
 
     if (loggedIn && loggedIn.id) {
       Promise.all([
-        fetch(`http://localhost:8000/permissions/users/${loggedIn.id}`).then((res) => {
+        fetch(`${API_BASE_URL}/permissions/users/${loggedIn.id}`).then((res) => {
           return res.status === 200 ? res.json() : { customPermissions: {} };
         }),
-        fetch("http://localhost:8000/permissions").then((res) => {
+        fetch(`${API_BASE_URL}/permissions`).then((res) => {
           return res.status === 200 ? res.json() : {};
         })
       ])

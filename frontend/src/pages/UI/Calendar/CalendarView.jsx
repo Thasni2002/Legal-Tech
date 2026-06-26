@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/utils/api";
+
 import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -206,7 +208,7 @@ export default function CalendarView() {
 
   const fetchCases = async () => {
     try {
-      const res = await fetch("http://localhost:8000/case-management/");
+      const res = await fetch(`${API_BASE_URL}/case-management/`);
       const data = await res.json();
       if (Array.isArray(data)) {
         const mappedEvents = data
@@ -412,7 +414,7 @@ export default function CalendarView() {
   const confirmDeleteEvent = async () => {
     if (eventToDelete) {
       try {
-        const res = await fetch(`http://localhost:8000/case-management/${eventToDelete}`, {
+        const res = await fetch(`${API_BASE_URL}/case-management/${eventToDelete}`, {
           method: 'DELETE',
         });
         

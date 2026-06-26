@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/utils/api";
+
 import React, { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
@@ -39,7 +41,7 @@ export default function UserEdit() {
   useEffect(() => {
     const loadUser = async () => {
       const res = await fetch(
-        `http://localhost:8000/permissions/users/${userId}`
+        `${API_BASE_URL}/permissions/users/${userId}`
       );
       const data = await res.json();
       setUser(data);
@@ -63,7 +65,7 @@ export default function UserEdit() {
   };
 
   const handleSave = async () => {
-    await fetch(`http://localhost:8000/permissions/users/${user.id}`, {
+    await fetch(`${API_BASE_URL}/permissions/users/${user.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(user),

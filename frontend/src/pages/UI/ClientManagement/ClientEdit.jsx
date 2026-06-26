@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/utils/api";
+
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -61,7 +63,7 @@ export default function ClientEdit({ onSave, onCancel }) {
         phone: formData.phone
       };
 
-      const res = await fetch(`http://localhost:8000/clients/${formData.clientId}`, {
+      const res = await fetch(`${API_BASE_URL}/clients/${formData.clientId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

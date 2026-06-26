@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/utils/api";
+
 import { useState, useEffect } from "react";
 import {
   CreditCard,
@@ -66,7 +68,7 @@ export default function ClientPayments() {
   const fetchInvoices = async () => {
     if (!clientEmail) return;
     try {
-      const res = await fetch(`http://localhost:8000/finance/invoices?email=${encodeURIComponent(clientEmail)}`);
+      const res = await fetch(`${API_BASE_URL}/finance/invoices?email=${encodeURIComponent(clientEmail)}`);
       if (res.ok) {
         const data = await res.json();
         setInvoices(data);
@@ -91,7 +93,7 @@ const handlePaymentSubmit = async (invoice) => {
   try {
     // Create Razorpay order
     const orderRes = await fetch(
-      "http://localhost:8000/finance/payment/create-order",
+      `${API_BASE_URL}/finance/payment/create-order`,
       {
         method: "POST",
         headers: {
@@ -117,7 +119,7 @@ const handlePaymentSubmit = async (invoice) => {
       handler: async function (response) {
         // Verify payment
         const verifyRes = await fetch(
-          "http://localhost:8000/finance/payment/verify",
+          `${API_BASE_URL}/finance/payment/verify`,
           {
             method: "POST",
             headers: {

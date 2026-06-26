@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/utils/api";
+
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { ArrowLeft } from "lucide-react";
@@ -140,7 +142,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
 
       if (formData.id) {
         response = await fetch(
-          `http://localhost:8000/lawfirm-management/${formData.id}`,
+          `${API_BASE_URL}/lawfirm-management/${formData.id}`,
           {
             method: "PUT",
             headers: {
@@ -150,7 +152,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
           }
         );
       } else {
-        response = await fetch("http://localhost:8000/lawfirm-management/", {
+        response = await fetch(`${API_BASE_URL}/lawfirm-management/`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

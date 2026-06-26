@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/utils/api";
+
 import { useState, useEffect } from "react";
 import { getLoggedInUser } from "@/utils/auth";
 import {
@@ -45,11 +47,11 @@ export default function AdvDashboardView() {
                 const advParam = loggedIn && loggedIn.id ? `?advocate_id=${loggedIn.id}` : "";
                 
                 const [resUsers, resCases, resHearings, resActivities, resDocs] = await Promise.all([
-                    fetch("http://localhost:8000/permissions/users"),
-                    fetch(`http://localhost:8000/clients/cases${advParam}`),
-                    fetch(`http://localhost:8000/clients/hearings${advParam}`),
-                    fetch(`http://localhost:8000/clients/activities${advParam}`),
-                    fetch(`http://localhost:8000/clients/documents${advParam}`)
+                    fetch(`${API_BASE_URL}/permissions/users`),
+                    fetch(`${API_BASE_URL}/clients/cases${advParam}`),
+                    fetch(`${API_BASE_URL}/clients/hearings${advParam}`),
+                    fetch(`${API_BASE_URL}/clients/activities${advParam}`),
+                    fetch(`${API_BASE_URL}/clients/documents${advParam}`)
                 ]);
 
                 if (!resUsers.ok || !resCases.ok || !resHearings.ok || !resActivities.ok || !resDocs.ok) {

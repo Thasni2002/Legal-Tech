@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/utils/api";
+
 import { useState, useEffect } from "react";
 import { getLoggedInUser } from "@/utils/auth";
 import DatePicker from "react-datepicker";
@@ -32,7 +34,7 @@ export default function ConsultationsView() {
 
     const fetchConsultations = async (currentUser) => {
         try {
-            let url = "http://localhost:8000/consultations";
+            let url = `${API_BASE_URL}/consultations`;
             if (currentUser) {
                 if (currentUser.role === "Senior Advocate" || currentUser.role === "Junior Advocate") {
                     url += `?advocate_id=${currentUser.id}`;
@@ -85,7 +87,7 @@ export default function ConsultationsView() {
 
         const loadClients = async () => {
             try {
-                const res = await fetch("http://localhost:8000/case-management/");
+                const res = await fetch(`${API_BASE_URL}/case-management/`);
                 if (res.ok) {
                     const casesData = await res.json();
                     const uniqueClientsMap = new Map();
@@ -175,7 +177,7 @@ export default function ConsultationsView() {
         };
 
         try {
-            let url = "http://localhost:8000/consultations/start";
+            let url = `${API_BASE_URL}/consultations/start`;
             const params = [];
             if (user) {
                 params.push(`advocate_id=${user.id}`);
@@ -211,7 +213,7 @@ export default function ConsultationsView() {
     const handleDeleteConsultation = async () => {
         if (!deleteId) return;
         try {
-            const res = await fetch(`http://localhost:8000/consultations/${deleteId}`, {
+            const res = await fetch(`${API_BASE_URL}/consultations/${deleteId}`, {
                 method: "DELETE",
             });
             if (res.ok) {
@@ -681,7 +683,7 @@ export default function ConsultationsView() {
                         <button
                             onClick={async () => {
                                 try {
-                                    const res = await fetch(`http://localhost:8000/consultations/${selectedAppointment.id}/status`, {
+                                    const res = await fetch(`${API_BASE_URL}/consultations/${selectedAppointment.id}/status`, {
                                         method: "PUT",
                                         headers: { "Content-Type": "application/json" },
                                         body: JSON.stringify({ status: "Approved" })
@@ -787,7 +789,7 @@ export default function ConsultationsView() {
                                     const formattedTime = `${hours}:${minutes}`;
 
                                     try {
-                                        const res = await fetch(`http://localhost:8000/consultations/${selectedAppointment.id}/reschedule`, {
+                                        const res = await fetch(`${API_BASE_URL}/consultations/${selectedAppointment.id}/reschedule`, {
                                             method: "PUT",
                                             headers: { "Content-Type": "application/json" },
                                             body: JSON.stringify({

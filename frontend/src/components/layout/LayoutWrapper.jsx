@@ -1,4 +1,6 @@
 "use client";
+
+import { API_BASE_URL } from "@/utils/api";
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/sidebar";
@@ -34,7 +36,7 @@ export default function LayoutWrapper({ children }) {
         setIsVerified(true);
       }
 
-      fetch(`http://localhost:8000/permissions/users/${loggedIn.id}`)
+      fetch(`${API_BASE_URL}/permissions/users/${loggedIn.id}`)
         .then((res) => {
           if (res.status === 404 || res.status === 401) {
             setIsVerified(false);

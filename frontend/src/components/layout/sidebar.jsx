@@ -3,6 +3,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { getLoggedInUser } from "@/utils/auth";
 import {
+import { API_BASE_URL } from "@/utils/api";
   Home,
   Scale,
   Folder,
@@ -20,6 +21,7 @@ import {
   Shield,
 } from "lucide-react";
 import Image from "next/image";
+import { API_BASE_URL } from "@/utils/api";
 // Map original section titles to new header labels
 const sectionTitleMap = {
   "Advocate Section": "Advocate Section",
@@ -44,10 +46,10 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
     const loggedIn = getLoggedInUser();
     if (loggedIn && loggedIn.id) {
       Promise.all([
-        fetch(`http://localhost:8000/permissions/users/${loggedIn.id}`).then((res) => {
+        fetch(`${API_BASE_URL}/permissions/users/${loggedIn.id}`).then((res) => {
           return res.status === 200 ? res.json() : { customPermissions: {} };
         }),
-        fetch("http://localhost:8000/permissions").then((res) => {
+        fetch(`${API_BASE_URL}/permissions`).then((res) => {
           return res.status === 200 ? res.json() : {};
         })
       ])

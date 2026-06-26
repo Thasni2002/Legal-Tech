@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine, SessionLocal
@@ -15,13 +16,16 @@ from app.advocate.case_management.routes import router as case_router
 
 app = FastAPI()
 
-# CORS setup
+# CORS setup — origins are read from env so production domains work without code changes
+_raw_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://127.0.0.1:3000"
+)
+ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-     allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000"
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,6 +40,11 @@ def startup():
     db = SessionLocal()
     create_default_user(db)
     db.close()
+
+# Health check endpoint (used by Docker HEALTHCHECK)
+@app.get("/health", tags=["Health"])
+def health_check():
+    return {"status": "ok"}
 
 # Include routers
 app.include_router(auth_router)

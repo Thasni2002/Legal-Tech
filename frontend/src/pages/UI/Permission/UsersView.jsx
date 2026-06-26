@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/utils/api";
+
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -239,7 +241,7 @@ export default function UsersView() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const resRoles = await fetch("http://localhost:8000/permissions/roles");
+        const resRoles = await fetch(`${API_BASE_URL}/permissions/roles`);
         if (resRoles.ok) {
           const rolesData = await resRoles.json();
           setRoles(rolesData);
@@ -254,7 +256,7 @@ export default function UsersView() {
       }
 
       try {
-        const resUsers = await fetch("http://localhost:8000/permissions/users");
+        const resUsers = await fetch(`${API_BASE_URL}/permissions/users`);
         if (resUsers.ok) {
           const usersData = await resUsers.json();
           setUsers(usersData);
@@ -265,7 +267,7 @@ export default function UsersView() {
       }
 
       try {
-        const resAdv = await fetch("http://localhost:8000/lawfirm-management/");
+        const resAdv = await fetch(`${API_BASE_URL}/lawfirm-management/`);
         if (resAdv.ok) {
           setAdvocates(await resAdv.json());
         }
@@ -274,7 +276,7 @@ export default function UsersView() {
       }
 
       try {
-        const resCases = await fetch("http://localhost:8000/case-management/");
+        const resCases = await fetch(`${API_BASE_URL}/case-management/`);
         if (resCases.ok) {
           const casesData = await resCases.json();
           const uniqueClientsMap = new Map();
@@ -307,7 +309,7 @@ export default function UsersView() {
   useEffect(() => {
     const loadPermissions = async () => {
       try {
-        const res = await fetch("http://localhost:8000/permissions");
+        const res = await fetch(`${API_BASE_URL}/permissions`);
         if (res.ok) {
           setRolePermissions(await res.json());
         }
@@ -362,7 +364,7 @@ export default function UsersView() {
     }
 
     try {
-      const res = await fetch("http://localhost:8000/permissions/users/provision", {
+      const res = await fetch(`${API_BASE_URL}/permissions/users/provision`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -424,7 +426,7 @@ export default function UsersView() {
     if (!deleteTarget) return;
     const { id, username, role } = deleteTarget;
     try {
-      const res = await fetch(`http://localhost:8000/permissions/users/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/permissions/users/${id}`, {
         method: "DELETE"
       });
       if (res.ok) {
@@ -460,7 +462,7 @@ export default function UsersView() {
 
     // Always fetch latest role permissions from API to stay in sync with PermissionView
     try {
-      const res = await fetch("http://localhost:8000/permissions");
+      const res = await fetch(`${API_BASE_URL}/permissions`);
       let basePerms = {};
       if (res.ok) {
         const freshPerms = await res.json();
@@ -510,7 +512,7 @@ export default function UsersView() {
       // Fetch fresh role defaults to compute diff
       let currentRolePerms = {};
       try {
-        const resRole = await fetch("http://localhost:8000/permissions");
+        const resRole = await fetch(`${API_BASE_URL}/permissions`);
         if (resRole.ok) {
           const allPerms = await resRole.json();
           currentRolePerms = allPerms[activeUser.role] || {};
@@ -536,7 +538,7 @@ export default function UsersView() {
         }
       }
 
-      const res = await fetch(`http://localhost:8000/permissions/users/${activeUser.id}`, {
+      const res = await fetch(`${API_BASE_URL}/permissions/users/${activeUser.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

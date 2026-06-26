@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/utils/api";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Scale, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
@@ -50,7 +52,7 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/login", {
+      const res = await fetch(`${API_BASE_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

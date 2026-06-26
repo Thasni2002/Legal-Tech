@@ -1,4 +1,5 @@
 "use client";
+import { API_BASE_URL } from "@/utils/api";
 
 import ProfileManagement from '@/pages/UI/ProfileManagement/ProfileManagmentView'
 import ProfileView from "@/pages/UI/ProfileManagement/profileView";
@@ -19,7 +20,7 @@ const Page = () => {
           return;
         }
 
-        const res = await fetch("http://localhost:8000/lawfirm-management/");
+        const res = await fetch(`${API_BASE_URL}/lawfirm-management/`);
         if (res.ok) {
           const advocates = await res.json();
           const myAdvocate = advocates.find(
@@ -60,13 +61,13 @@ const Page = () => {
 
       let response;
       if (payload.id) {
-        response = await fetch(`http://localhost:8000/lawfirm-management/${payload.id}`, {
+        response = await fetch(`${API_BASE_URL}/lawfirm-management/${payload.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
       } else {
-        response = await fetch("http://localhost:8000/lawfirm-management/", {
+        response = await fetch(`${API_BASE_URL}/lawfirm-management/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),

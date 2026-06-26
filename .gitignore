@@ -43,6 +43,9 @@ htmlcov/
 
 # FastAPI Environment Files
 .env
+.env.local
+.env.production
+# .env.example is intentionally NOT ignored (safe to commit)
 
 # =========================
 # IDE / Editor

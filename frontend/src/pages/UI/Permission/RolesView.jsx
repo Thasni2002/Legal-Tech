@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/utils/api";
+
 import React, { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, Search, Shield, Info, AlertTriangle, Check } from "lucide-react";
 import { createPortal } from "react-dom";
@@ -31,7 +33,7 @@ export default function RolesView() {
   useEffect(() => {
     const loadRoles = async () => {
       try {
-        const res = await fetch("http://localhost:8000/permissions/roles");
+        const res = await fetch(`${API_BASE_URL}/permissions/roles`);
         if (res.ok) {
           const data = await res.json();
           setRoles(data);
@@ -66,7 +68,7 @@ export default function RolesView() {
       }
 
       try {
-        const res = await fetch(`http://localhost:8000/permissions/roles/${editingRole.id}`, {
+        const res = await fetch(`${API_BASE_URL}/permissions/roles/${editingRole.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -91,7 +93,7 @@ export default function RolesView() {
     } else {
       // Creating Mode
       try {
-        const res = await fetch("http://localhost:8000/permissions/roles", {
+        const res = await fetch(`${API_BASE_URL}/permissions/roles`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -138,7 +140,7 @@ export default function RolesView() {
     }
 
     try {
-      const res = await fetch(`http://localhost:8000/permissions/roles/${roleId}`, {
+      const res = await fetch(`${API_BASE_URL}/permissions/roles/${roleId}`, {
         method: "DELETE"
       });
       if (res.ok) {

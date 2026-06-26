@@ -1,4 +1,5 @@
 "use client";
+import { API_BASE_URL } from "@/utils/api";
 
 import { useEffect, useState } from "react";
 import LawfirmAdd from "@/pages/UI/LawfirmManagement/LawfirmAdd";
@@ -21,7 +22,7 @@ export default function LawfirmManagementClient({
   const fetchAdvocate = async () => {
     try {
       const response = await fetch(
-        `http://localhost:8000/lawfirm-management/${advocateId}`
+        `${API_BASE_URL}/lawfirm-management/${advocateId}`
       );
 
       if (!response.ok) {

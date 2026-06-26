@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/utils/api";
+
 import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -178,7 +180,7 @@ export default function JuniorCalendarView() {
   const fetchAssignedCases = async () => {
     try {
       const user = getLoggedInUser();
-      const res = await fetch("http://localhost:8000/lawfirm-management/assigned-cases");
+      const res = await fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases`);
       const data = await res.json();
       if (Array.isArray(data)) {
         // Filter based on user session if they are a Junior Advocate

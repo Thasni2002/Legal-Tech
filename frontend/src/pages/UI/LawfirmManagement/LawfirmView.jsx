@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/utils/api";
+
 import { useRouter } from "next/navigation";
 import {
   Building2,
@@ -53,7 +55,7 @@ export default function LawfirmView() {
   useEffect(() => {
     const fetchAdvocates = async () => {
       try {
-        const response = await fetch("http://localhost:8000/lawfirm-management/");
+        const response = await fetch(`${API_BASE_URL}/lawfirm-management/`);
         if (!response.ok) {
           console.error("fetchAdvocates failed:", response.status);
           setAdvocates([]);
@@ -72,7 +74,7 @@ export default function LawfirmView() {
     const fetchAssignedCases = async () => {
       try {
         const response = await fetch(
-          "http://localhost:8000/lawfirm-management/assigned-cases"
+          `${API_BASE_URL}/lawfirm-management/assigned-cases`
         );
         if (!response.ok) {
           console.error("fetchAssignedCases failed:", response.status);
@@ -89,7 +91,7 @@ export default function LawfirmView() {
 
     const fetchDashboardStats = async () => {
       try {
-        const response = await fetch("http://localhost:8000/advocate/dashboard");
+        const response = await fetch(`${API_BASE_URL}/advocate/dashboard`);
         const data = await response.json();
         setDashboardStats(data.stats);
       } catch (error) {
@@ -104,7 +106,7 @@ export default function LawfirmView() {
 
 const handleAdvocateDelete = async (id) => {
   try {
-    await fetch(`http://localhost:8000/lawfirm-management/${id}`, {
+    await fetch(`${API_BASE_URL}/lawfirm-management/${id}`, {
       method: "DELETE",
     });
 
@@ -119,7 +121,7 @@ const handleAdvocateDelete = async (id) => {
 const handleCaseDelete = async (id) => {
   try {
     await fetch(
-      `http://localhost:8000/lawfirm-management/assigned-cases/${id}`,
+      `${API_BASE_URL}/lawfirm-management/assigned-cases/${id}`,
       {
         method: "DELETE",
       }

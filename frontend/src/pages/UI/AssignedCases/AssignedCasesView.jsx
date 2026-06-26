@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/utils/api";
+
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -73,7 +75,7 @@ const [cases, setCases] = useState([]);
     try {
       const user = getLoggedInUser();
       const res = await fetch(
-        "http://localhost:8000/lawfirm-management/assigned-cases"
+        `${API_BASE_URL}/lawfirm-management/assigned-cases`
       );
       const data = await res.json();
 
@@ -183,7 +185,7 @@ const [cases, setCases] = useState([]);
   const handleDelete = async (id) => {
     setDeleteLoading(true);
     try {
-      const res = await fetch(`http://localhost:8000/lawfirm-management/assigned-cases/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases/${id}`, {
         method: "DELETE",
       });
       if (res.ok) {

@@ -1,4 +1,5 @@
 "use client";
+import { API_BASE_URL } from "@/utils/api";
 
 import { useEffect, use } from "react";
 
@@ -11,7 +12,7 @@ const Page = ({ params }) => {
       try {
         // Fetch invoice details
         const invoiceRes = await fetch(
-          `http://localhost:8000/finance/invoices/${resolvedParams.id}`
+          `${API_BASE_URL}/finance/invoices/${resolvedParams.id}`
         );
 
         if (!invoiceRes.ok) {
@@ -23,7 +24,7 @@ const Page = ({ params }) => {
 
         // Create Razorpay order
         const orderRes = await fetch(
-          "http://localhost:8000/finance/payment/create-order",
+          `${API_BASE_URL}/finance/payment/create-order`,
           {
             method: "POST",
             headers: {
@@ -67,7 +68,7 @@ const Page = ({ params }) => {
           handler: async function (response) {
             try {
               const verifyRes = await fetch(
-                "http://localhost:8000/finance/payment/verify",
+                `${API_BASE_URL}/finance/payment/verify`,
                 {
                   method: "POST",
                   headers: {

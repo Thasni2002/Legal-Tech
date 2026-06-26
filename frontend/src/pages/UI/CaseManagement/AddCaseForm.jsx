@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/utils/api";
+
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Upload, X, Eye, CheckCircle, Edit3 } from "lucide-react";
@@ -58,7 +60,7 @@ const editId = params?.id;
   async function fetchCaseForEdit(id) {
     setLoadingEdit(true);
     try {
-      const res = await fetch(`http://localhost:8000/case-management/${id}`);
+      const res = await fetch(`${API_BASE_URL}/case-management/${id}`);
       if (!res.ok) throw new Error("Case not found");
       const data = await res.json();
       setFormData({
@@ -246,8 +248,8 @@ const handleSubmit = async (e) => {
 
   try {
     const url = isEditMode
-      ? `http://localhost:8000/case-management/${editId}`
-      : "http://localhost:8000/case-management/";
+      ? `${API_BASE_URL}/case-management/${editId}`
+      : `${API_BASE_URL}/case-management/`;
 
     const method = isEditMode ? "PUT" : "POST";
 

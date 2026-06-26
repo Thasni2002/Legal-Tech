@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/utils/api";
+
 import React, { useState, useEffect, useMemo } from "react";
 import { Shield, ShieldAlert, Save, HelpCircle, Check, CheckSquare } from "lucide-react";
 
@@ -159,7 +161,7 @@ export default function PermissionView() {
   useEffect(() => {
     const loadConfig = async () => {
       try {
-        const resRoles = await fetch("http://localhost:8000/permissions/roles");
+        const resRoles = await fetch(`${API_BASE_URL}/permissions/roles`);
         if (resRoles.ok) {
           const rolesData = await resRoles.json();
           setRoles(rolesData);
@@ -174,7 +176,7 @@ export default function PermissionView() {
       }
 
       try {
-        const resPerms = await fetch("http://localhost:8000/permissions");
+        const resPerms = await fetch(`${API_BASE_URL}/permissions`);
         if (resPerms.ok) {
           setPermissions(await resPerms.json());
         } else {
@@ -234,7 +236,7 @@ export default function PermissionView() {
   const handleSavePermissions = async () => {
     if (!selectedRole) return;
     try {
-      const res = await fetch(`http://localhost:8000/permissions/role/${selectedRole}`, {
+      const res = await fetch(`${API_BASE_URL}/permissions/role/${selectedRole}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(permissions[selectedRole] || {}),

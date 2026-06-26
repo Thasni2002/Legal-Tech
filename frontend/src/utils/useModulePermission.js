@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getLoggedInUser } from "@/utils/auth";
+import { API_BASE_URL } from "@/utils/api";
 
 const DEFAULT_PERMS = { view: true, add: true, edit: true, delete: true };
 
@@ -38,7 +39,7 @@ export default function useModulePermission(moduleKey) {
       // 1. Fetch role defaults first
       let roleDefaults = {};
       try {
-        const resRole = await fetch("http://localhost:8000/permissions");
+        const resRole = await fetch(`${API_BASE_URL}/permissions`);
         if (resRole.ok) {
           const allPerms = await resRole.json();
           roleDefaults = (allPerms[loggedIn.role] || {})[moduleKey] || {};
@@ -48,7 +49,7 @@ export default function useModulePermission(moduleKey) {
       // 2. Fetch user's custom overrides
       let customOverrides = {};
       try {
-        const resUser = await fetch(`http://localhost:8000/permissions/users/${loggedIn.id}`);
+        const resUser = await fetch(`${API_BASE_URL}/permissions/users/${loggedIn.id}`);
         if (resUser.ok) {
           const data = await resUser.json();
           const custom = data.customPermissions || {};
