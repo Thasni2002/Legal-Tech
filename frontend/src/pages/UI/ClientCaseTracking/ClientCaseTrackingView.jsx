@@ -9,6 +9,8 @@ import {
   CheckCircle2,
   Circle,
   ChevronRight,
+  Briefcase,
+  Search,
 } from "lucide-react";
 import useModulePermission from "@/utils/useModulePermission";
 import { getLoggedInUser } from "@/utils/auth";
@@ -17,6 +19,7 @@ export default function ClientCaseTrackingView() {
   const { perms, loading } = useModulePermission("Case Tracking");
   const [advocateName, setAdvocateName] = useState("");
   const [caseNumber, setCaseNumber] = useState("");
+  const [searchClient, setSearchClient] = useState("");
 
   // No view access
   if (!loading && !perms.view) {
@@ -47,9 +50,22 @@ export default function ClientCaseTrackingView() {
           const role = (user.role || "").toLowerCase().replace(/\s+/g, "");
           if (role === "client") {
             clientCases = data.filter((c) => {
-              if (!c.client_name) return false;
-              const normalizedName = c.client_name.toLowerCase().replace(/[^a-z0-9]/g, "");
-              return normalizedName === user.username;
+              // 1. Match by email (robust match)
+              const caseEmail = (c.email_id || "").toLowerCase().trim();
+              const userEmail = (user.email || "").toLowerCase().trim();
+              if (caseEmail && userEmail && caseEmail === userEmail) {
+                return true;
+              }
+
+              // 2. Match by normalized client name vs username
+              if (c.client_name) {
+                const normalizedName = c.client_name.toLowerCase().replace(/[^a-z0-9]/g, "");
+                const normalizedUsername = (user.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                if (normalizedName === normalizedUsername) {
+                  return true;
+                }
+              }
+              return false;
             });
           }
         }
@@ -69,6 +85,7 @@ export default function ClientCaseTrackingView() {
             title: item.case_title || "Untitled Case",
             status: item.status || "Case Submit",
             advocate: item.selected_advocate || "Advocate",
+            clientName: item.client_name || "Client",
             court: item.court_name || "Civil Court",
             nextHearing: item.next_hearing_date || "To be scheduled",
             currentStep: step,
@@ -96,13 +113,16 @@ export default function ClientCaseTrackingView() {
 
   // Filter cases based on inputs
   const filteredCases = cases.filter((item) => {
+    const matchClient =
+      searchClient.trim() === "" ||
+      (item.clientName || "").toLowerCase().includes(searchClient.toLowerCase().trim());
     const matchAdvocate =
       advocateName.trim() === "" ||
       item.advocate.toLowerCase() === advocateName.toLowerCase();
     const matchCase =
       caseNumber.trim() === "" ||
       item.caseId.toLowerCase() === caseNumber.toLowerCase();
-    return matchAdvocate && matchCase;
+    return matchClient && matchAdvocate && matchCase;
   });
 
   const uniqueAdvocates = [...new Set(cases.map(c => c.advocate))];
@@ -119,6 +139,32 @@ export default function ClientCaseTrackingView() {
           <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
             Track your case status and progress
           </p>
+        </div>
+
+        {/* Search Filter */}
+        <div className="bg-white rounded-xl border border-[#E2E8F0] p-5 shadow-sm">
+          <div className="relative max-w-md">
+            <Search
+              size={18}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748B]"
+            />
+            <input
+              type="text"
+              placeholder="Search by client name..."
+              value={searchClient}
+              onChange={(e) => setSearchClient(e.target.value)}
+              className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl pl-11 pr-10 py-3 text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all text-[#0F172A] font-medium placeholder:text-[#94A3B8]"
+            />
+            {searchClient && (
+              <button
+                onClick={() => setSearchClient("")}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-colors"
+                title="Clear search"
+              >
+                <span className="text-xs font-bold">×</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Dropdown Boxes — Advocate Name & Case Number */}
@@ -199,13 +245,17 @@ export default function ClientCaseTrackingView() {
                       {item.title}
                     </h2>
                     <div className="flex flex-wrap gap-x-5 gap-y-2 mt-2 text-sm text-[#64748B]">
-                      <span className="flex items-center gap-1.5">
+                      <span className="flex items-center gap-1.5" title="Case Number">
                         <FileText size={15} className="text-[#2563EB]" />
                         {item.caseId}
                       </span>
-                      <span className="flex items-center gap-1.5">
+                      <span className="flex items-center gap-1.5" title="Client Name">
                         <User size={15} className="text-[#2563EB]" />
-                        {item.advocate}
+                        Client: {item.clientName}
+                      </span>
+                      <span className="flex items-center gap-1.5" title="Advocate Name">
+                        <Briefcase size={15} className="text-[#2563EB]" />
+                        Advocate: {item.advocate}
                       </span>
                       <span className="flex items-center gap-1.5">
                         <Building2 size={15} className="text-[#2563EB]" />

@@ -52,19 +52,7 @@ const editId = params?.id;
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   const [selectedFiles, setSelectedFiles] = useState([]);
-  const [advocates, setAdvocates] = useState([]);
   const [selectedAdvocate, setSelectedAdvocate] = useState("");
-
-  // ─── Fetch advocates ───
-  async function fetchAdvocates() {
-    try {
-      const response = await fetch("http://localhost:8000/lawfirm-management/");
-      const data = await response.json();
-      setAdvocates(data);
-    } catch (error) {
-      console.error("Error fetching advocates:", error);
-    }
-  }
 
   // ─── Fetch case data for edit mode ───
   async function fetchCaseForEdit(id) {
@@ -109,7 +97,6 @@ const editId = params?.id;
   }
 
   useEffect(() => {
-    fetchAdvocates();
     if (isEditMode) {
       fetchCaseForEdit(editId);
     }
@@ -551,24 +538,6 @@ const handleSubmit = async (e) => {
           <div className="space-y-6 pt-4 border-t border-[#F1F5F9]">
             <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">Document Upload</h3>
 
-            {/* Advocate dropdown */}
-            <div>
-              <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">
-                Advocate Name
-              </label>
-              <select
-                value={selectedAdvocate}
-                onChange={(e) => setSelectedAdvocate(e.target.value)}
-                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-sm"
-              >
-                <option value="">Select Advocate</option>
-                {advocates.map((adv) => (
-                  <option key={adv.id} value={adv.advocateName}>
-                    {adv.advocateName}
-                  </option>
-                ))}
-              </select>
-            </div>
 
             {/* Document rows */}
             {documents.map((doc, index) => (
@@ -645,39 +614,21 @@ const handleSubmit = async (e) => {
             ))}
           </div>
 
-          {/* Status & Submit */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[#F1F5F9] items-end">
-            <div>
-              <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">
-                Case Status
-              </label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-              >
-                <option value="Active">Active</option>
-                <option value="Pending">Pending</option>
-                <option value="Closed">Closed</option>
-              </select>
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => router.push("/case-management")}
-                className="px-6 py-3.5 rounded-lg font-medium text-sm border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] transition"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-8 py-3.5 rounded-lg font-medium text-sm shadow-sm transition-all duration-200 cursor-pointer"
-              >
-                {isEditMode ? "Update Case" : "Save Case File"}
-              </button>
-            </div>
+          {/* Submit Buttons */}
+          <div className="flex justify-end gap-3 pt-4 border-t border-[#F1F5F9]">
+            <button
+              type="button"
+              onClick={() => router.push("/case-management")}
+              className="px-6 py-3.5 rounded-lg font-medium text-sm border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-8 py-3.5 rounded-lg font-medium text-sm shadow-sm transition-all duration-200 cursor-pointer"
+            >
+              {isEditMode ? "Update Case" : "Save Case File"}
+            </button>
           </div>
         </form>
       </div>
