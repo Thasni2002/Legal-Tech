@@ -14,6 +14,7 @@ from .schemas import (
 from . import service
 from pydantic import BaseModel
 from app.utils.email import send_email
+from app.advocate.case_management.models import Case
 import razorpay
 import os
 
@@ -120,18 +121,41 @@ def get_stats(
 # -----------------------------
 @router.get("/clients")
 def get_registered_clients(db: Session = Depends(get_db)):
-    users = db.query(User).all()
-    client_list = []
-
+    users = db.query(User).filter(User.role == "Client").all()
+    cases = db.query(Case).all()
+    
+    client_dict = {}
+    
+    # Process registered clients
     for user in users:
-        client_list.append({
+        client_dict[user.username] = {
             "id": user.id,
             "name": user.username,
             "email": user.email,
-            "mobile": user.mobile_number if hasattr(user, "mobile_number") else None
-        })
+            "mobile": user.phone,
+            "case_number": ""
+        }
+        
+    # Process cases to find case numbers and add unregistered clients
+    for case in cases:
+        client_name = case.client_name
+        if not client_name:
+            continue
+            
+        if client_name in client_dict:
+            if not client_dict[client_name]["case_number"]:
+                client_dict[client_name]["case_number"] = case.case_no
+        else:
+            # Add client from Case Management
+            client_dict[client_name] = {
+                "id": case.id + 10000,
+                "name": client_name,
+                "email": case.email_id or "",
+                "mobile": case.contact_number or "",
+                "case_number": case.case_no
+            }
 
-    return client_list
+    return list(client_dict.values())
 
 
 # -----------------------------
