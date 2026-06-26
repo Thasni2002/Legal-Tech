@@ -24,6 +24,8 @@ import {
 export default function ClientHistory() {
   const router = useRouter();
   const [client, setClient] = useState(null);
+  const [stats, setStats] = useState({ clientCount: 0, caseCount: 0 });
+  const [allClientsList, setAllClientsList] = useState([]);
   const [historyItems, setHistoryItems] = useState([]);
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -62,71 +64,90 @@ export default function ClientHistory() {
       }
     }
 
-    const clientId = currentClient ? currentClient.clientId : "C-9874";
-    const historyKey = `clientHistory_${clientId}`;
-
     // 2. Load custom history data manually added by user
-    const savedHistory = localStorage.getItem(historyKey);
-    if (savedHistory) {
-      try {
-        // Only load manual logs (long timestamp IDs) and exclude dummy data ("1", "2", "3")
-        const parsed = JSON.parse(savedHistory).filter(item => item.id.length > 5 && !item.id.startsWith("db-"));
-        setHistoryItems(parsed);
-      } catch (err) {
-        console.error("Failed to parse history data:", err);
+    let manualLogs = [];
+    if (currentClient) {
+      const historyKey = `clientHistory_${currentClient.clientId}`;
+      const savedHistory = localStorage.getItem(historyKey);
+      if (savedHistory) {
+        try {
+          // Only load manual logs (long timestamp IDs) and exclude dummy data ("1", "2", "3")
+          manualLogs = JSON.parse(savedHistory).filter(item => item.id.length > 5 && !item.id.startsWith("db-"));
+        } catch (err) {
+          console.error("Failed to parse history data:", err);
+        }
+      }
+    } else {
+      // Aggregate manual logs for all clients
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("clientHistory_")) {
+          const savedHistory = localStorage.getItem(key);
+          if (savedHistory) {
+            try {
+              const parsed = JSON.parse(savedHistory).filter(item => item.id.length > 5 && !item.id.startsWith("db-"));
+              manualLogs = [...manualLogs, ...parsed];
+            } catch (err) {
+              console.error("Failed to parse history data for key:", key, err);
+            }
+          }
+        }
       }
     }
+    setHistoryItems(manualLogs);
   }, []);
 
   useEffect(() => {
-    const targetName = (client?.fullName || client?.clientName || "John Doe (Demo Case)").trim().toLowerCase();
-
-    const fetchDbConsultations = async () => {
-      try {
-        const res = await fetch("http://localhost:8000/consultations");
-        if (res.ok) {
-          const data = await res.json();
-          
-          const matchedConsultations = data.filter(item => {
-            const itemClientName = (item.client_name || "").trim().toLowerCase();
-            return itemClientName === targetName || targetName.includes(itemClientName) || itemClientName.includes(targetName);
-          });
-
-          const mapped = matchedConsultations.map(item => ({
-            id: `db-consultation-${item.id}`,
-            type: "consultation",
-            title: item.status === "Completed" ? "Consultation Completed" : `Consultation ${item.status || "Scheduled"}`,
-            desc: `${item.type || "Video Call"} consultation with ${item.advocate_name || item.advocate || "Advocate"} regarding case.`,
-            date: item.date,
-            time: item.time,
-            badge: item.status || "Completed",
-          }));
-
-          setHistoryItems(prev => {
-            const nonDb = prev.filter(i => !i.id.startsWith("db-consultation-"));
-            return [...mapped, ...nonDb];
-          });
-        }
-      } catch (err) {
-        console.error("Failed to fetch consultations in ClientHistory:", err);
-      }
-    };
+    const targetName = (client?.fullName || client?.clientName || "").trim().toLowerCase();
 
     const fetchDbCases = async () => {
       try {
         const res = await fetch("http://127.0.0.1:8000/case-management/");
         if (res.ok) {
           const data = await res.json();
-          const matchedCases = data.filter(item => {
-            const itemClientName = (item.client_name || "").trim().toLowerCase();
-            return itemClientName === targetName || targetName.includes(itemClientName) || itemClientName.includes(targetName);
+          
+          const clientMap = {};
+          let idCounter = 1;
+          data.forEach(c => {
+            const name = c.client_name;
+            if (!name) return;
+            if (!clientMap[name]) {
+              clientMap[name] = {
+                clientId: `CUST-${String(idCounter).padStart(4, '0')}`,
+                fullName: name,
+                clientName: name,
+                phone: c.contact_number || "N/A",
+                email: c.email_id || "N/A",
+                caseStatus: c.status || "N/A",
+                caseTitle: c.case_title || "N/A",
+                caseNumber: c.case_no || "N/A",
+                courtName: c.court_name || "N/A",
+                assignedAdvocate: "Advocate",
+              };
+              idCounter++;
+            }
           });
+          const clientsArray = Object.values(clientMap);
+          setAllClientsList(clientsArray);
+          setStats({
+            clientCount: clientsArray.length,
+            caseCount: data.length
+          });
+
+          const matchedCases = client
+            ? data.filter(item => {
+                const itemClientName = (item.client_name || "").trim().toLowerCase();
+                return itemClientName === targetName || targetName.includes(itemClientName) || itemClientName.includes(targetName);
+              })
+            : data;
 
           const mapped = matchedCases.map(item => ({
             id: `db-case-${item.id}`,
             type: "case",
             title: "Case Created / Updated",
-            desc: `Case '${item.case_title || item.case_no}' under court '${item.court_name}' is currently '${item.status}'.`,
+            desc: client
+              ? `Case '${item.case_title || item.case_no}' under court '${item.court_name}' is currently '${item.status}'.`
+              : `Client: ${item.client_name || "Unknown"} - Case '${item.case_title || item.case_no}' under court '${item.court_name}' is currently '${item.status}'.`,
             date: item.created_at ? item.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
             time: item.created_at ? item.created_at.split("T")[1].substring(0, 5) : "10:00",
             badge: item.status || "Active",
@@ -147,16 +168,20 @@ export default function ClientHistory() {
         const res = await fetch("http://127.0.0.1:8000/finance/invoices");
         if (res.ok) {
           const data = await res.json();
-          const matchedInvoices = data.filter(item => {
-            const itemClientName = (item.client_name || "").trim().toLowerCase();
-            return itemClientName === targetName || targetName.includes(itemClientName) || itemClientName.includes(targetName);
-          });
+          const matchedInvoices = client
+            ? data.filter(item => {
+                const itemClientName = (item.client_name || "").trim().toLowerCase();
+                return itemClientName === targetName || targetName.includes(itemClientName) || itemClientName.includes(targetName);
+              })
+            : data;
 
           const mapped = matchedInvoices.map(item => ({
             id: `db-payment-${item.id}`,
             type: "payment",
             title: `₹${item.amount || 0} ${item.status === 'Paid' ? 'Received' : 'Pending'}`,
-            desc: `Invoice for '${item.service_details || "Services"}' with due date ${item.due_date}.`,
+            desc: client
+              ? `Invoice for '${item.service_details || "Services"}' with due date ${item.due_date}.`
+              : `Client: ${item.client_name || "Unknown"} - Invoice for '${item.service_details || "Services"}' with due date ${item.due_date}.`,
             date: item.issue_date || item.created_at?.split("T")[0] || new Date().toISOString().split("T")[0],
             time: item.created_at ? item.created_at.split("T")[1].substring(0, 5) : "12:00",
             badge: item.status || "Pending",
@@ -172,7 +197,6 @@ export default function ClientHistory() {
       }
     };
 
-    fetchDbConsultations();
     fetchDbCases();
     fetchDbInvoices();
   }, [client]);
@@ -366,65 +390,127 @@ export default function ClientHistory() {
 
       {/* Info Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Client Overview Card */}
-        <div className="lg:col-span-1 bg-white rounded-xl border border-[#E2E8F0] p-5 shadow-sm flex flex-col justify-between h-fit space-y-5">
-          <div>
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="font-bold text-[#0F172A] text-sm">Client Details</h3>
-              <span className="text-[10px] bg-[#F1F5F9] text-[#64748B] font-mono px-2 py-0.5 rounded font-semibold border border-[#E2E8F0]">
-                ID: {displayClient.clientId}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-3 pb-4 mb-4 border-b border-[#F1F5F9]">
-              <div className="w-10 h-10 bg-blue-50 text-[#2563EB] rounded-full flex items-center justify-center font-bold text-base select-none border border-blue-100">
-                {displayClient.fullName ? displayClient.fullName.charAt(0).toUpperCase() : "?"}
-              </div>
-              <div>
-                <h4 className="font-bold text-[#0F172A] text-sm leading-tight">
-                  {displayClient.fullName}
-                </h4>
-                <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1 border ${
-                  displayClient.caseStatus === "Active" || displayClient.caseStatus === "In Progress"
-                    ? "bg-green-50 text-green-700 border-green-200/50"
-                    : "bg-amber-50 text-amber-700 border-amber-200/50"
-                }`}>
-                  {displayClient.caseStatus || "In Progress"}
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-4 text-xs text-[#64748B]">
-              <div>
-                <span className="text-[10px] text-[#94A3B8] block font-semibold uppercase tracking-wider mb-1">Contact Info</span>
-                <p className="font-medium text-[#1E293B]">{displayClient.phone}</p>
-                <p className="font-medium text-[#1E293B] break-all">{displayClient.email}</p>
-              </div>
-              
-              {displayClient.caseTitle && (
-                <div className="pt-3 border-t border-[#F1F5F9]">
-                  <span className="text-[10px] text-[#94A3B8] block font-semibold uppercase tracking-wider mb-1">Active Case</span>
-                  <p className="font-semibold text-[#1E293B] leading-tight">{displayClient.caseTitle}</p>
-                  <p className="text-[10px] text-[#64748B] mt-0.5">{displayClient.caseNumber} &bull; {displayClient.courtName}</p>
-                </div>
-              )}
-
-              {displayClient.assignedAdvocate && (
-                <div className="pt-3 border-t border-[#F1F5F9]">
-                  <span className="text-[10px] text-[#94A3B8] block font-semibold uppercase tracking-wider mb-1">Counsel</span>
-                  <p className="font-semibold text-[#1E293B]">{displayClient.assignedAdvocate}</p>
-                </div>
-              )}
+        {/* Client Sidebar Card */}
+        <div className="lg:col-span-1 space-y-6">
+          {/* Client Navigation List Card */}
+          <div className="bg-white rounded-xl border border-[#E2E8F0] p-5 shadow-sm">
+            <h3 className="font-bold text-[#0F172A] text-sm mb-3">Filter by Client</h3>
+            <div className="space-y-1">
+              <button
+                onClick={() => setClient(null)}
+                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                  client === null
+                    ? "bg-blue-50 text-blue-600 border border-blue-100"
+                    : "text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#0F172A]"
+                }`}
+              >
+                All Clients
+              </button>
+              {allClientsList.map((c) => (
+                <button
+                  key={c.clientId}
+                  onClick={() => setClient(c)}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                    client?.clientName === c.clientName
+                      ? "bg-blue-50 text-blue-600 border border-blue-100"
+                      : "text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#0F172A]"
+                  }`}
+                >
+                  {c.clientName}
+                </button>
+              ))}
             </div>
           </div>
-          
-          <div className="pt-4 border-t border-[#F1F5F9] text-center">
-            <Link
-              href="/client-management"
-              className="inline-block text-xs font-semibold text-[#2563EB] hover:text-[#1d4ed8]"
-            >
-              Manage Profile &rarr;
-            </Link>
+
+          {/* Client Specific Details Card */}
+          <div className="bg-white rounded-xl border border-[#E2E8F0] p-5 shadow-sm flex flex-col justify-between h-fit space-y-5">
+            {client ? (
+              <div>
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="font-bold text-[#0F172A] text-sm">Client Details</h3>
+                  <span className="text-[10px] bg-[#F1F5F9] text-[#64748B] font-mono px-2 py-0.5 rounded font-semibold border border-[#E2E8F0]">
+                    ID: {client.clientId}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 pb-4 mb-4 border-b border-[#F1F5F9]">
+                  <div className="w-10 h-10 bg-blue-50 text-[#2563EB] rounded-full flex items-center justify-center font-bold text-base select-none border border-blue-100">
+                    {client.fullName ? client.fullName.charAt(0).toUpperCase() : "?"}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-[#0F172A] text-sm leading-tight">
+                      {client.fullName}
+                    </h4>
+                    <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1 border ${
+                      client.caseStatus === "Active" || client.caseStatus === "In Progress"
+                        ? "bg-green-50 text-green-700 border-green-200/50"
+                        : "bg-amber-50 text-amber-700 border-amber-200/50"
+                    }`}>
+                      {client.caseStatus || "In Progress"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-4 text-xs text-[#64748B]">
+                  <div>
+                    <span className="text-[10px] text-[#94A3B8] block font-semibold uppercase tracking-wider mb-1">Contact Info</span>
+                    <p className="font-medium text-[#1E293B]">{client.phone}</p>
+                    <p className="font-medium text-[#1E293B] break-all">{client.email}</p>
+                  </div>
+                  
+                  {client.caseTitle && (
+                    <div className="pt-3 border-t border-[#F1F5F9]">
+                      <span className="text-[10px] text-[#94A3B8] block font-semibold uppercase tracking-wider mb-1">Active Case</span>
+                      <p className="font-semibold text-[#1E293B] leading-tight">{client.caseTitle}</p>
+                      <p className="text-[10px] text-[#64748B] mt-0.5">{client.caseNumber} &bull; {client.courtName}</p>
+                    </div>
+                  )}
+
+                  {client.assignedAdvocate && (
+                    <div className="pt-3 border-t border-[#F1F5F9]">
+                      <span className="text-[10px] text-[#94A3B8] block font-semibold uppercase tracking-wider mb-1">Counsel</span>
+                      <p className="font-semibold text-[#1E293B]">{client.assignedAdvocate}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="font-bold text-[#0F172A] text-sm">Client Details</h3>
+                  <span className="text-[10px] bg-blue-50 text-blue-700 font-mono px-2 py-0.5 rounded font-semibold border border-blue-200">
+                    Scope: All
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 pb-4 mb-4 border-b border-[#F1F5F9]">
+                  <div className="w-10 h-10 bg-blue-50 text-[#2563EB] rounded-full flex items-center justify-center font-bold text-base select-none border border-blue-100">
+                    A
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-[#0F172A] text-sm leading-tight break-words">
+                      All Clients
+                    </h4>
+                    <span className="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1 border bg-blue-50 text-blue-700 border-blue-200/50">
+                      Consolidated View
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-4 text-xs text-[#64748B]">
+                  <div>
+                    <span className="text-[10px] text-[#94A3B8] block font-semibold uppercase tracking-wider mb-1">Timeline Coverage</span>
+                    <p className="font-medium text-[#1E293B]">Consolidated history logs across all case updates and financial transactions in the firm.</p>
+                  </div>
+                  
+                  <div className="pt-3 border-t border-[#F1F5F9]">
+                    <span className="text-[10px] text-[#94A3B8] block font-semibold uppercase tracking-wider mb-1">Overview Statistics</span>
+                    <p className="font-semibold text-[#1E293B] leading-tight">Total Clients: {stats.clientCount}</p>
+                    <p className="text-[10px] text-[#64748B] mt-0.5">Total Cases Tracked: {stats.caseCount}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -475,16 +561,7 @@ export default function ClientHistory() {
                 >
                   Payments
                 </button>
-                <button
-                  onClick={() => setActiveTab("consultation")}
-                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === "consultation"
-                      ? "bg-white text-[#0F172A] shadow-sm"
-                      : "text-[#64748B] hover:text-[#0F172A]"
-                  }`}
-                >
-                  Consultations
-                </button>
+
               </div>
 
               {/* Search Input */}
@@ -600,7 +677,7 @@ export default function ClientHistory() {
                   <option value="case">Case Update</option>
                   <option value="document">Document Upload</option>
                   <option value="payment">Payment Received</option>
-                  <option value="consultation">Consultation Completed</option>
+
                 </select>
               </div>
 
