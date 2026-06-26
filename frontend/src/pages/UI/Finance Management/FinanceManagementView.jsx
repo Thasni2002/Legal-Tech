@@ -456,16 +456,14 @@ const [upiId, setUpiId] = useState("");
   return (
     <div className="w-full space-y-8 max-w-7xl mx-auto pb-10">
       {/* Page Header */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-[#0F172A] to-[#1E293B] rounded-3xl shadow-xl shadow-slate-900/10 p-8 md:p-10">
+      <div className="relative overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-3xl shadow-sm p-8 md:p-10">
         <div className="relative z-10">
-          <h1 className="text-white font-extrabold text-3xl md:text-4xl tracking-tight leading-tight">
+          <h1 className="text-[#0F172A] font-extrabold text-3xl md:text-4xl tracking-tight leading-tight">
             Finance Management
           </h1>
-          <p className="text-[#94A3B8] mt-2 text-sm md:text-base font-medium max-w-xl">
-            Monitor revenue, track invoices, and manage all your financial records in one place.
-          </p>
+         
         </div>
-        <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 opacity-10 pointer-events-none">
+        <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 opacity-10 pointer-events-none text-blue-600">
           <Landmark size={200} />
         </div>
       </div>
@@ -564,6 +562,10 @@ const [upiId, setUpiId] = useState("");
                     placeholder="Type to search existing clients..."
                     value={searchTerm}
                     onChange={(e) => handleClientSearch(e.target.value)}
+                    onFocus={() => {
+                      setFilteredClients(clients);
+                      setShowDropdown(true);
+                    }}
                     className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                   />
                 </div>
@@ -578,7 +580,7 @@ const [upiId, setUpiId] = useState("");
                           setSearchTerm(client.name);
                           setEmail(client.email);
                           setMobileNumber(client.mobile || "");
-                          setCaseNumber("");
+                          setCaseNumber(client.case_number || "");
                           setShowDropdown(false);
                         }}
                         className="p-4 cursor-pointer hover:bg-[#F8FAFC] transition-colors border-b border-slate-50 last:border-0"
@@ -601,8 +603,8 @@ const [upiId, setUpiId] = useState("");
                     type="text"
                     placeholder="e.g. CR-2023-145"
                     value={caseNumber}
-                    onChange={(e) => setCaseNumber(e.target.value)}
-                    className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                    readOnly
+                    className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm bg-[#F8FAFC] text-[#64748B] cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -617,8 +619,8 @@ const [upiId, setUpiId] = useState("");
                     type="text"
                     placeholder="e.g. +91 9876543210"
                     value={mobileNumber}
-                    onChange={(e) => setMobileNumber(e.target.value)}
-                    className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                    readOnly
+                    className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm bg-[#F8FAFC] text-[#64748B] cursor-not-allowed"
                   />
                 </div>
               </div>
