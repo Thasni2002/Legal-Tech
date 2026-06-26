@@ -27,7 +27,7 @@ services:
     restart: unless-stopped
 
     env_file:
-      - .env.production
+      - ./backend/.env.production
 
     # Explicit environment overrides (ensures DB_HOST is always correct)
     environment:
@@ -58,9 +58,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args:
-        # NEXT_PUBLIC_API_URL is baked into the JS bundle at build time
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+
     container_name: legaltech_frontend
     restart: unless-stopped
 
