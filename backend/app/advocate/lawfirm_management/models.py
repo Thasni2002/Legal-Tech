@@ -47,4 +47,4 @@ class AssignedCase(Base):
     due_date = Column(String(50))
     assignment_notes = Column(String(500))   
     status = Column(String(50), default="Active")
-    assigned_documents = Column(Text, nullable=True)
+    assigned_documents = Column(LONGTEXT, nullable=True)
