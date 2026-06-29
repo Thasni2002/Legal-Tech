@@ -2,7 +2,7 @@
 
 import { API_BASE_URL } from "@/utils/api";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   Eye,
@@ -16,6 +16,11 @@ import {
   File,
   Gavel,
   Trash2,
+  Lock,
+  Upload,
+  Pencil,
+  ShieldOff,
+  CheckCircle,
 } from "lucide-react";
 import useModulePermission from "@/utils/useModulePermission";
 import { getLoggedInUser } from "@/utils/auth";
@@ -59,13 +64,25 @@ const getStatusBadgeClass = (status) => {
 
 export default function AssignedCasesView() {
   const { perms, loading } = useModulePermission("Assigned Cases");
-const [cases, setCases] = useState([]);
+  const [cases, setCases] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCase, setSelectedCase] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [modalViewMode, setModalViewMode] = useState("full");
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Upload state
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // Edit (rename) state
+  const [editingDocIdx, setEditingDocIdx] = useState(null);
+  const [editingDocName, setEditingDocName] = useState("");
+
+  // Doc-level delete confirm
+  const [docDeleteIdx, setDocDeleteIdx] = useState(null);
 
   useEffect(() => {
     fetchAssignedCases();
@@ -119,19 +136,31 @@ const [cases, setCases] = useState([]);
     );
   }
 
+  // ── Open modal & default to first VIEWABLE document ──
   const handleOpenDetails = (caseItem, viewMode = "full") => {
     setSelectedCase(caseItem);
     setModalViewMode(viewMode);
-    setSelectedDocument(caseItem.documents && caseItem.documents.length > 0 ? caseItem.documents[0] : null);
+    setUploadSuccess(false);
+    setEditingDocIdx(null);
+    setDocDeleteIdx(null);
+
+    // default-select the first document that has view=true (or view is undefined/null = treat as allowed)
+    const firstViewable = caseItem.documents?.find(
+      (d) => d.view === true || d.view === undefined || d.view === null
+    ) || null;
+    setSelectedDocument(firstViewable);
   };
 
   const closeModal = () => {
     setSelectedCase(null);
     setSelectedDocument(null);
+    setEditingDocIdx(null);
+    setDocDeleteIdx(null);
+    setUploadSuccess(false);
   };
 
   const handleStatusChange = (caseNo, newStatus) => {
-    if (!perms.edit) return; // blocked if no edit permission
+    if (!perms.edit) return;
     setCases((prevCases) =>
       prevCases.map((c) =>
         c.caseNo === caseNo ? { ...c, status: newStatus } : c
@@ -142,8 +171,24 @@ const [cases, setCases] = useState([]);
     }
   };
 
+  // ── VIEW: check doc.view permission ──
+  const handleViewDocument = (doc) => {
+    if (doc.view === false) return; // blocked
+    setSelectedDocument(doc);
+    const url = doc.url || doc.file_path;
+    if (url) {
+      window.open(url, "_blank");
+    } else {
+      const content = `Mock preview content for ${doc.file}\nDocument Type: ${doc.documentType}`;
+      const blob = new Blob([content], { type: "text/plain" });
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, "_blank");
+    }
+  };
+
+  // ── DOWNLOAD: check doc.view permission ──
   const handleDownloadDocument = (doc) => {
-    if (!doc) return;
+    if (!doc || doc.view === false) return; // blocked
     const url = doc.url || doc.file_path;
     if (url) {
       const a = document.createElement("a");
@@ -154,7 +199,6 @@ const [cases, setCases] = useState([]);
       a.click();
       document.body.removeChild(a);
     } else {
-      // Dummy download if no real URL
       const content = `Mock content for ${doc.file}\nDocument Type: ${doc.documentType}`;
       const blob = new Blob([content], { type: "text/plain" });
       const blobUrl = URL.createObjectURL(blob);
@@ -168,20 +212,82 @@ const [cases, setCases] = useState([]);
     }
   };
 
-  const handleViewDocument = (doc) => {
-    setSelectedDocument(doc);
-    const url = doc.url || doc.file_path;
-    if (url) {
-      window.open(url, "_blank");
-    } else {
-      // Dummy view in new tab if no real URL
-      const content = `Mock preview content for ${doc.file}\nDocument Type: ${doc.documentType}`;
-      const blob = new Blob([content], { type: "text/plain" });
-      const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, "_blank");
+  // ── UPLOAD: check doc.upload permission on the case (first doc or general) ──
+  // We allow upload if any document in the case has upload=true
+  const caseAllowsUpload = (caseItem) => {
+    if (!caseItem?.documents?.length) return false;
+    return caseItem.documents.some((d) => d.upload === true);
+  };
+
+  const handleUploadFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedCase) return;
+
+    setUploadLoading(true);
+    try {
+      // Optimistic update: add new document entry to local state
+      const newDoc = {
+        file: file.name,
+        documentType: "Uploaded",
+        view: true,
+        upload: true,
+        edit: true,
+        delete: true,
+      };
+      const updatedDocs = [...(selectedCase.documents || []), newDoc];
+      const updatedCase = { ...selectedCase, documents: updatedDocs };
+      setSelectedCase(updatedCase);
+      setCases((prev) =>
+        prev.map((c) => (c.id === selectedCase.id ? updatedCase : c))
+      );
+      setUploadSuccess(true);
+      setTimeout(() => setUploadSuccess(false), 3000);
+    } catch (err) {
+      console.error("Upload failed:", err);
+      alert("Upload failed. Please try again.");
+    } finally {
+      setUploadLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
+  // ── EDIT (rename): check doc.edit ──
+  const startEditing = (idx, currentName) => {
+    setEditingDocIdx(idx);
+    setEditingDocName(currentName);
+  };
+
+  const saveEdit = async () => {
+    if (editingDocIdx === null || !selectedCase) return;
+    const updatedDocs = selectedCase.documents.map((d, i) =>
+      i === editingDocIdx ? { ...d, file: editingDocName } : d
+    );
+    const updatedCase = { ...selectedCase, documents: updatedDocs };
+    setSelectedCase(updatedCase);
+    setCases((prev) =>
+      prev.map((c) => (c.id === selectedCase.id ? updatedCase : c))
+    );
+    setEditingDocIdx(null);
+    setEditingDocName("");
+  };
+
+  // ── DELETE document: check doc.delete ──
+  const handleDeleteDocument = async (docIdx) => {
+    if (!selectedCase) return;
+    const updatedDocs = selectedCase.documents.filter((_, i) => i !== docIdx);
+    const updatedCase = { ...selectedCase, documents: updatedDocs };
+    setSelectedCase(updatedCase);
+    setCases((prev) =>
+      prev.map((c) => (c.id === selectedCase.id ? updatedCase : c))
+    );
+    // If the deleted doc was the selected preview, clear it
+    if (selectedDocument === selectedCase.documents[docIdx]) {
+      setSelectedDocument(null);
+    }
+    setDocDeleteIdx(null);
+  };
+
+  // ── DELETE assigned case ──
   const handleDelete = async (id) => {
     setDeleteLoading(true);
     try {
@@ -202,16 +308,13 @@ const [cases, setCases] = useState([]);
     }
   };
 
-
-
-
   const filteredCases = cases.filter((item) => {
     const query = searchQuery.toLowerCase();
     return (
-      item.title.toLowerCase().includes(query) ||
-      item.caseNo.toLowerCase().includes(query) ||
-      item.client.toLowerCase().includes(query) ||
-      item.court.toLowerCase().includes(query)
+      item.title?.toLowerCase().includes(query) ||
+      item.caseNo?.toLowerCase().includes(query) ||
+      item.client?.toLowerCase().includes(query) ||
+      item.court?.toLowerCase().includes(query)
     );
   });
 
@@ -393,7 +496,9 @@ const [cases, setCases] = useState([]);
           </div>
         </div>
 
-      {/* Case Details Modal */}
+      {/* ══════════════════════════════════════════════
+          CASE DETAILS MODAL
+      ══════════════════════════════════════════════ */}
       {selectedCase && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           {/* Backdrop */}
@@ -431,7 +536,7 @@ const [cases, setCases] = useState([]);
             {/* Body: Split Layout */}
             <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-5 gap-6 p-6 min-h-0 bg-white">
               
-              {/* Left Column: Details & Documents (col-span-3 in full mode, col-span-2 in document mode) */}
+              {/* Left Column */}
               <div className={`${modalViewMode === "full" ? "lg:col-span-3" : "lg:col-span-2"} overflow-y-auto pr-2 space-y-6 flex flex-col h-full`}>
                 
                 {modalViewMode === "full" && (
@@ -483,112 +588,275 @@ const [cases, setCases] = useState([]);
                   </>
                 )}
 
-                {/* Documents Section */}
-                <div className="flex-1 flex flex-col min-h-0 space-y-2">
-                  <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">
-                    Assigned Documents ({selectedCase.documents?.length || 0})
-                  </h4>
-                  <div className={`space-y-2 overflow-y-auto flex-1 pr-1 ${modalViewMode === "full" ? "max-h-[220px]" : ""}`}>
-                    {selectedCase.documents?.map((doc, idx) => {
-const isSelected = selectedDocument?.file === doc.file;
-return (
-                        <div
-                          key={idx}
-                          className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
-                            isSelected
-                              ? "bg-blue-50/50 border-blue-200 text-blue-900 shadow-sm"
-                              : "bg-white border-[#E2E8F0] text-[#64748B] hover:border-[#E2E8F0] hover:bg-[#F1F5F9]"
+                {/* ── Documents Section ── */}
+                <div className="flex-1 flex flex-col min-h-0 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">
+                      Assigned Documents ({selectedCase.documents?.length || 0})
+                    </h4>
+
+                    {/* UPLOAD button — only if any document has upload=true */}
+                    {caseAllowsUpload(selectedCase) && (
+                      <div>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          className="hidden"
+                          id="doc-upload-input"
+                          onChange={handleUploadFile}
+                        />
+                        <label
+                          htmlFor="doc-upload-input"
+                          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl cursor-pointer transition-all ${
+                            uploadLoading
+                              ? "bg-[#E2E8F0] text-[#94A3B8]"
+                              : "bg-[#2563EB] text-white hover:bg-[#1d4ed8]"
                           }`}
                         >
-                          <div className="flex items-center gap-3">
-                            <FileText size={18} className={isSelected ? "text-[#2563EB]" : "text-[#64748B]"} />
-                            <div>
-                              <p className="text-xs font-bold truncate max-w-[160px] sm:max-w-[260px]">
-                                {doc.file}
-                              </p>
-                              <p className="text-[10px] text-[#64748B] mt-0.5">{doc.documentType}</p>
-                            </div>
-                          </div>
-                          
-                          <button
-                            onClick={() => handleViewDocument(doc)}
-                            className={`px-4 py-1.5 rounded-xl text-xxs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                              isSelected
-                                ? "bg-[#2563EB] text-white shadow-sm"
-                                : "bg-[#F8FAFC] text-[#64748B] hover:bg-slate-200"
+                          <Upload size={12} />
+                          {uploadLoading ? "Uploading..." : "Upload Doc"}
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Upload success banner */}
+                  {uploadSuccess && (
+                    <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2">
+                      <CheckCircle size={14} className="text-green-600" />
+                      <p className="text-xs font-semibold text-green-700">Document uploaded successfully!</p>
+                    </div>
+                  )}
+
+                  <div className={`space-y-2 overflow-y-auto flex-1 pr-1 ${modalViewMode === "full" ? "max-h-[220px]" : ""}`}>
+                    {selectedCase.documents?.length > 0 ? (
+                      selectedCase.documents.map((doc, idx) => {
+                        const isSelected = selectedDocument?.file === doc.file;
+                        const isLocked = doc.view === false;
+                        const canEdit = doc.edit === true;
+                        const canDelete = doc.delete === true;
+                        const isEditingThis = editingDocIdx === idx;
+
+                        return (
+                          <div
+                            key={idx}
+                            className={`rounded-2xl border transition-all ${
+                              isLocked
+                                ? "bg-slate-50 border-slate-200 opacity-75"
+                                : isSelected
+                                ? "bg-blue-50/50 border-blue-200 shadow-sm"
+                                : "bg-white border-[#E2E8F0] hover:border-[#E2E8F0] hover:bg-[#F1F5F9]"
                             }`}
                           >
-                            View
-                          </button>
-                        </div>
-                      );
-                    })}
+                            <div className="flex items-center justify-between p-3.5">
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                {/* File Icon / Lock Icon */}
+                                {isLocked ? (
+                                  <Lock size={18} className="text-slate-400 shrink-0" />
+                                ) : (
+                                  <FileText size={18} className={isSelected ? "text-[#2563EB]" : "text-[#64748B]"} />
+                                )}
+
+                                <div className="flex-1 min-w-0">
+                                  {/* Editable name / display name */}
+                                  {isEditingThis ? (
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="text"
+                                        value={editingDocName}
+                                        onChange={(e) => setEditingDocName(e.target.value)}
+                                        className="flex-1 text-xs border border-[#2563EB] rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#2563EB]/30"
+                                        autoFocus
+                                      />
+                                      <button
+                                        onClick={saveEdit}
+                                        className="text-[10px] font-bold px-2 py-1 bg-[#2563EB] text-white rounded-lg cursor-pointer hover:bg-[#1d4ed8]"
+                                      >
+                                        Save
+                                      </button>
+                                      <button
+                                        onClick={() => setEditingDocIdx(null)}
+                                        className="text-[10px] font-bold px-2 py-1 bg-slate-200 text-slate-600 rounded-lg cursor-pointer"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <p className={`text-xs font-bold truncate max-w-[140px] sm:max-w-[220px] ${isLocked ? "text-slate-400 line-through" : ""}`}>
+                                        {doc.file}
+                                      </p>
+                                      <div className="flex items-center gap-1.5 mt-0.5">
+                                        <p className="text-[10px] text-[#64748B]">{doc.documentType}</p>
+                                        {isLocked && (
+                                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider text-red-500 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full">
+                                            <ShieldOff size={9} /> Restricted
+                                          </span>
+                                        )}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Action buttons */}
+                              {!isEditingThis && (
+                                <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                                  {/* VIEW button */}
+                                  {isLocked ? (
+                                    <span className="px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed flex items-center gap-1">
+                                      <Lock size={10} /> Locked
+                                    </span>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleViewDocument(doc)}
+                                      className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                                        isSelected
+                                          ? "bg-[#2563EB] text-white shadow-sm"
+                                          : "bg-[#F8FAFC] text-[#64748B] hover:bg-slate-200"
+                                      }`}
+                                    >
+                                      View
+                                    </button>
+                                  )}
+
+                                  {/* EDIT button */}
+                                  {canEdit && !isLocked && (
+                                    <button
+                                      onClick={() => startEditing(idx, doc.file)}
+                                      className="p-1.5 rounded-lg text-[#64748B] hover:bg-blue-50 hover:text-[#2563EB] transition-colors cursor-pointer"
+                                      title="Rename document"
+                                    >
+                                      <Pencil size={13} />
+                                    </button>
+                                  )}
+
+                                  {/* DELETE button */}
+                                  {canDelete && (
+                                    <button
+                                      onClick={() => setDocDeleteIdx(idx)}
+                                      className="p-1.5 rounded-lg text-[#64748B] hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
+                                      title="Delete document"
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Document delete confirmation (inline) */}
+                            {docDeleteIdx === idx && (
+                              <div className="border-t border-red-100 bg-red-50 px-4 py-3 flex items-center justify-between rounded-b-2xl">
+                                <p className="text-xs font-semibold text-red-700">Delete this document?</p>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => setDocDeleteIdx(null)}
+                                    className="text-[10px] px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 font-bold cursor-pointer"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteDocument(idx)}
+                                    className="text-[10px] px-3 py-1.5 rounded-lg bg-red-600 text-white font-bold cursor-pointer hover:bg-red-700"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="text-center py-8 text-[#94A3B8] text-xs">
+                        No documents attached to this case.
+                      </div>
+                    )}
                   </div>
                 </div>
 
               </div>
 
-              {/* Right Column: Document Viewer (col-span-2 in full mode, col-span-3 in document mode) */}
+              {/* Right Column: Document Viewer */}
               <div className={`${modalViewMode === "full" ? "lg:col-span-2" : "lg:col-span-3"} bg-[#F1F5F9] rounded-3xl border border-[#E2E8F0]/50 flex flex-col overflow-hidden h-full min-h-[300px]`}>
                 
                 {selectedDocument ? (
-                  <div className="flex flex-col h-full">
-                    {/* Doc Preview Header */}
-                    <div className="p-3.5 bg-[#F8FAFC]/80 border-b border-[#E2E8F0]/60 flex items-center justify-between text-xs font-bold text-[#64748B]">
-                      <span className="truncate pr-4 flex items-center gap-1.5">
-                        <File size={14} className="text-blue-500" />
-                       {selectedDocument.file}
+                  selectedDocument.view === false ? (
+                    /* ── ACCESS DENIED PREVIEW ── */
+                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center gap-4">
+                      <div className="w-16 h-16 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center">
+                        <Lock size={28} className="text-red-400" />
+                      </div>
+                      <div>
+                        <h5 className="font-bold text-[#0F172A] text-sm mb-1">Access Restricted</h5>
+                        <p className="text-[11px] text-[#64748B] max-w-[180px] leading-relaxed">
+                          You do not have <span className="font-bold text-red-500">view</span> permission for this document.
+                        </p>
+                      </div>
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-red-500 bg-red-50 border border-red-200 px-2.5 py-1 rounded-full">
+                        <ShieldOff size={10} /> Permission Denied
                       </span>
-                      <button
-                        className="flex items-center gap-1 p-1 px-2.5 rounded-lg hover:bg-slate-200 text-[#64748B] hover:text-[#0F172A] transition-colors text-xxs font-bold uppercase tracking-wider bg-white/80 border border-[#E2E8F0]/40 cursor-pointer"
-                        onClick={() => handleDownloadDocument(selectedDocument)}
-                      >
-                        <Download size={12} />
-                        <span>Download</span>
-                      </button>
                     </div>
+                  ) : (
+                    <div className="flex flex-col h-full">
+                      {/* Doc Preview Header */}
+                      <div className="p-3.5 bg-[#F8FAFC]/80 border-b border-[#E2E8F0]/60 flex items-center justify-between text-xs font-bold text-[#64748B]">
+                        <span className="truncate pr-4 flex items-center gap-1.5">
+                          <File size={14} className="text-blue-500" />
+                         {selectedDocument.file}
+                        </span>
+                        <button
+                          className="flex items-center gap-1 p-1 px-2.5 rounded-lg hover:bg-slate-200 text-[#64748B] hover:text-[#0F172A] transition-colors text-xxs font-bold uppercase tracking-wider bg-white/80 border border-[#E2E8F0]/40 cursor-pointer"
+                          onClick={() => handleDownloadDocument(selectedDocument)}
+                        >
+                          <Download size={12} />
+                          <span>Download</span>
+                        </button>
+                      </div>
 
-                    {/* Doc Preview Content */}
-                    <div className="flex-1 p-4 overflow-y-auto bg-slate-200/30 flex justify-center items-start">
-                      {selectedDocument.url || selectedDocument.file_path ? (
-                        <iframe 
-                          src={selectedDocument.url || selectedDocument.file_path} 
-                          title={selectedDocument.file} 
-                          className="w-full min-h-[320px] rounded-xl border border-[#E2E8F0] shadow-sm bg-white" 
-                        />
-                      ) : (
-                        <div className="bg-white w-full shadow-sm border border-[#E2E8F0] rounded-xl p-5 min-h-[320px] font-serif text-[#0F172A] text-[11px] leading-relaxed flex flex-col relative select-none">
-                          
-                          {/* Decorative Legal Document Top Header */}
-                          <div className="border-b border-double border-slate-300 pb-2 mb-3 text-center">
-                            <p className="uppercase tracking-widest text-[8px] font-sans font-bold text-[#64748B]">IN THE COURT OF THE LAW</p>
-                            <p className="font-sans font-bold text-[9px] text-[#64748B] mt-0.5 uppercase">{selectedCase.court}</p>
-                            <div className="flex justify-between text-[7px] font-sans text-[#64748B] mt-1.5">
-                              <span>CASE: {selectedCase.caseNo}</span>
-                              <span>OFFICIAL PREVIEW</span>
+                      {/* Doc Preview Content */}
+                      <div className="flex-1 p-4 overflow-y-auto bg-slate-200/30 flex justify-center items-start">
+                        {selectedDocument.url || selectedDocument.file_path ? (
+                          <iframe 
+                            src={selectedDocument.url || selectedDocument.file_path} 
+                            title={selectedDocument.file} 
+                            className="w-full min-h-[320px] rounded-xl border border-[#E2E8F0] shadow-sm bg-white" 
+                          />
+                        ) : (
+                          <div className="bg-white w-full shadow-sm border border-[#E2E8F0] rounded-xl p-5 min-h-[320px] font-serif text-[#0F172A] text-[11px] leading-relaxed flex flex-col relative select-none">
+                            
+                            {/* Decorative Legal Document Top Header */}
+                            <div className="border-b border-double border-slate-300 pb-2 mb-3 text-center">
+                              <p className="uppercase tracking-widest text-[8px] font-sans font-bold text-[#64748B]">IN THE COURT OF THE LAW</p>
+                              <p className="font-sans font-bold text-[9px] text-[#64748B] mt-0.5 uppercase">{selectedCase.court}</p>
+                              <div className="flex justify-between text-[7px] font-sans text-[#64748B] mt-1.5">
+                                <span>CASE: {selectedCase.caseNo}</span>
+                                <span>OFFICIAL PREVIEW</span>
+                              </div>
                             </div>
+
+                            {/* Document Title */}
+                            <h5 className="font-bold text-center underline text-xs mb-3 uppercase text-[#0F172A]">
+                              {selectedDocument.file?.replace('.pdf', '').replaceAll('_', ' ')}
+                            </h5>
+
+                            {/* Document Simulated Body Text */}
+                            <div className="whitespace-pre-wrap flex-1 text-[#64748B] font-serif italic border-l border-[#E2E8F0] pl-2">
+                             Document Type: {selectedDocument.documentType}
+                            </div>
+
+                            {/* Bottom stamp marker */}
+                            <div className="mt-6 border-t border-[#E2E8F0] pt-3 flex justify-between items-center text-[7px] font-sans text-[#64748B]">
+                              <span>VERIFIED VIA LEGALPORTAL</span>
+                              <span className="bg-blue-50 text-[#2563EB] px-1.5 py-0.5 rounded font-mono font-bold uppercase tracking-wider border border-blue-100">PREVIEW ONLY</span>
+                            </div>
+
                           </div>
-
-                          {/* Document Title */}
-                          <h5 className="font-bold text-center underline text-xs mb-3 uppercase text-[#0F172A]">
-                            {selectedDocument.file?.replace('.pdf', '').replaceAll('_', ' ')}
-                          </h5>
-
-                          {/* Document Simulated Body Text */}
-                          <div className="whitespace-pre-wrap flex-1 text-[#64748B] font-serif italic border-l border-[#E2E8F0] pl-2">
-                           Document Type: {selectedDocument.documentType}
-                          </div>
-
-                          {/* Bottom stamp marker */}
-                          <div className="mt-6 border-t border-[#E2E8F0] pt-3 flex justify-between items-center text-[7px] font-sans text-[#64748B]">
-                            <span>VERIFIED VIA LEGALPORTAL</span>
-                            <span className="bg-blue-50 text-[#2563EB] px-1.5 py-0.5 rounded font-mono font-bold uppercase tracking-wider border border-blue-100">PREVIEW ONLY</span>
-                          </div>
-
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )
                 ) : (
                   /* Empty State */
                   <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">

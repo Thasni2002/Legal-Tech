@@ -1,7 +1,7 @@
 import EditCaseClient from "./EditCaseClient";
-
-
+import { use } from "react";
 
 export default function EditCasePage({ params }) {
-  return <EditCaseClient id={params.id} />;
+  const { id } = use(params);
+  return <EditCaseClient id={id} />;
 }
