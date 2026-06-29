@@ -1,6 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { getLoggedInUser } from "@/utils/auth";
 import {
   Briefcase,
   Calendar,
@@ -13,18 +15,43 @@ import {
 export default function JunAdvDashView() {
   const router = useRouter();
 
-  const cases = [
-    {
-      title: "State vs Rajesh Kumar",
-      hearing: "15 Jun 2026",
-      status: "Active",
-    },
-    {
-      title: "Anita Verma vs Suresh",
-      hearing: "18 Jun 2026",
-      status: "Pending",
-    },
-  ];
+  const [cases, setCases] = useState([]);
+  const [userName, setUserName] = useState("");
+
+  useEffect(() => {
+    const user = getLoggedInUser();
+    if (user && user.username) {
+      setUserName(user.username);
+    }
+
+    const fetchAssignedCases = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/lawfirm-management/assigned-cases");
+        const data = await res.json();
+
+        let casesToShow = data;
+        if (user && user.role && user.role.toLowerCase().includes("junior")) {
+          casesToShow = data.filter((item) => {
+            if (!item.advocate_name) return false;
+            const normalizedAssignedName = item.advocate_name.toLowerCase().replace(/[^a-z0-9]/g, "");
+            return normalizedAssignedName === user.username;
+          });
+        }
+
+        const formattedCases = casesToShow.map((item) => ({
+          title: item.case_title || item.case_name,
+          hearing: item.due_date ? item.due_date.split("T")[0] : "No date",
+          status: item.status || "Active",
+        }));
+
+        setCases(formattedCases);
+      } catch (error) {
+        console.error("Error fetching dashboard cases:", error);
+      }
+    };
+
+    fetchAssignedCases();
+  }, []);
 
   const tasks = [
     "Prepare case notes",
@@ -48,7 +75,7 @@ export default function JunAdvDashView() {
             Junior Advocate Dashboard
           </h1>
           <p className="text-[#64748B] mt-2 text-lg font-medium">
-            Welcome 
+            Welcome {userName ? <span className="capitalize">{userName}</span> : ""}
           </p>
         </div>
       </div>
