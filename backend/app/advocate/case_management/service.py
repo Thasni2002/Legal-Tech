@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 import json
+from datetime import datetime
 
 from .models import Case
 from .schemas import CaseCreate, CaseUpdate
@@ -27,7 +28,8 @@ def create_case(db: Session, data: CaseCreate):
         documents=json.dumps(
             [doc.dict() for doc in data.documents]
         ) if data.documents else "[]",
-        next_hearing_date=data.nextHearingDate
+        next_hearing_date=data.nextHearingDate,
+        cnr_number=data.cnrNumber
     )
 
     db.add(new_case)
@@ -91,6 +93,10 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
         )
     if data.nextHearingDate is not None:
         case.next_hearing_date = data.nextHearingDate
+    if data.cnrNumber is not None:
+        case.cnr_number = data.cnrNumber
+
+    case.updated_at = datetime.utcnow()
 
     db.commit()
     db.refresh(case)

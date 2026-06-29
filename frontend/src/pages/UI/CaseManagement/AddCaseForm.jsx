@@ -29,6 +29,7 @@ const editId = params?.id;
   
 
   const [formData, setFormData] = useState({
+    cnrNumber: "",
     caseId: "",
     caseTitle: "",
     caseNo: "",
@@ -64,6 +65,7 @@ const editId = params?.id;
       if (!res.ok) throw new Error("Case not found");
       const data = await res.json();
       setFormData({
+        cnrNumber: data.cnr_number || "",
         caseId: data.case_id || "",
         caseTitle: data.case_title || "",
         caseNo: data.case_no || "",
@@ -107,6 +109,15 @@ const editId = params?.id;
   // ─── Validate a single field ───
   function validateField(name, value) {
     switch (name) {
+      case "cnrNumber":
+        if (!value.trim()) return "CNR Number is required";
+        if (value.trim().length !== 16) {
+          return "CNR Number must be exactly 16 characters (e.g., KLAL010012342026)";
+        }
+        if (!/^[a-zA-Z]{4}[a-zA-Z0-9]{2}\d{10}$/.test(value.trim())) {
+          return "Invalid format. Expected State(2L) + District(2L) + Est(2AN) + CaseNo(6D) + Year(4D) (e.g., KLAL010012342026)";
+        }
+        return "";
       case "caseId":
         if (!value.trim()) return "Case ID is required";
         if (!/^[a-zA-Z0-9]+-\d{4}-\d+$/.test(value.trim())) {
@@ -119,8 +130,8 @@ const editId = params?.id;
         return "";
       case "caseNo":
         if (!value.trim()) return "Case Number is required";
-        if (!/^[a-zA-Z0-9]+[\/\-]\d+[\/\-]\d{4}$/.test(value.trim())) {
-          return "Format must be like CR/1234/2026";
+        if (!/^[a-zA-Z0-9\s/\\-]+$/.test(value.trim())) {
+          return "Please enter a valid Case Number (e.g. OS/123/2026)";
         }
         return "";
       case "caseType":
@@ -155,7 +166,7 @@ const editId = params?.id;
   }
 
   function validateAll() {
-    const fields = ["caseId", "caseTitle", "caseNo", "caseType", "caseDes", "clientName", "contactNumber", "emailId", "courtName", "courtType"];
+    const fields = ["cnrNumber", "caseId", "caseTitle", "caseNo", "caseType", "caseDes", "clientName", "contactNumber", "emailId", "courtName", "courtType"];
     const newErrors = {};
     const newTouched = {};
     let valid = true;
@@ -196,7 +207,9 @@ const editId = params?.id;
       setSelectedFiles(fileList);
     } else {
       let val = value;
-      if (name === "contactNumber") {
+      if (name === "cnrNumber") {
+        val = value.toUpperCase().slice(0, 16);
+      } else if (name === "contactNumber") {
         val = value.replace(/\D/g, "").slice(0, 10);
       }
       const newFormData = { ...formData, [name]: val };
@@ -217,6 +230,7 @@ const handleSubmit = async (e) => {
   if (!validateAll()) return;
 
   const payload = {
+    cnrNumber: formData.cnrNumber || null,
     caseId: formData.caseId || "",
     caseTitle: formData.caseTitle,
     caseNo: formData.caseNo,
@@ -276,6 +290,7 @@ const handleSubmit = async (e) => {
     // Reset form only for add mode
     if (!isEditMode) {
       setFormData({
+        cnrNumber: "",
         caseId: "",
         caseTitle: "",
         caseNo: "",
@@ -381,6 +396,20 @@ const handleSubmit = async (e) => {
               Case Details
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* CNR Number */}
+              <div>
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">CNR Number</label>
+                <input
+                  type="text"
+                  name="cnrNumber"
+                  placeholder="e.g. KLAL010012342026"
+                  value={formData.cnrNumber || ""}
+                  onChange={handleChange}
+                  className={`${baseInputClass} ${getBorderClass("cnrNumber")}`}
+                />
+                {touched.cnrNumber && errors.cnrNumber && <ErrorMsg message={errors.cnrNumber} />}
+              </div>
+
               {/* Case ID */}
               <div>
                 <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Case ID</label>
@@ -415,7 +444,7 @@ const handleSubmit = async (e) => {
                 <input
                   type="text"
                   name="caseNo"
-                  placeholder="e.g. CR/1234/2026"
+                  placeholder="Indian Court of Kerala"
                   value={formData.caseNo}
                   onChange={handleChange}
                   className={`${baseInputClass} ${getBorderClass("caseNo")}`}

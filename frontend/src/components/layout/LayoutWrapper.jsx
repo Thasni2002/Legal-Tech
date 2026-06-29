@@ -20,6 +20,20 @@ export default function LayoutWrapper({ children }) {
   const [isVerified, setIsVerified] = useState(isAuthPage);
 
   useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768 && window.innerWidth < 1024) {
+        setIsCollapsed(true); // Auto-collapse on tablets (md to lg)
+      } else if (window.innerWidth >= 1024) {
+        setIsCollapsed(false); // Expand on desktop
+      }
+    };
+
+    handleResize(); // run on mount
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
     if (isAuthPage) {
       setIsVerified(true);
       return;
@@ -73,7 +87,7 @@ export default function LayoutWrapper({ children }) {
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]">
       <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
-      <div className={`flex-1 flex flex-col  ${isCollapsed ? "md:pl-20" : "md:pl-64 "} min-h-screen`}>
+      <div className={`flex-1 flex flex-col transition-[padding] duration-300 ease-in-out ${isCollapsed ? "md:pl-[72px]" : "md:pl-[280px]"} min-h-screen`}>
         <Navbar />
         <main className="flex-1 p-4 md:p-6 lg:p-12">{children}</main>
       </div>

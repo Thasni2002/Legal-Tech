@@ -112,6 +112,7 @@ def create_consultation(db: Session, data: ConsultationCreate):
     return new_consultation
 
 def reschedule_consultation(db: Session, consultation_id: int, data: ConsultationReschedule):
+    from datetime import datetime
     consultation = get_consultation_by_id(db, consultation_id)
     if not consultation:
         return None
@@ -119,11 +120,13 @@ def reschedule_consultation(db: Session, consultation_id: int, data: Consultatio
     consultation.time = data.time
     consultation.reschedule_reason = data.reason
     consultation.status = "Rescheduled"
+    consultation.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(consultation)
     return consultation
 
 def update_consultation_status(db: Session, consultation_id: int, status: str):
+    from datetime import datetime
     consultation = get_consultation_by_id(db, consultation_id)
     if not consultation:
         return None
@@ -133,6 +136,7 @@ def update_consultation_status(db: Session, consultation_id: int, status: str):
         elif consultation.status == "Pending":
             consultation.reschedule_reason = "Approved by advocate"
     consultation.status = status
+    consultation.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(consultation)
     return consultation

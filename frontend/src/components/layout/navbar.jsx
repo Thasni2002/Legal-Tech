@@ -1,23 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getLoggedInUser } from "@/utils/auth";
-import {
-  Bell,
-  ChevronDown,
-} from "lucide-react";
+import { API_BASE_URL } from "@/utils/api";
+import { Bell, ChevronDown, LoaderCircle, CheckCheck } from "lucide-react";
 
 export default function Navbar() {
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [user, setUser] = useState(null);
   const [profileImage, setProfileImage] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNotifs, setLoadingNotifs] = useState(false);
 
   const router = useRouter();
+  const profileRef = useRef(null);
+  const notificationRef = useRef(null);
 
   useEffect(() => {
-    setUser(getLoggedInUser());
+    const loggedInUser = getLoggedInUser();
+    setUser(loggedInUser);
+
     const savedProfile = localStorage.getItem("advocate_profile");
     if (savedProfile) {
       try {
@@ -27,7 +31,96 @@ export default function Navbar() {
         }
       } catch (e) {}
     }
+
+    if (loggedInUser) {
+      fetchNotifications(loggedInUser);
+    }
+
+    const handleClickOutside = (event) => {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setShowProfile(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const fetchNotifications = async (loggedInUser) => {
+    setLoadingNotifs(true);
+    try {
+      const params = new URLSearchParams();
+      if (loggedInUser.id) params.set("user_id", loggedInUser.id);
+      if (loggedInUser.role) params.set("role", loggedInUser.role);
+
+      const res = await fetch(`${API_BASE_URL}/notifications?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        // Backend now returns is_read field per notification
+        setNotifications(data);
+      }
+    } catch (err) {
+      console.warn("Could not fetch notifications:", err.message);
+    } finally {
+      setLoadingNotifs(false);
+    }
+  };
+
+  /**
+   * Mark one notification as read — persisted in MySQL via backend API.
+   */
+  const markAsRead = useCallback(async (notifId) => {
+    const loggedInUser = getLoggedInUser();
+    if (!loggedInUser?.id) return;
+
+    // Optimistic UI update immediately
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notifId ? { ...n, is_read: true } : n))
+    );
+
+    try {
+      await fetch(`${API_BASE_URL}/notifications/mark-read`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: loggedInUser.id,
+          notification_ids: [notifId],
+        }),
+      });
+    } catch (err) {
+      console.warn("Could not mark notification as read:", err.message);
+    }
+  }, []);
+
+  /**
+   * Mark ALL notifications as read — persisted in MySQL via backend API.
+   */
+  const markAllAsRead = useCallback(async () => {
+    const loggedInUser = getLoggedInUser();
+    if (!loggedInUser?.id) return;
+
+    const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id);
+    if (unreadIds.length === 0) return;
+
+    // Optimistic UI update immediately
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+
+    try {
+      await fetch(`${API_BASE_URL}/notifications/mark-read`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: loggedInUser.id,
+          notification_ids: unreadIds,
+        }),
+      });
+    } catch (err) {
+      console.warn("Could not mark all notifications as read:", err.message);
+    }
+  }, [notifications]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -35,40 +128,7 @@ export default function Navbar() {
     router.push("/login");
   };
 
-  const notifications = [
-    {
-      id: 1,
-      icon: "🎂",
-      title: "Today is Rahul Sharma's Birthday",
-      time: "Just now",
-      color: "text-rose-600",
-      bg: "bg-rose-50"
-    },
-    {
-      id: 2,
-      icon: "📢",
-      title: "New Supreme Court Judgment Added",
-      time: "1 hour ago",
-      color: "text-blue-600",
-      bg: "bg-blue-50"
-    },
-    {
-      id: 3,
-      icon: "⚖️",
-      title: "Case Hearing Tomorrow at 10:00 AM",
-      time: "4 hours ago",
-      color: "text-emerald-600",
-      bg: "bg-emerald-50"
-    },
-    {
-      id: 4,
-      icon: "📄",
-      title: "New Document Uploaded",
-      time: "1 day ago",
-      color: "text-purple-600",
-      bg: "bg-purple-50"
-    }
-  ];
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
     <nav className="bg-white border-b border-[#E2E8F0] px-6 py-3 flex justify-end items-center">
@@ -77,65 +137,115 @@ export default function Navbar() {
       <div className="flex items-end gap-3">
 
         {/* Notifications */}
-        <div className="relative">
+        <div className="relative" ref={notificationRef}>
           <button
-            onClick={() =>
-              setShowNotifications(!showNotifications)
-            }
+            onClick={() => setShowNotifications(!showNotifications)}
             className="relative p-2.5 rounded-lg hover:bg-[#F1F5F9] transition-colors duration-200"
           >
-            <Bell size={20} className="text-[#64748B]" />
-
-            <span className="absolute -top-0.5 -right-0.5 bg-[#DC2626] text-white text-[10px] font-semibold h-[18px] w-[18px] rounded-full flex items-center justify-center">
-              {notifications.length}
-            </span>
+            <Bell size={20} className={unreadCount > 0 ? "text-[#2563EB]" : "text-[#64748B]"} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-[#DC2626] text-white text-[10px] font-semibold h-[18px] w-[18px] rounded-full flex items-center justify-center animate-pulse">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </button>
 
-          {/* Notification Modal */}
+          {/* Notification Dropdown */}
           {showNotifications && (
             <div className="absolute right-0 mt-3 w-80 md:w-96 bg-white border border-[#E2E8F0] rounded-3xl shadow-xl shadow-slate-200/50 z-50 overflow-hidden transform origin-top-right transition-all animate-in fade-in zoom-in-95 duration-200">
-              <div className="px-6 py-5 border-b border-[#F1F5F9] flex justify-between items-center bg-[#F8FAFC]">
-                <h3 className="font-extrabold text-[16px] text-[#0F172A] tracking-tight">
-                  Notifications
-                </h3>
-                <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  {notifications.length} New
-                </span>
+              <div className="px-6 py-4 border-b border-[#F1F5F9] flex justify-between items-center bg-[#F8FAFC]">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-extrabold text-[16px] text-[#0F172A] tracking-tight">
+                    Notifications
+                  </h3>
+                  {unreadCount > 0 && (
+                    <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      {unreadCount} New
+                    </span>
+                  )}
+                </div>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllAsRead}
+                    className="flex items-center gap-1 text-xs text-[#2563EB] font-semibold hover:text-blue-800 transition-colors"
+                    title="Mark all as read"
+                  >
+                    <CheckCheck size={14} />
+                    Mark all read
+                  </button>
+                )}
               </div>
 
-              <div className="max-h-[350px] overflow-y-auto p-2 space-y-1">
-                {notifications.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-start gap-4 p-3 rounded-2xl hover:bg-[#F8FAFC] transition-colors duration-200 cursor-pointer group"
-                  >
-                    <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-lg ${item.bg} ${item.color} shadow-sm group-hover:scale-110 transition-transform duration-200`}>
-                      {item.icon}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-[#1E293B] truncate leading-tight group-hover:text-[#2563EB] transition-colors">
-                        {item.title}
-                      </p>
-                      <p className="text-xs font-medium text-[#64748B] mt-1">
-                        {item.time}
-                      </p>
-                    </div>
-                    <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
+              <div className="max-h-[380px] overflow-y-auto p-2 space-y-1">
+                {loadingNotifs ? (
+                  <div className="flex items-center justify-center py-8 gap-2 text-slate-400 text-sm">
+                    <LoaderCircle size={16} className="animate-spin" />
+                    <span>Loading notifications...</span>
                   </div>
-                ))}
+                ) : notifications.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-slate-400">
+                    <Bell size={32} className="mb-2 opacity-30" />
+                    <p className="text-sm font-medium">No new notifications</p>
+                  </div>
+                ) : (
+                  notifications.map((item) => {
+                    const isRead = item.is_read;
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => !isRead && markAsRead(item.id)}
+                        className={`flex items-start gap-4 p-3 rounded-2xl transition-colors duration-200 group ${
+                          isRead
+                            ? "bg-[#F8FAFC] opacity-60"
+                            : "hover:bg-[#EFF6FF] cursor-pointer"
+                        }`}
+                      >
+                        <div
+                          className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-lg shadow-sm transition-transform duration-200 ${
+                            isRead ? "opacity-60" : "group-hover:scale-110"
+                          } ${item.bg} ${item.color}`}
+                        >
+                          {item.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className={`text-sm leading-tight transition-colors ${
+                              isRead
+                                ? "font-normal text-[#64748B]"
+                                : "font-bold text-[#1E293B] group-hover:text-[#2563EB]"
+                            }`}
+                          >
+                            {item.title}
+                          </p>
+                          <p className="text-xs font-medium text-[#94A3B8] mt-1">
+                            {item.time}
+                          </p>
+                        </div>
+                        {/* Unread indicator dot */}
+                        {!isRead && (
+                          <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0 animate-pulse" />
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
-              
-              <div className="p-3 border-t border-[#F1F5F9] bg-white">
-                <button className="w-full py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-[#475569] text-xs font-bold uppercase tracking-wider transition-colors">
-                  View All Notifications
-                </button>
-              </div>
+
+              {/* Footer: all read */}
+              {notifications.length > 0 && unreadCount === 0 && (
+                <div className="px-6 py-3 border-t border-[#F1F5F9] text-center bg-[#F8FAFC]">
+                  <p className="text-xs text-slate-400 font-medium flex items-center justify-center gap-1">
+                    <CheckCheck size={13} className="text-emerald-500" />
+                    All caught up!
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
 
         {/* Profile Section */}
-        <div className="relative">
+        <div className="relative" ref={profileRef}>
           <button
             onClick={() => setShowProfile(!showProfile)}
             className="flex items-center gap-3 hover:bg-[#F1F5F9] px-3 py-2 rounded-lg transition-colors duration-200"
@@ -156,7 +266,6 @@ export default function Navbar() {
               <h4 className="font-semibold text-sm text-[#0F172A] capitalize">
                 {user ? user.username : "Guest User"}
               </h4>
-
               <p className="text-xs text-[#64748B]">
                 {user ? user.role : "Viewer"}
               </p>
@@ -168,16 +277,12 @@ export default function Navbar() {
           {/* Profile Dropdown */}
           {showProfile && (
             <div className="absolute right-0 mt-2 w-48 bg-white border border-[#E2E8F0] rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.1)] z-50 overflow-hidden">
-
               <button
-                onClick={() =>
-                  router.push("/profile-management")
-                }
+                onClick={() => router.push("/profile-management")}
                 className="w-full text-left px-4 py-3 text-sm text-[#1E293B] hover:bg-[#F1F5F9] transition-colors duration-150"
               >
                 My Profile
               </button>
-
               <div className="border-t border-[#F1F5F9]">
                 <button
                   onClick={handleLogout}
@@ -186,7 +291,6 @@ export default function Navbar() {
                   Logout
                 </button>
               </div>
-
             </div>
           )}
         </div>

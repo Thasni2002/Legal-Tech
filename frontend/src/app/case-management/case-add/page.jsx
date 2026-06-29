@@ -4,12 +4,3 @@ export default function AddCasePage() {
   return <AddCaseForm />;
 }
 
-// const page = () => {
-//   return (
-//     <div>
-//       <AddCaseForm/>
-//     </div>
-//   )
-// }
-
-// export default page

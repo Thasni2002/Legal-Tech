@@ -28,6 +28,7 @@ const Page = () => {
           );
           if (myAdvocate) {
             setProfile(myAdvocate);
+            localStorage.setItem("advocate_profile", JSON.stringify(myAdvocate));
             setIsSubmitted(true);
           } else {
             // Profile not found in advocates table, pre-fill with user details
@@ -77,6 +78,7 @@ const Page = () => {
       if (response.ok) {
         const savedData = await response.json();
         setProfile(savedData);
+        localStorage.setItem("advocate_profile", JSON.stringify(savedData));
         setIsSubmitted(true);
       } else {
         console.error("Failed to save profile to backend.");
