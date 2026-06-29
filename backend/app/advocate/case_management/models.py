@@ -1,6 +1,8 @@
-from sqlalchemy import Column, Integer, String, Text
+
+from sqlalchemy import Column, Integer, String, Text, DateTime
 from sqlalchemy.dialects.mysql import LONGTEXT
 from app.database import Base
+from datetime import datetime
 
 class Case(Base):
     __tablename__ = "case_management_cases"
@@ -8,6 +10,7 @@ class Case(Base):
     id = Column(Integer, primary_key=True, index=True)
 
     case_id = Column(String(100))
+    cnr_number = Column(String(100), nullable=True)
     case_title = Column(String(255))
     case_no = Column(String(100))
     case_type = Column(String(100))
@@ -24,3 +27,6 @@ class Case(Base):
     selected_advocate = Column(String(255), nullable=True)
     documents = Column(LONGTEXT, nullable=True)
     next_hearing_date = Column(String(100), nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
