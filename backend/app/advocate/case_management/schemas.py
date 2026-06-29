@@ -7,6 +7,7 @@ class DocumentSchema(BaseModel):
     documentType: str
     advocate: str
     file: Optional[str] = None
+    url: Optional[str] = None
     view: Optional[bool] = False
     upload: Optional[bool] = False
     edit: Optional[bool] = False

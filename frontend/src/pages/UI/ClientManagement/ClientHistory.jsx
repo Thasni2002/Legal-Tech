@@ -18,8 +18,13 @@ import {
   AlertCircle,
   TrendingUp,
   CreditCard,
-  MessageSquare
+  MessageSquare,
+  Eye,
+  Receipt,
+  Download,
+  ExternalLink
 } from "lucide-react";
+import { createPortal } from "react-dom";
 
 export default function ClientHistory() {
   const router = useRouter();
@@ -28,6 +33,8 @@ export default function ClientHistory() {
   const [allClientsList, setAllClientsList] = useState([]);
   const [historyItems, setHistoryItems] = useState([]);
   const [activeTab, setActiveTab] = useState("all");
+  const [selectedDoc, setSelectedDoc] = useState(null);
+  const [selectedPayment, setSelectedPayment] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [newLog, setNewLog] = useState({
@@ -157,6 +164,32 @@ export default function ClientHistory() {
             const nonDb = prev.filter(i => !i.id.startsWith("db-case-"));
             return [...mapped, ...nonDb];
           });
+
+          // Extract documents from each matched case and map as document history items
+          const docItems = [];
+          matchedCases.forEach(item => {
+            const docs = Array.isArray(item.documents) ? item.documents : [];
+            docs.forEach((doc, idx) => {
+              if (!doc.file && !doc.url) return; // skip empty entries
+              docItems.push({
+                id: `db-doc-${item.id}-${idx}`,
+                type: "document",
+                title: doc.documentType || "Document Uploaded",
+                desc: client
+                  ? `Document '${doc.file || doc.url || "File"}' uploaded for case '${item.case_title || item.case_no}' (${item.court_name}).`
+                  : `Client: ${item.client_name || "Unknown"} — '${doc.file || doc.url || "File"}' for case '${item.case_title || item.case_no}'.`,
+                date: item.created_at ? item.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
+                time: item.created_at ? item.created_at.split("T")[1]?.substring(0, 5) : "10:00",
+                badge: doc.documentType || "Document",
+                fileUrl: doc.url || null,
+              });
+            });
+          });
+          setHistoryItems(prev => {
+            const nonDoc = prev.filter(i => !i.id.startsWith("db-doc-"));
+            return [...docItems, ...nonDoc];
+          });
+
         }
       } catch (err) {
         console.error("Failed to fetch cases in ClientHistory:", err);
@@ -178,13 +211,14 @@ export default function ClientHistory() {
           const mapped = matchedInvoices.map(item => ({
             id: `db-payment-${item.id}`,
             type: "payment",
-            title: `₹${item.amount || 0} ${item.status === 'Paid' ? 'Received' : 'Pending'}`,
+            title: `₹${(item.grand_total || item.subtotal || 0).toLocaleString("en-IN")} — ${item.status === 'Paid' ? 'Received' : item.status || 'Pending'}`,
             desc: client
-              ? `Invoice for '${item.service_details || "Services"}' with due date ${item.due_date}.`
-              : `Client: ${item.client_name || "Unknown"} - Invoice for '${item.service_details || "Services"}' with due date ${item.due_date}.`,
-            date: item.issue_date || item.created_at?.split("T")[0] || new Date().toISOString().split("T")[0],
+              ? `Invoice for ${item.client_name || "Client"} | Case: ${item.case_number || "N/A"} | Method: ${item.payment_method || "N/A"}.`
+              : `Client: ${item.client_name || "Unknown"} | Case: ${item.case_number || "N/A"} | Method: ${item.payment_method || "N/A"}.`,
+            date: item.created_at?.split("T")[0] || new Date().toISOString().split("T")[0],
             time: item.created_at ? item.created_at.split("T")[1].substring(0, 5) : "12:00",
             badge: item.status || "Pending",
+            invoiceData: item,
           }));
 
           setHistoryItems(prev => {
@@ -630,6 +664,24 @@ export default function ClientHistory() {
                         <p className="text-xs text-[#64748B] leading-relaxed font-medium">
                           {item.desc}
                         </p>
+                        <div className="flex gap-2 mt-2 flex-wrap">
+                          {item.fileUrl && (
+                            <button
+                              onClick={() => setSelectedDoc({ fileUrl: item.fileUrl, title: item.title, badge: item.badge })}
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2 py-1 rounded-md transition cursor-pointer"
+                            >
+                              <Eye size={12} /> View Document
+                            </button>
+                          )}
+                          {item.type === "payment" && (
+                            <button
+                              onClick={() => setSelectedPayment(item)}
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-1 rounded-md transition cursor-pointer"
+                            >
+                              <Receipt size={12} /> View Payment Details
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -769,6 +821,254 @@ export default function ClientHistory() {
           </div>
         </div>
       )}
+
+      {/* Document Viewer Modal */}
+      {selectedDoc && (
+        <DocumentViewerModal
+          fileUrl={selectedDoc.fileUrl}
+          title={selectedDoc.title}
+          badge={selectedDoc.badge}
+          onClose={() => setSelectedDoc(null)}
+        />
+      )}
+
+      {/* Payment Detail Modal */}
+      {selectedPayment && (
+        <PaymentDetailModal
+          item={selectedPayment}
+          formatDate={formatDate}
+          onClose={() => setSelectedPayment(null)}
+        />
+      )}
     </div>
+  );
+}
+
+function DocumentViewerModal({ fileUrl, title, badge, onClose }) {
+  const ext = (fileUrl || "").split(".").pop().toLowerCase().split("?")[0];
+  const isImage = ["jpg", "jpeg", "png", "webp", "gif", "bmp", "svg"].includes(ext);
+  const isPdf = ext === "pdf";
+
+  const normalizeUrl = (url) => {
+    if (!url) return "";
+    if (typeof window !== "undefined") {
+      if (window.location.hostname === "127.0.0.1") {
+        return url.replace("localhost:8000", "127.0.0.1:8000");
+      } else {
+        return url.replace("127.0.0.1:8000", "localhost:8000");
+      }
+    }
+    return url;
+  };
+
+  const normalizedUrl = normalizeUrl(fileUrl);
+
+  const handleDownload = () => {
+    if (!normalizedUrl) return;
+
+    if (normalizedUrl.startsWith("data:")) {
+      try {
+        const parts = normalizedUrl.split(",");
+        const mime = parts[0].match(/:(.*?);/)[1];
+        const bstr = atob(parts[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = title || "document";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+      } catch (err) {
+        console.error("Base64 download failed, fallback to direct open:", err);
+        window.open(normalizedUrl, "_blank");
+      }
+    } else {
+      window.location.href = normalizedUrl + "?download=true";
+    }
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[99999] p-4">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl flex flex-col max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center">
+              <FileText size={16} />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-800 text-sm leading-tight">{title || "Document"}</h3>
+              {badge && (
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  {badge}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDownload}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
+            >
+              <Download size={13} /> Download
+            </button>
+            <a href={normalizedUrl} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-lg transition">
+              <ExternalLink size={13} /> Open in Tab
+            </a>
+            <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer">
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+        {/* Viewer Body */}
+        <div className="flex-1 overflow-auto bg-slate-100 flex items-center justify-center min-h-[400px]">
+          {isPdf ? (
+            <iframe src={normalizedUrl} className="w-full h-full min-h-[600px] border-0" title={title || "Document"} />
+          ) : isImage ? (
+            <div className="p-6">
+              <img src={normalizedUrl} alt={title || "Document"} className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-lg" />
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+              <div className="w-16 h-16 bg-slate-200 text-slate-400 rounded-2xl flex items-center justify-center">
+                <FileText size={32} />
+              </div>
+              <div>
+                <p className="font-bold text-slate-700 text-sm">Preview not available</p>
+                <p className="text-xs text-slate-500 mt-1">This file type cannot be previewed in the browser.</p>
+              </div>
+              <button
+                onClick={handleDownload}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition cursor-pointer"
+              >
+                <Download size={14} /> Download File
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ─── Payment Detail Modal ────────────────────────────────────────
+function PaymentDetailModal({ item, formatDate, onClose }) {
+  const inv = item.invoiceData || {};
+
+  const rows = [
+    { label: "Court Fee", type: inv.court_fee_case_type, amount: inv.court_fee_amount, note: inv.court_fee_jurisdiction },
+    { label: "Stamp Duty", type: inv.stamp_duty_doc_type, amount: inv.stamp_duty_amount, note: inv.stamp_duty_state },
+    { label: "Advocate Fee", type: inv.advocate_fee_case_type, amount: inv.advocate_fee_amount, note: inv.advocate_fee_remarks },
+    { label: "Filing Cost", type: inv.filing_cost_pages ? `${inv.filing_cost_pages} pages` : null, amount: inv.filing_cost_amount, note: inv.filing_cost_notes },
+  ].filter(r => r.amount > 0);
+
+  const statusColor = {
+    Paid: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    Pending: "bg-amber-100 text-amber-700 border-amber-200",
+    Overdue: "bg-red-100 text-red-700 border-red-200",
+    Sent: "bg-blue-100 text-blue-700 border-blue-200",
+  }[inv.status] || "bg-slate-100 text-slate-700 border-slate-200";
+
+  return createPortal(
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[99999] p-4">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-white shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
+              <Receipt size={18} />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-800 text-sm">Payment Details</h3>
+              <p className="text-[10px] text-slate-500 mt-0.5">{item.title}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="overflow-y-auto flex-1 p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Client</p>
+              <p className="font-bold text-slate-800 text-sm">{inv.client_name || "—"}</p>
+              {inv.case_number && <p className="text-[10px] text-slate-500">Case: {inv.case_number}</p>}
+            </div>
+            {inv.status && (
+              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider ${statusColor}`}>
+                {inv.status}
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Invoice Date</p>
+              <p className="font-semibold text-slate-700">{formatDate(item.date)}</p>
+            </div>
+            <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Payment Method</p>
+              <p className="font-semibold text-slate-700 capitalize">{inv.payment_method || "—"}</p>
+              {inv.gpay_number && <p className="text-[10px] text-slate-500 mt-0.5">GPay: {inv.gpay_number}</p>}
+              {inv.upi_id && <p className="text-[10px] text-slate-500 mt-0.5">UPI: {inv.upi_id}</p>}
+            </div>
+          </div>
+          {rows.length > 0 ? (
+            <div className="border border-slate-100 rounded-xl overflow-hidden">
+              <div className="bg-slate-50 px-4 py-2 border-b border-slate-100">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fee Breakdown</p>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {rows.map((r, i) => (
+                  <div key={i} className="flex items-center justify-between px-4 py-3">
+                    <div>
+                      <p className="text-xs font-semibold text-slate-700">{r.label}</p>
+                      {r.type && <p className="text-[10px] text-slate-400">{r.type}</p>}
+                      {r.note && <p className="text-[10px] text-slate-400">{r.note}</p>}
+                    </div>
+                    <p className="text-sm font-bold text-slate-800">₹{(r.amount || 0).toLocaleString("en-IN")}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400 italic text-center py-2">No fee breakdown available.</p>
+          )}
+          {(inv.subtotal > 0 || inv.grand_total > 0) && (
+            <div className="bg-gradient-to-br from-emerald-50 to-white border border-emerald-100 rounded-xl p-4 space-y-2">
+              {inv.subtotal > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-500 font-medium">Subtotal</span>
+                  <span className="font-semibold text-slate-700">₹{inv.subtotal.toLocaleString("en-IN")}</span>
+                </div>
+              )}
+              {inv.gst > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-500 font-medium">GST</span>
+                  <span className="font-semibold text-slate-700">₹{inv.gst.toLocaleString("en-IN")}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm border-t border-emerald-100 pt-2 mt-1">
+                <span className="font-bold text-slate-800">Grand Total</span>
+                <span className="font-extrabold text-emerald-700 text-base">₹{(inv.grand_total || 0).toLocaleString("en-IN")}</span>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="px-5 py-3 border-t border-slate-100 bg-white flex justify-end shrink-0">
+          <button onClick={onClose} className="px-4 py-2 border border-slate-200 text-slate-700 font-semibold text-xs rounded-lg hover:bg-slate-50 transition cursor-pointer">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
