@@ -215,7 +215,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
 
   if (loading) {
     return (
-      <aside className={`fixed top-0 left-0 h-screen bg-white border-r border-[#E2E8F0] z-20 ${isCollapsed ? "w-[72px]" : "w-[280px]"}`}>
+      <aside className={`fixed top-0 left-0 h-screen bg-white border-r border-[#E2E8F0] z-50 ${isCollapsed ? "w-[72px]" : "w-[280px]"}`}>
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between px-6 py-5 border-b border-[#E2E8F0]">
             <div className="flex items-center gap-2">
@@ -251,7 +251,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-screen transition-[width] duration-300 ease-in-out bg-white border-r border-[#E2E8F0] z-20 ${isCollapsed ? "w-[72px]" : "w-[280px]"
+        className={`fixed top-0 left-0 h-screen transition-[width] duration-300 ease-in-out bg-white border-r border-[#E2E8F0] z-50 ${isCollapsed ? "md:w-[72px] w-[280px]" : "w-[280px]"
           } ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
       >
         <div className="flex flex-col h-full overflow-y-auto">
@@ -263,7 +263,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
             </div>
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="p-1 rounded hover:bg-[#F1F5F9] transition-colors"
+              className="hidden md:block p-1 rounded hover:bg-[#F1F5F9] transition-colors"
               aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {isCollapsed ? (

@@ -36,6 +36,7 @@ class Consultation(Base):
     reschedule_reason = Column(String(500), nullable=True)
     
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)
 
     # Relationships
     client = relationship("User", foreign_keys=[client_id])

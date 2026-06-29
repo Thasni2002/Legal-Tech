@@ -213,6 +213,7 @@ export default function CaseView() {
         },
         body: JSON.stringify({
           caseId: selectedCase.case_id,
+          cnrNumber: selectedCase.cnr_number,
           caseTitle: selectedCase.case_title,
           caseNo: selectedCase.case_no,
           caseType: selectedCase.case_type,
@@ -560,6 +561,7 @@ export default function CaseView() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="bg-[#F8FAFC] rounded-2xl p-5 border border-[#F1F5F9] space-y-4">
                       <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Case Details</h4>
+                      <InfoRow icon={<Hash size={14} />} label="CNR Number" value={selectedCase.cnr_number} />
                       <InfoRow icon={<Hash size={14} />} label="Case ID" value={selectedCase.case_id} />
                       <InfoRow icon={<FileText size={14} />} label="Case Number" value={selectedCase.case_no} />
                       <InfoRow icon={<Scale size={14} />} label="Case Type" value={selectedCase.case_type} />
