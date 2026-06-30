@@ -3,6 +3,7 @@
 import { API_BASE_URL } from "@/utils/api";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { getLoggedInUser } from "@/utils/auth";
 import {
     Users,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 
 export default function AdvDashboardView() {
+    const router = useRouter();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -48,8 +50,8 @@ export default function AdvDashboardView() {
                 
                 const [resUsers, resCases, resHearings, resActivities, resDocs] = await Promise.all([
                     fetch(`${API_BASE_URL}/permissions/users`),
-                    fetch(`${API_BASE_URL}/clients/cases${advParam}`),
-                    fetch(`${API_BASE_URL}/clients/hearings${advParam}`),
+                    fetch(`${API_BASE_URL}/case-management/`),
+                    fetch(`${API_BASE_URL}/clients/hearings${advParam}`), // keeping as fallback, but won't be used for dashboard count
                     fetch(`${API_BASE_URL}/clients/activities${advParam}`),
                     fetch(`${API_BASE_URL}/clients/documents${advParam}`)
                 ]);
@@ -58,7 +60,7 @@ export default function AdvDashboardView() {
                     throw new Error("Failed to fetch dashboard data from backend resources");
                 }
 
-                const [users, cases, hearings, activities, documents] = await Promise.all([
+                const [users, cases, oldHearings, activities, documents] = await Promise.all([
                     resUsers.json(),
                     resCases.json(),
                     resHearings.json(),
@@ -70,6 +72,7 @@ export default function AdvDashboardView() {
                 const total_advocates = users.filter(u => u.role && u.role.toLowerCase().includes("advocate")).length;
 
                 // 2. Cases stats
+                // case_management/ returns status like "Active", "Pending", "Closed"
                 const active_cases = cases.filter(c => c.status === "Active" || c.status === "Hearing").length;
                 const pending_cases = cases.filter(c => c.status === "Pending").length;
                 const closed_cases = cases.filter(c => c.status === "Closed").length;
@@ -81,13 +84,40 @@ export default function AdvDashboardView() {
                 const day = String(today.getDate()).padStart(2, '0');
                 const todayStr = `${year}-${month}-${day}`;
 
-                const upcomingHearings = hearings.filter(h => h.date >= todayStr);
-                const upcoming_hearings_count = upcomingHearings.length;
+                // Extract hearings from cases' next_hearing_date
+                const extractedHearings = [];
+                cases.forEach(c => {
+                    if (c.next_hearing_date) {
+                        // Handle ISO string or YYYY-MM-DD
+                        const isIso = c.next_hearing_date.includes('T');
+                        const datePart = isIso ? c.next_hearing_date.split('T')[0] : c.next_hearing_date.split(' ')[0];
+                        const timePart = isIso ? c.next_hearing_date.split('T')[1]?.substring(0, 5) : (c.next_hearing_date.split(' ')[1] || "10:00");
+                        
+                        if (datePart >= todayStr) {
+                            extractedHearings.push({
+                                date: datePart,
+                                time: timePart || "10:00",
+                                case_title: c.case_title,
+                                court: c.court_name,
+                                advocate_name: c.selected_advocate || ""
+                            });
+                        }
+                    }
+                });
+
+                const upcoming_hearings_count = extractedHearings.length;
 
                 // 4. Case Overview list (sort by created_at desc, limit 5)
                 const casesList = [...cases]
                     .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
-                    .slice(0, 5);
+                    .slice(0, 5)
+                    .map(c => ({
+                        case_no: c.case_no,
+                        client_name: c.client_name,
+                        type: c.case_type,
+                        court: c.court_name,
+                        status: c.status
+                    }));
 
                 // 5. Hearings list (sort by date asc, time asc, limit 5)
                 const formatHearingDate = (dateStr) => {
@@ -100,10 +130,10 @@ export default function AdvDashboardView() {
                     return `${dNum} ${months[mNum]}`;
                 };
 
-                const hearingsList = [...upcomingHearings]
+                const hearingsList = [...extractedHearings]
                     .sort((a, b) => {
                         if (a.date !== b.date) return a.date.localeCompare(b.date);
-                        return a.time.localeCompare(b.time);
+                        return (a.time || "").localeCompare(b.time || "");
                     })
                     .slice(0, 5)
                     .map(h => ({
@@ -120,9 +150,26 @@ export default function AdvDashboardView() {
                     .slice(0, 5);
 
                 // 7. Documents list (sort by created_at desc, limit 5)
-                const documentsList = [...documents]
+                // If the old API works we keep it, otherwise extract from cases
+                let documentsList = [...documents]
                     .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
                     .slice(0, 5);
+                
+                if (documentsList.length === 0) {
+                     // Try extracting from cases
+                     const caseDocs = [];
+                     cases.forEach(c => {
+                         if (c.documents && Array.isArray(c.documents)) {
+                             c.documents.forEach(d => {
+                                 caseDocs.push({
+                                     document_name: d.file_name || d.name || "Document",
+                                     created_at: c.created_at
+                                 });
+                             });
+                         }
+                     });
+                     documentsList = caseDocs.sort((a, b) => (b.created_at || "").localeCompare(a.created_at || "")).slice(0, 5);
+                }
 
                 setData({
                     stats: {
@@ -374,7 +421,10 @@ export default function AdvDashboardView() {
                         <h2 className="text-2xl font-extrabold text-[#0F172A]">
                             Upcoming Hearings
                         </h2>
-                        <button className="text-xs font-bold text-[#2563EB] uppercase tracking-wider hover:text-[#1d4ed8] transition-colors">
+                        <button 
+                            onClick={() => router.push("/calendar")}
+                            className="text-xs font-bold text-[#2563EB] uppercase tracking-wider hover:text-[#1d4ed8] transition-colors cursor-pointer"
+                        >
                             View Calendar
                         </button>
                     </div>
