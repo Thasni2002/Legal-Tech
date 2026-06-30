@@ -155,6 +155,7 @@ export default function ClientHistory() {
             desc: client
               ? `Case '${item.case_title || item.case_no}' under court '${item.court_name}' is currently '${item.status}'.`
               : `Client: ${item.client_name || "Unknown"} - Case '${item.case_title || item.case_no}' under court '${item.court_name}' is currently '${item.status}'.`,
+            documents: item.documents || [],
             date: item.created_at ? item.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
             time: item.created_at ? item.created_at.split("T")[1].substring(0, 5) : "10:00",
             badge: item.status || "Active",
@@ -175,6 +176,9 @@ export default function ClientHistory() {
                 id: `db-doc-${item.id}-${idx}`,
                 type: "document",
                 title: doc.documentType || "Document Uploaded",
+                fileName: doc.file || "File",
+                caseName: item.case_title || item.case_no,
+                courtName: item.court_name,
                 desc: client
                   ? `Document '${doc.file || doc.url || "File"}' uploaded for case '${item.case_title || item.case_no}' (${item.court_name}).`
                   : `Client: ${item.client_name || "Unknown"} — '${doc.file || doc.url || "File"}' for case '${item.case_title || item.case_no}'.`,
@@ -641,7 +645,16 @@ export default function ClientHistory() {
                       </span>
 
                       {/* Content Card */}
-                      <div className="p-5 rounded-xl border border-[#E2E8F0] shadow-sm hover:shadow-md bg-white transition-all duration-200">
+                      <div 
+                        onClick={() => {
+                          if (item.type === "document") {
+                            setSelectedDoc({ fileUrl: item.fileUrl || null, title: item.fileName || item.title, badge: item.badge });
+                          }
+                        }}
+                        className={`p-5 rounded-xl border border-[#E2E8F0] shadow-sm hover:shadow-md bg-white transition-all duration-200 ${
+                          item.type === "document" ? "cursor-pointer hover:border-amber-300 hover:bg-amber-50/5" : ""
+                        }`}
+                      >
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                           <div className="flex flex-wrap items-center gap-2">
                             <h4 className="font-bold text-[#0F172A] text-sm leading-tight">
@@ -661,13 +674,59 @@ export default function ClientHistory() {
                           </div>
                         </div>
 
-                        <p className="text-xs text-[#64748B] leading-relaxed font-medium">
-                          {item.desc}
-                        </p>
-                        <div className="flex gap-2 mt-2 flex-wrap">
-                          {item.fileUrl && (
+                        {item.type === "document" ? (
+                          <p className="text-xs text-[#64748B] leading-relaxed font-medium">
+                            Document{" "}
                             <button
-                              onClick={() => setSelectedDoc({ fileUrl: item.fileUrl, title: item.title, badge: item.badge })}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedDoc({ fileUrl: item.fileUrl || null, title: item.fileName, badge: item.badge });
+                              }}
+                              className="font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer bg-transparent border-0 p-0 inline-block align-baseline"
+                            >
+                              '{item.fileName || "File"}'
+                            </button>{" "}
+                            uploaded for case '{item.caseName || "N/A"}' ({item.courtName || "N/A"}).
+                          </p>
+                        ) : (
+                          <p className="text-xs text-[#64748B] leading-relaxed font-medium">
+                            {item.desc}
+                          </p>
+                        )}
+
+                        {item.type === "case" && item.documents && item.documents.length > 0 && (
+                          <div className="mt-3.5 border-t border-slate-100 pt-3 space-y-2">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Attached Documents:</p>
+                            <div className="grid gap-2">
+                              {item.documents.map((doc, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200/50">
+                                  <div className="flex items-center gap-2 truncate pr-2">
+                                    <FileText size={13} className="text-slate-400 shrink-0" />
+                                    <span className="text-xs text-slate-700 font-semibold truncate">{doc.file || "Document"}</span>
+                                    <span className="text-[9px] font-bold text-slate-500 bg-slate-200/60 px-1.5 py-0.5 rounded-full uppercase shrink-0">{doc.documentType}</span>
+                                  </div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedDoc({ fileUrl: doc.url || null, title: doc.file, badge: doc.documentType });
+                                    }}
+                                    className="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1.5 rounded-lg transition cursor-pointer shrink-0"
+                                  >
+                                    <Eye size={11} /> View
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex gap-2 mt-2 flex-wrap">
+                          {item.type === "document" && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedDoc({ fileUrl: item.fileUrl || null, title: item.fileName || item.title, badge: item.badge });
+                              }}
                               className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2 py-1 rounded-md transition cursor-pointer"
                             >
                               <Eye size={12} /> View Document
@@ -845,9 +904,9 @@ export default function ClientHistory() {
 }
 
 function DocumentViewerModal({ fileUrl, title, badge, onClose }) {
-  const ext = (fileUrl || "").split(".").pop().toLowerCase().split("?")[0];
-  const isImage = ["jpg", "jpeg", "png", "webp", "gif", "bmp", "svg"].includes(ext);
-  const isPdf = ext === "pdf";
+  const [viewerUrl, setViewerUrl] = useState("");
+  const [isPdf, setIsPdf] = useState(false);
+  const [isImage, setIsImage] = useState(false);
 
   const normalizeUrl = (url) => {
     if (!url) return "";
@@ -862,6 +921,42 @@ function DocumentViewerModal({ fileUrl, title, badge, onClose }) {
   };
 
   const normalizedUrl = normalizeUrl(fileUrl);
+
+  useEffect(() => {
+    if (!fileUrl) return;
+
+    // Detect file type
+    if (fileUrl.startsWith("data:")) {
+      const mime = fileUrl.split(";")[0].split(":")[1] || "";
+      setIsImage(mime.startsWith("image/"));
+      setIsPdf(mime === "application/pdf");
+
+      try {
+        const parts = fileUrl.split(",");
+        const mimeType = parts[0].match(/:(.*?);/)[1];
+        const bstr = atob(parts[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], { type: mimeType });
+        const bUrl = URL.createObjectURL(blob);
+        setViewerUrl(bUrl);
+        return () => {
+          URL.revokeObjectURL(bUrl);
+        };
+      } catch (e) {
+        console.error("Failed to parse base64 for preview:", e);
+        setViewerUrl(fileUrl);
+      }
+    } else {
+      const ext = (fileUrl || "").split(".").pop().toLowerCase().split("?")[0];
+      setIsImage(["jpg", "jpeg", "png", "webp", "gif", "bmp", "svg"].includes(ext));
+      setIsPdf(ext === "pdf");
+      setViewerUrl(normalizedUrl);
+    }
+  }, [fileUrl]);
 
   const handleDownload = () => {
     if (!normalizedUrl) return;
@@ -930,11 +1025,11 @@ function DocumentViewerModal({ fileUrl, title, badge, onClose }) {
         </div>
         {/* Viewer Body */}
         <div className="flex-1 overflow-auto bg-slate-100 flex items-center justify-center min-h-[400px]">
-          {isPdf ? (
-            <iframe src={normalizedUrl} className="w-full h-full min-h-[600px] border-0" title={title || "Document"} />
-          ) : isImage ? (
+          {isPdf && viewerUrl ? (
+            <iframe src={viewerUrl} className="w-full h-full min-h-[600px] border-0" title={title || "Document"} />
+          ) : isImage && viewerUrl ? (
             <div className="p-6">
-              <img src={normalizedUrl} alt={title || "Document"} className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-lg" />
+              <img src={viewerUrl} alt={title || "Document"} className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-lg" />
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
