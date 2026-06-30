@@ -59,3 +59,17 @@ def remove_case(
     if not deleted:
         raise HTTPException(status_code=404, detail="Case not found")
     return {"message": "Case deleted successfully"}
+
+
+from pydantic import BaseModel
+class GenerateDocumentRequest(BaseModel):
+    prompt: str
+
+@router.post("/{case_id}/generate-document")
+def generate_document(
+    case_id: int,
+    request: GenerateDocumentRequest,
+    db: Session = Depends(get_db)
+):
+    from .service import generate_legal_document
+    return generate_legal_document(db, case_id, request.prompt)

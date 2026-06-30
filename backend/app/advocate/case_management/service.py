@@ -116,3 +116,51 @@ def delete_case(db: Session, case_id: int):
     db.commit()
 
     return case
+
+
+def generate_legal_document(db: Session, case_id: int, user_prompt: str):
+    import os
+    import google.generativeai as genai
+    from fastapi import HTTPException
+
+    case = get_case(db, case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    from dotenv import load_dotenv
+    load_dotenv()
+    
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured in backend")
+
+    genai.configure(api_key=api_key)
+    
+    # Construct prompt with case context
+    context = f"""
+    Case Title: {case.case_title}
+    Case Number: {case.case_no}
+    Case Type: {case.case_type}
+    Client Name: {case.client_name}
+    Court: {case.court_name} ({case.court_type})
+    Case Description: {case.case_description}
+    Status: {case.status}
+    """
+    
+    full_prompt = f"""
+You are an expert legal assistant. Use the following context about a legal case to generate the requested document. 
+Format the output in clean Markdown. Include appropriate placeholders like [Signature] or [Date] where necessary.
+
+Context:
+{context}
+
+User Request:
+{user_prompt}
+"""
+
+    try:
+        model = genai.GenerativeModel('gemini-flash-latest')
+        response = model.generate_content(full_prompt)
+        return {"document": response.text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
