@@ -58,8 +58,7 @@ class AssignedCaseCreate(BaseModel):
     due_date: Optional[str] = None
     assignment_notes: Optional[str] = None
     status: Optional[str] = "Active"
-    assigned_documents: Optional[List[Dict[str, Any]]] = []
-
+    assigned_documents: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
 
 class AssignedCaseOut(AssignedCaseCreate):
     id: int
