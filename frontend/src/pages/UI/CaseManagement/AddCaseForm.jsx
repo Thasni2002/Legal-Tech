@@ -84,6 +84,7 @@ const editId = params?.id;
           documentType: d.documentType || "",
           advocate: d.advocate || "",
           file: d.file ? { name: d.file } : null,
+          url: d.url || null,
           view: d.view !== undefined ? d.view : true,
           upload: d.upload !== undefined ? d.upload : true,
           edit: d.edit !== undefined ? d.edit : true,
@@ -238,6 +239,7 @@ const handleSubmit = async (e) => {
       documentType: doc.documentType || "",
       advocate: selectedAdvocate || "",
       file: doc.file ? doc.file.name : null,
+      url: doc.url || null,
       view: doc.view !== undefined ? doc.view : true,
       upload: doc.upload !== undefined ? doc.upload : true,
       edit: doc.edit !== undefined ? doc.edit : true,
@@ -572,16 +574,60 @@ const handleSubmit = async (e) => {
                       key={`${index}-${doc.file?.name || "empty"}`}
                       type="file"
                       onChange={(e) => {
-                        const updated = [...documents];
-                        updated[index].file = e.target.files[0];
-                        setDocuments(updated);
+                        const file = e.target.files[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setDocuments((prev) => {
+                              const updated = [...prev];
+                              if (updated[index]) {
+                                updated[index].file = file;
+                                updated[index].url = reader.result;
+                              }
+                              return updated;
+                            });
+                          };
+                          reader.readAsDataURL(file);
+                        } else {
+                          const updated = [...documents];
+                          updated[index].file = null;
+                          updated[index].url = null;
+                          setDocuments(updated);
+                        }
                       }}
                       className="w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-sm"
                     />
                     {doc.file && (
                       <button
                         type="button"
-                        onClick={() => window.open(URL.createObjectURL(doc.file))}
+                        onClick={() => {
+                          if (doc.url) {
+                            if (doc.url.startsWith("data:")) {
+                              try {
+                                const parts = doc.url.split(",");
+                                const mime = parts[0].match(/:(.*?);/)[1];
+                                const bstr = atob(parts[1]);
+                                let n = bstr.length;
+                                const u8arr = new Uint8Array(n);
+                                while (n--) {
+                                  u8arr[n] = bstr.charCodeAt(n);
+                                }
+                                const blob = new Blob([u8arr], { type: mime });
+                                const blobUrl = URL.createObjectURL(blob);
+                                window.open(blobUrl, "_blank");
+                              } catch (e) {
+                                console.error("Failed to preview base64:", e);
+                                window.open(doc.url, "_blank");
+                              }
+                            } else {
+                              window.open(doc.url, "_blank");
+                            }
+                          } else if (doc.file instanceof File) {
+                            window.open(URL.createObjectURL(doc.file), "_blank");
+                          } else {
+                            alert("No preview data available for this document.");
+                          }
+                        }}
                         className="p-3 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition"
                       >
                         <Eye size={18} />
