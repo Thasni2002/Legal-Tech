@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy import Column, Integer, String,Date
 from sqlalchemy.dialects.mysql import LONGTEXT
 from app.database import Base
+
 
 
 class Advocate(Base):
@@ -17,13 +18,13 @@ class Advocate(Base):
     status = Column(String(20), default="Active")
 
     # New fields
-    date_of_birth = Column(String(50), nullable=True)
+    date_of_birth = Column(Date, nullable=True)
     gender = Column(String(20), nullable=True)
     aadhaar_number = Column(String(20), nullable=True)
     pan_number = Column(String(20), nullable=True)
     practice_area = Column(String(100), nullable=True)
     court_type = Column(String(100), nullable=True)
-    years_of_experience = Column(String(20), nullable=True)
+    years_of_experience = Column(Integer, nullable=True)
     languages_known = Column(String(200), nullable=True)
     law_firm_name = Column(String(100), nullable=True)
     state = Column(String(100), nullable=True)

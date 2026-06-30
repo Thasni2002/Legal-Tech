@@ -36,6 +36,9 @@ def create_case(db: Session, data: CaseCreate):
     db.commit()
     db.refresh(new_case)
 
+    if isinstance(new_case.documents, str):
+        new_case.documents = json.loads(new_case.documents or "[]")
+
     return new_case
 
 
@@ -43,7 +46,8 @@ def get_all_cases(db: Session):
     cases = db.query(Case).all()
 
     for case in cases:
-        case.documents = json.loads(case.documents or "[]")
+        if isinstance(case.documents, str):
+            case.documents = json.loads(case.documents or "[]")
 
     return cases
 
@@ -52,7 +56,8 @@ def get_case(db: Session, case_id: int):
     case = db.query(Case).filter(Case.id == case_id).first()
 
     if case:
-        case.documents = json.loads(case.documents or "[]")
+        if isinstance(case.documents, str):
+            case.documents = json.loads(case.documents or "[]")
 
     return case
 
@@ -101,7 +106,8 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
     db.commit()
     db.refresh(case)
 
-    case.documents = json.loads(case.documents or "[]")
+    if isinstance(case.documents, str):
+        case.documents = json.loads(case.documents or "[]")
 
     return case
 

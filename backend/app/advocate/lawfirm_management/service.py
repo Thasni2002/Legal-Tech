@@ -1,21 +1,16 @@
 from sqlalchemy.orm import Session
 import json
 from .models import Advocate, AssignedCase
-from .schemas import AdvocateCreate, AdvocateUpdate
+from .schemas import (
+    AdvocateCreate,
+    AdvocateUpdate,
+    AssignedCaseCreate
+)
 
 
 # Get all advocates
 def get_all_advocates(db: Session):
-    advocates = db.query(Advocate).all()
-
-    # Fix old invalid DB values
-    for advocate in advocates:
-        if advocate.date_of_birth == "":
-            advocate.date_of_birth = None
-        if advocate.years_of_experience == "":
-            advocate.years_of_experience = None
-
-    return advocates
+    return db.query(Advocate).all()
 
 
 # Get single advocate
@@ -23,17 +18,9 @@ def get_advocate_by_id(
     db: Session,
     advocate_id: int
 ):
-    advocate = db.query(Advocate).filter(
+    return db.query(Advocate).filter(
         Advocate.id == advocate_id
     ).first()
-
-    if advocate:
-        if advocate.date_of_birth == "":
-            advocate.date_of_birth = None
-        if advocate.years_of_experience == "":
-            advocate.years_of_experience = None
-
-    return advocate
 
 
 # Create advocate
@@ -44,13 +31,6 @@ def create_advocate(
     advocate_data = advocate.model_dump(
         by_alias=False
     )
-
-    # Convert empty strings to None
-    if advocate_data.get("date_of_birth") == "":
-        advocate_data["date_of_birth"] = None
-
-    if advocate_data.get("years_of_experience") == "":
-        advocate_data["years_of_experience"] = None
 
     new_advocate = Advocate(
         **advocate_data
@@ -78,15 +58,9 @@ def update_advocate(
         return None
 
     update_data = advocate_data.model_dump(
+        exclude_unset=True,
         by_alias=False
     )
-
-    # Convert empty strings to None
-    if update_data.get("date_of_birth") == "":
-        update_data["date_of_birth"] = None
-
-    if update_data.get("years_of_experience") == "":
-        update_data["years_of_experience"] = None
 
     for key, value in update_data.items():
         setattr(advocate, key, value)
@@ -121,7 +95,7 @@ def delete_advocate(
 # Create assigned case
 def create_assigned_case(
     db: Session,
-    case_data
+    case_data: AssignedCaseCreate
 ):
     case_dict = case_data.model_dump()
 
@@ -129,7 +103,9 @@ def create_assigned_case(
         case_dict.get("assigned_documents", [])
     )
 
-    new_case = AssignedCase(**case_dict)
+    new_case = AssignedCase(
+        **case_dict
+    )
 
     db.add(new_case)
     db.commit()
@@ -203,7 +179,7 @@ def delete_assigned_case(
 def update_assigned_case(
     db: Session,
     case_id: int,
-    case_data
+    case_data: AssignedCaseCreate
 ):
     assigned_case = get_assigned_case_by_id(
         db,
@@ -213,11 +189,14 @@ def update_assigned_case(
     if not assigned_case:
         return None
 
-    case_dict = case_data.model_dump()
-
-    case_dict["assigned_documents"] = json.dumps(
-        case_dict.get("assigned_documents", [])
+    case_dict = case_data.model_dump(
+        exclude_unset=True
     )
+
+    if "assigned_documents" in case_dict:
+        case_dict["assigned_documents"] = json.dumps(
+            case_dict.get("assigned_documents", [])
+        )
 
     for key, value in case_dict.items():
         setattr(assigned_case, key, value)

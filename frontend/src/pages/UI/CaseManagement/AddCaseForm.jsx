@@ -4,7 +4,7 @@ import { API_BASE_URL } from "@/utils/api";
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Upload, X, Eye, CheckCircle, Edit3 } from "lucide-react";
+import { ArrowLeft, X, Eye, CheckCircle, Edit3 } from "lucide-react";
 
 // Error message component
 function ErrorMsg({ message }) {
@@ -18,15 +18,15 @@ function ErrorMsg({ message }) {
 }
 
 export default function AddCaseForm() {
-const router = useRouter();
+  const router = useRouter();
   const params = useParams();
-const editId = params?.id;
+  const editId = params?.id;
 
   const isEditMode = !!editId;
   const [documents, setDocuments] = useState([
     { documentType: "", advocate: "", file: null },
   ]);
-  
+
 
   const [formData, setFormData] = useState({
     cnrNumber: "",
@@ -34,7 +34,6 @@ const editId = params?.id;
     caseTitle: "",
     caseNo: "",
     caseType: "",
-    caseCat: "",
     caseDes: "",
     clientName: "",
     contactNumber: "",
@@ -54,7 +53,7 @@ const editId = params?.id;
   // Success popup
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
-  const [selectedFiles, setSelectedFiles] = useState([]);
+
   const [selectedAdvocate, setSelectedAdvocate] = useState("");
 
   // ─── Fetch case data for edit mode ───
@@ -193,139 +192,145 @@ const editId = params?.id;
     "w-full rounded-lg border bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 outline-none transition-all duration-200";
 
   const handleChange = (e) => {
-    const { name, value, files } = e.target;
-    if (name === "documentFiles") {
-      const fileArray = Array.from(files);
-      if (fileArray.length > 2) {
-        alert("You can only select up to 2 files at a time.");
-        return;
-      }
-      const fileList = fileArray.map((file) => ({
-        file,
-        documentType: "",
-        advocate: "",
-      }));
-      setSelectedFiles(fileList);
-    } else {
-      let val = value;
-      if (name === "cnrNumber") {
-        val = value.toUpperCase().slice(0, 16);
-      } else if (name === "contactNumber") {
-        val = value.replace(/\D/g, "").slice(0, 10);
-      }
-      const newFormData = { ...formData, [name]: val };
-      setFormData(newFormData);
-      const error = validateField(name, val);
-      setTouched((prev) => ({ ...prev, [name]: true }));
-      setErrors((prev) => ({ ...prev, [name]: error }));
-    }
-  };
+    const { name, value } = e.target;
 
-  const removeSelectedFile = (index) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
-  };
+    let val = value;
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-
-  if (!validateAll()) return;
-
-  const payload = {
-    cnrNumber: formData.cnrNumber || null,
-    caseId: formData.caseId || "",
-    caseTitle: formData.caseTitle,
-    caseNo: formData.caseNo,
-    caseType: formData.caseType,
-    caseDes: formData.caseDes,
-
-    clientName: formData.clientName,
-    contactNumber: formData.contactNumber,
-    emailId: formData.emailId,
-
-    courtName: formData.courtName,
-    courtType: formData.courtType,
-
-    status: formData.status,
-
-    selectedAdvocate: selectedAdvocate || null,
-
-    documents: documents.map((doc) => ({
-      documentType: doc.documentType || "",
-      advocate: selectedAdvocate || "",
-      file: doc.file ? doc.file.name : null,
-      url: doc.url || null,
-      view: doc.view !== undefined ? doc.view : true,
-      upload: doc.upload !== undefined ? doc.upload : true,
-      edit: doc.edit !== undefined ? doc.edit : true,
-      delete: doc.delete !== undefined ? doc.delete : true,
-    })),
-    nextHearingDate: formData.nextHearingDate || null,
-  };
-
-  try {
-    const url = isEditMode
-      ? `${API_BASE_URL}/case-management/${editId}`
-      : `${API_BASE_URL}/case-management/`;
-
-    const method = isEditMode ? "PUT" : "POST";
-
-    const response = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => null);
-      throw new Error(errData?.detail || "Failed to save case");
+    // CNR auto uppercase + limit
+    if (name === "cnrNumber") {
+      val = value.toUpperCase().slice(0, 16);
     }
 
-    setShowSuccessPopup(true);
+    // Contact number only digits + limit
+    if (name === "contactNumber") {
+      val = value.replace(/\D/g, "").slice(0, 10);
+    }
 
-    setTimeout(() => {
-      setShowSuccessPopup(false);
-      router.push("/case-management");
-    }, 2500);
+    // Update form data
+    setFormData((prev) => ({
+      ...prev,
+      [name]: val,
+    }));
 
-    // Reset form only for add mode
-    if (!isEditMode) {
-      setFormData({
-        cnrNumber: "",
-        caseId: "",
-        caseTitle: "",
-        caseNo: "",
-        caseType: "",
-        caseCat: "",
-        caseDes: "",
-        clientName: "",
-        contactNumber: "",
-        emailId: "",
-        courtName: "",
-        courtType: "",
-        status: "Active",
-        nextHearingDate: "",
+    // Validate while typing
+    const error = validateField(name, val);
+
+    // Mark field touched
+    setTouched((prev) => ({
+      ...prev,
+      [name]: true,
+    }));
+
+    // Set error
+    setErrors((prev) => ({
+      ...prev,
+      [name]: error,
+    }));
+  };
+
+
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateAll()) return;
+
+    const payload = {
+      cnrNumber: formData.cnrNumber || null,
+      caseId: formData.caseId || "",
+      caseTitle: formData.caseTitle,
+      caseNo: formData.caseNo,
+      caseType: formData.caseType,
+      caseDes: formData.caseDes,
+
+      clientName: formData.clientName,
+      contactNumber: formData.contactNumber,
+      emailId: formData.emailId,
+
+      courtName: formData.courtName,
+      courtType: formData.courtType,
+
+      status: formData.status,
+
+      selectedAdvocate: selectedAdvocate || null,
+
+      documents: documents.map((doc) => ({
+        documentType: doc.documentType || "",
+        advocate: selectedAdvocate || "",
+        file: doc.file ? doc.file.name : null,
+        url: doc.url || null,
+        view: doc.view !== undefined ? doc.view : true,
+        upload: doc.upload !== undefined ? doc.upload : true,
+        edit: doc.edit !== undefined ? doc.edit : true,
+        delete: doc.delete !== undefined ? doc.delete : true,
+      })),
+      nextHearingDate: formData.nextHearingDate || null,
+    };
+
+    try {
+      const url = isEditMode
+        ? `${API_BASE_URL}/case-management/${editId}`
+        : `${API_BASE_URL}/case-management/`;
+
+      const method = isEditMode ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
       });
 
-      setErrors({});
-      setTouched({});
-      setDocuments([
-        {
-          documentType: "",
-          advocate: "",
-          file: null,
-        },
-      ]);
+      if (!response.ok) {
+        const errData = await response.json().catch(() => null);
+        throw new Error(errData?.detail || "Failed to save case");
+      }
 
-      setSelectedAdvocate("");
-      setSelectedFiles([]);
+      setShowSuccessPopup(true);
+
+      setTimeout(() => {
+        setShowSuccessPopup(false);
+        router.push("/case-management");
+      }, 2500);
+
+      // Reset form only for add mode
+      if (!isEditMode) {
+        setFormData({
+          cnrNumber: "",
+          caseId: "",
+          caseTitle: "",
+          caseNo: "",
+          caseType: "",
+          caseCat: "",
+          caseDes: "",
+          clientName: "",
+          contactNumber: "",
+          emailId: "",
+          courtName: "",
+          courtType: "",
+          status: "Active",
+          nextHearingDate: "",
+        });
+
+        setErrors({});
+        setTouched({});
+        setDocuments([
+          {
+            documentType: "",
+            advocate: "",
+            file: null,
+          },
+        ]);
+
+        setSelectedAdvocate("");
+        
+      }
+    } catch (error) {
+      console.error("Save error:", error);
+      alert(error.message || "Something went wrong while saving the case.");
     }
-  } catch (error) {
-    console.error("Save error:", error);
-    alert(error.message || "Something went wrong while saving the case.");
-  }
-};
+  };
 
   if (loadingEdit) {
     return (

@@ -15,6 +15,8 @@ export default function LawfirmAdd({ onCancel, initialData }) {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
 
   useEffect(() => {
     setMounted(true);
@@ -56,6 +58,71 @@ export default function LawfirmAdd({ onCancel, initialData }) {
     ...sanitizedInitialData,
   });
 
+
+  function validateField(name, value) {
+    switch (name) {
+      case "advocateName":
+        if (!value.trim()) return "Advocate Name is required";
+        return "";
+
+      case "barCouncilId":
+        if (!value.trim()) return "Bar Council ID is required";
+        return "";
+
+      case "enrollmentNumber":
+        if (!value.trim()) return "Enrollment Number is required";
+        return "";
+
+      case "phoneNumber":
+        if (value && !/^\d{10}$/.test(value))
+          return "Phone Number must be 10 digits";
+        return "";
+
+      case "aadhaarNumber":
+        if (value && !/^\d{12}$/.test(value))
+          return "Aadhaar Number must be 12 digits";
+        return "";
+
+      case "emailAddress":
+        if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
+          return "Invalid email address";
+        return "";
+
+      case "practiceArea":
+        if (!value.trim()) return "Practice Area is required";
+        return "";
+
+      case "courtType":
+        if (!value.trim()) return "Court Type is required";
+        return "";
+
+      case "city":
+        if (!value.trim()) return "City is required";
+        return "";
+
+      case "state":
+        if (!value.trim()) return "State is required";
+        return "";
+
+      case "pincode":
+        if (value && !/^\d{6}$/.test(value))
+          return "Pincode must be 6 digits";
+        return "";
+
+      case "chambersAddress":
+        if (!value.trim()) return "Chambers Address is required";
+        return "";
+
+      case "yearsOfExperience":
+        if (value && (isNaN(value) || Number(value) < 0))
+          return "Years of Experience must be a positive number";
+        return "";
+
+      default:
+        return "";
+    }
+  }
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -73,6 +140,18 @@ export default function LawfirmAdd({ onCancel, initialData }) {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
+    }));
+
+    const error = validateField(name, value);
+
+    setTouched((prev) => ({
+      ...prev,
+      [name]: true,
+    }));
+
+    setErrors((prev) => ({
+      ...prev,
+      [name]: error,
     }));
   };
 
@@ -93,24 +172,45 @@ export default function LawfirmAdd({ onCancel, initialData }) {
     }
   };
 
+  function validateAll() {
+    const fields = [
+      "advocateName",
+      "barCouncilId",
+      "enrollmentNumber",
+      "phoneNumber",
+      "emailAddress",
+      "aadhaarNumber",
+      "practiceArea",
+      "courtType",
+      "yearsOfExperience",
+      "city",
+      "state",
+      "pincode",
+      "chambersAddress"
+    ];
+
+    const newErrors = {};
+    const newTouched = {};
+    let valid = true;
+
+    fields.forEach((field) => {
+      const err = validateField(field, formData[field] || "");
+      newErrors[field] = err;
+      newTouched[field] = true;
+
+      if (err) valid = false;
+    });
+
+    setErrors(newErrors);
+    setTouched(newTouched);
+
+    return valid;
+  }
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (
-      formData.phoneNumber &&
-      !/^\d{10}$/.test(formData.phoneNumber)
-    ) {
-      alert("Phone Number must be 10 digits");
-      return;
-    }
-
-    if (
-      formData.aadhaarNumber &&
-      !/^\d{12}$/.test(formData.aadhaarNumber)
-    ) {
-      alert("Aadhaar Number must be 12 digits");
-      return;
-    }
+    if (!validateAll()) return;
 
     try {
       const payload = {
@@ -119,13 +219,15 @@ export default function LawfirmAdd({ onCancel, initialData }) {
         enrollmentNumber: formData.enrollmentNumber,
         phoneNumber: formData.phoneNumber,
         emailAddress: formData.emailAddress,
-        dateOfBirth: formData.dateOfBirth,
+        dateOfBirth: formData.dateOfBirth || null,
         gender: formData.gender,
         aadhaarNumber: formData.aadhaarNumber,
         panNumber: formData.panNumber,
         practiceArea: formData.practiceArea,
         courtType: formData.courtType,
-        yearsOfExperience: formData.yearsOfExperience,
+        yearsOfExperience: formData.yearsOfExperience
+          ? Number(formData.yearsOfExperience)
+          : null,
         languagesKnown: formData.languagesKnown,
         lawFirmName: formData.lawFirmName,
         specialization: formData.specialization,
@@ -198,7 +300,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
           <h1 className="text-3xl font-extrabold text-[#0F172A] tracking-tight">
             Law Firm Management
           </h1>
-          
+
         </div>
       </div>
 
@@ -221,7 +323,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
               />
 
               <label className="absolute bottom-1 right-1 bg-[#0F172A] hover:bg-[#1E293B] text-white w-10 h-10 rounded-full flex items-center justify-center cursor-pointer shadow-lg transition-transform hover:scale-110 active:scale-95">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></svg>
                 <input
                   type="file"
                   className="hidden"
@@ -243,18 +345,91 @@ export default function LawfirmAdd({ onCancel, initialData }) {
         {/* Personal Information */}
         <div className="bg-white rounded-3xl border border-[#E2E8F0] p-8 md:p-10 shadow-xl shadow-slate-200/40">
           <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
-            <span className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">👤</span>
+            <span className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+              👤
+            </span>
             Personal Information
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            <InputField label="Advocate Name" name="advocateName" value={formData.advocateName} onChange={handleChange} />
-            <InputField label="Bar Council ID" name="barCouncilId" value={formData.barCouncilId} onChange={handleChange} />
-            <InputField label="Enrollment Number" name="enrollmentNumber" value={formData.enrollmentNumber} onChange={handleChange} />
-            <InputField label="Phone Number (Optional)" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} maxLength={10} />
-            <InputField label="Email Address (Optional)" type="email" name="emailAddress" value={formData.emailAddress} onChange={handleChange} />
-            <InputField label="Date of Birth" type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} />
 
+            {/* Advocate Name */}
+            <div>
+              <InputField
+                label="Advocate Name"
+                name="advocateName"
+                value={formData.advocateName}
+                onChange={handleChange}
+              />
+              {touched.advocateName && errors.advocateName && (
+                <p className="text-red-500 text-sm mt-1">{errors.advocateName}</p>
+              )}
+            </div>
+
+            {/* Bar Council ID */}
+            <div>
+              <InputField
+                label="Bar Council ID"
+                name="barCouncilId"
+                value={formData.barCouncilId}
+                onChange={handleChange}
+              />
+              {touched.barCouncilId && errors.barCouncilId && (
+                <p className="text-red-500 text-sm mt-1">{errors.barCouncilId}</p>
+              )}
+            </div>
+
+            {/* Enrollment Number */}
+            <div>
+              <InputField
+                label="Enrollment Number"
+                name="enrollmentNumber"
+                value={formData.enrollmentNumber}
+                onChange={handleChange}
+              />
+              {touched.enrollmentNumber && errors.enrollmentNumber && (
+                <p className="text-red-500 text-sm mt-1">{errors.enrollmentNumber}</p>
+              )}
+            </div>
+
+            {/* Phone Number */}
+            <div>
+              <InputField
+                label="Phone Number (Optional)"
+                name="phoneNumber"
+                value={formData.phoneNumber}
+                onChange={handleChange}
+                maxLength={10}
+              />
+              {touched.phoneNumber && errors.phoneNumber && (
+                <p className="text-red-500 text-sm mt-1">{errors.phoneNumber}</p>
+              )}
+            </div>
+
+            {/* Email */}
+            <div>
+              <InputField
+                label="Email Address (Optional)"
+                type="email"
+                name="emailAddress"
+                value={formData.emailAddress}
+                onChange={handleChange}
+              />
+              {touched.emailAddress && errors.emailAddress && (
+                <p className="text-red-500 text-sm mt-1">{errors.emailAddress}</p>
+              )}
+            </div>
+
+            {/* Date of Birth */}
+            <InputField
+              label="Date of Birth"
+              type="date"
+              name="dateOfBirth"
+              value={formData.dateOfBirth}
+              onChange={handleChange}
+            />
+
+            {/* Gender */}
             <SelectField
               label="Gender"
               options={["Male", "Female", "Other"]}
@@ -263,67 +438,227 @@ export default function LawfirmAdd({ onCancel, initialData }) {
               onChange={handleChange}
             />
 
-            <InputField label="Aadhaar Number (Optional)" name="aadhaarNumber" value={formData.aadhaarNumber} onChange={handleChange} maxLength={12} />
-            <InputField label="PAN Number (Optional)" name="panNumber" value={formData.panNumber} onChange={handleChange} />
+            {/* Aadhaar */}
+            <div>
+              <InputField
+                label="Aadhaar Number (Optional)"
+                name="aadhaarNumber"
+                value={formData.aadhaarNumber}
+                onChange={handleChange}
+                maxLength={12}
+              />
+              {touched.aadhaarNumber && errors.aadhaarNumber && (
+                <p className="text-red-500 text-sm mt-1">{errors.aadhaarNumber}</p>
+              )}
+            </div>
+
+            {/* PAN */}
+            <InputField
+              label="PAN Number (Optional)"
+              name="panNumber"
+              value={formData.panNumber}
+              onChange={handleChange}
+            />
+
           </div>
         </div>
 
         {/* Professional Information */}
         <div className="bg-white rounded-3xl border border-[#E2E8F0] p-8 md:p-10 shadow-xl shadow-slate-200/40">
           <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
-            <span className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">⚖️</span>
+            <span className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              ⚖️
+            </span>
             Professional Information
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            <SelectField label="Practice Area" options={["Civil Law", "Criminal Law", "Corporate Law", "Family Law", "Property Law"]} name="practiceArea" value={formData.practiceArea} onChange={handleChange} />
-            <SelectField label="Court Type" options={["District Court", "High Court", "Supreme Court"]} name="courtType" value={formData.courtType} onChange={handleChange} />
-            <InputField label="Years of Experience (Optional)" type="number" name="yearsOfExperience" value={formData.yearsOfExperience} onChange={handleChange} />
-            <InputField label="Languages Known (Optional)" placeholder="English, Hindi" name="languagesKnown" value={formData.languagesKnown} onChange={handleChange} />
-            <InputField label="Law Firm Name (Optional)" name="lawFirmName" value={formData.lawFirmName} onChange={handleChange} />
-            <InputField label="Specialization (Optional)" name="specialization" value={formData.specialization} onChange={handleChange} />
-            <SelectField
-              label="Status"
-              options={["Active", "Inactive"]}
-              name="status"
-              value={formData.status || "Active"}
-              onChange={handleChange}
-            />
+
+            {/* Practice Area */}
+            <div>
+              <SelectField
+                label="Practice Area"
+                options={[
+                  "Civil Law",
+                  "Criminal Law",
+                  "Corporate Law",
+                  "Family Law",
+                  "Property Law"
+                ]}
+                name="practiceArea"
+                value={formData.practiceArea}
+                onChange={handleChange}
+              />
+              {touched.practiceArea && errors.practiceArea && (
+                <p className="text-red-500 text-sm mt-1">{errors.practiceArea}</p>
+              )}
+            </div>
+
+            {/* Court Type */}
+            <div>
+              <SelectField
+                label="Court Type"
+                options={[
+                  "District Court",
+                  "High Court",
+                  "Supreme Court"
+                ]}
+                name="courtType"
+                value={formData.courtType}
+                onChange={handleChange}
+              />
+              {touched.courtType && errors.courtType && (
+                <p className="text-red-500 text-sm mt-1">{errors.courtType}</p>
+              )}
+            </div>
+
+            {/* Years of Experience */}
+            <div>
+              <InputField
+                label="Years of Experience (Optional)"
+                type="number"
+                name="yearsOfExperience"
+                value={formData.yearsOfExperience}
+                onChange={handleChange}
+              />
+              {touched.yearsOfExperience && errors.yearsOfExperience && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.yearsOfExperience}
+                </p>
+              )}
+            </div>
+
+            {/* Languages Known */}
+            <div>
+              <InputField
+                label="Languages Known (Optional)"
+                placeholder="English, Hindi"
+                name="languagesKnown"
+                value={formData.languagesKnown}
+                onChange={handleChange}
+              />
+            </div>
+
+            {/* Law Firm Name */}
+            <div>
+              <InputField
+                label="Law Firm Name (Optional)"
+                name="lawFirmName"
+                value={formData.lawFirmName}
+                onChange={handleChange}
+              />
+            </div>
+
+            {/* Specialization */}
+            <div>
+              <InputField
+                label="Specialization (Optional)"
+                name="specialization"
+                value={formData.specialization}
+                onChange={handleChange}
+              />
+            </div>
+
+            {/* Status */}
+            <div>
+              <SelectField
+                label="Status"
+                options={["Active", "Inactive"]}
+                name="status"
+                value={formData.status || "Active"}
+                onChange={handleChange}
+              />
+            </div>
+
           </div>
         </div>
 
         {/* Address Information */}
         <div className="bg-white rounded-3xl border border-[#E2E8F0] p-8 md:p-10 shadow-xl shadow-slate-200/40">
           <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
-            <span className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">🏢</span>
+            <span className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              🏢
+            </span>
             Address Information
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            <InputField label="City" name="city" value={formData.city} onChange={handleChange} />
-            <InputField label="State" name="state" value={formData.state} onChange={handleChange} />
-            <InputField label="Pincode" name="pincode" value={formData.pincode} onChange={handleChange} maxLength={6} />
+
+            {/* City */}
+            <div>
+              <InputField
+                label="City"
+                name="city"
+                value={formData.city}
+                onChange={handleChange}
+              />
+              {touched.city && errors.city && (
+                <p className="text-red-500 text-sm mt-1">{errors.city}</p>
+              )}
+            </div>
+
+            {/* State */}
+            <div>
+              <InputField
+                label="State"
+                name="state"
+                value={formData.state}
+                onChange={handleChange}
+              />
+              {touched.state && errors.state && (
+                <p className="text-red-500 text-sm mt-1">{errors.state}</p>
+              )}
+            </div>
+
+            {/* Pincode */}
+            <div>
+              <InputField
+                label="Pincode"
+                name="pincode"
+                value={formData.pincode}
+                onChange={handleChange}
+                maxLength={6}
+              />
+              {touched.pincode && errors.pincode && (
+                <p className="text-red-500 text-sm mt-1">{errors.pincode}</p>
+              )}
+            </div>
+
           </div>
 
+          {/* Chambers Address */}
           <div className="mt-8">
             <label className="block mb-2 text-sm font-medium text-[#0F172A]">
               Chambers Address
             </label>
+
             <textarea
               rows="4"
               placeholder="Enter Chambers Address"
-              className="w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+              className={`w-full rounded-xl border bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 outline-none transition-all duration-200 ${
+                touched.chambersAddress && errors.chambersAddress
+                  ? "border-red-500 focus:ring-red-500/20 focus:border-red-500"
+                  : "border-[#E2E8F0] focus:ring-[#2563EB]/20 focus:border-[#2563EB]"
+              }`}
               name="chambersAddress"
               value={formData.chambersAddress}
               onChange={handleChange}
             />
+
+            {touched.chambersAddress && errors.chambersAddress && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.chambersAddress}
+              </p>
+            )}
           </div>
         </div>
 
         {/* About */}
         <div className="bg-white rounded-3xl border border-[#E2E8F0] p-8 md:p-10 shadow-xl shadow-slate-200/40">
           <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
-            <span className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">📝</span>
+            <span className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">
+              📝
+            </span>
             About Advocate (Optional)
           </h2>
 
@@ -335,6 +670,12 @@ export default function LawfirmAdd({ onCancel, initialData }) {
             value={formData.about}
             onChange={handleChange}
           />
+
+          {touched.about && errors.about && (
+            <p className="text-red-500 text-sm mt-1">
+              {errors.about}
+            </p>
+          )}
         </div>
 
         {/* Buttons */}
@@ -355,36 +696,36 @@ export default function LawfirmAdd({ onCancel, initialData }) {
           </button>
         </div>
       </form>
-        { showSuccessModal && mounted && createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 w-[90%] max-w-md text-center">
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
-                  <span className="text-green-600 text-3xl">✓</span>
-                </div>
+      {showSuccessModal && mounted && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-[90%] max-w-md text-center">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+                <span className="text-green-600 text-3xl">✓</span>
               </div>
-
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                Success
-              </h2>
-
-              <p className="text-gray-600 mb-6">
-                {successMessage}
-              </p>
-
-              <button
-                onClick={() => {
-                  setShowSuccessModal(false);
-                  router.push("/lawfirm-management");
-                }}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg cursor-pointer"
-              >
-                OK
-              </button>
             </div>
-          </div>,
-          document.body
-        )}
+
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              Success
+            </h2>
+
+            <p className="text-gray-600 mb-6">
+              {successMessage}
+            </p>
+
+            <button
+              onClick={() => {
+                setShowSuccessModal(false);
+                router.push("/lawfirm-management");
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg cursor-pointer"
+            >
+              OK
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
