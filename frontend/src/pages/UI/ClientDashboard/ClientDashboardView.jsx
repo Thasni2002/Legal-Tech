@@ -1,48 +1,124 @@
 "use client";
 
-import {
-  Calendar,
-  Briefcase,
-  User,
-} from "lucide-react";
+import { useState, useEffect } from "react";
+import { Calendar, Briefcase, User } from "lucide-react";
+import { getLoggedInUser } from "@/utils/auth";
+
+const BASE_URL = "http://localhost:8000";
 
 export default function ClientDashboard() {
-  const cases = [
-    {
-      caseNo: "CIV/101",
-      type: "Property Dispute",
-      hearing: "20 June 2026",
-      advocate: "Rahul Sharma",
-      status: "Active",
-    },
-    {
-      caseNo: "CR/202",
-      type: "Criminal Case",
-      hearing: "25 June 2026",
-      advocate: "Priya Nair",
-      status: "Hearing",
-    },
-  ];
+  const [userName, setUserName] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const consultations = [
-    {
-      date: "12 June 2026",
-      advocate: "Rahul Sharma",
-      status: "Completed",
-    },
-    {
-      date: "15 June 2026",
-      advocate: "Priya Nair",
-      status: "Pending",
-    },
-  ];
+  const [cases, setCases] = useState([]);
+  const [hearings, setHearings] = useState([]);
+  const [consultations, setConsultations] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [assignedAdvocate, setAssignedAdvocate] = useState(null);
+  const [invoices, setInvoices] = useState([]);
 
-  const timeline = [
-    "10 June - Case Created",
-    "12 June - Evidence Submitted",
-    "15 June - Hearing Scheduled",
-    "18 June - Court Notice Sent",
-  ];
+  useEffect(() => {
+    const user = getLoggedInUser();
+    const name = user?.username || user?.name || "";
+    setUserName(name);
+
+    const fetchAll = async () => {
+      try {
+        const [casesRes, hearingsRes, consultRes, activitiesRes, invoicesRes] = await Promise.all([
+          fetch(`${BASE_URL}/clients/cases`),
+          fetch(`${BASE_URL}/clients/hearings`),
+          fetch(`${BASE_URL}/consultations`),
+          fetch(`${BASE_URL}/clients/activities`),
+          fetch(`${BASE_URL}/finance/invoices${name ? `?client_name=${encodeURIComponent(name)}` : ""}`),
+        ]);
+
+        const [casesData, hearingsData, consultData, activitiesData, invoicesData] = await Promise.all([
+          casesRes.json(),
+          hearingsRes.json(),
+          consultRes.json(),
+          activitiesRes.json(),
+          invoicesRes.json(),
+        ]);
+
+        setInvoices(Array.isArray(invoicesData) ? invoicesData : []);
+
+        // Filter cases for this client by client_name matching username
+        const clientCases = name
+          ? casesData.filter((c) => {
+              const normalized = (c.client_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+              const normalizedUser = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+              return normalized === normalizedUser;
+            })
+          : casesData;
+
+        setCases(clientCases);
+        setHearings(hearingsData);
+
+        // Filter consultations for this client by client_name
+        const clientConsults = name
+          ? consultData.filter((c) => {
+              const normalized = (c.client_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+              const normalizedUser = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+              return normalized === normalizedUser;
+            })
+          : consultData;
+
+        setConsultations(clientConsults.slice(-5).reverse());
+        setActivities(activitiesData.slice(-4).reverse());
+
+        // Derive assigned advocate info from the first case that has an advocate
+        const caseWithAdvocate = hearingsData.find((h) => h.advocate_name);
+        if (caseWithAdvocate) {
+          setAssignedAdvocate({
+            name: caseWithAdvocate.advocate_name,
+            phone: "—",
+            email: "—",
+            specialization: "—",
+          });
+        }
+      } catch (err) {
+        console.error("ClientDashboard fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAll();
+  }, []);
+
+  // Derived stats
+  const activeCasesCount = cases.filter((c) => c.status === "Active").length;
+  const upcomingHearingsCount = hearings.length;
+
+  // Payment summary derived from invoices
+  const totalPaid = invoices
+    .filter((inv) => inv.status === "Paid")
+    .reduce((sum, inv) => sum + (inv.grand_total || 0), 0);
+
+  const totalPending = invoices
+    .filter((inv) => inv.status !== "Paid")
+    .reduce((sum, inv) => sum + (inv.grand_total || 0), 0);
+
+  const nextDueInvoice = invoices
+    .filter((inv) => inv.status !== "Paid")
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))[0];
+
+  const fmtCurrency = (amount) =>
+    amount > 0 ? `₹${amount.toLocaleString("en-IN")}` : "₹0";
+
+  // Format a date string nicely
+  const fmtDate = (d) => {
+    if (!d) return "—";
+    try {
+      return new Date(d).toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+    } catch {
+      return d;
+    }
+  };
 
   return (
     <div className="w-full space-y-8 max-w-7xl mx-auto animate-in fade-in zoom-in-95 duration-500">
@@ -54,7 +130,7 @@ export default function ClientDashboard() {
             Client Dashboard
           </h1>
           <p className="text-[#64748B] mt-2 text-lg font-medium">
-             Welcome 
+            Welcome{userName ? <span className="capitalize"> {userName}</span> : ""}
           </p>
         </div>
       </div>
@@ -69,7 +145,11 @@ export default function ClientDashboard() {
           <p className="text-[#475569] text-xs font-bold uppercase tracking-wider mb-2">
             Active Cases
           </p>
-          <h2 className="text-4xl md:text-5xl font-black text-[#0F172A] tracking-tight">2</h2>
+          <h2 className="text-4xl md:text-5xl font-black text-[#0F172A] tracking-tight">
+            {loading ? (
+              <span className="inline-block w-12 h-10 rounded-xl bg-slate-100 animate-pulse" />
+            ) : activeCasesCount}
+          </h2>
         </div>
 
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-6 md:p-8 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 cursor-pointer group">
@@ -79,7 +159,11 @@ export default function ClientDashboard() {
           <p className="text-[#475569] text-xs font-bold uppercase tracking-wider mb-2">
             Upcoming Hearings
           </p>
-          <h2 className="text-4xl md:text-5xl font-black text-[#0F172A] tracking-tight">2</h2>
+          <h2 className="text-4xl md:text-5xl font-black text-[#0F172A] tracking-tight">
+            {loading ? (
+              <span className="inline-block w-12 h-10 rounded-xl bg-slate-100 animate-pulse" />
+            ) : upcomingHearingsCount}
+          </h2>
         </div>
 
       </div>
@@ -87,161 +171,209 @@ export default function ClientDashboard() {
       {/* My Cases */}
       <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
         <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-extrabold text-[#0F172A]">
-            My Cases
-          </h2>
-          <button className="text-xs font-bold text-[#2563EB] uppercase tracking-wider hover:text-[#1d4ed8] transition-colors">
-            View All
-          </button>
+          <h2 className="text-2xl font-extrabold text-[#0F172A]">My Cases</h2>
         </div>
 
         <div className="w-full overflow-x-auto rounded-2xl border border-[#E2E8F0]">
-          <table className="min-w-full divide-y divide-[#E2E8F0]">
-            <thead className="bg-[#F8FAFC]">
-              <tr>
-                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case No</th>
-                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
-                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Next Hearing</th>
-                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Advocate</th>
-                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-[#E2E8F0] bg-white">
-              {cases.map((item, index) => (
-                <tr key={index} className="hover:bg-[#F8FAFC] transition-colors duration-150">
-                  <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">{item.caseNo}</td>
-                  <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">{item.type}</td>
-                  <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.hearing}</td>
-                  <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">{item.advocate}</td>
-                  <td className="p-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                      item.status === 'Active'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : 'bg-blue-50 text-blue-700 border-blue-200'
-                    }`}>
-                      {item.status}
-                    </span>
-                  </td>
+          {loading ? (
+            <div className="p-8 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+                <p className="text-sm text-[#64748B] font-medium">Loading cases…</p>
+              </div>
+            </div>
+          ) : cases.length === 0 ? (
+            <div className="p-10 text-center text-[#94A3B8] font-medium text-sm">
+              No cases found.
+            </div>
+          ) : (
+            <table className="min-w-full divide-y divide-[#E2E8F0]">
+              <thead className="bg-[#F8FAFC]">
+                <tr>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case No</th>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Title / Type</th>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Court</th>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-[#E2E8F0] bg-white">
+                {cases.map((item, index) => (
+                  <tr key={index} className="hover:bg-[#F8FAFC] transition-colors duration-150">
+                    <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">{item.case_no}</td>
+                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">
+                      <span className="block font-bold text-[#0F172A]">{item.title}</span>
+                      <span className="text-xs text-[#64748B]">{item.type}</span>
+                    </td>
+                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.court}</td>
+                    <td className="p-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                        item.status === "Active"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : item.status === "Hearing"
+                          ? "bg-blue-50 text-blue-700 border-blue-200"
+                          : "bg-amber-50 text-amber-700 border-amber-200"
+                      }`}>
+                        {item.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
-      {/* Consultation + Payment */}
+      {/* Consultation + Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
         {/* Consultation History */}
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl font-extrabold text-[#0F172A]">
-              Consultation History
-            </h2>
-          </div>
-
-          <div className="space-y-4 flex-1">
-            {consultations.map((item, index) => (
-              <div
-                key={index}
-                className="flex justify-between items-center p-4 bg-[#F8FAFC] rounded-2xl border border-transparent hover:border-[#E2E8F0] hover:bg-white hover:shadow-md transition-all duration-300"
-              >
-                <div>
-                  <span className="block font-bold text-[#1E293B] mb-1">{item.date}</span>
-                  <span className="text-xs font-medium text-[#64748B]">{item.advocate}</span>
-                </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                  item.status === 'Completed'
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-amber-50 text-amber-700 border-amber-200'
-                }`}>{item.status}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Payment Summary */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
           <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">
-            Payment Summary
+            Consultation History
           </h2>
 
           <div className="space-y-4 flex-1">
-            <div className="flex justify-between items-center p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
-              <span className="text-emerald-800 font-bold text-sm uppercase tracking-wider">Total Paid</span>
-              <span className="font-black text-emerald-600 text-xl">₹35,000</span>
-            </div>
-
-            <div className="flex justify-between items-center p-4 bg-rose-50 border border-rose-200 rounded-2xl">
-              <span className="text-rose-800 font-bold text-sm uppercase tracking-wider">Pending Amount</span>
-              <span className="font-black text-rose-600 text-xl">₹15,000</span>
-            </div>
-
-            <div className="flex justify-between items-center p-4 bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl">
-              <span className="text-[#475569] font-bold text-sm uppercase tracking-wider">Next Due Date</span>
-              <span className="font-extrabold text-[#0F172A] text-lg">25 June 2026</span>
-            </div>
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-6 h-6 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : consultations.length === 0 ? (
+              <div className="text-center text-[#94A3B8] font-medium text-sm py-6">
+                No consultations found.
+              </div>
+            ) : (
+              consultations.map((item, index) => (
+                <div
+                  key={index}
+                  className="flex justify-between items-center p-4 bg-[#F8FAFC] rounded-2xl border border-transparent hover:border-[#E2E8F0] hover:bg-white hover:shadow-md transition-all duration-300"
+                >
+                  <div>
+                    <span className="block font-bold text-[#1E293B] mb-1">{fmtDate(item.date)}</span>
+                    <span className="text-xs font-medium text-[#64748B]">
+                      {item.advocate_name || "—"} · {item.type}
+                    </span>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                    item.status === "Completed"
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : item.status === "In Progress"
+                      ? "bg-blue-50 text-blue-700 border-blue-200"
+                      : "bg-amber-50 text-amber-700 border-amber-200"
+                  }`}>
+                    {item.status}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
+        </div>
 
-          <button className="mt-8 w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white py-4 rounded-full font-bold uppercase tracking-wider text-xs shadow-lg hover:shadow-xl active:scale-[0.98] transition-all">
-            Pay Now
-          </button>
+        {/* Recent Activity */}
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
+          <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">
+            Recent Activity
+          </h2>
+
+          <div className="space-y-4 flex-1">
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-6 h-6 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : activities.length === 0 ? (
+              <div className="text-center text-[#94A3B8] font-medium text-sm py-6">
+                No recent activity.
+              </div>
+            ) : (
+              activities.map((item, index) => (
+                <div key={index} className="flex items-start gap-4 group">
+                  <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold shadow-sm shrink-0 group-hover:scale-110 transition-transform">
+                    {index + 1}
+                  </div>
+                  <div className="flex-1 bg-[#F8FAFC] p-4 rounded-2xl border border-[#E2E8F0] group-hover:bg-white group-hover:shadow-md transition-all">
+                    <span className="font-bold text-[#1E293B] block">{item.title}</span>
+                    <span className="text-xs text-[#64748B] mt-1 block">{item.timestamp_str}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
       </div>
+
+      {/* Upcoming Hearings */}
+      {!loading && hearings.length > 0 && (
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
+          <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">Upcoming Hearings</h2>
+          <div className="w-full overflow-x-auto rounded-2xl border border-[#E2E8F0]">
+            <table className="min-w-full divide-y divide-[#E2E8F0]">
+              <thead className="bg-[#F8FAFC]">
+                <tr>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case</th>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Court</th>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Advocate</th>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date & Time</th>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E2E8F0] bg-white">
+                {hearings.map((h, i) => (
+                  <tr key={i} className="hover:bg-[#F8FAFC] transition-colors duration-150">
+                    <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">{h.case_title}</td>
+                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{h.court}</td>
+                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">{h.advocate_name || "—"}</td>
+                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap">
+                      {fmtDate(h.date)} · {h.time}
+                    </td>
+                    <td className="p-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                        h.status === "Scheduled"
+                          ? "bg-blue-50 text-blue-700 border-blue-200"
+                          : h.status === "Completed"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : "bg-amber-50 text-amber-700 border-amber-200"
+                      }`}>
+                        {h.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Assigned Advocate */}
-      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
-        <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
-            <User className="w-5 h-5" />
-          </div>
-          Assigned Advocate
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-5 hover:bg-white hover:shadow-md transition-all">
-            <span className="block text-xs text-[#64748B] font-bold uppercase tracking-wider mb-2">Name</span>
-            <span className="font-extrabold text-lg text-[#0F172A]">Rahul Sharma</span>
-          </div>
-          <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-5 hover:bg-white hover:shadow-md transition-all">
-            <span className="block text-xs text-[#64748B] font-bold uppercase tracking-wider mb-2">Phone</span>
-            <span className="font-bold text-[#1E293B]">+91 9876543210</span>
-          </div>
-          <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-5 hover:bg-white hover:shadow-md transition-all">
-            <span className="block text-xs text-[#64748B] font-bold uppercase tracking-wider mb-2">Email</span>
-            <span className="font-bold text-[#1E293B] overflow-hidden text-ellipsis">rahul@gmail.com</span>
-          </div>
-          <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-5 hover:bg-white hover:shadow-md transition-all">
-            <span className="block text-xs text-[#64748B] font-bold uppercase tracking-wider mb-2">Specialization</span>
-            <span className="font-bold text-[#1E293B]">Criminal Lawyer</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
-        <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">
-          Recent Activity
-        </h2>
-
-        <div className="space-y-6">
-          {timeline.map((item, index) => (
-            <div
-              key={index}
-              className="flex items-start gap-4 group"
-            >
-              <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold shadow-sm shrink-0 group-hover:scale-110 transition-transform">
-                {index + 1}
-              </div>
-              <div className="flex-1 bg-[#F8FAFC] p-4 rounded-2xl border border-[#E2E8F0] group-hover:bg-white group-hover:shadow-md transition-all">
-                <span className="font-bold text-[#1E293B]">{item}</span>
-              </div>
+      {!loading && assignedAdvocate && (
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
+          <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+              <User className="w-5 h-5" />
             </div>
-          ))}
+            Assigned Advocate
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-5 hover:bg-white hover:shadow-md transition-all">
+              <span className="block text-xs text-[#64748B] font-bold uppercase tracking-wider mb-2">Name</span>
+              <span className="font-extrabold text-lg text-[#0F172A]">{assignedAdvocate.name}</span>
+            </div>
+            <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-5 hover:bg-white hover:shadow-md transition-all">
+              <span className="block text-xs text-[#64748B] font-bold uppercase tracking-wider mb-2">Phone</span>
+              <span className="font-bold text-[#1E293B]">{assignedAdvocate.phone}</span>
+            </div>
+            <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-5 hover:bg-white hover:shadow-md transition-all">
+              <span className="block text-xs text-[#64748B] font-bold uppercase tracking-wider mb-2">Email</span>
+              <span className="font-bold text-[#1E293B]">{assignedAdvocate.email}</span>
+            </div>
+            <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-5 hover:bg-white hover:shadow-md transition-all">
+              <span className="block text-xs text-[#64748B] font-bold uppercase tracking-wider mb-2">Specialization</span>
+              <span className="font-bold text-[#1E293B]">{assignedAdvocate.specialization}</span>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
     </div>
   );
