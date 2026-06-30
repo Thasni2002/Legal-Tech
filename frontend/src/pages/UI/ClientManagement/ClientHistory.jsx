@@ -109,7 +109,7 @@ export default function ClientHistory() {
 
     const fetchDbCases = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/case-management/");
+        const res = await fetch("http://127.0.0.1:8000/lawfirm-management/assigned-cases");
         if (res.ok) {
           const data = await res.json();
           
@@ -123,13 +123,13 @@ export default function ClientHistory() {
                 clientId: `CUST-${String(idCounter).padStart(4, '0')}`,
                 fullName: name,
                 clientName: name,
-                phone: c.contact_number || "N/A",
-                email: c.email_id || "N/A",
+                phone: "N/A",
+                email: "N/A",
                 caseStatus: c.status || "N/A",
                 caseTitle: c.case_title || "N/A",
-                caseNumber: c.case_no || "N/A",
-                courtName: c.court_name || "N/A",
-                assignedAdvocate: "Advocate",
+                caseNumber: c.case_number || "N/A",
+                courtName: c.practice_area || "N/A",
+                assignedAdvocate: c.advocate_name || "Advocate",
               };
               idCounter++;
             }
@@ -153,9 +153,9 @@ export default function ClientHistory() {
             type: "case",
             title: "Case Created / Updated",
             desc: client
-              ? `Case '${item.case_title || item.case_no}' under court '${item.court_name}' is currently '${item.status}'.`
-              : `Client: ${item.client_name || "Unknown"} - Case '${item.case_title || item.case_no}' under court '${item.court_name}' is currently '${item.status}'.`,
-            documents: item.documents || [],
+              ? `Case '${item.case_title || item.case_number}' under court '${item.practice_area}' is currently '${item.status}'.`
+              : `Client: ${item.client_name || "Unknown"} - Case '${item.case_title || item.case_number}' under court '${item.practice_area}' is currently '${item.status}'.`,
+            documents: item.assigned_documents || [],
             date: item.created_at ? item.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
             time: item.created_at ? item.created_at.split("T")[1].substring(0, 5) : "10:00",
             badge: item.status || "Active",
@@ -169,7 +169,7 @@ export default function ClientHistory() {
           // Extract documents from each matched case and map as document history items
           const docItems = [];
           matchedCases.forEach(item => {
-            const docs = Array.isArray(item.documents) ? item.documents : [];
+            const docs = Array.isArray(item.assigned_documents) ? item.assigned_documents : [];
             docs.forEach((doc, idx) => {
               if (!doc.file && !doc.url) return; // skip empty entries
               docItems.push({
@@ -177,11 +177,11 @@ export default function ClientHistory() {
                 type: "document",
                 title: doc.documentType || "Document Uploaded",
                 fileName: doc.file || "File",
-                caseName: item.case_title || item.case_no,
-                courtName: item.court_name,
+                caseName: item.case_title || item.case_number,
+                courtName: item.practice_area,
                 desc: client
-                  ? `Document '${doc.file || doc.url || "File"}' uploaded for case '${item.case_title || item.case_no}' (${item.court_name}).`
-                  : `Client: ${item.client_name || "Unknown"} — '${doc.file || doc.url || "File"}' for case '${item.case_title || item.case_no}'.`,
+                  ? `Document '${doc.file || doc.url || "File"}' uploaded for case '${item.case_title || item.case_number}' (${item.practice_area}).`
+                  : `Client: ${item.client_name || "Unknown"} — '${doc.file || doc.url || "File"}' for case '${item.case_title || item.case_number}'.`,
                 date: item.created_at ? item.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
                 time: item.created_at ? item.created_at.split("T")[1]?.substring(0, 5) : "10:00",
                 badge: doc.documentType || "Document",

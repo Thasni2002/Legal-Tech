@@ -71,6 +71,14 @@ export default function AssignedCasesView() {
   const [modalViewMode, setModalViewMode] = useState("full");
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const user = getLoggedInUser();
+
+  const isAssignedAdvocate = (caseItem) => {
+    if (!caseItem || !user) return false;
+    const advName = caseItem.advocateName || caseItem.advocate_name;
+    if (!advName) return false;
+    return user.username === advName.toLowerCase().replace(/[^a-z0-9]/g, "");
+  };
 
   // Upload state
   const [uploadLoading, setUploadLoading] = useState(false);
@@ -109,7 +117,8 @@ export default function AssignedCasesView() {
         id: item.id,
         title: item.case_title,
         caseNo: item.case_number,
-        client: item.advocate_name,
+        client: item.client_name || "N/A",
+        advocateName: item.advocate_name,
         court: item.practice_area,
         hearing: item.due_date || "No hearing date",
         status: item.status || "Active",
@@ -173,7 +182,8 @@ export default function AssignedCasesView() {
 
   // ── VIEW: check doc.view permission ──
   const handleViewDocument = (doc) => {
-    if (doc.view === false) return; // blocked
+    const assignedAdv = isAssignedAdvocate(selectedCase);
+    if (assignedAdv && doc.view === false) return; // blocked
     setSelectedDocument(doc);
     const url = doc.url || doc.file_path;
     if (url) {
@@ -188,7 +198,8 @@ export default function AssignedCasesView() {
 
   // ── DOWNLOAD: check doc.view permission ──
   const handleDownloadDocument = (doc) => {
-    if (!doc || doc.view === false) return; // blocked
+    const assignedAdv = isAssignedAdvocate(selectedCase);
+    if (!doc || (assignedAdv && doc.view === false)) return; // blocked
     const url = doc.url || doc.file_path;
     if (url) {
       const a = document.createElement("a");
@@ -216,6 +227,8 @@ export default function AssignedCasesView() {
   // We allow upload if any document in the case has upload=true
   const caseAllowsUpload = (caseItem) => {
     if (!caseItem?.documents?.length) return false;
+    const assignedAdv = isAssignedAdvocate(caseItem);
+    if (!assignedAdv) return true; // bypass for admin/senior roles
     return caseItem.documents.some((d) => d.upload === true);
   };
 
@@ -225,23 +238,52 @@ export default function AssignedCasesView() {
 
     setUploadLoading(true);
     try {
-      // Optimistic update: add new document entry to local state
-      const newDoc = {
-        file: file.name,
-        documentType: "Uploaded",
-        view: true,
-        upload: true,
-        edit: true,
-        delete: true,
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64Url = reader.result;
+        const newDoc = {
+          file: file.name,
+          documentType: "Uploaded",
+          url: base64Url,
+          view: true,
+          upload: true,
+          edit: true,
+          delete: true,
+        };
+        const updatedDocs = [...(selectedCase.documents || []), newDoc];
+        const updatedCase = { ...selectedCase, documents: updatedDocs };
+
+        // Save to backend database
+        const saveRes = await fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases/${selectedCase.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            case_name: selectedCase.title,
+            case_number: selectedCase.caseNo,
+            case_title: selectedCase.title,
+            advocate_name: selectedCase.advocateName,
+            client_name: selectedCase.client,
+            practice_area: selectedCase.court,
+            priority: selectedCase.priority || "Normal",
+            due_date: selectedCase.hearing === "No hearing date" ? "" : selectedCase.hearing,
+            assignment_notes: selectedCase.notes,
+            status: selectedCase.status,
+            assigned_documents: updatedDocs
+          })
+        });
+
+        if (saveRes.ok) {
+          setSelectedCase(updatedCase);
+          setCases((prev) =>
+            prev.map((c) => (c.id === selectedCase.id ? updatedCase : c))
+          );
+          setUploadSuccess(true);
+          setTimeout(() => setUploadSuccess(false), 3000);
+        } else {
+          alert("Failed to save uploaded document to database.");
+        }
       };
-      const updatedDocs = [...(selectedCase.documents || []), newDoc];
-      const updatedCase = { ...selectedCase, documents: updatedDocs };
-      setSelectedCase(updatedCase);
-      setCases((prev) =>
-        prev.map((c) => (c.id === selectedCase.id ? updatedCase : c))
-      );
-      setUploadSuccess(true);
-      setTimeout(() => setUploadSuccess(false), 3000);
+      reader.readAsDataURL(file);
     } catch (err) {
       console.error("Upload failed:", err);
       alert("Upload failed. Please try again.");
@@ -263,12 +305,40 @@ export default function AssignedCasesView() {
       i === editingDocIdx ? { ...d, file: editingDocName } : d
     );
     const updatedCase = { ...selectedCase, documents: updatedDocs };
-    setSelectedCase(updatedCase);
-    setCases((prev) =>
-      prev.map((c) => (c.id === selectedCase.id ? updatedCase : c))
-    );
-    setEditingDocIdx(null);
-    setEditingDocName("");
+
+    try {
+      const saveRes = await fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases/${selectedCase.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          case_name: selectedCase.title,
+          case_number: selectedCase.caseNo,
+          case_title: selectedCase.title,
+          advocate_name: selectedCase.advocateName,
+          client_name: selectedCase.client,
+          practice_area: selectedCase.court,
+          priority: selectedCase.priority || "Normal",
+          due_date: selectedCase.hearing === "No hearing date" ? "" : selectedCase.hearing,
+          assignment_notes: selectedCase.notes,
+          status: selectedCase.status,
+          assigned_documents: updatedDocs
+        })
+      });
+
+      if (saveRes.ok) {
+        setSelectedCase(updatedCase);
+        setCases((prev) =>
+          prev.map((c) => (c.id === selectedCase.id ? updatedCase : c))
+        );
+        setEditingDocIdx(null);
+        setEditingDocName("");
+      } else {
+        alert("Failed to save changes to database.");
+      }
+    } catch (err) {
+      console.error("Failed to rename document:", err);
+      alert("Failed to rename document.");
+    }
   };
 
   // ── DELETE document: check doc.delete ──
@@ -276,15 +346,42 @@ export default function AssignedCasesView() {
     if (!selectedCase) return;
     const updatedDocs = selectedCase.documents.filter((_, i) => i !== docIdx);
     const updatedCase = { ...selectedCase, documents: updatedDocs };
-    setSelectedCase(updatedCase);
-    setCases((prev) =>
-      prev.map((c) => (c.id === selectedCase.id ? updatedCase : c))
-    );
-    // If the deleted doc was the selected preview, clear it
-    if (selectedDocument === selectedCase.documents[docIdx]) {
-      setSelectedDocument(null);
+
+    try {
+      const saveRes = await fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases/${selectedCase.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          case_name: selectedCase.title,
+          case_number: selectedCase.caseNo,
+          case_title: selectedCase.title,
+          advocate_name: selectedCase.advocateName,
+          client_name: selectedCase.client,
+          practice_area: selectedCase.court,
+          priority: selectedCase.priority || "Normal",
+          due_date: selectedCase.hearing === "No hearing date" ? "" : selectedCase.hearing,
+          assignment_notes: selectedCase.notes,
+          status: selectedCase.status,
+          assigned_documents: updatedDocs
+        })
+      });
+
+      if (saveRes.ok) {
+        setSelectedCase(updatedCase);
+        setCases((prev) =>
+          prev.map((c) => (c.id === selectedCase.id ? updatedCase : c))
+        );
+        if (selectedDocument === selectedCase.documents[docIdx]) {
+          setSelectedDocument(null);
+        }
+        setDocDeleteIdx(null);
+      } else {
+        alert("Failed to delete document from database.");
+      }
+    } catch (err) {
+      console.error("Failed to delete document:", err);
+      alert("Failed to delete document.");
     }
-    setDocDeleteIdx(null);
   };
 
   // ── DELETE assigned case ──
@@ -631,11 +728,12 @@ export default function AssignedCasesView() {
                   <div className={`space-y-2 overflow-y-auto flex-1 pr-1 ${modalViewMode === "full" ? "max-h-[220px]" : ""}`}>
                     {selectedCase.documents?.length > 0 ? (
                       selectedCase.documents.map((doc, idx) => {
-                        const isSelected = selectedDocument?.file === doc.file;
-                        const isLocked = doc.view === false;
-                        const canEdit = doc.edit === true;
-                        const canDelete = doc.delete === true;
-                        const isEditingThis = editingDocIdx === idx;
+                         const isSelected = selectedDocument?.file === doc.file;
+                         const assignedAdv = isAssignedAdvocate(selectedCase);
+                         const isLocked = assignedAdv && doc.view === false;
+                         const canEdit = !assignedAdv || doc.edit === true;
+                         const canDelete = !assignedAdv || doc.delete === true;
+                         const isEditingThis = editingDocIdx === idx;
 
                         return (
                           <div
