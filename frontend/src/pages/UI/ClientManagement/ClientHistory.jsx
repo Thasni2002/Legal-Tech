@@ -181,6 +181,7 @@ export default function ClientHistory() {
                 fileName: doc.file || "File",
                 caseName: item.case_title || item.case_no,
                 courtName: item.court_name,
+                clientName: item.client_name || "Unknown",
                 desc: client
                   ? `Document '${doc.file || doc.url || "File"}' uploaded for case '${item.case_title || item.case_no}' (${item.court_name}).`
                   : `Client: ${item.client_name || "Unknown"} — '${doc.file || doc.url || "File"}' for case '${item.case_title || item.case_no}'.`,
@@ -435,31 +436,26 @@ export default function ClientHistory() {
           {/* Client Navigation List Card */}
           <div className="bg-white rounded-xl border border-[#E2E8F0] p-5 shadow-sm">
             <h3 className="font-bold text-[#0F172A] text-sm mb-3">Filter by Client</h3>
-            <div className="space-y-1">
-              <button
-                onClick={() => setClient(null)}
-                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                  client === null
-                    ? "bg-blue-50 text-blue-600 border border-blue-100"
-                    : "text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#0F172A]"
-                }`}
-              >
-                All Clients
-              </button>
+            <select
+              value={client ? (client.clientName || client.fullName) : "all"}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "all") {
+                  setClient(null);
+                } else {
+                  const selected = allClientsList.find((c) => (c.clientName || c.fullName) === val);
+                  setClient(selected);
+                }
+              }}
+              className="w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-xs text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200 cursor-pointer font-semibold"
+            >
+              <option value="all">All Clients</option>
               {allClientsList.map((c) => (
-                <button
-                  key={c.clientId}
-                  onClick={() => setClient(c)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                    client?.clientName === c.clientName
-                      ? "bg-blue-50 text-blue-600 border border-blue-100"
-                      : "text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#0F172A]"
-                  }`}
-                >
-                  {c.clientName}
-                </button>
+                <option key={c.clientId} value={c.clientName || c.fullName}>
+                  {c.clientName || c.fullName}
+                </option>
               ))}
-            </div>
+            </select>
           </div>
 
           {/* Client Specific Details Card */}
@@ -678,6 +674,12 @@ export default function ClientHistory() {
 
                         {item.type === "document" ? (
                           <p className="text-xs text-[#64748B] leading-relaxed font-medium">
+                            {!client && (
+                              <>
+                                <span className="font-bold text-[#0F172A]">Client: {item.clientName || "Unknown"}</span>
+                                <span className="text-[#E2E8F0] mx-2">&bull;</span>
+                              </>
+                            )}
                             Document{" "}
                             <button
                               onClick={(e) => {

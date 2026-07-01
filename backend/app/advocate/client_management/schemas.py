@@ -15,7 +15,10 @@ class ClientCreate(BaseModel):
     email: str
     phone: str
 
+from typing import Optional
+
 class ClientUpdate(BaseModel):
+    original_name: Optional[str] = None
     full_name: str
     email: str
     phone: str

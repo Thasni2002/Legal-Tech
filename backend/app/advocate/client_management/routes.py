@@ -187,16 +187,56 @@ def create_client(client: ClientCreate, db: Session = Depends(get_db)):
 # Update client details
 @router.put("/{client_id}", response_model=ClientResponse)
 def update_client(client_id: str, client: ClientUpdate, db: Session = Depends(get_db)):
-    db_client = db.query(Client).filter(Client.client_id == client_id).first()
-    if not db_client:
-        raise HTTPException(status_code=404, detail="Client not found")
+    updated_any = False
     
-    db_client.full_name = client.full_name
-    db_client.email = client.email
-    db_client.phone = client.phone
-    db.commit()
-    db.refresh(db_client)
-    return db_client
+    # 1. Update clients table if found
+    db_client = db.query(Client).filter(Client.client_id == client_id).first()
+    if db_client:
+        db_client.full_name = client.full_name
+        db_client.email = client.email
+        db_client.phone = client.phone
+        db.commit()
+        db.refresh(db_client)
+        updated_any = True
+
+    # 2. Update case_management_cases, invoices, and consultations
+    if client.original_name:
+        from app.advocate.case_management.models import Case as CaseMgmtCase
+        from app.advocate.finance_management.models import Invoice
+        from app.advocate.consultations.models import Consultation
+
+        # Update Case Management Cases
+        cases_updated = db.query(CaseMgmtCase).filter(CaseMgmtCase.client_name == client.original_name).update({
+            CaseMgmtCase.client_name: client.full_name,
+            CaseMgmtCase.contact_number: client.phone,
+            CaseMgmtCase.email_id: client.email
+        }, synchronize_session=False)
+
+        # Update Invoices
+        db.query(Invoice).filter(Invoice.client_name == client.original_name).update({
+            Invoice.client_name: client.full_name
+        }, synchronize_session=False)
+
+        # Update Consultations
+        db.query(Consultation).filter(Consultation.client_name == client.original_name).update({
+            Consultation.client_name: client.full_name
+        }, synchronize_session=False)
+
+        db.commit()
+        
+        if cases_updated > 0:
+            updated_any = True
+
+    if not updated_any and not db_client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    return ClientResponse(
+        id=db_client.id if db_client else 1,
+        client_id=client_id,
+        full_name=client.full_name,
+        email=client.email,
+        phone=client.phone
+    )
 
 
 # Delete client
