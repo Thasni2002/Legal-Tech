@@ -96,7 +96,8 @@ export default function ConsultationsView() {
                         if (cName && !uniqueClientsMap.has(cName)) {
                             uniqueClientsMap.set(cName, {
                                 id: cName, // use name as unique id since we dedupe by name
-                                clientName: cName
+                                clientName: cName,
+                                emailId: c.emailId || c.email_id || ""
                             });
                         }
                     });
@@ -168,8 +169,12 @@ export default function ConsultationsView() {
             return;
         }
 
+        const selectedClient = clients.find(c => c.clientName === clientName);
+        const clientEmail = selectedClient ? selectedClient.emailId : "";
+
         const startData = {
             client_name: clientName,
+            client_email: clientEmail,
             type: consultationType,
             date: consultationDate,
             time: consultationTime,

@@ -17,6 +17,7 @@ class ConsultationCreate(ConsultationBase):
 
 class ConsultationStart(BaseModel):
     client_name: str
+    client_email: Optional[str] = None
     type: str
     date: date_type
     time: str
