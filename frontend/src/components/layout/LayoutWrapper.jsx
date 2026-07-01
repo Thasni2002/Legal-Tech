@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/sidebar";
 import Navbar from "@/components/layout/navbar";
 import { getLoggedInUser } from "@/utils/auth";
+import FloatingAIIcon from "@/components/common/FloatingAIIcon";
 
 // Pages that should NOT show the sidebar/navbar
 const AUTH_ROUTES = ["/login", "/register"];
@@ -91,6 +92,7 @@ export default function LayoutWrapper({ children }) {
         <Navbar />
         <main className="flex-1 p-4 md:p-6 lg:p-12">{children}</main>
       </div>
+      <FloatingAIIcon />
     </div>
   );
 }

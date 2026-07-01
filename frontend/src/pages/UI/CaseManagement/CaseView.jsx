@@ -289,11 +289,9 @@ export default function CaseView() {
       </div>
 
       {/* ──── QUICK ACCESS CARDS ──── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         {[
           { title: "AI Legal Assistant", desc: "Get intelligent legal answers.", color: "from-[#7C3AED] to-[#6d28d9]", path: "/ai-assistant" },
-          { title: "Judgment Summary", desc: "Summarize judgments & key points.", color: "from-[#16A34A] to-[#15803d]", path: "/judgment-summary" },
-          { title: "Legal Research", desc: "Search laws, acts & provisions.", color: "from-[#2563EB] to-[#1d4ed8]", path: "/legal-research" },
           { title: "Document Generation", desc: "Generate legal documents with AI.", color: "from-[#D97706] to-[#b45309]", path: "/document-generation" },
         ].map((card) => (
           <button
