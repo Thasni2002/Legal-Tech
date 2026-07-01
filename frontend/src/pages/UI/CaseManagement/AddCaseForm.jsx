@@ -53,8 +53,9 @@ export default function AddCaseForm() {
   // Success popup
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
-
   const [selectedAdvocate, setSelectedAdvocate] = useState("");
+  const [clientMode, setClientMode] = useState(""); // "" | "new" | "existing"
+  const [existingClients, setExistingClients] = useState([]);
 
   // ─── Fetch case data for edit mode ───
   async function fetchCaseForEdit(id) {
@@ -92,6 +93,7 @@ export default function AddCaseForm() {
           delete: d.delete !== undefined ? d.delete : true,
         })));
       }
+      setClientMode("new"); // Force show fields in edit mode
     } catch (err) {
       console.error("Error loading case:", err);
       alert("Failed to load case data.");
@@ -100,7 +102,39 @@ export default function AddCaseForm() {
     }
   }
 
+  // ─── Fetch existing clients ───
+  const fetchClients = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/case-management/`);
+      const data = await res.json();
+      const casesArray = Array.isArray(data)
+        ? data
+        : Array.isArray(data.results)
+        ? data.results
+        : Array.isArray(data.data)
+        ? data.data
+        : [];
+      
+      const uniqueClients = [];
+      const seen = new Set();
+      casesArray.forEach(c => {
+        if (c.client_name && !seen.has(c.client_name.toLowerCase())) {
+          seen.add(c.client_name.toLowerCase());
+          uniqueClients.push({
+            clientName: c.client_name,
+            contactNumber: c.contact_number || "",
+            emailId: c.email_id || "",
+          });
+        }
+      });
+      setExistingClients(uniqueClients);
+    } catch (err) {
+      console.error("Failed to fetch clients:", err);
+    }
+  };
+
   useEffect(() => {
+    fetchClients();
     if (isEditMode) {
       fetchCaseForEdit(editId);
     }
@@ -160,13 +194,36 @@ export default function AddCaseForm() {
       case "courtType":
         if (!value) return "Please select a Court Type";
         return "";
+      case "nextHearingDate":
+        if (!value) return "Date is required";
+        return "";
       default:
         return "";
     }
   }
 
+  const handleExistingClientChange = (e) => {
+    const selectedName = e.target.value;
+    if (!selectedName) {
+      setFormData(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "" }));
+      return;
+    }
+    const client = existingClients.find(c => c.clientName === selectedName);
+    if (client) {
+      setFormData(prev => ({
+        ...prev,
+        clientName: client.clientName,
+        contactNumber: client.contactNumber,
+        emailId: client.emailId,
+      }));
+      setErrors(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "" }));
+    } else {
+      setFormData(prev => ({ ...prev, clientName: selectedName, contactNumber: "", emailId: "" }));
+    }
+  };
+
   function validateAll() {
-    const fields = ["cnrNumber", "caseId", "caseTitle", "caseNo", "caseType", "caseDes", "clientName", "contactNumber", "emailId", "courtName", "courtType"];
+    const fields = ["cnrNumber", "caseId", "caseTitle", "caseNo", "caseType", "caseDes", "clientName", "contactNumber", "emailId", "courtName", "courtType", "nextHearingDate"];
     const newErrors = {};
     const newTouched = {};
     let valid = true;
@@ -232,6 +289,11 @@ export default function AddCaseForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (clientMode === "") {
+      alert("Please select New Client or Existing Client and fill the details.");
+      return;
+    }
 
     if (!validateAll()) return;
 
@@ -324,6 +386,7 @@ export default function AddCaseForm() {
         ]);
 
         setSelectedAdvocate("");
+        setClientMode("");
         
       }
     } catch (error) {
@@ -397,8 +460,89 @@ export default function AddCaseForm() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Case Details */}
+          {/* Client Information */}
           <div className="space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">Client Details</h3>
+              <div className="flex bg-[#F1F5F9] rounded-lg p-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setClientMode("new");
+                    setFormData(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "" }));
+                    setErrors(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "" }));
+                    setTouched(prev => ({ ...prev, clientName: false, contactNumber: false, emailId: false }));
+                  }}
+                  className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${clientMode === "new" ? "bg-white text-[#2563EB] shadow-sm" : "text-[#64748B] hover:text-[#0F172A]"}`}
+                >
+                  New Client
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setClientMode("existing");
+                    setFormData(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "" }));
+                    setErrors(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "" }));
+                    setTouched(prev => ({ ...prev, clientName: false, contactNumber: false, emailId: false }));
+                  }}
+                  className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${clientMode === "existing" ? "bg-white text-[#2563EB] shadow-sm" : "text-[#64748B] hover:text-[#0F172A]"}`}
+                >
+                  Existing Client
+                </button>
+              </div>
+            </div>
+
+            {clientMode === "existing" && (
+              <div className="mb-5">
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Select Existing Client</label>
+                <select
+                  onChange={handleExistingClientChange}
+                  value={formData.clientName}
+                  className={baseInputClass}
+                >
+                  <option value="">— Select Client —</option>
+                  {existingClients.map((c, i) => (
+                    <option key={i} value={c.clientName}>{c.clientName} ({c.contactNumber || "No contact"})</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {clientMode !== "" && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div>
+                  <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Client Name</label>
+                  <input type="text" name="clientName" placeholder="Full Name" value={formData.clientName} onChange={handleChange}
+                    readOnly={clientMode === "existing"}
+                    className={`${baseInputClass} ${getBorderClass("clientName")} ${clientMode === "existing" ? "bg-gray-50" : ""}`} />
+                  {touched.clientName && errors.clientName && <ErrorMsg message={errors.clientName} />}
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Contact Number</label>
+                  <input type="tel" name="contactNumber" placeholder="e.g. 9876543210" value={formData.contactNumber} onChange={handleChange}
+                    readOnly={clientMode === "existing"}
+                    className={`${baseInputClass} ${getBorderClass("contactNumber")} ${clientMode === "existing" ? "bg-gray-50" : ""}`} />
+                  {touched.contactNumber && errors.contactNumber && <ErrorMsg message={errors.contactNumber} />}
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Email Address</label>
+                  <input type="email" name="emailId" placeholder="client@example.com" value={formData.emailId} onChange={handleChange}
+                    readOnly={clientMode === "existing"}
+                    className={`${baseInputClass} ${getBorderClass("emailId")} ${clientMode === "existing" ? "bg-gray-50" : ""}`} />
+                  {touched.emailId && errors.emailId && <ErrorMsg message={errors.emailId} />}
+                </div>
+              </div>
+            )}
+            
+            {clientMode === "" && (
+              <div className="py-8 text-center border-2 border-dashed border-[#E2E8F0] rounded-xl bg-[#F8FAFC]">
+                <p className="text-sm text-[#64748B] font-medium">Please select New Client or Existing Client to proceed.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Case Details */}
+          <div className="space-y-5 pt-4 border-t border-[#F1F5F9]">
             <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">
               Case Details
             </h3>
@@ -483,9 +627,9 @@ export default function AddCaseForm() {
                 {touched.caseType && errors.caseType && <ErrorMsg message={errors.caseType} />}
               </div>
 
-              {/* Next Hearing Date */}
+              {/* Date */}
               <div>
-                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Next Hearing Date</label>
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Date</label>
                 <input
                   type="date"
                   name="nextHearingDate"
@@ -512,30 +656,7 @@ export default function AddCaseForm() {
             </div>
           </div>
 
-          {/* Client Information */}
-          <div className="space-y-5 pt-4 border-t border-[#F1F5F9]">
-            <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">Client Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <div>
-                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Client Name</label>
-                <input type="text" name="clientName" placeholder="Full Name" value={formData.clientName} onChange={handleChange}
-                  className={`${baseInputClass} ${getBorderClass("clientName")}`} />
-                {touched.clientName && errors.clientName && <ErrorMsg message={errors.clientName} />}
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Contact Number</label>
-                <input type="tel" name="contactNumber" placeholder="e.g. 9876543210" value={formData.contactNumber} onChange={handleChange}
-                  className={`${baseInputClass} ${getBorderClass("contactNumber")}`} />
-                {touched.contactNumber && errors.contactNumber && <ErrorMsg message={errors.contactNumber} />}
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Email Address</label>
-                <input type="email" name="emailId" placeholder="client@example.com" value={formData.emailId} onChange={handleChange}
-                  className={`${baseInputClass} ${getBorderClass("emailId")}`} />
-                {touched.emailId && errors.emailId && <ErrorMsg message={errors.emailId} />}
-              </div>
-            </div>
-          </div>
+
 
           {/* Court Information */}
           <div className="space-y-5 pt-4 border-t border-[#F1F5F9]">

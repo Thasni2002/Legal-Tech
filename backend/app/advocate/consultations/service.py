@@ -1,5 +1,8 @@
 from sqlalchemy.orm import Session
 from typing import Optional
+from fastapi import BackgroundTasks
+import asyncio
+from app.utils.email import send_email
 from .models import Consultation
 from .schemas import ConsultationCreate, ConsultationReschedule, ConsultationStart
 from app.authapp.models import User
@@ -141,7 +144,7 @@ def update_consultation_status(db: Session, consultation_id: int, status: str):
     db.refresh(consultation)
     return consultation
 
-def start_instant_consultation(db: Session, data: ConsultationStart, advocate_id: Optional[int] = None, advocate_name: Optional[str] = None):
+def start_instant_consultation(db: Session, data: ConsultationStart, background_tasks: BackgroundTasks, advocate_id: Optional[int] = None, advocate_name: Optional[str] = None):
     # Lookup client ID by client_name
     client_id = None
     if data.client_name:
@@ -162,6 +165,44 @@ def start_instant_consultation(db: Session, data: ConsultationStart, advocate_id
     db.add(new_consultation)
     db.commit()
     db.refresh(new_consultation)
+    
+    # Send Email to client
+    if data.client_email:
+        advocate_display = advocate_name if advocate_name else "Senior Advocate"
+        subject = f"Action Required: Consultation Scheduled with {advocate_display}"
+        
+        # We assume frontend runs on localhost:3000 for development. You can change this using env vars later.
+        frontend_url = "http://localhost:3000"
+        
+        html_body = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #2563EB;">Consultation Scheduled</h2>
+                <p>Hello <strong>{data.client_name}</strong>,</p>
+                <p>A new consultation has been scheduled for you by {advocate_display}. Please review the details below:</p>
+                
+                <div style="background-color: #F8FAFC; padding: 15px; border-radius: 8px; border: 1px solid #E2E8F0; margin: 20px 0;">
+                    <p style="margin: 5px 0;"><strong>Date:</strong> {data.date}</p>
+                    <p style="margin: 5px 0;"><strong>Time:</strong> {data.time}</p>
+                    <p style="margin: 5px 0;"><strong>Type:</strong> {data.type}</p>
+                </div>
+                
+                <p>Please confirm your availability by clicking one of the buttons below:</p>
+                
+                <div style="margin-top: 30px; display: flex; gap: 15px;">
+                    <a href="{frontend_url}/client-action?id={new_consultation.id}&action=approve" style="background-color: #16A34A; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Approve</a>
+                    <a href="{frontend_url}/client-action?id={new_consultation.id}&action=reschedule" style="background-color: #D97706; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; margin-left: 10px;">Reschedule</a>
+                </div>
+                
+                <p style="margin-top: 40px; font-size: 12px; color: #64748B;">This is an automated message. Please do not reply directly to this email.</p>
+            </body>
+        </html>
+        """
+        
+        # fastapi-mail async functions must be awaited in a sync block or wrapped properly.
+        # Since we are adding it to BackgroundTasks, we can just pass the async function directly.
+        background_tasks.add_task(send_email, to_email=data.client_email, subject=subject, body=html_body)
+
     return new_consultation
 
 def delete_consultation(db: Session, consultation_id: int) -> bool:
