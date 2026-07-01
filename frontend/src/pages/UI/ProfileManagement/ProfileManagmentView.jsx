@@ -7,6 +7,14 @@ import SelectField from "@/components/SelectField/SelectField";
 import { getLoggedInUser } from "@/utils/auth";
 
 export default function ProfileManagmentView({ onSubmit, onCancel, initialData }) {
+  const specializationOptionsMap = {
+    "Civil Law": ["Property Disputes", "Contracts", "Torts", "Consumer Protection"],
+    "Criminal Law": ["Bail Matters", "Cyber Crime", "White Collar Crime", "Narcotics"],
+    "Corporate Law": ["Mergers & Acquisitions", "Intellectual Property", "Taxation", "Compliance"],
+    "Family Law": ["Divorce", "Child Custody", "Alimony", "Domestic Violence"],
+    "Property Law": ["Real Estate", "Land Disputes", "Tenant Rights", "Wills & Estates"]
+  };
+
   const [formData, setFormData] = useState({
     advocateName: "",
     barCouncilId: "",
@@ -32,18 +40,79 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
     ...initialData,
   });
 
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+
+  function validateField(name, value) {
+    switch (name) {
+      case "advocateName": if (!value.trim()) return "Advocate Name is required"; return "";
+      case "barCouncilId": if (!value.trim()) return "Bar Council ID is required"; if (!/^K\/\d{1,5}\/\d{4}$/i.test(value.trim())) return "Must be Kerala format (e.g., K/1234/2023)"; return "";
+      case "enrollmentNumber": if (!value.trim()) return "Enrollment Number is required"; if (!/^K\/\d{1,5}\/\d{4}$/i.test(value.trim())) return "Must be Kerala format (e.g., K/1234/2023)"; return "";
+      case "phoneNumber": if (value && !/^\d{10}$/.test(value)) return "Phone Number must be 10 digits"; return "";
+      case "aadhaarNumber": if (value && !/^\d{12}$/.test(value)) return "Aadhaar Number must be 12 digits"; return "";
+      case "emailAddress": if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Invalid email address"; return "";
+      case "panNumber": if (value && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(value)) return "Invalid PAN Number format (e.g. ABCDE1234F)"; return "";
+      case "practiceArea": if (!value.trim()) return "Practice Area is required"; return "";
+      case "courtType": if (!value.trim()) return "Court Type is required"; return "";
+      case "city": if (!value.trim()) return "City is required"; return "";
+      case "state": if (!value.trim()) return "State is required"; return "";
+      case "pincode": if (value && !/^\d{6}$/.test(value)) return "Pincode must be 6 digits"; return "";
+      case "chambersAddress": if (!value.trim()) return "Chambers Address is required"; return "";
+      case "yearsOfExperience": if (value && (isNaN(value) || Number(value) < 0)) return "Experience must be positive"; return "";
+      default: return "";
+    }
+  }
+
+  function validateAll() {
+    const fields = ["advocateName", "barCouncilId", "enrollmentNumber", "phoneNumber", "emailAddress", "aadhaarNumber", "practiceArea", "courtType", "yearsOfExperience", "city", "state", "pincode", "chambersAddress"];
+    const newErrors = {};
+    const newTouched = {};
+    let valid = true;
+    fields.forEach((field) => {
+      const err = validateField(field, formData[field] || "");
+      newErrors[field] = err;
+      newTouched[field] = true;
+      if (err) valid = false;
+    });
+    setErrors(newErrors);
+    setTouched(newTouched);
+    return valid;
+  }
+
   const [user, setUser] = useState(null);
 
   useEffect(() => {
     setUser(getLoggedInUser());
   }, []);
 
+  const getSpecializationOptions = () => {
+    return formData?.practiceArea && specializationOptionsMap[formData.practiceArea] 
+      ? specializationOptionsMap[formData.practiceArea] 
+      : ["Select Practice Area first"];
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    const numberFields = ["phoneNumber", "aadhaarNumber", "pincode", "yearsOfExperience"];
+    if (numberFields.includes(name)) {
+      if (!/^\d*$/.test(value)) return;
+    }
+
+    let finalValue = value;
+    if (name === "panNumber") {
+      finalValue = value.toUpperCase();
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: finalValue,
+      ...(name === "practiceArea" ? { specialization: "" } : {})
     }));
+
+    const error = validateField(name, finalValue);
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    setErrors((prev) => ({ ...prev, [name]: error }));
   };
 
   const handleImageChange = (e) => {
@@ -62,6 +131,7 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!validateAll()) return;
     if (onSubmit) {
       onSubmit(formData);
     }
@@ -125,6 +195,7 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div>
               <InputField
                 label="Advocate Name"
                 placeholder="Enter Advocate Name"
@@ -132,23 +203,38 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
                 value={formData.advocateName}
                 onChange={handleChange}
               />
+              {touched.advocateName && errors.advocateName && (
+                <p className="text-red-500 text-sm mt-1">{errors.advocateName}</p>
+              )}
+            </div>
 
+              <div>
               <InputField
                 label="Bar Council ID"
-                placeholder="Enter Bar Council ID"
+                placeholder="e.g. K/1234/2023"
                 name="barCouncilId"
                 value={formData.barCouncilId}
                 onChange={handleChange}
               />
+              {touched.barCouncilId && errors.barCouncilId && (
+                <p className="text-red-500 text-sm mt-1">{errors.barCouncilId}</p>
+              )}
+            </div>
 
+              <div>
               <InputField
                 label="Enrollment Number"
-                placeholder="Enter Enrollment Number"
+                placeholder="e.g. K/1234/2023"
                 name="enrollmentNumber"
                 value={formData.enrollmentNumber}
                 onChange={handleChange}
               />
+              {touched.enrollmentNumber && errors.enrollmentNumber && (
+                <p className="text-red-500 text-sm mt-1">{errors.enrollmentNumber}</p>
+              )}
+            </div>
 
+              <div>
               <InputField
                 label="Phone Number"
                 placeholder="Enter Phone Number"
@@ -156,16 +242,26 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
                 value={formData.phoneNumber}
                 onChange={handleChange}
               />
+              {touched.phoneNumber && errors.phoneNumber && (
+                <p className="text-red-500 text-sm mt-1">{errors.phoneNumber}</p>
+              )}
+            </div>
 
+              <div>
               <InputField
                 label="Email Address"
                 type="email"
-                placeholder="Enter Email Address"
+                placeholder="e.g. example@email.com"
                 name="emailAddress"
                 value={formData.emailAddress}
                 onChange={handleChange}
               />
+              {touched.emailAddress && errors.emailAddress && (
+                <p className="text-red-500 text-sm mt-1">{errors.emailAddress}</p>
+              )}
+            </div>
 
+              <div>
               <InputField
                 label="Date of Birth"
                 type="date"
@@ -173,7 +269,12 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
                 value={formData.dateOfBirth}
                 onChange={handleChange}
               />
+              {touched.dateOfBirth && errors.dateOfBirth && (
+                <p className="text-red-500 text-sm mt-1">{errors.dateOfBirth}</p>
+              )}
+            </div>
 
+              <div>
               <SelectField
                 label="Gender"
                 options={["Male", "Female", "Other"]}
@@ -181,7 +282,12 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
                 value={formData.gender}
                 onChange={handleChange}
               />
+              {touched.gender && errors.gender && (
+                <p className="text-red-500 text-sm mt-1">{errors.gender}</p>
+              )}
+            </div>
 
+              <div>
               <InputField
                 label="Aadhaar Number"
                 placeholder="Enter Aadhaar Number"
@@ -189,14 +295,23 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
                 value={formData.aadhaarNumber}
                 onChange={handleChange}
               />
+              {touched.aadhaarNumber && errors.aadhaarNumber && (
+                <p className="text-red-500 text-sm mt-1">{errors.aadhaarNumber}</p>
+              )}
+            </div>
 
+              <div>
               <InputField
                 label="PAN Number"
-                placeholder="Enter PAN Number"
+                placeholder="e.g. ABCDE1234F"
                 name="panNumber"
                 value={formData.panNumber}
                 onChange={handleChange}
               />
+              {touched.panNumber && errors.panNumber && (
+                <p className="text-red-500 text-sm mt-1">{errors.panNumber}</p>
+              )}
+            </div>
             </div>
           </div>
 
@@ -208,6 +323,7 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div>
               <SelectField
                 label="Practice Area"
                 options={[
@@ -221,7 +337,12 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
                 value={formData.practiceArea}
                 onChange={handleChange}
               />
+              {touched.practiceArea && errors.practiceArea && (
+                <p className="text-red-500 text-sm mt-1">{errors.practiceArea}</p>
+              )}
+            </div>
 
+              <div>
               <SelectField
                 label="Court Type"
                 options={[
@@ -233,7 +354,12 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
                 value={formData.courtType}
                 onChange={handleChange}
               />
+              {touched.courtType && errors.courtType && (
+                <p className="text-red-500 text-sm mt-1">{errors.courtType}</p>
+              )}
+            </div>
 
+              <div>
               <InputField
                 label="Years of Experience"
                 type="number"
@@ -242,30 +368,24 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
                 value={formData.yearsOfExperience}
                 onChange={handleChange}
               />
+              {touched.yearsOfExperience && errors.yearsOfExperience && (
+                <p className="text-red-500 text-sm mt-1">{errors.yearsOfExperience}</p>
+              )}
+            </div>
 
-              <InputField
-                label="Languages Known"
-                placeholder="English, Hindi, Malayalam"
-                name="languagesKnown"
-                value={formData.languagesKnown}
-                onChange={handleChange}
-              />
-
-              <InputField
-                label="Law Firm Name"
-                placeholder="Enter Law Firm Name"
-                name="lawFirmName"
-                value={formData.lawFirmName}
-                onChange={handleChange}
-              />
-
-              <InputField
+              <div>
+              <SelectField
                 label="Specialization"
-                placeholder="Enter Specialization"
+                options={getSpecializationOptions()}
                 name="specialization"
                 value={formData.specialization}
                 onChange={handleChange}
+                disabled={!formData.practiceArea}
               />
+              {touched.specialization && errors.specialization && (
+                <p className="text-red-500 text-sm mt-1">{errors.specialization}</p>
+              )}
+            </div>
             </div>
           </div>
 
@@ -277,6 +397,7 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div>
               <InputField
                 label="City"
                 placeholder="Enter City"
@@ -284,7 +405,12 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
                 value={formData.city}
                 onChange={handleChange}
               />
+              {touched.city && errors.city && (
+                <p className="text-red-500 text-sm mt-1">{errors.city}</p>
+              )}
+            </div>
 
+              <div>
               <InputField
                 label="State"
                 placeholder="Enter State"
@@ -292,7 +418,12 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
                 value={formData.state}
                 onChange={handleChange}
               />
+              {touched.state && errors.state && (
+                <p className="text-red-500 text-sm mt-1">{errors.state}</p>
+              )}
+            </div>
 
+              <div>
               <InputField
                 label="Pincode"
                 placeholder="Enter Pincode"
@@ -300,6 +431,10 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
                 value={formData.pincode}
                 onChange={handleChange}
               />
+              {touched.pincode && errors.pincode && (
+                <p className="text-red-500 text-sm mt-1">{errors.pincode}</p>
+              )}
+            </div>
             </div>
 
             <div className="mt-8">
@@ -307,14 +442,21 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
                 Chambers Address
               </label>
 
-              <textarea
+                            <div><textarea
                 rows="4"
                 placeholder="Enter Chambers Address"
-                className="w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+                className={`w-full rounded-xl border px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 outline-none transition-all duration-200 ${
+                  touched.chambersAddress && errors.chambersAddress
+                    ? "border-red-500 focus:ring-red-500/20"
+                    : "border-[#E2E8F0] focus:ring-[#2563EB]/20 focus:border-[#2563EB]"
+                }`}
                 name="chambersAddress"
                 value={formData.chambersAddress}
                 onChange={handleChange}
               />
+              {touched.chambersAddress && errors.chambersAddress && (
+                <p className="text-red-500 text-sm mt-1">{errors.chambersAddress}</p>
+              )}</div>
             </div>
           </div>
 

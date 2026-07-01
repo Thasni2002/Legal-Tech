@@ -31,6 +31,20 @@ export default function LawfirmAdd({ onCancel, initialData }) {
     });
   }
 
+  const specializationOptionsMap = {
+    "Civil Law": ["Property Disputes", "Contracts", "Torts", "Consumer Protection"],
+    "Criminal Law": ["Bail Matters", "Cyber Crime", "White Collar Crime", "Narcotics"],
+    "Corporate Law": ["Mergers & Acquisitions", "Intellectual Property", "Taxation", "Compliance"],
+    "Family Law": ["Divorce", "Child Custody", "Alimony", "Domestic Violence"],
+    "Property Law": ["Real Estate", "Land Disputes", "Tenant Rights", "Wills & Estates"]
+  };
+
+  const getSpecializationOptions = () => {
+    return formData?.practiceArea && specializationOptionsMap[formData.practiceArea] 
+      ? specializationOptionsMap[formData.practiceArea] 
+      : ["Select Practice Area first"];
+  };
+
   const [formData, setFormData] = useState({
     id: null,
     advocateName: "",
@@ -67,10 +81,12 @@ export default function LawfirmAdd({ onCancel, initialData }) {
 
       case "barCouncilId":
         if (!value.trim()) return "Bar Council ID is required";
+        if (!/^K\/\d{1,5}\/\d{4}$/i.test(value.trim())) return "Must be Kerala format (e.g., K/1234/2023)";
         return "";
 
       case "enrollmentNumber":
         if (!value.trim()) return "Enrollment Number is required";
+        if (!/^K\/\d{1,5}\/\d{4}$/i.test(value.trim())) return "Must be Kerala format (e.g., K/1234/2023)";
         return "";
 
       case "phoneNumber":
@@ -86,6 +102,11 @@ export default function LawfirmAdd({ onCancel, initialData }) {
       case "emailAddress":
         if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
           return "Invalid email address";
+        return "";
+
+      case "panNumber":
+        if (value && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(value))
+          return "Invalid PAN Number format (e.g. ABCDE1234F)";
         return "";
 
       case "practiceArea":
@@ -137,9 +158,15 @@ export default function LawfirmAdd({ onCancel, initialData }) {
       if (!/^\d*$/.test(value)) return;
     }
 
+    let finalValue = value;
+    if (name === "panNumber") {
+      finalValue = value.toUpperCase();
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: finalValue,
+      ...(name === "practiceArea" ? { specialization: "" } : {})
     }));
 
     const error = validateField(name, value);
@@ -371,6 +398,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
               <InputField
                 label="Bar Council ID"
                 name="barCouncilId"
+                placeholder="e.g. K/1234/2023"
                 value={formData.barCouncilId}
                 onChange={handleChange}
               />
@@ -384,6 +412,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
               <InputField
                 label="Enrollment Number"
                 name="enrollmentNumber"
+                placeholder="e.g. K/1234/2023"
                 value={formData.enrollmentNumber}
                 onChange={handleChange}
               />
@@ -396,6 +425,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
             <div>
               <InputField
                 label="Phone Number (Optional)"
+                placeholder="e.g. 9876543210"
                 name="phoneNumber"
                 value={formData.phoneNumber}
                 onChange={handleChange}
@@ -411,6 +441,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
               <InputField
                 label="Email Address (Optional)"
                 type="email"
+                placeholder="e.g. example@email.com"
                 name="emailAddress"
                 value={formData.emailAddress}
                 onChange={handleChange}
@@ -453,12 +484,18 @@ export default function LawfirmAdd({ onCancel, initialData }) {
             </div>
 
             {/* PAN */}
-            <InputField
-              label="PAN Number (Optional)"
-              name="panNumber"
-              value={formData.panNumber}
-              onChange={handleChange}
-            />
+            <div>
+              <InputField
+                label="PAN Number (Optional)"
+                placeholder="e.g. ABCDE1234F"
+                name="panNumber"
+                value={formData.panNumber}
+                onChange={handleChange}
+              />
+              {touched.panNumber && errors.panNumber && (
+                <p className="text-red-500 text-sm mt-1">{errors.panNumber}</p>
+              )}
+            </div>
 
           </div>
         </div>
@@ -494,6 +531,18 @@ export default function LawfirmAdd({ onCancel, initialData }) {
               )}
             </div>
 
+            {/* Specialization */}
+            <div>
+              <SelectField
+                label="Specialization (Optional)"
+                options={getSpecializationOptions()}
+                name="specialization"
+                value={formData.specialization}
+                onChange={handleChange}
+                disabled={!formData.practiceArea}
+              />
+            </div>
+
             {/* Court Type */}
             <div>
               <SelectField
@@ -526,37 +575,6 @@ export default function LawfirmAdd({ onCancel, initialData }) {
                   {errors.yearsOfExperience}
                 </p>
               )}
-            </div>
-
-            {/* Languages Known */}
-            <div>
-              <InputField
-                label="Languages Known (Optional)"
-                placeholder="English, Hindi"
-                name="languagesKnown"
-                value={formData.languagesKnown}
-                onChange={handleChange}
-              />
-            </div>
-
-            {/* Law Firm Name */}
-            <div>
-              <InputField
-                label="Law Firm Name (Optional)"
-                name="lawFirmName"
-                value={formData.lawFirmName}
-                onChange={handleChange}
-              />
-            </div>
-
-            {/* Specialization */}
-            <div>
-              <InputField
-                label="Specialization (Optional)"
-                name="specialization"
-                value={formData.specialization}
-                onChange={handleChange}
-              />
             </div>
 
             {/* Status */}

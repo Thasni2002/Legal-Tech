@@ -25,8 +25,6 @@ class Advocate(Base):
     practice_area = Column(String(100), nullable=True)
     court_type = Column(String(100), nullable=True)
     years_of_experience = Column(Integer, nullable=True)
-    languages_known = Column(String(200), nullable=True)
-    law_firm_name = Column(String(100), nullable=True)
     state = Column(String(100), nullable=True)
     pincode = Column(String(20), nullable=True)
     chambers_address = Column(String(500), nullable=True)
