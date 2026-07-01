@@ -285,13 +285,16 @@ export default function UsersView() {
             const emailId = c.emailId || c.email_id;
             const contactNumber = c.contactNumber || c.contact_number;
             
-            if (clientName && emailId && !uniqueClientsMap.has(emailId)) {
-              uniqueClientsMap.set(emailId, {
-                id: emailId, // using email as unique id
-                clientName: clientName,
-                contactNumber: contactNumber,
-                emailId: emailId
-              });
+            if (clientName) {
+              const key = `${clientName.trim().toLowerCase()}_${(emailId || "").trim().toLowerCase()}`;
+              if (!uniqueClientsMap.has(key)) {
+                uniqueClientsMap.set(key, {
+                  id: key, // using composite key as unique id
+                  clientName: clientName,
+                  contactNumber: contactNumber || "",
+                  emailId: emailId || ""
+                });
+              }
             }
           });
           setClients(Array.from(uniqueClientsMap.values()));

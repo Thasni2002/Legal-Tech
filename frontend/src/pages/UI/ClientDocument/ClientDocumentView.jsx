@@ -23,6 +23,8 @@ export default function ClientDocuments() {
   const [documents, setDocuments] = useState([]);
   const [loadingDocs, setLoadingDocs] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState(null);
+  const [matchedCases, setMatchedCases] = useState([]);
+  const [selectedCaseId, setSelectedCaseId] = useState("");
 
   const fetchClientDocs = async () => {
     try {
@@ -37,14 +39,29 @@ export default function ClientDocuments() {
       if (res.ok) {
         const casesData = await res.json();
         // Filter cases matching client name
-        const matchedCases = casesData.filter(item => {
+        const casesArray = Array.isArray(casesData)
+          ? casesData
+          : Array.isArray(casesData.results)
+          ? casesData.results
+          : Array.isArray(casesData.data)
+          ? casesData.data
+          : [];
+
+        const filtered = casesArray.filter(item => {
           const itemClientName = (item.client_name || "").trim().toLowerCase();
           return itemClientName === clientName || clientName.includes(itemClientName) || itemClientName.includes(clientName);
         });
 
+        setMatchedCases(filtered);
+
+        // Pre-select the first case if not set already
+        if (filtered.length > 0 && !selectedCaseId) {
+          setSelectedCaseId(filtered[0].id.toString());
+        }
+
         // Extract documents from matched cases
         const docItems = [];
-        matchedCases.forEach(item => {
+        filtered.forEach(item => {
           const docs = Array.isArray(item.documents) ? item.documents : [];
           docs.forEach((doc, idx) => {
             if (!doc.file && !doc.url) return; // skip empty entries
@@ -77,31 +94,157 @@ export default function ClientDocuments() {
       alert("You do not have permission to upload documents.");
       return;
     }
-    if (!documentName || !documentType || !file) {
-      alert("Please fill all fields");
+    if (!documentName || !documentType || !file || !selectedCaseId) {
+      alert("Please fill all fields and select a case");
       return;
     }
-    const newDocument = {
-      id: Date.now(),
-      name: documentName,
-      type: documentType,
-      fileName: file.name,
-      fileUrl: URL.createObjectURL(file),
-      date: new Date().toLocaleDateString(),
-      status: "Submitted",
+
+    const targetCase = matchedCases.find(c => c.id.toString() === selectedCaseId.toString());
+    if (!targetCase) {
+      alert("Selected case not found.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64Url = reader.result;
+
+      const newDoc = {
+        documentType: documentType,
+        advocate: targetCase.selected_advocate || "",
+        file: file.name,
+        url: base64Url,
+        view: true,
+        upload: true,
+        edit: true,
+        delete: true,
+      };
+
+      const existingDocs = Array.isArray(targetCase.documents) ? targetCase.documents : [];
+      const updatedDocs = [...existingDocs, newDoc];
+
+      const payload = {
+        caseId: targetCase.case_id,
+        cnrNumber: targetCase.cnr_number,
+        caseTitle: targetCase.case_title,
+        caseNo: targetCase.case_no,
+        caseType: targetCase.case_type,
+        caseDes: targetCase.case_description,
+        clientName: targetCase.client_name,
+        contactNumber: targetCase.contact_number,
+        emailId: targetCase.email_id,
+        courtName: targetCase.court_name,
+        courtType: targetCase.court_type,
+        status: targetCase.status,
+        selectedAdvocate: targetCase.selected_advocate,
+        documents: updatedDocs.map(d => ({
+          documentType: d.documentType,
+          advocate: d.advocate || "",
+          file: d.file,
+          view: d.view !== undefined ? d.view : true,
+          upload: d.upload !== undefined ? d.upload : true,
+          edit: d.edit !== undefined ? d.edit : true,
+          delete: d.delete !== undefined ? d.delete : true,
+        })),
+        nextHearingDate: targetCase.next_hearing_date,
+      };
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/case-management/${targetCase.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+          alert("Document uploaded successfully!");
+          setDocumentName("");
+          setDocumentType("");
+          setFile(null);
+          fetchClientDocs();
+        } else {
+          const errData = await response.json().catch(() => null);
+          throw new Error(errData?.detail || "Failed to upload document");
+        }
+      } catch (err) {
+        console.error("Upload document failed:", err);
+        alert(err.message || "Failed to upload document. Please try again.");
+      }
     };
-    setDocuments((prev) => [newDocument, ...prev]);
-    setDocumentName("");
-    setDocumentType("");
-    setFile(null);
+    reader.readAsDataURL(file);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (docId) => {
     if (!perms.delete) {
       alert("You do not have permission to delete documents.");
       return;
     }
-    setDocuments(documents.filter((doc) => doc.id !== id));
+
+    if (typeof docId === "string" && docId.startsWith("db-doc-")) {
+      const parts = docId.split("-");
+      const caseIdStr = parts[2];
+      const docIndex = parseInt(parts[3], 10);
+
+      const targetCase = matchedCases.find(c => c.id.toString() === caseIdStr);
+      if (!targetCase) {
+        alert("Case associated with document not found.");
+        return;
+      }
+
+      const existingDocs = Array.isArray(targetCase.documents) ? targetCase.documents : [];
+      const updatedDocs = existingDocs.filter((_, idx) => idx !== docIndex);
+
+      const payload = {
+        caseId: targetCase.case_id,
+        cnrNumber: targetCase.cnr_number,
+        caseTitle: targetCase.case_title,
+        caseNo: targetCase.case_no,
+        caseType: targetCase.case_type,
+        caseDes: targetCase.case_description,
+        clientName: targetCase.client_name,
+        contactNumber: targetCase.contact_number,
+        emailId: targetCase.email_id,
+        courtName: targetCase.court_name,
+        courtType: targetCase.court_type,
+        status: targetCase.status,
+        selectedAdvocate: targetCase.selected_advocate,
+        documents: updatedDocs.map(d => ({
+          documentType: d.documentType,
+          advocate: d.advocate || "",
+          file: d.file,
+          view: d.view !== undefined ? d.view : true,
+          upload: d.upload !== undefined ? d.upload : true,
+          edit: d.edit !== undefined ? d.edit : true,
+          delete: d.delete !== undefined ? d.delete : true,
+        })),
+        nextHearingDate: targetCase.next_hearing_date,
+      };
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/case-management/${targetCase.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+          alert("Document deleted successfully!");
+          fetchClientDocs();
+        } else {
+          const errData = await response.json().catch(() => null);
+          throw new Error(errData?.detail || "Failed to delete document");
+        }
+      } catch (err) {
+        console.error("Delete document failed:", err);
+        alert(err.message || "Failed to delete document. Please try again.");
+      }
+    } else {
+      setDocuments(documents.filter((doc) => doc.id !== docId));
+    }
   };
 
   // No view access → show access denied page
@@ -138,7 +281,19 @@ export default function ClientDocuments() {
 
         {perms.add ? (
           <>
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-4 gap-4">
+              <select
+                value={selectedCaseId}
+                onChange={(e) => setSelectedCaseId(e.target.value)}
+                className="border border-[#E2E8F0] rounded-lg p-3 bg-white"
+              >
+                <option value="">Select Associated Case</option>
+                {matchedCases.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.case_title} ({item.case_no})
+                  </option>
+                ))}
+              </select>
               <input
                 type="text"
                 placeholder="Document Title"
@@ -164,6 +319,11 @@ export default function ClientDocuments() {
                 className="border border-[#E2E8F0] rounded-lg p-2"
               />
             </div>
+            {matchedCases.length === 0 && (
+              <p className="text-xs text-red-500 mt-2">
+                ⚠️ No cases found matching your client name. Please contact your advocate to create a case for you.
+              </p>
+            )}
             <button
               onClick={handleUpload}
               className="mt-5 bg-[#2563EB] text-white px-5 py-2 rounded-lg flex items-center gap-2 cursor-pointer"

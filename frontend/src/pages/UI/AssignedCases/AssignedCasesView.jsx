@@ -589,8 +589,8 @@ export default function AssignedCasesView() {
                             onChange={(e) => handleStatusChange(item.id, e.target.value)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold border-0 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 cursor-pointer transition-colors ${getStatusSelectClass(item.status)}`}
                           >
-                            <option value="Completed" className="bg-white text-[#0F172A]">Completed</option>
-                            {/* <option value="Closed" className="bg-white text-[#0F172A]">Closed</option> */}
+                            {/* <option value="Completed" className="bg-white text-[#0F172A]">Completed</option> */}
+                            <option value="Closed" className="bg-white text-[#0F172A]">Completed</option>
                             <option value="In Progress" className="bg-white text-[#0F172A]">In Progress</option>
                             <option value="Active" className="bg-white text-[#0F172A]">Active</option>
                             {/* <option value="To Do" className="bg-white text-[#0F172A]">To Do</option> */}
