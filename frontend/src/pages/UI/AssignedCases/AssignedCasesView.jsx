@@ -220,17 +220,56 @@ export default function AssignedCasesView() {
     setUploadSuccess(false);
   };
 
-  const handleStatusChange = (caseNo, newStatus) => {
-    if (!perms.edit) return;
+  const handleStatusChange = async (id, newStatus) => {
+  if (!perms.edit) return;
+
+  try {
+    // Optional backend update
+    /*
+    await fetch(
+      `http://localhost:8000/lawfirm-management/assigned-cases/${id}/status`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: newStatus,
+        }),
+      }
+    );
+    */
+
     setCases((prevCases) =>
       prevCases.map((c) =>
-        c.caseNo === caseNo ? { ...c, status: newStatus } : c
+        c.id === id ? { ...c, status: newStatus } : c
       )
     );
-    if (selectedCase && selectedCase.caseNo === caseNo) {
-      setSelectedCase((prev) => ({ ...prev, status: newStatus }));
+
+    if (selectedCase && selectedCase.id === id) {
+      setSelectedCase((prev) => ({
+        ...prev,
+        status: newStatus,
+      }));
     }
-  };
+  } catch (error) {
+    console.error("Status update error:", error);
+  }
+};
+
+
+
+  // const handleStatusChange = (caseNo, newStatus) => {
+  //   if (!perms.edit) return;
+  //   setCases((prevCases) =>
+  //     prevCases.map((c) =>
+  //       c.caseNo === caseNo ? { ...c, status: newStatus } : c
+  //     )
+  //   );
+  //   if (selectedCase && selectedCase.caseNo === caseNo) {
+  //     setSelectedCase((prev) => ({ ...prev, status: newStatus }));
+  //   }
+  // };
 
   // ── VIEW: check doc.view permission ──
   const handleViewDocument = (doc) => {
@@ -246,6 +285,55 @@ export default function AssignedCasesView() {
       window.open(blobUrl, "_blank");
     }
   };
+
+//   const handleViewDocument = async (doc) => {
+//   if (doc.view === false) return;
+
+//   setSelectedDocument(doc);
+
+//   let fileUrl =
+//     doc.url ||
+//     doc.file_path ||
+//     doc.document_url ||
+//     doc.document ||
+//     "";
+
+//   if (!fileUrl) {
+//     console.error("No document URL found.");
+//     return;
+//   }
+
+//   // Normalize localhost
+//   if (typeof window !== "undefined") {
+//     if (window.location.hostname === "127.0.0.1") {
+//       fileUrl = fileUrl.replace("localhost:8000", "127.0.0.1:8000");
+//     } else {
+//       fileUrl = fileUrl.replace("127.0.0.1:8000", "localhost:8000");
+//     }
+//   }
+
+//   const extension = fileUrl
+//     .split("?")[0]
+//     .split(".")
+//     .pop()
+//     .toLowerCase();
+
+//   setViewerUrl(fileUrl);
+
+//   setIsPdf(extension === "pdf");
+
+//   setIsImage(
+//     [
+//       "jpg",
+//       "jpeg",
+//       "png",
+//       "gif",
+//       "bmp",
+//       "webp",
+//       "svg",
+//     ].includes(extension)
+//   );
+// };
 
   // ── DOWNLOAD: check doc.view permission ──
   const handleDownloadDocument = (doc) => {
@@ -498,14 +586,14 @@ export default function AssignedCasesView() {
                         {perms.edit ? (
                           <select
                             value={item.status}
-                            onChange={(e) => handleStatusChange(item.caseNo, e.target.value)}
+                            onChange={(e) => handleStatusChange(item.id, e.target.value)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold border-0 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 cursor-pointer transition-colors ${getStatusSelectClass(item.status)}`}
                           >
                             <option value="Completed" className="bg-white text-[#0F172A]">Completed</option>
-                            <option value="Closed" className="bg-white text-[#0F172A]">Closed</option>
+                            {/* <option value="Closed" className="bg-white text-[#0F172A]">Closed</option> */}
                             <option value="In Progress" className="bg-white text-[#0F172A]">In Progress</option>
                             <option value="Active" className="bg-white text-[#0F172A]">Active</option>
-                            <option value="To Do" className="bg-white text-[#0F172A]">To Do</option>
+                            {/* <option value="To Do" className="bg-white text-[#0F172A]">To Do</option> */}
                           </select>
                         ) : (
                           <span className={`px-3 py-1.5 rounded-lg text-xs font-bold inline-block ${getStatusBadgeClass(item.status)}`}>
@@ -874,6 +962,47 @@ export default function AssignedCasesView() {
                       </div>
 
                       {/* Doc Preview Content */}
+
+                      {/* <div className="flex-1 p-2 bg-slate-100 overflow-auto">
+
+  {!viewerUrl ? (
+    <div className="flex h-full items-center justify-center">
+      <div className="text-center">
+        <FileText className="mx-auto text-gray-400 mb-2" size={40} />
+        <p className="text-gray-500 font-semibold">
+          No Preview Available
+        </p>
+      </div>
+    </div>
+  ) : isImage ? (
+
+    <img
+      src={viewerUrl}
+      alt={selectedDocument.file}
+      className="w-full h-auto object-contain rounded-lg"
+    />
+
+  ) : isPdf ? (
+
+    <iframe
+      src={viewerUrl}
+      title={selectedDocument.file}
+      className="w-full h-[650px] rounded-lg border"
+    />
+
+  ) : (
+
+    <iframe
+      src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
+        viewerUrl
+      )}`}
+      title={selectedDocument.file}
+      className="w-full h-[650px] rounded-lg border"
+    />
+
+  )}
+
+</div> */}
                       <div className="flex-1 p-4 overflow-y-auto bg-slate-200/30 flex justify-center items-start h-full min-h-[320px]">
                         {!viewerUrl ? (
                           <div className="flex flex-col items-center justify-center py-16 gap-4 text-center w-full">
