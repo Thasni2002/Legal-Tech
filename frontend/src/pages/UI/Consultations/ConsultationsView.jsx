@@ -31,6 +31,7 @@ export default function ConsultationsView() {
     const [mounted, setMounted] = useState(false);
     const [dismissedNotifications, setDismissedNotifications] = useState([]);
     const [clients, setClients] = useState([]);
+    const [meetingLink, setMeetingLink] = useState("");
 
     const fetchConsultations = async (currentUser) => {
         try {
@@ -169,6 +170,11 @@ export default function ConsultationsView() {
             return;
         }
 
+        if (!meetingLink.trim()) {
+    alert("Please enter Google Meet link.");
+    return;
+}
+
         const selectedClient = clients.find(c => c.clientName === clientName);
         const clientEmail = selectedClient ? selectedClient.emailId : "";
 
@@ -178,6 +184,7 @@ export default function ConsultationsView() {
             type: consultationType,
             date: consultationDate,
             time: consultationTime,
+            meeting_link: meetingLink,
             status: "Pending Client"
         };
 
@@ -203,6 +210,7 @@ export default function ConsultationsView() {
                 setConsultationType("Consultation Type");
                 setConsultationDate("");
                 setConsultationTime("");
+                setMeetingLink("");
                 setSelectedTimeDate(null);
                 setShowHistory(true);
                 fetchConsultations(user);
@@ -213,6 +221,9 @@ export default function ConsultationsView() {
             console.error("Error creating consultation:", err);
             alert("Error connecting to server");
         }
+
+
+        
     };
 
     const handleDeleteConsultation = async () => {
@@ -322,20 +333,7 @@ export default function ConsultationsView() {
                     </button>
                 </div>
 
-                <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300">
-                    <div>
-                        <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-xl mb-4">📹</div>
-                        <h3 className="text-xl font-extrabold text-[#0F172A]">
-                            Video / Chat Consultation
-                        </h3>
-                        <p className="text-[#64748B] text-sm mt-2 font-medium">
-                            Start a new consultation
-                        </p>
-                    </div>
-                    <button className="w-full mt-6 bg-[#2563EB] hover:bg-[#1d4ed8] text-white py-3.5 rounded-full font-bold uppercase tracking-wider text-xs transition-colors shadow-md hover:shadow-lg active:scale-[0.98]">
-                        Start Consultation
-                    </button>
-                </div>
+            
 
                 <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 flex flex-col justify-between sm:col-span-2 xl:col-span-1 transition-transform hover:scale-[1.02] duration-300">
                     <div>
@@ -535,7 +533,7 @@ export default function ConsultationsView() {
                 <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">
                     Schedule Consultation
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                     <div className="flex flex-col">
                         <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">Client Name</label>
                         <select
@@ -589,6 +587,19 @@ export default function ConsultationsView() {
                             />
                         </div>
                     </div>
+<div className="flex flex-col">
+    <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">
+        Google Meet Link
+    </label>
+    <input
+        type="url"
+        value={meetingLink}
+        onChange={(e) => setMeetingLink(e.target.value)}
+        placeholder="Paste Google Meet link"
+        className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+    />
+</div>
+
                 </div>
                 <div className="mt-8 flex justify-end">
                     <button

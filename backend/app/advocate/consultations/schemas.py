@@ -21,6 +21,7 @@ class ConsultationStart(BaseModel):
     type: str
     date: date_type
     time: str
+    meeting_link: Optional[str] = None
     status: Optional[str] = "Pending"
 
 class ConsultationReschedule(BaseModel):
@@ -40,6 +41,7 @@ class ConsultationOut(BaseModel):
     date: date_type
     time: str
     type: str
+    meeting_link: Optional[str]
     issue: Optional[str]
     fee: Optional[str]
     status: str
