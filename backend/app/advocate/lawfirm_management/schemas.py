@@ -18,8 +18,6 @@ class AdvocateBase(BaseModel):
     pan_number: Optional[str] = Field(None, alias="panNumber")
     practice_area: Optional[str] = Field(None, alias="practiceArea")
     court_type: Optional[str] = Field(None, alias="courtType")
-    languages_known: Optional[str] = Field(None, alias="languagesKnown")
-    law_firm_name: Optional[str] = Field(None, alias="lawFirmName")
     state: Optional[str] = Field(None, alias="state")
     pincode: Optional[str] = Field(None, alias="pincode")
     chambers_address: Optional[str] = Field(None, alias="chambersAddress")
