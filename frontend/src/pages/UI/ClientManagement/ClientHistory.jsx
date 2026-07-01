@@ -25,6 +25,8 @@ import {
   ExternalLink
 } from "lucide-react";
 import { createPortal } from "react-dom";
+import { API_BASE_URL } from "@/utils/api";
+
 
 export default function ClientHistory() {
   const router = useRouter();
@@ -109,7 +111,7 @@ export default function ClientHistory() {
 
     const fetchDbCases = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/lawfirm-management/assigned-cases");
+        const res = await fetch(`${API_BASE_URL}/case-management/`);
         if (res.ok) {
           const data = await res.json();
           
@@ -123,13 +125,13 @@ export default function ClientHistory() {
                 clientId: `CUST-${String(idCounter).padStart(4, '0')}`,
                 fullName: name,
                 clientName: name,
-                phone: "N/A",
-                email: "N/A",
+                phone: c.contact_number || "N/A",
+                email: c.email_id || "N/A",
                 caseStatus: c.status || "N/A",
                 caseTitle: c.case_title || "N/A",
-                caseNumber: c.case_number || "N/A",
-                courtName: c.practice_area || "N/A",
-                assignedAdvocate: c.advocate_name || "Advocate",
+                caseNumber: c.case_no || "N/A",
+                courtName: c.court_name || "N/A",
+                assignedAdvocate: "Advocate",
               };
               idCounter++;
             }
@@ -153,11 +155,11 @@ export default function ClientHistory() {
             type: "case",
             title: "Case Created / Updated",
             desc: client
-              ? `Case '${item.case_title || item.case_number}' under court '${item.practice_area}' is currently '${item.status}'.`
-              : `Client: ${item.client_name || "Unknown"} - Case '${item.case_title || item.case_number}' under court '${item.practice_area}' is currently '${item.status}'.`,
-            documents: item.assigned_documents || [],
-            date: item.created_at ? item.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
-            time: item.created_at ? item.created_at.split("T")[1].substring(0, 5) : "10:00",
+              ? `Case '${item.case_title || item.case_no}' under court '${item.court_name}' is currently '${item.status}'.`
+              : `Client: ${item.client_name || "Unknown"} - Case '${item.case_title || item.case_no}' under court '${item.court_name}' is currently '${item.status}'.`,
+            documents: item.documents || [],
+            date: item.created_at ? item.created_at.replace(" ", "T").split("T")[0] : new Date().toISOString().split("T")[0],
+            time: item.created_at ? (item.created_at.replace(" ", "T").split("T")[1] || "10:00").substring(0, 5) : "10:00",
             badge: item.status || "Active",
           }));
 
@@ -169,7 +171,7 @@ export default function ClientHistory() {
           // Extract documents from each matched case and map as document history items
           const docItems = [];
           matchedCases.forEach(item => {
-            const docs = Array.isArray(item.assigned_documents) ? item.assigned_documents : [];
+            const docs = Array.isArray(item.documents) ? item.documents : [];
             docs.forEach((doc, idx) => {
               if (!doc.file && !doc.url) return; // skip empty entries
               docItems.push({
@@ -177,13 +179,13 @@ export default function ClientHistory() {
                 type: "document",
                 title: doc.documentType || "Document Uploaded",
                 fileName: doc.file || "File",
-                caseName: item.case_title || item.case_number,
-                courtName: item.practice_area,
+                caseName: item.case_title || item.case_no,
+                courtName: item.court_name,
                 desc: client
-                  ? `Document '${doc.file || doc.url || "File"}' uploaded for case '${item.case_title || item.case_number}' (${item.practice_area}).`
-                  : `Client: ${item.client_name || "Unknown"} — '${doc.file || doc.url || "File"}' for case '${item.case_title || item.case_number}'.`,
-                date: item.created_at ? item.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
-                time: item.created_at ? item.created_at.split("T")[1]?.substring(0, 5) : "10:00",
+                  ? `Document '${doc.file || doc.url || "File"}' uploaded for case '${item.case_title || item.case_no}' (${item.court_name}).`
+                  : `Client: ${item.client_name || "Unknown"} — '${doc.file || doc.url || "File"}' for case '${item.case_title || item.case_no}'.`,
+                date: item.created_at ? item.created_at.replace(" ", "T").split("T")[0] : new Date().toISOString().split("T")[0],
+                time: item.created_at ? (item.created_at.replace(" ", "T").split("T")[1] || "10:00").substring(0, 5) : "10:00",
                 badge: doc.documentType || "Document",
                 fileUrl: doc.url || null,
               });
@@ -202,7 +204,7 @@ export default function ClientHistory() {
 
     const fetchDbInvoices = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/finance/invoices");
+        const res = await fetch(`${API_BASE_URL}/finance/invoices`);
         if (res.ok) {
           const data = await res.json();
           const matchedInvoices = client
@@ -219,8 +221,8 @@ export default function ClientHistory() {
             desc: client
               ? `Invoice for ${item.client_name || "Client"} | Case: ${item.case_number || "N/A"} | Method: ${item.payment_method || "N/A"}.`
               : `Client: ${item.client_name || "Unknown"} | Case: ${item.case_number || "N/A"} | Method: ${item.payment_method || "N/A"}.`,
-            date: item.created_at?.split("T")[0] || new Date().toISOString().split("T")[0],
-            time: item.created_at ? item.created_at.split("T")[1].substring(0, 5) : "12:00",
+            date: item.created_at ? item.created_at.replace(" ", "T").split("T")[0] : new Date().toISOString().split("T")[0],
+            time: item.created_at ? (item.created_at.replace(" ", "T").split("T")[1] || "12:00").substring(0, 5) : "12:00",
             badge: item.status || "Pending",
             invoiceData: item,
           }));
@@ -706,10 +708,7 @@ export default function ClientHistory() {
                                     <span className="text-[9px] font-bold text-slate-500 bg-slate-200/60 px-1.5 py-0.5 rounded-full uppercase shrink-0">{doc.documentType}</span>
                                   </div>
                                   <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedDoc({ fileUrl: doc.url || null, title: doc.file, badge: doc.documentType });
-                                    }}
+                                    onClick={() => setSelectedDoc({ fileUrl: doc.url || null, title: doc.file, badge: doc.documentType })}
                                     className="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1.5 rounded-lg transition cursor-pointer shrink-0"
                                   >
                                     <Eye size={11} /> View
@@ -723,10 +722,7 @@ export default function ClientHistory() {
                         <div className="flex gap-2 mt-2 flex-wrap">
                           {item.type === "document" && (
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedDoc({ fileUrl: item.fileUrl || null, title: item.fileName || item.title, badge: item.badge });
-                              }}
+                              onClick={() => setSelectedDoc({ fileUrl: item.fileUrl || null, title: item.fileName || item.title, badge: item.badge })}
                               className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2 py-1 rounded-md transition cursor-pointer"
                             >
                               <Eye size={12} /> View Document
@@ -1025,9 +1021,19 @@ function DocumentViewerModal({ fileUrl, title, badge, onClose }) {
         </div>
         {/* Viewer Body */}
         <div className="flex-1 overflow-auto bg-slate-100 flex items-center justify-center min-h-[400px]">
-          {isPdf && viewerUrl ? (
+          {!viewerUrl ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+              <div className="w-16 h-16 bg-slate-200 text-slate-400 rounded-2xl flex items-center justify-center">
+                <FileText size={32} />
+              </div>
+              <div>
+                <p className="font-bold text-slate-700 text-sm">No preview available</p>
+                <p className="text-xs text-slate-500 mt-1">This document has no uploaded file data to preview.</p>
+              </div>
+            </div>
+          ) : isPdf ? (
             <iframe src={viewerUrl} className="w-full h-full min-h-[600px] border-0" title={title || "Document"} />
-          ) : isImage && viewerUrl ? (
+          ) : isImage ? (
             <div className="p-6">
               <img src={viewerUrl} alt={title || "Document"} className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-lg" />
             </div>

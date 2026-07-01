@@ -71,14 +71,6 @@ export default function AssignedCasesView() {
   const [modalViewMode, setModalViewMode] = useState("full");
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const user = getLoggedInUser();
-
-  const isAssignedAdvocate = (caseItem) => {
-    if (!caseItem || !user) return false;
-    const advName = caseItem.advocateName || caseItem.advocate_name;
-    if (!advName) return false;
-    return user.username === advName.toLowerCase().replace(/[^a-z0-9]/g, "");
-  };
 
   // Upload state
   const [uploadLoading, setUploadLoading] = useState(false);
@@ -92,9 +84,70 @@ export default function AssignedCasesView() {
   // Doc-level delete confirm
   const [docDeleteIdx, setDocDeleteIdx] = useState(null);
 
+  const [viewerUrl, setViewerUrl] = useState("");
+  const [isPdf, setIsPdf] = useState(false);
+  const [isImage, setIsImage] = useState(false);
+
   useEffect(() => {
     fetchAssignedCases();
   }, []);
+
+  useEffect(() => {
+    if (!selectedDocument) {
+      setViewerUrl("");
+      setIsPdf(false);
+      setIsImage(false);
+      return;
+    }
+
+    const fileUrl = selectedDocument.url || selectedDocument.file_path;
+    if (!fileUrl) {
+      setViewerUrl("");
+      setIsPdf(false);
+      setIsImage(false);
+      return;
+    }
+
+    if (fileUrl.startsWith("data:")) {
+      const mime = fileUrl.split(";")[0].split(":")[1] || "";
+      setIsImage(mime.startsWith("image/"));
+      setIsPdf(mime === "application/pdf");
+
+      try {
+        const parts = fileUrl.split(",");
+        const mimeType = parts[0].match(/:(.*?);/)[1];
+        const bstr = atob(parts[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], { type: mimeType });
+        const bUrl = URL.createObjectURL(blob);
+        setViewerUrl(bUrl);
+        return () => {
+          URL.revokeObjectURL(bUrl);
+        };
+      } catch (e) {
+        console.error("Failed to parse base64 for preview in AssignedCases:", e);
+        setViewerUrl(fileUrl);
+      }
+    } else {
+      const ext = (fileUrl || "").split(".").pop().toLowerCase().split("?")[0];
+      setIsImage(["jpg", "jpeg", "png", "webp", "gif", "bmp", "svg"].includes(ext));
+      setIsPdf(ext === "pdf");
+      
+      let normalized = fileUrl;
+      if (typeof window !== "undefined") {
+        if (window.location.hostname === "127.0.0.1") {
+          normalized = fileUrl.replace("localhost:8000", "127.0.0.1:8000");
+        } else {
+          normalized = fileUrl.replace("127.0.0.1:8000", "localhost:8000");
+        }
+      }
+      setViewerUrl(normalized);
+    }
+  }, [selectedDocument]);
 
   const fetchAssignedCases = async () => {
     try {
@@ -117,8 +170,7 @@ export default function AssignedCasesView() {
         id: item.id,
         title: item.case_title,
         caseNo: item.case_number,
-        client: item.client_name || "N/A",
-        advocateName: item.advocate_name,
+        client: item.advocate_name,
         court: item.practice_area,
         hearing: item.due_date || "No hearing date",
         status: item.status || "Active",
@@ -182,8 +234,7 @@ export default function AssignedCasesView() {
 
   // ── VIEW: check doc.view permission ──
   const handleViewDocument = (doc) => {
-    const assignedAdv = isAssignedAdvocate(selectedCase);
-    if (assignedAdv && doc.view === false) return; // blocked
+    if (doc.view === false) return; // blocked
     setSelectedDocument(doc);
     const url = doc.url || doc.file_path;
     if (url) {
@@ -198,8 +249,7 @@ export default function AssignedCasesView() {
 
   // ── DOWNLOAD: check doc.view permission ──
   const handleDownloadDocument = (doc) => {
-    const assignedAdv = isAssignedAdvocate(selectedCase);
-    if (!doc || (assignedAdv && doc.view === false)) return; // blocked
+    if (!doc || doc.view === false) return; // blocked
     const url = doc.url || doc.file_path;
     if (url) {
       const a = document.createElement("a");
@@ -227,8 +277,6 @@ export default function AssignedCasesView() {
   // We allow upload if any document in the case has upload=true
   const caseAllowsUpload = (caseItem) => {
     if (!caseItem?.documents?.length) return false;
-    const assignedAdv = isAssignedAdvocate(caseItem);
-    if (!assignedAdv) return true; // bypass for admin/senior roles
     return caseItem.documents.some((d) => d.upload === true);
   };
 
@@ -239,12 +287,11 @@ export default function AssignedCasesView() {
     setUploadLoading(true);
     try {
       const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64Url = reader.result;
+      reader.onloadend = () => {
         const newDoc = {
           file: file.name,
           documentType: "Uploaded",
-          url: base64Url,
+          url: reader.result,
           view: true,
           upload: true,
           edit: true,
@@ -252,43 +299,21 @@ export default function AssignedCasesView() {
         };
         const updatedDocs = [...(selectedCase.documents || []), newDoc];
         const updatedCase = { ...selectedCase, documents: updatedDocs };
-
-        // Save to backend database
-        const saveRes = await fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases/${selectedCase.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            case_name: selectedCase.title,
-            case_number: selectedCase.caseNo,
-            case_title: selectedCase.title,
-            advocate_name: selectedCase.advocateName,
-            client_name: selectedCase.client,
-            practice_area: selectedCase.court,
-            priority: selectedCase.priority || "Normal",
-            due_date: selectedCase.hearing === "No hearing date" ? "" : selectedCase.hearing,
-            assignment_notes: selectedCase.notes,
-            status: selectedCase.status,
-            assigned_documents: updatedDocs
-          })
-        });
-
-        if (saveRes.ok) {
-          setSelectedCase(updatedCase);
-          setCases((prev) =>
-            prev.map((c) => (c.id === selectedCase.id ? updatedCase : c))
-          );
-          setUploadSuccess(true);
-          setTimeout(() => setUploadSuccess(false), 3000);
-        } else {
-          alert("Failed to save uploaded document to database.");
-        }
+        setSelectedCase(updatedCase);
+        setCases((prev) =>
+          prev.map((c) => (c.id === selectedCase.id ? updatedCase : c))
+        );
+        setSelectedDocument(newDoc);
+        setUploadSuccess(true);
+        setUploadLoading(false);
+        setTimeout(() => setUploadSuccess(false), 3000);
       };
       reader.readAsDataURL(file);
     } catch (err) {
       console.error("Upload failed:", err);
       alert("Upload failed. Please try again.");
-    } finally {
       setUploadLoading(false);
+    } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
@@ -305,40 +330,12 @@ export default function AssignedCasesView() {
       i === editingDocIdx ? { ...d, file: editingDocName } : d
     );
     const updatedCase = { ...selectedCase, documents: updatedDocs };
-
-    try {
-      const saveRes = await fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases/${selectedCase.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          case_name: selectedCase.title,
-          case_number: selectedCase.caseNo,
-          case_title: selectedCase.title,
-          advocate_name: selectedCase.advocateName,
-          client_name: selectedCase.client,
-          practice_area: selectedCase.court,
-          priority: selectedCase.priority || "Normal",
-          due_date: selectedCase.hearing === "No hearing date" ? "" : selectedCase.hearing,
-          assignment_notes: selectedCase.notes,
-          status: selectedCase.status,
-          assigned_documents: updatedDocs
-        })
-      });
-
-      if (saveRes.ok) {
-        setSelectedCase(updatedCase);
-        setCases((prev) =>
-          prev.map((c) => (c.id === selectedCase.id ? updatedCase : c))
-        );
-        setEditingDocIdx(null);
-        setEditingDocName("");
-      } else {
-        alert("Failed to save changes to database.");
-      }
-    } catch (err) {
-      console.error("Failed to rename document:", err);
-      alert("Failed to rename document.");
-    }
+    setSelectedCase(updatedCase);
+    setCases((prev) =>
+      prev.map((c) => (c.id === selectedCase.id ? updatedCase : c))
+    );
+    setEditingDocIdx(null);
+    setEditingDocName("");
   };
 
   // ── DELETE document: check doc.delete ──
@@ -346,42 +343,15 @@ export default function AssignedCasesView() {
     if (!selectedCase) return;
     const updatedDocs = selectedCase.documents.filter((_, i) => i !== docIdx);
     const updatedCase = { ...selectedCase, documents: updatedDocs };
-
-    try {
-      const saveRes = await fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases/${selectedCase.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          case_name: selectedCase.title,
-          case_number: selectedCase.caseNo,
-          case_title: selectedCase.title,
-          advocate_name: selectedCase.advocateName,
-          client_name: selectedCase.client,
-          practice_area: selectedCase.court,
-          priority: selectedCase.priority || "Normal",
-          due_date: selectedCase.hearing === "No hearing date" ? "" : selectedCase.hearing,
-          assignment_notes: selectedCase.notes,
-          status: selectedCase.status,
-          assigned_documents: updatedDocs
-        })
-      });
-
-      if (saveRes.ok) {
-        setSelectedCase(updatedCase);
-        setCases((prev) =>
-          prev.map((c) => (c.id === selectedCase.id ? updatedCase : c))
-        );
-        if (selectedDocument === selectedCase.documents[docIdx]) {
-          setSelectedDocument(null);
-        }
-        setDocDeleteIdx(null);
-      } else {
-        alert("Failed to delete document from database.");
-      }
-    } catch (err) {
-      console.error("Failed to delete document:", err);
-      alert("Failed to delete document.");
+    setSelectedCase(updatedCase);
+    setCases((prev) =>
+      prev.map((c) => (c.id === selectedCase.id ? updatedCase : c))
+    );
+    // If the deleted doc was the selected preview, clear it
+    if (selectedDocument === selectedCase.documents[docIdx]) {
+      setSelectedDocument(null);
     }
+    setDocDeleteIdx(null);
   };
 
   // ── DELETE assigned case ──
@@ -728,12 +698,11 @@ export default function AssignedCasesView() {
                   <div className={`space-y-2 overflow-y-auto flex-1 pr-1 ${modalViewMode === "full" ? "max-h-[220px]" : ""}`}>
                     {selectedCase.documents?.length > 0 ? (
                       selectedCase.documents.map((doc, idx) => {
-                         const isSelected = selectedDocument?.file === doc.file;
-                         const assignedAdv = isAssignedAdvocate(selectedCase);
-                         const isLocked = assignedAdv && doc.view === false;
-                         const canEdit = !assignedAdv || doc.edit === true;
-                         const canDelete = !assignedAdv || doc.delete === true;
-                         const isEditingThis = editingDocIdx === idx;
+                        const isSelected = selectedDocument?.file === doc.file;
+                        const isLocked = doc.view === false;
+                        const canEdit = doc.edit === true;
+                        const canDelete = doc.delete === true;
+                        const isEditingThis = editingDocIdx === idx;
 
                         return (
                           <div
@@ -786,11 +755,6 @@ export default function AssignedCasesView() {
                                       </p>
                                       <div className="flex items-center gap-1.5 mt-0.5">
                                         <p className="text-[10px] text-[#64748B]">{doc.documentType}</p>
-                                        {isLocked && (
-                                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider text-red-500 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full">
-                                            <ShieldOff size={9} /> Restricted
-                                          </span>
-                                        )}
                                       </div>
                                     </>
                                   )}
@@ -801,11 +765,7 @@ export default function AssignedCasesView() {
                               {!isEditingThis && (
                                 <div className="flex items-center gap-1.5 ml-2 shrink-0">
                                   {/* VIEW button */}
-                                  {isLocked ? (
-                                    <span className="px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed flex items-center gap-1">
-                                      <Lock size={10} /> Locked
-                                    </span>
-                                  ) : (
+                                  {!isLocked && (
                                     <button
                                       onClick={() => handleViewDocument(doc)}
                                       className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
@@ -914,42 +874,46 @@ export default function AssignedCasesView() {
                       </div>
 
                       {/* Doc Preview Content */}
-                      <div className="flex-1 p-4 overflow-y-auto bg-slate-200/30 flex justify-center items-start">
-                        {selectedDocument.url || selectedDocument.file_path ? (
+                      <div className="flex-1 p-4 overflow-y-auto bg-slate-200/30 flex justify-center items-start h-full min-h-[320px]">
+                        {!viewerUrl ? (
+                          <div className="flex flex-col items-center justify-center py-16 gap-4 text-center w-full">
+                            <div className="w-16 h-16 bg-slate-200 text-slate-400 rounded-2xl flex items-center justify-center">
+                              <FileText size={32} />
+                            </div>
+                            <div>
+                              <p className="font-bold text-slate-700 text-sm">No preview available</p>
+                              <p className="text-xs text-slate-500 mt-1">This document has no uploaded file data to preview.</p>
+                            </div>
+                          </div>
+                        ) : isPdf ? (
                           <iframe 
-                            src={selectedDocument.url || selectedDocument.file_path} 
+                            src={viewerUrl} 
                             title={selectedDocument.file} 
-                            className="w-full min-h-[320px] rounded-xl border border-[#E2E8F0] shadow-sm bg-white" 
+                            className="w-full h-full min-h-[320px] rounded-xl border border-[#E2E8F0] shadow-sm bg-white" 
                           />
+                        ) : isImage ? (
+                          <div className="p-2 w-full flex justify-center">
+                            <img 
+                              src={viewerUrl} 
+                              alt={selectedDocument.file} 
+                              className="max-w-full max-h-[50vh] object-contain rounded-xl shadow-md bg-white" 
+                            />
+                          </div>
                         ) : (
-                          <div className="bg-white w-full shadow-sm border border-[#E2E8F0] rounded-xl p-5 min-h-[320px] font-serif text-[#0F172A] text-[11px] leading-relaxed flex flex-col relative select-none">
-                            
-                            {/* Decorative Legal Document Top Header */}
-                            <div className="border-b border-double border-slate-300 pb-2 mb-3 text-center">
-                              <p className="uppercase tracking-widest text-[8px] font-sans font-bold text-[#64748B]">IN THE COURT OF THE LAW</p>
-                              <p className="font-sans font-bold text-[9px] text-[#64748B] mt-0.5 uppercase">{selectedCase.court}</p>
-                              <div className="flex justify-between text-[7px] font-sans text-[#64748B] mt-1.5">
-                                <span>CASE: {selectedCase.caseNo}</span>
-                                <span>OFFICIAL PREVIEW</span>
-                              </div>
+                          <div className="flex flex-col items-center justify-center py-16 gap-4 text-center w-full">
+                            <div className="w-16 h-16 bg-slate-200 text-slate-400 rounded-2xl flex items-center justify-center">
+                              <FileText size={32} />
                             </div>
-
-                            {/* Document Title */}
-                            <h5 className="font-bold text-center underline text-xs mb-3 uppercase text-[#0F172A]">
-                              {selectedDocument.file?.replace('.pdf', '').replaceAll('_', ' ')}
-                            </h5>
-
-                            {/* Document Simulated Body Text */}
-                            <div className="whitespace-pre-wrap flex-1 text-[#64748B] font-serif italic border-l border-[#E2E8F0] pl-2">
-                             Document Type: {selectedDocument.documentType}
+                            <div>
+                              <p className="font-bold text-slate-700 text-sm">Preview not available</p>
+                              <p className="text-xs text-slate-500 mt-1">This file type cannot be previewed in the browser.</p>
                             </div>
-
-                            {/* Bottom stamp marker */}
-                            <div className="mt-6 border-t border-[#E2E8F0] pt-3 flex justify-between items-center text-[7px] font-sans text-[#64748B]">
-                              <span>VERIFIED VIA LEGALPORTAL</span>
-                              <span className="bg-blue-50 text-[#2563EB] px-1.5 py-0.5 rounded font-mono font-bold uppercase tracking-wider border border-blue-100">PREVIEW ONLY</span>
-                            </div>
-
+                            <button
+                              onClick={() => handleDownloadDocument(selectedDocument)}
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition cursor-pointer"
+                            >
+                              <Download size={14} /> Download File
+                            </button>
                           </div>
                         )}
                       </div>
