@@ -30,16 +30,21 @@ import {
   ExternalLink,
   CreditCard,
   IndianRupee,
-  Receipt
+  Receipt,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle
 } from "lucide-react";
 import { usePermissions } from "@/utils/usePermissions";
 import { API_BASE_URL } from "@/utils/api";
+import ClientEdit from "./ClientEdit";
 
 
 export default function ClientView() {
   const router = useRouter();
   const { hasPermission } = usePermissions();
   const [clients, setClients] = useState([]);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [metrics, setMetrics] = useState({
     totalClients: 0,
     activeClients: 0,
@@ -50,6 +55,14 @@ export default function ClientView() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [historyItems, setHistoryItems] = useState([]);
   const [activeTab, setActiveTab] = useState("all");
+  const [deleteModal, setDeleteModal] = useState({
+    show: false,
+    type: "", // "warning", "confirm", "success", "error"
+    title: "",
+    message: "",
+    clientId: null,
+    clientName: ""
+  });
 
   const formatDate = (dateString) => {
     if (!dateString) return "";
@@ -278,7 +291,30 @@ export default function ClientView() {
     fetchClients();
   }, []);
   const handleDelete = async (clientId) => {
-    alert("Client deletion is currently disabled as clients are derived from active cases.");
+    const client = clients.find(c => c.clientId === clientId);
+    if (!client) return;
+
+    const statusLower = (client.status || "").toLowerCase();
+    const isClosed = statusLower === "closed" || statusLower === "inactive";
+
+    if (!isClosed) {
+      setDeleteModal({
+        show: true,
+        type: "warning",
+        title: "Deletion Restrained",
+        message: `Only clients with closed cases can be deleted.\n"${client.clientName}" currently has an active or pending status.`
+      });
+      return;
+    }
+
+    setDeleteModal({
+      show: true,
+      type: "confirm",
+      title: "Delete Client?",
+      message: `Are you sure you want to delete client "${client.clientName}" and all their associated cases?\nThis action cannot be undone.`,
+      clientId: clientId,
+      clientName: client.clientName
+    });
   };
   return (
     <div className="w-full space-y-6 md:space-y-8 animate-fade-in pb-10">
@@ -496,7 +532,7 @@ export default function ClientView() {
                                   email: client.emailId,
                                   phone: client.contactNumber
                                 }));
-                                router.push("/client-management/edit-client");
+                                setShowEditModal(true);
                               }}
                               title="Edit Client"
                               className="p-1.5 bg-slate-100 hover:bg-amber-50 text-slate-600 hover:text-amber-600 rounded-lg cursor-pointer transition shadow-xs border border-slate-200/30 flex items-center gap-1 text-[11px] font-bold"
@@ -553,6 +589,135 @@ export default function ClientView() {
           formatTime={formatTime}
           getTypeConfig={getTypeConfig}
         />
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && createPortal(
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-[9999] p-4 animate-fade-in">
+          <ClientEdit
+            onSave={(updatedData) => {
+              fetchClients();
+              setShowEditModal(false);
+            }}
+            onCancel={() => {
+              setShowEditModal(false);
+            }}
+          />
+        </div>,
+        document.body
+      )}
+
+      {/* Custom Delete Notifications/Confirm Modal */}
+      {deleteModal.show && createPortal(
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-[10001] p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-sm w-full p-6 text-center animate-scale-up">
+            {deleteModal.type === "warning" && (
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-amber-50 border border-amber-100 text-amber-500 mb-4 shadow-sm animate-bounce-subtle">
+                <AlertTriangle className="h-8 w-8" />
+              </div>
+            )}
+            {deleteModal.type === "confirm" && (
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-50 border border-red-100 text-red-500 mb-4 shadow-sm animate-bounce-subtle">
+                <Trash2 className="h-8 w-8" />
+              </div>
+            )}
+            {deleteModal.type === "success" && (
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-500 mb-4 shadow-sm animate-bounce-subtle">
+                <CheckCircle2 className="h-8 w-8" />
+              </div>
+            )}
+            {deleteModal.type === "error" && (
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-50 border border-red-100 text-red-500 mb-4 shadow-sm animate-bounce-subtle">
+                <XCircle className="h-8 w-8" />
+              </div>
+            )}
+
+            <h3 className="text-lg font-bold text-slate-900 mb-2">
+              {deleteModal.title}
+            </h3>
+            <p className="text-xs text-slate-500 mb-6 px-2 whitespace-pre-line leading-relaxed">
+              {deleteModal.message}
+            </p>
+
+            {deleteModal.type === "confirm" ? (
+              <div className="flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setDeleteModal(prev => ({ ...prev, show: false }))}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const clientId = deleteModal.clientId;
+                    const clientName = deleteModal.clientName;
+                    setDeleteModal(prev => ({ ...prev, show: false }));
+                    
+                    try {
+                      const res = await fetch(`${API_BASE_URL}/case-management/`);
+                      if (res.ok) {
+                        const casesData = await res.json();
+                        const targetName = clientName.trim().toLowerCase();
+                        const clientCases = casesData.filter(c => {
+                          const itemClientName = (c.client_name || "").trim().toLowerCase();
+                          return itemClientName === targetName;
+                        });
+
+                        // Delete all associated cases
+                        for (const item of clientCases) {
+                          await fetch(`${API_BASE_URL}/case-management/${item.id}`, {
+                            method: "DELETE",
+                          });
+                        }
+
+                        // Delete the client record from clients db
+                        try {
+                          await fetch(`${API_BASE_URL}/clients/${clientId}`, {
+                            method: "DELETE",
+                          });
+                        } catch (err) {
+                          console.error("Failed to delete client from /clients endpoint:", err);
+                        }
+
+                        setDeleteModal({
+                          show: true,
+                          type: "success",
+                          title: "Client Deleted Successfully",
+                          message: `Client "${clientName}" and all associated cases have been successfully deleted from the system.`
+                        });
+                        fetchClients();
+                      } else {
+                        throw new Error("Failed to fetch cases");
+                      }
+                    } catch (err) {
+                      console.error("Error deleting client:", err);
+                      setDeleteModal({
+                        show: true,
+                        type: "error",
+                        title: "Deletion Failed",
+                        message: "Failed to delete the client and associated cases. Please try again."
+                      });
+                    }
+                  }}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-lg font-semibold text-sm shadow-sm transition-all duration-200 cursor-pointer"
+                >
+                  Yes, Delete
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setDeleteModal(prev => ({ ...prev, show: false }))}
+                className="w-full bg-[#2563EB] hover:bg-[#1d4ed8] text-white py-2.5 rounded-lg font-semibold text-sm shadow-sm transition-all duration-200 cursor-pointer"
+              >
+                OK
+              </button>
+            )}
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
