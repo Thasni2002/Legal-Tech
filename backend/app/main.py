@@ -19,6 +19,13 @@ from app.utils.scheduler import start_scheduler
 
 app = FastAPI()
 
+from fastapi.staticfiles import StaticFiles
+# Mount uploads directory to serve files statically
+uploads_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
+if not os.path.exists(uploads_dir):
+    os.makedirs(uploads_dir)
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     print("VALIDATION ERROR:", exc.errors())

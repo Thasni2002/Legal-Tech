@@ -918,19 +918,20 @@ function DocumentViewerModal({ fileUrl, title, badge, onClose }) {
     return url;
   };
 
-  const normalizedUrl = normalizeUrl(fileUrl);
+  const effectiveUrl = fileUrl || (title && (title.includes(".") || title.toLowerCase().endsWith(".pdf") || title.toLowerCase().endsWith(".jpg") || title.toLowerCase().endsWith(".png") || title.toLowerCase().endsWith(".jpeg")) ? `http://localhost:8000/uploads/${title}` : "");
+  const normalizedUrl = normalizeUrl(effectiveUrl);
 
   useEffect(() => {
-    if (!fileUrl) return;
+    if (!effectiveUrl) return;
 
     // Detect file type
-    if (fileUrl.startsWith("data:")) {
-      const mime = fileUrl.split(";")[0].split(":")[1] || "";
+    if (effectiveUrl.startsWith("data:")) {
+      const mime = effectiveUrl.split(";")[0].split(":")[1] || "";
       setIsImage(mime.startsWith("image/"));
       setIsPdf(mime === "application/pdf");
 
       try {
-        const parts = fileUrl.split(",");
+        const parts = effectiveUrl.split(",");
         const mimeType = parts[0].match(/:(.*?);/)[1];
         const bstr = atob(parts[1]);
         let n = bstr.length;
@@ -946,15 +947,15 @@ function DocumentViewerModal({ fileUrl, title, badge, onClose }) {
         };
       } catch (e) {
         console.error("Failed to parse base64 for preview:", e);
-        setViewerUrl(fileUrl);
+        setViewerUrl(effectiveUrl);
       }
     } else {
-      const ext = (fileUrl || "").split(".").pop().toLowerCase().split("?")[0];
+      const ext = (effectiveUrl || "").split(".").pop().toLowerCase().split("?")[0];
       setIsImage(["jpg", "jpeg", "png", "webp", "gif", "bmp", "svg"].includes(ext));
       setIsPdf(ext === "pdf");
       setViewerUrl(normalizedUrl);
     }
-  }, [fileUrl]);
+  }, [effectiveUrl]);
 
   const handleDownload = () => {
     if (!normalizedUrl) return;
