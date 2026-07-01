@@ -102,6 +102,7 @@ def create_consultation(db: Session, data: ConsultationCreate):
         client_name=data.client_name,
         advocate_id=advocate_id,
         advocate_name=data.advocate_name,
+
         date=data.date,
         time=data.time,
         type=data.type,
@@ -160,6 +161,8 @@ def start_instant_consultation(db: Session, data: ConsultationStart, background_
         time=data.time,
         advocate_id=advocate_id,
         advocate_name=advocate_name,
+        meeting_link=data.meeting_link,
+
         status=data.status if data.status else "Pending"
     )
     db.add(new_consultation)
@@ -185,6 +188,8 @@ def start_instant_consultation(db: Session, data: ConsultationStart, background_
                     <p style="margin: 5px 0;"><strong>Date:</strong> {data.date}</p>
                     <p style="margin: 5px 0;"><strong>Time:</strong> {data.time}</p>
                     <p style="margin: 5px 0;"><strong>Type:</strong> {data.type}</p>
+                       <p style="margin: 5px 0;"><strong>Google Meet:</strong> 
+                       <a href="{data.meeting_link}">{data.meeting_link}</a></p>
                 </div>
                 
                 <p>Please confirm your availability by clicking one of the buttons below:</p>
@@ -193,6 +198,8 @@ def start_instant_consultation(db: Session, data: ConsultationStart, background_
                     <a href="{frontend_url}/client-action?id={new_consultation.id}&action=approve" style="background-color: #16A34A; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Approve</a>
                     <a href="{frontend_url}/client-action?id={new_consultation.id}&action=reschedule" style="background-color: #D97706; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; margin-left: 10px;">Reschedule</a>
                 </div>
+
+                
                 
                 <p style="margin-top: 40px; font-size: 12px; color: #64748B;">This is an automated message. Please do not reply directly to this email.</p>
             </body>

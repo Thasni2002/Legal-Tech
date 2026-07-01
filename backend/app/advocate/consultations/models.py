@@ -20,6 +20,7 @@ class Consultation(Base):
     date = Column(Date, nullable=False)
     time = Column(String(50), nullable=False)  # E.g., "11:00 AM"
     type = Column(String(100), nullable=False)  # "Video Call", "Chat", "Person to Person"
+    meeting_link = Column(String(500), nullable=True)
     
     # Legal matters
     issue = Column(String(255), nullable=True)  # E.g. "Civil Dispute"
@@ -41,3 +42,4 @@ class Consultation(Base):
     # Relationships
     client = relationship("User", foreign_keys=[client_id])
     advocate = relationship("User", foreign_keys=[advocate_id])
+    
