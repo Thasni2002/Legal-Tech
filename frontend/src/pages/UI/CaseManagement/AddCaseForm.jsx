@@ -56,6 +56,7 @@ export default function AddCaseForm() {
   const [selectedAdvocate, setSelectedAdvocate] = useState("");
   const [clientMode, setClientMode] = useState(""); // "" | "new" | "existing"
   const [existingClients, setExistingClients] = useState([]);
+  const [originalEmail, setOriginalEmail] = useState("");
 
   // ─── Fetch case data for edit mode ───
   async function fetchCaseForEdit(id) {
@@ -81,6 +82,7 @@ export default function AddCaseForm() {
         nextHearingDate: data.next_hearing_date || "",
       });
       setSelectedAdvocate(data.selected_advocate || "");
+      setOriginalEmail(data.email_id || "");
       if (data.documents && data.documents.length > 0) {
         setDocuments(data.documents.map(d => ({
           documentType: d.documentType || "",
@@ -187,6 +189,17 @@ export default function AddCaseForm() {
       case "emailId":
         if (!value.trim()) return "Email Address is required";
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Please enter a valid email address";
+        if (clientMode === "new") {
+          if (isEditMode && value.trim().toLowerCase() === originalEmail.trim().toLowerCase()) {
+            return "";
+          }
+          const emailExists = existingClients.some(
+            (c) => c.emailId.trim().toLowerCase() === value.trim().toLowerCase()
+          );
+          if (emailExists) {
+            return "This email is already associated with another client";
+          }
+        }
         return "";
       case "courtName":
         if (!value) return "Please select a Court Name";
