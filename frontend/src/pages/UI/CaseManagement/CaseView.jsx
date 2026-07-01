@@ -161,7 +161,6 @@ export default function CaseView() {
           case_name: selectedCase.case_title,
           case_number: selectedCase.case_no,
           case_title: selectedCase.case_title,
-          client_name: selectedCase.client_name,
           advocate_name: assignedAdvocate,
           practice_area: selectedCase.case_type || "",
           priority: "Normal",
