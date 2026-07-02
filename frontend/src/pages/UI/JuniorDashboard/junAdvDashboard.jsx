@@ -208,7 +208,7 @@ export default function JunAdvDashView() {
       <div className="grid md:grid-cols-2 gap-8">
 
         {/* Pending Tasks */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
+        {/* <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
           <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">
             Pending Tasks
           </h2>
@@ -226,10 +226,10 @@ export default function JunAdvDashView() {
               </div>
             ))}
           </div>
-        </div>
+        </div> */}
 
         {/* Recent Documents */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
+        {/* <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
           <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">
             Recent Documents
           </h2>
@@ -278,7 +278,7 @@ export default function JunAdvDashView() {
               ))
             )}
           </div>
-        </div>
+        </div> */}
 
       </div>
 

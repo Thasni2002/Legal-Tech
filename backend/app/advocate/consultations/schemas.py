@@ -22,12 +22,13 @@ class ConsultationStart(BaseModel):
     date: date_type
     time: str
     meeting_link: Optional[str] = None
-    status: Optional[str] = "Pending"
+    status: Optional[str] = "Pending Client"
 
 class ConsultationReschedule(BaseModel):
     date: date_type
     time: str
     reason: Optional[str] = None
+    status: Optional[str] = None
 
 class ConsultationUpdateStatus(BaseModel):
     status: str

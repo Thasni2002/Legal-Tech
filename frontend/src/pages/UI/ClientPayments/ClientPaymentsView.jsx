@@ -26,7 +26,7 @@ export default function ClientPayments() {
   const [clientEmail, setClientEmail] = useState("");
   const [clientName, setClientName] = useState("");
   const [authError, setAuthError] = useState("");
-  
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   // Payment modal state
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -100,8 +100,8 @@ const handlePaymentSubmit = async (invoice) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          amount: Invoice.grand_total,
-          invoice_id:Invoice.id,
+          amount: invoice.grand_total,
+          invoice_id:invoice.id,
         }),
       }
     );
@@ -109,11 +109,11 @@ const handlePaymentSubmit = async (invoice) => {
     const orderData = await orderRes.json();
 
     const options = {
-      key: "rzp_test_your_key_id",
+      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
       amount: orderData.amount,
       currency: orderData.currency,
       name: "Legal Tech",
-      description: `Invoice Payment #${Invoice.id}`,
+      description: `Invoice Payment #${invoice.id}`,
       order_id: orderData.id,
 
       handler: async function (response) {
@@ -129,7 +129,7 @@ const handlePaymentSubmit = async (invoice) => {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              invoice_id: Invoice.id,
+              invoice_id: invoice.id,
             }),
           }
         );
@@ -146,9 +146,9 @@ const handlePaymentSubmit = async (invoice) => {
       },
 
       prefill: {
-        name: Invoice.client_name,
-        email: Invoice.email,
-        contact: Invoice.mobile_number,
+        name: invoice.client_name,
+        email: invoice.email,
+        contact: invoice.mobile_number,
       },
 
       theme: {

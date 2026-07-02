@@ -51,6 +51,7 @@ class PaymentEmailSchema(BaseModel):
     gpay_number: str | None = None
     upi_id: str | None = None
     payment_link: str
+    invoice_pdf_path: Optional[str] = None
 
 
 
@@ -198,7 +199,8 @@ async def send_payment_email(data: PaymentEmailSchema):
     await send_email(
         to_email=data.email,
         subject="Legal Payment Request",
-        body=html_content
+        body=html_content,
+        attachment_path=data.invoice_pdf_path
     )
 
     return {"message": "Email sent successfully"}

@@ -36,21 +36,21 @@ export default function ClientConsultationView() {
   const [dismissedNotifications, setDismissedNotifications] = useState([]);
 
   const formatDateString = (dateStr) => {
-      if (!dateStr) return "N/A";
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return dateStr;
-      return d.toLocaleDateString("en-US", { year: 'numeric', month: 'long', day: 'numeric' });
+    if (!dateStr) return "N/A";
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString("en-US", { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
   const formatTimeString = (timeStr) => {
-      if (!timeStr) return "N/A";
-      return timeStr;
+    if (!timeStr) return "N/A";
+    return timeStr;
   };
 
   const handleDismissNotification = (id) => {
-      const newDismissed = [...dismissedNotifications, id];
-      setDismissedNotifications(newDismissed);
-      localStorage.setItem("client_dismissed_consultation_notifications", JSON.stringify(newDismissed));
+    const newDismissed = [...dismissedNotifications, id];
+    setDismissedNotifications(newDismissed);
+    localStorage.setItem("client_dismissed_consultation_notifications", JSON.stringify(newDismissed));
   };
 
   // Permission state for Consultation module
@@ -106,7 +106,8 @@ export default function ClientConsultationView() {
             item.status === "Approved" ||
             item.status === "Rescheduled" ||
             item.status === "Scheduled" ||
-            item.status === "Pending Client"
+            item.status === "Pending Client" ||
+            item.status === "Pending Advocate"
         );
         const hist = data.filter(
           (item) =>
@@ -114,7 +115,9 @@ export default function ClientConsultationView() {
             item.status === "Approved" ||
             item.status === "Pending" ||
             item.status === "Rescheduled" ||
-            item.status === "Scheduled"
+            item.status === "Scheduled" ||
+            item.status === "Pending Client" ||
+            item.status === "Pending Advocate"
         );
         setAppointments(upcoming);
         setHistory(hist);
@@ -138,7 +141,7 @@ export default function ClientConsultationView() {
           return;
         }
       }
-    } catch (_) {}
+    } catch (_) { }
 
     try {
       // 2. Fall back to role defaults
@@ -152,7 +155,7 @@ export default function ClientConsultationView() {
           return;
         }
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // 3. Default: allow (no restriction configured)
     setCanAddConsultation(true);
@@ -261,7 +264,8 @@ export default function ClientConsultationView() {
     const rescheduleData = {
       date: formData.date,
       time: formData.time,
-      reason: "Rescheduled by client",
+      reason: "Requested by client",
+      status: "Pending Advocate"
     };
 
     try {
@@ -275,7 +279,7 @@ export default function ClientConsultationView() {
       );
 
       if (res.ok) {
-        triggerSuccess("booking successfully");
+        triggerSuccess("Reschedule request sent successfully");
         setRescheduleId(null);
         setShowModal(false);
         fetchConsultations(user);
@@ -350,59 +354,58 @@ export default function ClientConsultationView() {
       </div>
 
       {/* Notifications */}
-      {mounted && history.filter(item => {
-          if (dismissedNotifications.includes(item.id)) return false;
-          const isApprovedByAdvocate = item.status === "Approved" && item.reschedule_reason === "Approved by advocate";
-          const isRescheduledByAdvocate = item.status === "Rescheduled" && item.reschedule_reason?.includes("advocate");
-          return isApprovedByAdvocate || isRescheduledByAdvocate;
+      {mounted && appointments.filter(item => {
+        if (dismissedNotifications.includes(item.id)) return false;
+        const isApprovedByAdvocate = item.status === "Approved" && item.reschedule_reason === "Approved by advocate";
+        const isRescheduledByAdvocate = item.status === "Rescheduled" && item.reschedule_reason?.includes("advocate");
+        return isApprovedByAdvocate || isRescheduledByAdvocate;
       }).length > 0 && (
           <div className="space-y-3 mb-6">
-              {history.filter(item => {
-                  if (dismissedNotifications.includes(item.id)) return false;
-                  const isApprovedByAdvocate = item.status === "Approved" && item.reschedule_reason === "Approved by advocate";
-                  const isRescheduledByAdvocate = item.status === "Rescheduled" && item.reschedule_reason?.includes("advocate");
-                  return isApprovedByAdvocate || isRescheduledByAdvocate;
-              }).map(item => {
-                  const isApproved = item.status === "Approved";
-                  return (
-                      <div
-                          key={item.id}
-                          className={`flex items-start justify-between p-4 rounded-xl border transition-all duration-300 ${
-                              isApproved 
-                                  ? "bg-emerald-50 border-emerald-200 text-emerald-900" 
-                                  : "bg-amber-50 border-amber-200 text-amber-900"
-                          }`}
-                      >
-                          <div className="flex gap-3 items-center">
-                              <span className="text-xl">{isApproved ? "✅" : "🗓️"}</span>
-                              <div>
-                                  <p className="font-semibold text-sm">
-                                      {isApproved 
-                                          ? `Your consultation request has been approved` 
-                                          : `Your consultation has been rescheduled`}
-                                  </p>
-                                  <p className="text-xs mt-0.5 opacity-90">
-                                      Scheduled for: <span className="font-medium">{formatDateString(item.date)}</span> at <span className="font-medium">{formatTimeString(item.time)}</span> ({item.type})
-                                      {!isApproved && item.reschedule_reason && (
-                                          <span className="block mt-1 font-medium italic">Reason: {item.reschedule_reason}</span>
-                                      )}
-                                  </p>
-                              </div>
-                          </div>
-                          <button
-                              onClick={() => handleDismissNotification(item.id)}
-                              className="text-gray-400 hover:text-gray-700 font-bold ml-4 text-sm leading-none focus:outline-none cursor-pointer"
-                          >
-                              ✕
-                          </button>
-                      </div>
-                  );
-              })}
+            {appointments.filter(item => {
+              if (dismissedNotifications.includes(item.id)) return false;
+              const isApprovedByAdvocate = item.status === "Approved" && item.reschedule_reason === "Approved by advocate";
+              const isRescheduledByAdvocate = item.status === "Rescheduled" && item.reschedule_reason?.includes("advocate");
+              return isApprovedByAdvocate || isRescheduledByAdvocate;
+            }).map(item => {
+              const isApproved = item.status === "Approved";
+              return (
+                <div
+                  key={item.id}
+                  className={`flex items-start justify-between p-4 rounded-xl border transition-all duration-300 ${isApproved
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                    : "bg-amber-50 border-amber-200 text-amber-900"
+                    }`}
+                >
+                  <div className="flex gap-3 items-center">
+                    <span className="text-xl">{isApproved ? "✅" : "🗓️"}</span>
+                    <div>
+                      <p className="font-semibold text-sm">
+                        {isApproved
+                          ? `Your consultation request has been approved`
+                          : `Your consultation has been rescheduled`}
+                      </p>
+                      <p className="text-xs mt-0.5 opacity-90">
+                        Scheduled for: <span className="font-medium">{formatDateString(item.date)}</span> at <span className="font-medium">{formatTimeString(item.time)}</span> ({item.type})
+                        {!isApproved && item.reschedule_reason && (
+                          <span className="block mt-1 font-medium italic">Reason: {item.reschedule_reason}</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDismissNotification(item.id)}
+                    className="text-gray-400 hover:text-gray-700 font-bold ml-4 text-sm leading-none focus:outline-none cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+              );
+            })}
           </div>
-      )}
+        )}
 
       {/* Top Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 w-full">
         {/* Book Appointment */}
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300">
           <div>
@@ -435,17 +438,7 @@ export default function ClientConsultationView() {
           )}
         </div>
 
-        {/* Video Consultation */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300">
-          <div>
-            <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-xl mb-4">📹</div>
-            <h2 className="text-xl font-extrabold text-[#0F172A]">Video Consultation</h2>
-            <p className="text-[#64748B] mt-2 text-sm font-medium">Join a video consultation with your advocate.</p>
-          </div>
-          <button className="w-full mt-6 bg-[#4F46E5] hover:bg-[#4338CA] text-white py-3.5 rounded-full font-bold uppercase tracking-wider text-xs transition-colors shadow-md hover:shadow-lg active:scale-[0.98]">
-            Join Consultation
-          </button>
-        </div>
+
 
         {/* Consultation History */}
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300">
@@ -480,15 +473,21 @@ export default function ClientConsultationView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E2E8F0] bg-white">
-              {appointments.filter(item => item.status === "Pending Client").length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="p-8 text-center text-[#64748B] font-medium">
-                    No pending consultation requests.
-                  </td>
-                </tr>
+              {appointments.filter(
+                item =>
+                  item.status === "Pending Client" ||
+                  item.status === "Rescheduled"
+              ).length === 0 ? (<tr>
+                <td colSpan="8" className="p-8 text-center text-[#64748B] font-medium">
+                  No pending consultation requests.
+                </td>
+              </tr>
               ) : (
-                appointments.filter(item => item.status === "Pending Client").map((item) => (
-                  <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors duration-150">
+appointments.filter(
+  item =>
+    item.status === "Pending Client" ||
+    item.status === "Rescheduled"
+).map((item) => (                  <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors duration-150">
                     <td className="p-4 font-bold text-[#0F172A] capitalize whitespace-nowrap">{item.client_name || item.client}</td>
                     <td className="p-4 text-sm text-[#475569] capitalize whitespace-nowrap font-medium">{item.advocate_name || item.advocate}</td>
                     <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.date}</td>
@@ -563,8 +562,8 @@ export default function ClientConsultationView() {
                     <td className="p-4 text-[#475569] text-sm whitespace-nowrap font-medium">{item.advocate}</td>
                     <td className="p-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${item.status === 'Active'
-                          ? 'bg-green-50 text-green-700 border-green-200'
-                          : 'bg-blue-50 text-blue-700 border-blue-200'
+                        ? 'bg-green-50 text-green-700 border-green-200'
+                        : 'bg-blue-50 text-blue-700 border-blue-200'
                         }`}>
                         {item.status}
                       </span>
