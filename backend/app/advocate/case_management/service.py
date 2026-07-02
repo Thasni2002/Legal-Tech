@@ -96,6 +96,13 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
         case.documents = json.dumps(
             [doc.dict() for doc in data.documents]
         )
+        try:
+            from app.advocate.lawfirm_management.models import AssignedCase
+            assigned_cases = db.query(AssignedCase).filter(AssignedCase.case_number == case.case_no).all()
+            for ac in assigned_cases:
+                ac.assigned_documents = case.documents
+        except Exception as e:
+            print(f"Error synchronizing document permissions: {e}")
     if data.nextHearingDate is not None:
         case.next_hearing_date = data.nextHearingDate
     if data.cnrNumber is not None:

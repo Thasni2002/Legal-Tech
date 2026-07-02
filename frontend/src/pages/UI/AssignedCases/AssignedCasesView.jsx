@@ -21,6 +21,7 @@ import {
   Pencil,
   ShieldOff,
   CheckCircle,
+  ExternalLink,
 } from "lucide-react";
 import useModulePermission from "@/utils/useModulePermission";
 import { getLoggedInUser } from "@/utils/auth";
@@ -87,6 +88,9 @@ export default function AssignedCasesView() {
   const [viewerUrl, setViewerUrl] = useState("");
   const [isPdf, setIsPdf] = useState(false);
   const [isImage, setIsImage] = useState(false);
+  const [isAudio, setIsAudio] = useState(false);
+  const [isVideo, setIsVideo] = useState(false);
+  const [selectedDoc, setSelectedDoc] = useState(null);
 
   useEffect(() => {
     fetchAssignedCases();
@@ -97,6 +101,8 @@ export default function AssignedCasesView() {
       setViewerUrl("");
       setIsPdf(false);
       setIsImage(false);
+      setIsAudio(false);
+      setIsVideo(false);
       return;
     }
 
@@ -105,6 +111,8 @@ export default function AssignedCasesView() {
       setViewerUrl("");
       setIsPdf(false);
       setIsImage(false);
+      setIsAudio(false);
+      setIsVideo(false);
       return;
     }
 
@@ -112,6 +120,8 @@ export default function AssignedCasesView() {
       const mime = fileUrl.split(";")[0].split(":")[1] || "";
       setIsImage(mime.startsWith("image/"));
       setIsPdf(mime === "application/pdf");
+      setIsAudio(mime.startsWith("audio/"));
+      setIsVideo(mime.startsWith("video/"));
 
       try {
         const parts = fileUrl.split(",");
@@ -133,9 +143,14 @@ export default function AssignedCasesView() {
         setViewerUrl(fileUrl);
       }
     } else {
-      const ext = (fileUrl || "").split(".").pop().toLowerCase().split("?")[0];
+      let ext = (fileUrl || "").split(".").pop().toLowerCase().split("?")[0];
+      if (fileUrl.startsWith("blob:") || ext.length > 5) {
+        ext = (selectedDocument.file || "").split(".").pop().toLowerCase().split("?")[0];
+      }
       setIsImage(["jpg", "jpeg", "png", "webp", "gif", "bmp", "svg"].includes(ext));
       setIsPdf(ext === "pdf");
+      setIsAudio(["mp3", "wav", "ogg", "aac", "m4a", "wma", "flac"].includes(ext));
+      setIsVideo(["mp4", "webm", "ogg", "mov", "avi", "mkv", "3gp"].includes(ext));
       
       let normalized = fileUrl;
       if (typeof window !== "undefined") {
@@ -170,7 +185,7 @@ export default function AssignedCasesView() {
         id: item.id,
         title: item.case_title,
         caseNo: item.case_number,
-        client: item.advocate_name,
+        client: item.client_name || "N/A",
         court: item.practice_area,
         hearing: item.due_date || "No hearing date",
         status: item.status || "Active",
@@ -275,15 +290,17 @@ export default function AssignedCasesView() {
   const handleViewDocument = (doc) => {
     if (doc.view === false) return; // blocked
     setSelectedDocument(doc);
-    const url = doc.url || doc.file_path;
-    if (url) {
-      window.open(url, "_blank");
-    } else {
+    let fileUrl = doc.url || doc.file_path || null;
+    if (!fileUrl) {
       const content = `Mock preview content for ${doc.file}\nDocument Type: ${doc.documentType}`;
       const blob = new Blob([content], { type: "text/plain" });
-      const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, "_blank");
+      fileUrl = URL.createObjectURL(blob);
     }
+    setSelectedDoc({
+      fileUrl: fileUrl,
+      title: doc.file,
+      badge: doc.documentType,
+    });
   };
 
 //   const handleViewDocument = async (doc) => {
@@ -1028,6 +1045,20 @@ export default function AssignedCasesView() {
                               className="max-w-full max-h-[50vh] object-contain rounded-xl shadow-md bg-white" 
                             />
                           </div>
+                        ) : isAudio ? (
+                          <div className="p-6 flex flex-col items-center justify-center gap-3 bg-white rounded-xl border border-slate-200 w-full max-w-sm mx-auto shadow-xs">
+                            <div className="w-12 h-12 bg-blue-50 text-[#2563EB] rounded-full flex items-center justify-center">
+                              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                              </svg>
+                            </div>
+                            <p className="font-semibold text-slate-700 text-xs text-center truncate max-w-full">{selectedDocument.file}</p>
+                            <audio controls src={viewerUrl} className="w-full focus:outline-none" />
+                          </div>
+                        ) : isVideo ? (
+                          <div className="p-2 w-full flex justify-center items-center">
+                            <video controls src={viewerUrl} className="max-w-full max-h-[50vh] rounded-xl shadow-md border border-slate-200" />
+                          </div>
                         ) : (
                           <div className="flex flex-col items-center justify-center py-16 gap-4 text-center w-full">
                             <div className="w-16 h-16 bg-slate-200 text-slate-400 rounded-2xl flex items-center justify-center">
@@ -1113,6 +1144,217 @@ export default function AssignedCasesView() {
           </div>
         </div>
       , document.body)}
+
+      {selectedDoc && (
+        <DocumentViewerModal
+          fileUrl={selectedDoc.fileUrl}
+          title={selectedDoc.title}
+          badge={selectedDoc.badge}
+          onClose={() => setSelectedDoc(null)}
+        />
+      )}
     </div>
+  );
+}
+
+function DocumentViewerModal({ fileUrl, title, badge, onClose }) {
+  const [viewerUrl, setViewerUrl] = useState("");
+  const [isPdf, setIsPdf] = useState(false);
+  const [isImage, setIsImage] = useState(false);
+  const [isAudio, setIsAudio] = useState(false);
+  const [isVideo, setIsVideo] = useState(false);
+
+  const normalizeUrl = (url) => {
+    if (!url) return "";
+    if (typeof window !== "undefined") {
+      if (window.location.hostname === "127.0.0.1") {
+        return url.replace("localhost:8000", "127.0.0.1:8000");
+      } else {
+        return url.replace("127.0.0.1:8000", "localhost:8000");
+      }
+    }
+    return url;
+  };
+
+  const effectiveUrl = fileUrl || (title && (title.includes(".") || title.toLowerCase().endsWith(".pdf") || title.toLowerCase().endsWith(".jpg") || title.toLowerCase().endsWith(".png") || title.toLowerCase().endsWith(".jpeg")) ? `http://localhost:8000/uploads/${title}` : "");
+  const normalizedUrl = normalizeUrl(effectiveUrl);
+
+  useEffect(() => {
+    if (!effectiveUrl) return;
+
+    // Detect file type
+    if (effectiveUrl.startsWith("data:")) {
+      const mime = effectiveUrl.split(";")[0].split(":")[1] || "";
+      setIsImage(mime.startsWith("image/"));
+      setIsPdf(mime === "application/pdf");
+      setIsAudio(mime.startsWith("audio/"));
+      setIsVideo(mime.startsWith("video/"));
+
+      try {
+        const parts = effectiveUrl.split(",");
+        const mimeType = parts[0].match(/:(.*?);/)[1];
+        const bstr = atob(parts[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], { type: mimeType });
+        const bUrl = URL.createObjectURL(blob);
+        setViewerUrl(bUrl);
+        return () => {
+          URL.revokeObjectURL(bUrl);
+        };
+      } catch (e) {
+        console.error("Failed to parse base64 for preview in AssignedCases viewer modal:", e);
+        setViewerUrl(effectiveUrl);
+      }
+    } else {
+      let ext = (effectiveUrl || "").split(".").pop().toLowerCase().split("?")[0];
+      if (effectiveUrl.startsWith("blob:") || ext.length > 5) {
+        ext = (title || "").split(".").pop().toLowerCase().split("?")[0];
+      }
+      setIsImage(["jpg", "jpeg", "png", "webp", "gif", "bmp", "svg"].includes(ext));
+      setIsPdf(ext === "pdf");
+      setIsAudio(["mp3", "wav", "ogg", "aac", "m4a", "wma", "flac"].includes(ext));
+      setIsVideo(["mp4", "webm", "ogg", "mov", "avi", "mkv", "3gp"].includes(ext));
+      setViewerUrl(normalizedUrl);
+    }
+  }, [effectiveUrl]);
+
+  const handleDownload = () => {
+    if (!normalizedUrl) return;
+
+    if (normalizedUrl.startsWith("data:")) {
+      try {
+        const parts = normalizedUrl.split(",");
+        const mime = parts[0].match(/:(.*?);/)[1];
+        const bstr = atob(parts[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = title || "document";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+      } catch (err) {
+        console.error("Base64 download failed, fallback to direct open:", err);
+        window.open(normalizedUrl, "_blank");
+      }
+    } else {
+      window.location.href = normalizedUrl + "?download=true";
+    }
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[99999] p-4">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl flex flex-col max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center">
+              <FileText size={16} />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-800 text-sm leading-tight">{title || "Document"}</h3>
+              {badge && (
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  {badge}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDownload}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
+            >
+              <Download size={13} /> Download
+            </button>
+            <a
+              href={normalizedUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-lg transition"
+            >
+              <ExternalLink size={13} /> Open in Tab
+            </a>
+            <button
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Viewer Body */}
+        <div className="flex-1 overflow-auto bg-slate-100 flex items-center justify-center min-h-[400px]">
+          {!viewerUrl ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+              <div className="w-16 h-16 bg-slate-200 text-slate-400 rounded-2xl flex items-center justify-center">
+                <FileText size={32} />
+              </div>
+              <div>
+                <p className="font-bold text-slate-700 text-sm">No preview available</p>
+                <p className="text-xs text-slate-500 mt-1">This document has no uploaded file data to preview.</p>
+              </div>
+            </div>
+          ) : isPdf ? (
+            <iframe
+              src={viewerUrl}
+              className="w-full h-full min-h-[600px] border-0"
+              title={title || "Document"}
+            />
+          ) : isImage ? (
+            <div className="p-6">
+              <img
+                src={viewerUrl}
+                alt={title || "Document"}
+                className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-lg"
+              />
+            </div>
+          ) : isAudio ? (
+            <div className="p-12 flex flex-col items-center justify-center gap-4 bg-white rounded-xl border border-slate-200 w-full max-w-md mx-auto my-8 shadow-sm">
+              <div className="w-16 h-16 bg-blue-50 text-[#2563EB] rounded-full flex items-center justify-center shadow-xs">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                </svg>
+              </div>
+              <p className="font-bold text-slate-700 text-sm text-center truncate max-w-full">{title}</p>
+              <audio controls src={viewerUrl} className="w-full mt-2 focus:outline-none" />
+            </div>
+          ) : isVideo ? (
+            <div className="p-6 flex items-center justify-center max-w-full w-full h-full">
+              <video controls src={viewerUrl} className="max-w-full max-h-[70vh] rounded-xl shadow-lg border border-slate-200" />
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+              <div className="w-16 h-16 bg-slate-200 text-slate-400 rounded-2xl flex items-center justify-center">
+                <FileText size={32} />
+              </div>
+              <div>
+                <p className="font-bold text-slate-700 text-sm">Preview not available</p>
+                <p className="text-xs text-slate-500 mt-1">This file type cannot be previewed in the browser.</p>
+              </div>
+              <button
+                onClick={handleDownload}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition cursor-pointer"
+              >
+                <Download size={14} /> Download File
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
