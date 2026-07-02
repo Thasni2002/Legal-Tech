@@ -103,6 +103,27 @@ def create_assigned_case(
         case_dict.get("assigned_documents", [])
     )
 
+    # Check for existing assignment to prevent duplicates
+    existing = db.query(AssignedCase).filter(
+        AssignedCase.case_number == case_data.case_number,
+        AssignedCase.advocate_name == case_data.advocate_name
+    ).first()
+
+    if existing:
+        # Update fields instead of inserting a duplicate
+        existing.case_name = case_dict.get("case_name")
+        existing.case_title = case_dict.get("case_title")
+        existing.practice_area = case_dict.get("practice_area")
+        existing.priority = case_dict.get("priority")
+        existing.due_date = case_dict.get("due_date")
+        existing.assignment_notes = case_dict.get("assignment_notes")
+        existing.status = case_dict.get("status", existing.status)
+        existing.assigned_documents = case_dict.get("assigned_documents")
+        db.commit()
+        db.refresh(existing)
+        existing.assigned_documents = json.loads(existing.assigned_documents or "[]")
+        return existing
+
     new_case = AssignedCase(
         **case_dict
     )

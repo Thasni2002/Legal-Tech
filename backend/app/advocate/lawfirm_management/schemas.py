@@ -57,6 +57,7 @@ class AssignedCaseCreate(BaseModel):
     assignment_notes: Optional[str] = None
     status: Optional[str] = "Active"
     assigned_documents: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
+    client_name: Optional[str] = None
 
 class AssignedCaseOut(AssignedCaseCreate):
     id: int

@@ -60,6 +60,36 @@ Base.metadata.create_all(bind=engine)
 def startup():
     db = SessionLocal()
     create_default_user(db)
+    
+    # Clean up duplicate assigned cases
+    try:
+        from app.advocate.lawfirm_management.models import AssignedCase
+        from sqlalchemy import func
+        duplicates = db.query(
+            AssignedCase.case_number,
+            AssignedCase.advocate_name,
+            func.max(AssignedCase.id).label('max_id')
+        ).group_by(
+            AssignedCase.case_number,
+            AssignedCase.advocate_name
+        ).having(
+            func.count(AssignedCase.id) > 1
+        ).all()
+        
+        deleted_count = 0
+        for case_num, adv_name, max_id in duplicates:
+            result = db.query(AssignedCase).filter(
+                AssignedCase.case_number == case_num,
+                AssignedCase.advocate_name == adv_name,
+                AssignedCase.id != max_id
+            ).delete(synchronize_session=False)
+            deleted_count += result
+        if deleted_count > 0:
+            db.commit()
+            print(f"Successfully cleaned up {deleted_count} duplicate assigned cases records.")
+    except Exception as e:
+        print(f"Error cleaning up duplicate assigned cases: {e}")
+        
     db.close()
 
     # Automatically add columns to existing tables if they don't exist
@@ -86,6 +116,24 @@ def startup():
                 with engine.begin() as conn:
                     conn.execute(text("ALTER TABLE consultations ADD COLUMN updated_at DATETIME NULL;"))
                 print("Successfully added updated_at column to consultations table.")
+        if inspector.has_table('assigned_cases'):
+            columns = [col['name'] for col in inspector.get_columns('assigned_cases')]
+            if 'client_name' not in columns:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE assigned_cases ADD COLUMN client_name VARCHAR(255) NULL;"))
+                print("Successfully added client_name column to assigned_cases table.")
+            # Populate client_name for existing records by joining case_management_cases
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text("""
+                        UPDATE assigned_cases ac
+                        JOIN case_management_cases c ON ac.case_number = c.case_no
+                        SET ac.client_name = c.client_name
+                        WHERE ac.client_name IS NULL;
+                    """))
+                print("Successfully updated NULL client_name fields in assigned_cases.")
+            except Exception as update_err:
+                print(f"Error updating existing client_names in assigned_cases: {update_err}")
     except Exception as e:
         print(f"Error checking/adding migration columns: {e}")
 

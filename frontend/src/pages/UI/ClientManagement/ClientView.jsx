@@ -1021,6 +1021,8 @@ function DocumentViewerModal({ fileUrl, title, badge, onClose }) {
   const [viewerUrl, setViewerUrl] = useState("");
   const [isPdf, setIsPdf] = useState(false);
   const [isImage, setIsImage] = useState(false);
+  const [isAudio, setIsAudio] = useState(false);
+  const [isVideo, setIsVideo] = useState(false);
 
   const normalizeUrl = (url) => {
     if (!url) return "";
@@ -1045,6 +1047,8 @@ function DocumentViewerModal({ fileUrl, title, badge, onClose }) {
       const mime = effectiveUrl.split(";")[0].split(":")[1] || "";
       setIsImage(mime.startsWith("image/"));
       setIsPdf(mime === "application/pdf");
+      setIsAudio(mime.startsWith("audio/"));
+      setIsVideo(mime.startsWith("video/"));
 
       try {
         const parts = effectiveUrl.split(",");
@@ -1066,9 +1070,14 @@ function DocumentViewerModal({ fileUrl, title, badge, onClose }) {
         setViewerUrl(effectiveUrl);
       }
     } else {
-      const ext = (effectiveUrl || "").split(".").pop().toLowerCase().split("?")[0];
+      let ext = (effectiveUrl || "").split(".").pop().toLowerCase().split("?")[0];
+      if (effectiveUrl.startsWith("blob:") || ext.length > 5) {
+        ext = (title || "").split(".").pop().toLowerCase().split("?")[0];
+      }
       setIsImage(["jpg", "jpeg", "png", "webp", "gif", "bmp", "svg"].includes(ext));
       setIsPdf(ext === "pdf");
+      setIsAudio(["mp3", "wav", "ogg", "aac", "m4a", "wma", "flac"].includes(ext));
+      setIsVideo(["mp4", "webm", "ogg", "mov", "avi", "mkv", "3gp"].includes(ext));
       setViewerUrl(normalizedUrl);
     }
   }, [effectiveUrl]);
@@ -1171,6 +1180,20 @@ function DocumentViewerModal({ fileUrl, title, badge, onClose }) {
                 alt={title || "Document"}
                 className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-lg"
               />
+            </div>
+          ) : isAudio ? (
+            <div className="p-12 flex flex-col items-center justify-center gap-4 bg-white rounded-xl border border-slate-200 w-full max-w-md mx-auto my-8 shadow-sm">
+              <div className="w-16 h-16 bg-blue-50 text-[#2563EB] rounded-full flex items-center justify-center shadow-xs">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                </svg>
+              </div>
+              <p className="font-bold text-slate-700 text-sm text-center truncate max-w-full">{title}</p>
+              <audio controls src={viewerUrl} className="w-full mt-2 focus:outline-none" />
+            </div>
+          ) : isVideo ? (
+            <div className="p-6 flex items-center justify-center max-w-full w-full h-full">
+              <video controls src={viewerUrl} className="max-w-full max-h-[70vh] rounded-xl shadow-lg border border-slate-200" />
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">

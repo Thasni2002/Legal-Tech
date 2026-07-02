@@ -732,6 +732,10 @@ export default function AddCaseForm() {
                     <option value="Petition">Petition</option>
                     <option value="Evidence">Evidence</option>
                     <option value="Affidavit">Affidavit</option>
+                    <option value="Audio Recording">Audio Recording</option>
+                    <option value="Video Footage">Video Footage</option>
+                    <option value="Written Document">Written Document</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
 
@@ -741,6 +745,7 @@ export default function AddCaseForm() {
                     <input
                       key={`${index}-${doc.file?.name || "empty"}`}
                       type="file"
+                      accept="audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.gif"
                       onChange={(e) => {
                         const file = e.target.files[0];
                         if (file) {

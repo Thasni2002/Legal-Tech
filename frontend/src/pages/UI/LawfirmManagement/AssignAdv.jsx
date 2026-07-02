@@ -21,6 +21,7 @@ export default function AssignAdv({ isOpen, onClose }) {
     dueDate: "",
     assignmentNotes: "",
     status: "Active",
+    clientName: "",
   });
 
   useEffect(() => {
@@ -44,6 +45,7 @@ export default function AssignAdv({ isOpen, onClose }) {
           dueDate: data.due_date || "",
           assignmentNotes: data.assignment_notes || "",
           status: data.status || "Active",
+          clientName: data.client_name || "",
         });
       } catch (error) {
         console.error("Error fetching case:", error);
@@ -84,6 +86,7 @@ export default function AssignAdv({ isOpen, onClose }) {
             name: c.case_title || `Case ${c.id}`,
             caseNumber: c.case_no || `CASE-${c.id}`,
             caseTitle: c.case_title || `Case ${c.id}`,
+            clientName: c.client_name || "",
           }));
           setCases(mappedCases);
         }
@@ -128,6 +131,7 @@ export default function AssignAdv({ isOpen, onClose }) {
         caseName: selectedValue,
         caseNumber: selectedCase.caseNumber,
         caseTitle: selectedCase.caseTitle,
+        clientName: selectedCase.clientName,
       });
     } else {
       // Reset when "Select Case" chosen
@@ -136,6 +140,7 @@ export default function AssignAdv({ isOpen, onClose }) {
         caseName: "",
         caseNumber: "",
         caseTitle: "",
+        clientName: "",
       });
     }
   };
@@ -153,6 +158,7 @@ export default function AssignAdv({ isOpen, onClose }) {
       due_date: formData.dueDate,
       assignment_notes: formData.assignmentNotes,
       status: formData.status,
+      client_name: formData.clientName,
     };
 
     try {
@@ -187,6 +193,7 @@ export default function AssignAdv({ isOpen, onClose }) {
           dueDate: "",
           assignmentNotes: "",
           status: "Active",
+          clientName: "",
         });
 
         setShowSuccess(true);

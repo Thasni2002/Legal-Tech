@@ -167,9 +167,42 @@ export default function CaseView() {
           due_date: selectedCase.next_hearing_date || "",
           assignment_notes: `Assigned from Case Management - Case #${selectedCase.case_no}`,
           status: "Active",
-          assigned_documents: selectedCase.documents || []
+          assigned_documents: selectedCase.documents || [],
+          client_name: selectedCase.client_name || ""
         }),
       });
+
+      // Also update selected_advocate in the case management record
+      await fetch(`${API_BASE_URL}/case-management/${selectedCase.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caseId: selectedCase.case_id,
+          cnrNumber: selectedCase.cnr_number,
+          caseTitle: selectedCase.case_title,
+          caseNo: selectedCase.case_no,
+          caseType: selectedCase.case_type,
+          caseDes: selectedCase.case_description,
+          clientName: selectedCase.client_name,
+          contactNumber: selectedCase.contact_number,
+          emailId: selectedCase.email_id,
+          courtName: selectedCase.court_name,
+          courtType: selectedCase.court_type,
+          status: selectedCase.status,
+          selectedAdvocate: assignedAdvocate,
+          documents: selectedCase.documents || [],
+          nextHearingDate: selectedCase.next_hearing_date
+        })
+      });
+
+      // Update local state so it renders the assigned UI immediately
+      const updatedCase = {
+        ...selectedCase,
+        selected_advocate: assignedAdvocate
+      };
+      setSelectedCase(updatedCase);
+      setCases(prev => prev.map(c => c.id === selectedCase.id ? updatedCase : c));
+
       setAssignSuccess(true);
       setTimeout(() => setAssignSuccess(false), 3000);
     } catch (e) {
@@ -229,6 +262,7 @@ export default function CaseView() {
             documentType: d.documentType,
             advocate: d.advocate || "",
             file: d.file,
+            url: d.url || "",
             view: d.view || false,
             upload: d.upload || false,
             edit: d.edit || false,
@@ -631,37 +665,83 @@ export default function CaseView() {
                       </div>
                     </div>
 
-                    {assignSuccess && (
-                      <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4">
-                        <CheckCircle size={16} className="text-green-600" />
-                        <p className="text-sm text-green-700 font-semibold">
-                          Assigned to <strong>{assignedAdvocate}</strong> successfully!
-                        </p>
+                         {selectedCase.selected_advocate ? (
+                      <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-xl p-3.5 flex items-center justify-between shadow-xs">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-[#3B82F6] text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                            {selectedCase.selected_advocate.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-[#60A5FA] uppercase tracking-wider leading-none">Assigned Junior Advocate</p>
+                            <p className="text-sm font-bold text-[#1E40AF] mt-0.5">{selectedCase.selected_advocate}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            try {
+                              // Reset advocate on server
+                              await fetch(`${API_BASE_URL}/case-management/${selectedCase.id}`, {
+                                method: "PUT",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  caseId: selectedCase.case_id,
+                                  cnrNumber: selectedCase.cnr_number,
+                                  caseTitle: selectedCase.case_title,
+                                  caseNo: selectedCase.case_no,
+                                  caseType: selectedCase.case_type,
+                                  caseDes: selectedCase.case_description,
+                                  clientName: selectedCase.client_name,
+                                  contactNumber: selectedCase.contact_number,
+                                  emailId: selectedCase.email_id,
+                                  courtName: selectedCase.court_name,
+                                  courtType: selectedCase.court_type,
+                                  status: selectedCase.status,
+                                  selectedAdvocate: "",
+                                  documents: selectedCase.documents || [],
+                                  nextHearingDate: selectedCase.next_hearing_date
+                                })
+                              });
+                              // Update local state
+                              const updatedCase = {
+                                ...selectedCase,
+                                selected_advocate: ""
+                              };
+                              setSelectedCase(updatedCase);
+                              setCases(prev => prev.map(c => c.id === selectedCase.id ? updatedCase : c));
+                              setAssignedAdvocate("");
+                            } catch (e) {
+                              console.error("Failed to unassign advocate:", e);
+                            }
+                          }}
+                          className="text-xs font-bold text-[#2563EB] hover:text-[#1d4ed8] bg-white border border-[#BFDBFE] px-3 py-1.5 rounded-lg hover:shadow-xs transition cursor-pointer"
+                        >
+                          Change
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-3">
+                        <select
+                          value={assignedAdvocate}
+                          onChange={(e) => setAssignedAdvocate(e.target.value)}
+                          className="flex-1 rounded-xl border border-[#BFDBFE] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition"
+                        >
+                          <option value="">— Select Junior Advocate —</option>
+                          {advocates.map((adv) => (
+                            <option key={adv.id} value={adv.advocateName || adv.advocate_name}>
+                              {adv.advocateName || adv.advocate_name}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={handleAssignDocument}
+                          disabled={!assignedAdvocate || assignLoading}
+                          className="flex items-center gap-2 px-5 py-2.5 bg-[#2563EB] hover:bg-[#1d4ed8] disabled:opacity-50 text-white text-sm font-bold rounded-xl transition cursor-pointer"
+                        >
+                          <Send size={14} />
+                          {assignLoading ? "Assigning..." : "Assign"}
+                        </button>
                       </div>
                     )}
-
-                    <div className="flex gap-3">
-                      <select
-                        value={assignedAdvocate}
-                        onChange={(e) => setAssignedAdvocate(e.target.value)}
-                        className="flex-1 rounded-xl border border-[#BFDBFE] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition"
-                      >
-                        <option value="">— Select Junior Advocate —</option>
-                        {advocates.map((adv) => (
-                          <option key={adv.id} value={adv.advocateName || adv.advocate_name}>
-                            {adv.advocateName || adv.advocate_name}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={handleAssignDocument}
-                        disabled={!assignedAdvocate || assignLoading}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-[#2563EB] hover:bg-[#1d4ed8] disabled:opacity-50 text-white text-sm font-bold rounded-xl transition cursor-pointer"
-                      >
-                        <Send size={14} />
-                        {assignLoading ? "Assigning..." : "Assign"}
-                      </button>
-                    </div>
                   </div>
 
                   {/* Documents list table or placeholder */}

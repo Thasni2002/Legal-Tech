@@ -47,3 +47,4 @@ class AssignedCase(Base):
     assignment_notes = Column(String(500))   
     status = Column(String(50), default="Active")
     assigned_documents = Column(LONGTEXT, nullable=True)
+    client_name = Column(String(255), nullable=True)
