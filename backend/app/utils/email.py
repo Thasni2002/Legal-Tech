@@ -16,12 +16,23 @@ conf = ConnectionConfig(
     USE_CREDENTIALS=True
 )
 
-async def send_email(to_email: str, subject: str, body: str):
+async def send_email(
+    to_email: str,
+    subject: str,
+    body: str,
+    attachment_path: str = None
+):
+    attachments = []
+
+    if attachment_path and os.path.exists(attachment_path):
+            attachments.append(attachment_path)
+
     message = MessageSchema(
         subject=subject,
         recipients=[to_email],
         body=body,
-        subtype="html"
+        subtype="html",
+        attachments=attachments
     )
 
     fm = FastMail(conf)

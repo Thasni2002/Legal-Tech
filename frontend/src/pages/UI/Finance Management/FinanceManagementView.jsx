@@ -174,7 +174,9 @@ export default function CourtFeeCalView() {
             payment_method: paymentMethod,
             gpay_number: gpayNumber,
             upi_id: upiId,
-            payment_link: `http://localhost:3000/client-payments/${savedInvoice.id}`
+            payment_link: `http://localhost:3000/client-payments/${savedInvoice.id}`,
+            invoice_pdf_path: `invoices/invoice_${savedInvoice.id}.pdf`
+
           })
         });
 
@@ -731,13 +733,13 @@ export default function CourtFeeCalView() {
                   onChange={(e) => setStampDuty(e.target.value)}
                   className="w-full border border-emerald-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
                 />
-                <input
+                {/* <input
                   type="text"
                   placeholder="State"
                   value={stampDutyState}
                   onChange={(e) => setStampDutyState(e.target.value)}
                   className="w-full border border-emerald-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-                />
+                /> */}
                 <div className="pt-2 font-bold text-emerald-700 text-lg">
                   ₹{stampDuty || 0}
                 </div>
@@ -808,13 +810,13 @@ export default function CourtFeeCalView() {
                   onChange={(e) => setFilingCost(e.target.value)}
                   className="w-full border border-purple-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
                 />
-                <input
+                {/* <input
                   type="text"
                   placeholder="Notes"
                   value={filingCostNotes}
                   onChange={(e) => setFilingCostNotes(e.target.value)}
                   className="w-full border border-purple-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
-                />
+                /> */}
                 <div className="pt-2 font-bold text-purple-700 text-lg">
                   ₹{filingCost || 0}
                 </div>

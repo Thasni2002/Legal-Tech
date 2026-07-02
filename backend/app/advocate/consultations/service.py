@@ -123,7 +123,7 @@ def reschedule_consultation(db: Session, consultation_id: int, data: Consultatio
     consultation.date = data.date
     consultation.time = data.time
     consultation.reschedule_reason = data.reason
-    consultation.status = "Rescheduled"
+    consultation.status = data.status if data.status else "Rescheduled"
     consultation.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(consultation)
@@ -139,6 +139,8 @@ def update_consultation_status(db: Session, consultation_id: int, status: str):
             consultation.reschedule_reason = "Approved by client"
         elif consultation.status == "Pending":
             consultation.reschedule_reason = "Approved by advocate"
+        elif consultation.status == "Pending Advocate":
+            consultation.reschedule_reason = "Approved client reschedule"
     consultation.status = status
     consultation.updated_at = datetime.utcnow()
     db.commit()

@@ -32,7 +32,8 @@ export default function ConsultationsView() {
     const [dismissedNotifications, setDismissedNotifications] = useState([]);
     const [clients, setClients] = useState([]);
     const [meetingLink, setMeetingLink] = useState("");
-
+    const [showScheduleSuccess, setShowScheduleSuccess] = useState(false);
+    const [showRescheduleSuccess, setShowRescheduleSuccess] = useState(false);
     const fetchConsultations = async (currentUser) => {
         try {
             let url = `${API_BASE_URL}/consultations`;
@@ -46,7 +47,7 @@ export default function ConsultationsView() {
             const res = await fetch(url);
             if (res.ok) {
                 const data = await res.json();
-                
+
                 // Mapped to match original component client name display
                 const mappedData = data.map(item => ({
                     ...item,
@@ -55,12 +56,13 @@ export default function ConsultationsView() {
 
                 // Appointments for advocate to action: Pending
                 const appts = mappedData.filter(item =>
-                    item.status === "Pending"
+                    item.status === "Pending" ||
+                    item.status === "Pending Advocate"
                 );
 
                 // History: Approved, Rescheduled, or Pending Client
                 const hist = mappedData.filter(item =>
-                    item.status === "Approved" || item.status === "Rescheduled" || item.status === "Pending Client"
+                    item.status === "Approved" || item.status === "Pending Advocate" || item.status === "Pending Client" || item.status === "Rescheduled"
                 );
 
                 setAppointments(appts);
@@ -171,9 +173,9 @@ export default function ConsultationsView() {
         }
 
         if (!meetingLink.trim()) {
-    alert("Please enter Google Meet link.");
-    return;
-}
+            alert("Please enter Google Meet link.");
+            return;
+        }
 
         const selectedClient = clients.find(c => c.clientName === clientName);
         const clientEmail = selectedClient ? selectedClient.emailId : "";
@@ -212,8 +214,9 @@ export default function ConsultationsView() {
                 setConsultationTime("");
                 setMeetingLink("");
                 setSelectedTimeDate(null);
-                setShowHistory(true);
                 fetchConsultations(user);
+                setShowScheduleSuccess(true);
+
             } else {
                 alert("Failed to start/schedule consultation");
             }
@@ -223,7 +226,7 @@ export default function ConsultationsView() {
         }
 
 
-        
+
     };
 
     const handleDeleteConsultation = async () => {
@@ -261,63 +264,95 @@ export default function ConsultationsView() {
                 </p>
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
+                <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0]">
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-xl">📊</div>
+                        <p className="text-[#64748B] font-bold uppercase tracking-wider text-xs">Total Consultations</p>
+                    </div>
+                    <h3 className="text-4xl font-extrabold text-[#0F172A] tracking-tight">
+                        {totalConsultations}
+                    </h3>
+                </div>
+                <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0]">
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center text-xl">📹</div>
+                        <p className="text-[#64748B] font-bold uppercase tracking-wider text-xs">Video Calls</p>
+                    </div>
+                    <h3 className="text-4xl font-extrabold text-[#0F172A] tracking-tight">
+                        {videoCalls}
+                    </h3>
+                </div>
+                <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0]">
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center text-xl">💬</div>
+                        <p className="text-[#64748B] font-bold uppercase tracking-wider text-xs">Chat Consultations</p>
+                    </div>
+                    <h3 className="text-4xl font-extrabold text-[#0F172A] tracking-tight">
+                        {chatConsultations}
+                    </h3>
+                </div>
+            </div>
+
             {/* Notifications */}
             {mounted && history.filter(item => {
                 if (dismissedNotifications.includes(item.id)) return false;
                 const isApprovedByClient = item.status === "Approved" && item.reschedule_reason === "Approved by client";
-                const isRescheduledByClient = item.status === "Rescheduled" && item.reschedule_reason?.includes("client");
+                const isRescheduledByClient = item.status === "Pending Advocate" && item.reschedule_reason?.includes("client");
                 return isApprovedByClient || isRescheduledByClient;
             }).length > 0 && (
-                <div className="space-y-3 mb-6">
-                    {history.filter(item => {
-                        if (dismissedNotifications.includes(item.id)) return false;
-                        const isApprovedByClient = item.status === "Approved" && item.reschedule_reason === "Approved by client";
-                        const isRescheduledByClient = item.status === "Rescheduled" && item.reschedule_reason?.includes("client");
-                        return isApprovedByClient || isRescheduledByClient;
-                    }).map(item => {
-                        const isApproved = item.status === "Approved";
-                        return (
-                            <div
-                                key={item.id}
-                                className={`flex items-start justify-between p-4 rounded-xl border transition-all duration-300 ${
-                                    isApproved 
-                                        ? "bg-emerald-50 border-emerald-200 text-emerald-900" 
+                    <div className="space-y-3 mb-6">
+                        {history.filter(item => {
+                            if (dismissedNotifications.includes(item.id)) return false;
+                            const isApprovedByClient = item.status === "Approved" && item.reschedule_reason === "Approved by client";
+                            const isRescheduledByClient = item.status === "Pending Advocate" && item.reschedule_reason?.includes("client");
+                            return isApprovedByClient || isRescheduledByClient;
+                        }).map(item => {
+                            const isApproved = item.status === "Approved";
+                            return (
+                                <div
+                                    key={item.id}
+                                    className={`flex items-start justify-between p-4 rounded-xl border transition-all duration-300 ${isApproved
+                                        ? "bg-emerald-50 border-emerald-200 text-emerald-900"
                                         : "bg-amber-50 border-amber-200 text-amber-900"
-                                }`}
-                            >
-                                <div className="flex gap-3 items-center">
-                                    <span className="text-xl">{isApproved ? "✅" : "🗓️"}</span>
-                                    <div>
-                                        <p className="font-semibold text-sm">
-                                            {isApproved 
-                                                ? `Client ${item.client} approved your consultation request` 
-                                                : `Client ${item.client} rescheduled the consultation`}
-                                        </p>
-                                        <p className="text-xs mt-0.5 opacity-90">
-                                            Scheduled for: <span className="font-medium">{formatDateString(item.date)}</span> at <span className="font-medium">{formatTimeString(item.time)}</span> ({item.type})
-                                            {!isApproved && item.reschedule_reason && (
-                                                <span className="block mt-1 font-medium italic">Reason: {item.reschedule_reason}</span>
-                                            )}
-                                        </p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => handleDismissNotification(item.id)}
-                                    className="text-gray-400 hover:text-gray-700 font-bold ml-4 text-sm leading-none focus:outline-none cursor-pointer"
+                                        }`}
                                 >
-                                    ✕
-                                </button>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
+                                    <div className="flex gap-3 items-center">
+                                        <span className="text-xl">{isApproved ? "✅" : "🗓️"}</span>
+                                        <div>
+                                            <p className="font-semibold text-sm">
+                                                {isApproved
+                                                    ? `Client ${item.client} approved your consultation request`
+                                                    : `Client ${item.client} requested a reschedule`}
+                                            </p>
+                                            <p className="text-xs mt-0.5 opacity-90">
+                                                Scheduled for: <span className="font-medium">{formatDateString(item.date)}</span> at <span className="font-medium">{formatTimeString(item.time)}</span> ({item.type})
+                                                {!isApproved && item.reschedule_reason && (
+                                                    <span className="block mt-1 font-medium italic">Reason: {item.reschedule_reason}</span>
+                                                )}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => handleDismissNotification(item.id)}
+                                        className="text-gray-400 hover:text-gray-700 font-bold ml-4 text-sm leading-none focus:outline-none cursor-pointer"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
 
             {/* Top Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 w-full">
+                {/* Accept Appointments */}
+                <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 flex flex-col justify-between h-full transition-transform hover:scale-[1.02] duration-300">
                     <div>
-                        <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center text-xl mb-4">📅</div>
+                        <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center text-xl mb-4">
+                            📅
+                        </div>
                         <h3 className="text-xl font-extrabold text-[#0F172A]">
                             Accept Appointments
                         </h3>
@@ -325,6 +360,7 @@ export default function ConsultationsView() {
                             View and manage consultation requests
                         </p>
                     </div>
+
                     <button
                         onClick={() => setShowAppointments(!showAppointments)}
                         className="w-full mt-6 bg-[#16A34A] hover:bg-[#15803d] text-white py-3.5 rounded-full font-bold uppercase tracking-wider text-xs transition-colors shadow-md hover:shadow-lg active:scale-[0.98]"
@@ -333,11 +369,12 @@ export default function ConsultationsView() {
                     </button>
                 </div>
 
-            
-
-                <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 flex flex-col justify-between sm:col-span-2 xl:col-span-1 transition-transform hover:scale-[1.02] duration-300">
+                {/* Consultation History */}
+                <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 flex flex-col justify-between h-full transition-transform hover:scale-[1.02] duration-300">
                     <div>
-                        <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center text-xl mb-4">📜</div>
+                        <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center text-xl mb-4">
+                            📜
+                        </div>
                         <h3 className="text-xl font-extrabold text-[#0F172A]">
                             Consultation History
                         </h3>
@@ -345,6 +382,7 @@ export default function ConsultationsView() {
                             View previous consultations
                         </p>
                     </div>
+
                     <button
                         onClick={() => setShowHistory(!showHistory)}
                         className="w-full mt-6 bg-[#D97706] hover:bg-[#b45309] text-white py-3.5 rounded-full font-bold uppercase tracking-wider text-xs transition-colors shadow-md hover:shadow-lg active:scale-[0.98]"
@@ -352,6 +390,7 @@ export default function ConsultationsView() {
                         {showHistory ? "Hide History" : "View History"}
                     </button>
                 </div>
+
             </div>
 
             {/* Appointment Requests */}
@@ -360,19 +399,21 @@ export default function ConsultationsView() {
                     <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">
                         Appointment Requests
                     </h2>
+
                     <div className="w-full overflow-x-auto rounded-xl border border-[#E2E8F0]">
                         <table className="min-w-full divide-y divide-[#E2E8F0]">
                             <thead className="bg-[#F8FAFC]">
                                 <tr>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client Name</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Issue</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Action</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase">Client Name</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase">Date</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase">Time</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase">Type</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase">Issue</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase">Status</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase">Action</th>
                                 </tr>
                             </thead>
+
                             <tbody className="divide-y divide-[#E2E8F0] bg-white">
                                 {appointments.length === 0 ? (
                                     <tr>
@@ -383,42 +424,116 @@ export default function ConsultationsView() {
                                 ) : (
                                     appointments.map((item) => (
                                         <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors">
-                                            <td className="p-4 whitespace-nowrap font-bold text-[#0F172A] capitalize">{item.client}</td>
-                                            <td className="p-4 whitespace-nowrap text-[#475569] text-sm">{formatDateString(item.date)}</td>
-                                            <td className="p-4 whitespace-nowrap text-[#475569] text-sm font-medium">{formatTimeString(item.time)}</td>
-                                            <td className="p-4 whitespace-nowrap text-[#475569] text-sm">{item.type}</td>
-                                            <td className="p-4 whitespace-nowrap text-[#475569] text-sm">{item.issue || "General Consultation"}</td>
-                                            <td className="p-4 whitespace-nowrap">
-                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">
+                                            <td className="p-4 font-bold text-[#0F172A] capitalize">
+                                                {item.client}
+                                            </td>
+
+                                            <td className="p-4 text-sm text-[#475569]">
+                                                {formatDateString(item.date)}
+                                            </td>
+
+                                            <td className="p-4 text-sm text-[#475569] font-medium">
+                                                {formatTimeString(item.time)}
+                                            </td>
+
+                                            <td className="p-4 text-sm text-[#475569]">
+                                                {item.type}
+                                            </td>
+
+                                            <td className="p-4 text-sm text-[#475569]">
+                                                {item.issue || "General Consultation"}
+                                            </td>
+
+                                            <td className="p-4">
+                                                <span
+                                                    className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${item.status === "Pending Advocate"
+                                                        ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                                        : "bg-purple-50 text-purple-700 border border-purple-200"
+                                                        }`}
+                                                >
                                                     {item.status || "Pending"}
                                                 </span>
                                             </td>
+
                                             <td className="p-4">
                                                 <div className="flex gap-2 items-center">
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedAppointment(item);
-                                                            setShowAcceptModal(true);
-                                                        }}
-                                                        className="px-4 py-2 bg-[#16A34A] hover:bg-[#15803d] text-white rounded-full transition-colors text-xs font-bold uppercase tracking-wider shadow-sm active:scale-95"
-                                                    >
-                                                        Accept
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedAppointment(item);
-                                                            setShowDeclineModal(true);
-                                                        }}
-                                                        className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-full transition-colors text-xs font-bold uppercase tracking-wider shadow-sm active:scale-95"
-                                                    >
-                                                        Reschedule
-                                                    </button>
+
+                                                    {/* Normal appointment request */}
+                                                    {item.status === "Pending" && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedAppointment(item);
+                                                                    setShowAcceptModal(true);
+                                                                }}
+                                                                className="px-4 py-2 bg-[#16A34A] hover:bg-[#15803d] text-white rounded-full text-xs font-bold"
+                                                            >
+                                                                Accept
+                                                            </button>
+
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedAppointment(item);
+                                                                    setShowDeclineModal(true);
+                                                                }}
+                                                                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-full text-xs font-bold"
+                                                            >
+                                                                Reschedule
+                                                            </button>
+                                                        </>
+                                                    )}
+
+                                                    {/* Client requested reschedule */}
+                                                    {item.status === "Pending Advocate" && (
+                                                        <>
+                                                            <button
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        const res = await fetch(
+                                                                            `${API_BASE_URL}/consultations/${item.id}/status`,
+                                                                            {
+                                                                                method: "PUT",
+                                                                                headers: {
+                                                                                    "Content-Type": "application/json",
+                                                                                },
+                                                                                body: JSON.stringify({
+                                                                                    status: "Approved",
+                                                                                    reason: "Approved client reschedule"
+                                                                                }),
+                                                                            }
+                                                                        );
+
+                                                                        if (res.ok) {
+                                                                            fetchConsultations(user);
+                                                                            alert("Client reschedule approved");
+                                                                        }
+                                                                    } catch (err) {
+                                                                        console.error(err);
+                                                                    }
+                                                                }}
+                                                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-bold"
+                                                            >
+                                                                Accept Client Date
+                                                            </button>
+
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedAppointment(item);
+                                                                    setShowDeclineModal(true);
+                                                                }}
+                                                                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-full text-xs font-bold"
+                                                            >
+                                                                Give Another Date
+                                                            </button>
+                                                        </>
+                                                    )}
+
                                                     <button
                                                         onClick={() => {
                                                             setDeleteId(item.id);
                                                             setShowDeleteModal(true);
                                                         }}
-                                                        className="px-4 py-2 bg-slate-100 hover:bg-rose-100 text-[#475569] hover:text-rose-600 rounded-full transition-colors text-xs font-bold uppercase tracking-wider active:scale-95 shadow-sm"
+                                                        className="px-4 py-2 bg-slate-100 hover:bg-rose-100 text-[#475569] hover:text-rose-600 rounded-full text-xs font-bold"
                                                     >
                                                         Delete
                                                     </button>
@@ -457,76 +572,74 @@ export default function ConsultationsView() {
                                 <span className="text-xl font-bold">✕</span>
                             </button>
                         </div>
-                    {history.length === 0 ? (
-                        <div className="text-center py-12 text-[#64748B] font-medium bg-[#F8FAFC] rounded-2xl border border-dashed border-[#E2E8F0]">
-                            No consultations found. Start a new one below.
-                        </div>
-                    ) : (
-                        <div className="w-full overflow-x-auto rounded-xl border border-[#E2E8F0]">
-                            <table className="min-w-full divide-y divide-[#E2E8F0]">
-                                <thead className="bg-[#F8FAFC]">
-                                    <tr>
-                                        <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client Name</th>
-                                        <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
-                                        <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
-                                        <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
-                                        <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
-                                        <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[#E2E8F0] bg-white">
-                                    {history.map((item) => (
-                                        <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors">
-                                            <td className="p-4 whitespace-nowrap font-bold text-[#0F172A] capitalize">{item.client}</td>
-                                            <td className="p-4 whitespace-nowrap text-sm text-[#475569]">{formatDateString(item.date)}</td>
-                                            <td className="p-4 whitespace-nowrap text-sm font-medium text-[#475569]">{formatTimeString(item.time)}</td>
-                                            <td className="p-4 whitespace-nowrap">
-                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                                                    item.type === "Video Call" || item.type === "Video Consultation"
+                        {history.length === 0 ? (
+                            <div className="text-center py-12 text-[#64748B] font-medium bg-[#F8FAFC] rounded-2xl border border-dashed border-[#E2E8F0]">
+                                No consultations found. Start a new one below.
+                            </div>
+                        ) : (
+                            <div className="w-full overflow-x-auto rounded-xl border border-[#E2E8F0]">
+                                <table className="min-w-full divide-y divide-[#E2E8F0]">
+                                    <thead className="bg-[#F8FAFC]">
+                                        <tr>
+                                            <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client Name</th>
+                                            <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
+                                            <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
+                                            <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
+                                            <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                                            <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[#E2E8F0] bg-white">
+                                        {history.map((item) => (
+                                            <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors">
+                                                <td className="p-4 whitespace-nowrap font-bold text-[#0F172A] capitalize">{item.client}</td>
+                                                <td className="p-4 whitespace-nowrap text-sm text-[#475569]">{formatDateString(item.date)}</td>
+                                                <td className="p-4 whitespace-nowrap text-sm font-medium text-[#475569]">{formatTimeString(item.time)}</td>
+                                                <td className="p-4 whitespace-nowrap">
+                                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${item.type === "Video Call" || item.type === "Video Consultation"
                                                         ? "bg-blue-50 text-blue-700 border border-blue-200"
                                                         : item.type === "Chat" || item.type === "Chat Consultation"
-                                                        ? "bg-purple-50 text-purple-700 border border-purple-200"
-                                                        : "bg-amber-50 text-amber-700 border border-amber-200"
-                                                }`}>
-                                                    {item.type}
-                                                </span>
-                                            </td>
-                                            <td className="p-4 whitespace-nowrap">
-                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                                                    item.status === "Completed"
+                                                            ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                                            : "bg-amber-50 text-amber-700 border border-amber-200"
+                                                        }`}>
+                                                        {item.type}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4 whitespace-nowrap">
+                                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${item.status === "Completed"
                                                         ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                                         : item.status === "Approved"
-                                                        ? "bg-green-50 text-green-700 border border-green-200"
-                                                        : item.status === "Rescheduled"
-                                                        ? "bg-amber-50 text-amber-700 border border-amber-200"
-                                                        : item.status === "Pending Client"
-                                                        ? "bg-purple-50 text-purple-700 border border-purple-200"
-                                                        : "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                                                }`}>
-                                                    {item.status}
-                                                </span>
-                                            </td>
-                                            <td className="p-4 whitespace-nowrap">
-                                                <button
-                                                    onClick={() => {
-                                                        setDeleteId(item.id);
-                                                        setShowDeleteModal(true);
-                                                    }}
-                                                    className="px-4 py-2 bg-slate-100 hover:bg-rose-100 text-[#475569] hover:text-rose-600 rounded-full transition-colors text-xs font-bold uppercase tracking-wider active:scale-95 shadow-sm"
-                                                >
-                                                    Delete
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
-            </div>,
-            document.body
-        ) : null}
+                                                            ? "bg-green-50 text-green-700 border border-green-200"
+                                                            : item.status === "Rescheduled"
+                                                                ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                                                : item.status === "Pending Client"
+                                                                    ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                                                    : "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                                                        }`}>
+                                                        {item.status}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4 whitespace-nowrap">
+                                                    <button
+                                                        onClick={() => {
+                                                            setDeleteId(item.id);
+                                                            setShowDeleteModal(true);
+                                                        }}
+                                                        className="px-4 py-2 bg-slate-100 hover:bg-rose-100 text-[#475569] hover:text-rose-600 rounded-full transition-colors text-xs font-bold uppercase tracking-wider active:scale-95 shadow-sm"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </div>,
+                document.body
+            ) : null}
 
             {/* Consultation Form */}
             <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 mb-8">
@@ -587,18 +700,18 @@ export default function ConsultationsView() {
                             />
                         </div>
                     </div>
-<div className="flex flex-col">
-    <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">
-        Google Meet Link
-    </label>
-    <input
-        type="url"
-        value={meetingLink}
-        onChange={(e) => setMeetingLink(e.target.value)}
-        placeholder="Paste Google Meet link"
-        className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
-    />
-</div>
+                    <div className="flex flex-col">
+                        <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">
+                            Google Meet Link
+                        </label>
+                        <input
+                            type="url"
+                            value={meetingLink}
+                            onChange={(e) => setMeetingLink(e.target.value)}
+                            placeholder="Paste Google Meet link"
+                            className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+                        />
+                    </div>
 
                 </div>
                 <div className="mt-8 flex justify-end">
@@ -611,36 +724,39 @@ export default function ConsultationsView() {
                 </div>
             </div>
 
-            {/* Statistics */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
-                <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0]">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-xl">📊</div>
-                        <p className="text-[#64748B] font-bold uppercase tracking-wider text-xs">Total Consultations</p>
-                    </div>
-                    <h3 className="text-4xl font-extrabold text-[#0F172A] tracking-tight">
-                        {totalConsultations}
-                    </h3>
-                </div>
-                <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0]">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center text-xl">📹</div>
-                        <p className="text-[#64748B] font-bold uppercase tracking-wider text-xs">Video Calls</p>
-                    </div>
-                    <h3 className="text-4xl font-extrabold text-[#0F172A] tracking-tight">
-                        {videoCalls}
-                    </h3>
-                </div>
-                <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0]">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center text-xl">💬</div>
-                        <p className="text-[#64748B] font-bold uppercase tracking-wider text-xs">Chat Consultations</p>
-                    </div>
-                    <h3 className="text-4xl font-extrabold text-[#0F172A] tracking-tight">
-                        {chatConsultations}
-                    </h3>
-                </div>
-            </div>
+            {mounted && showScheduleSuccess && typeof document !== "undefined"
+                ? createPortal(
+                    <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+                        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 text-center border border-[#E2E8F0] animate-in fade-in zoom-in duration-200">
+
+                            <div className="w-20 h-20 mx-auto bg-green-50 rounded-full flex items-center justify-center text-4xl mb-6 shadow-inner">
+                                ✅
+                            </div>
+
+                            <h2 className="text-2xl font-extrabold text-[#0F172A]">
+                                Consultation Scheduled
+                            </h2>
+
+                            <p className="text-[#64748B] mt-4 font-medium leading-relaxed">
+                                Your consultation has been scheduled successfully.
+                                The client will receive the meeting details and can approve it.
+                            </p>
+
+                            <button
+                                onClick={() => setShowScheduleSuccess(false)}
+                                className="mt-8 w-full py-4 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-full font-bold uppercase tracking-wider text-xs transition-all shadow-lg active:scale-95"
+                            >
+                                OK
+                            </button>
+                        </div>
+                    </div>,
+                    document.body
+                )
+                : null}
+
+
+
+
 
             {/* Delete Confirmation Modal */}
             {mounted && showDeleteModal && typeof document !== "undefined" ? createPortal(
@@ -723,6 +839,36 @@ export default function ConsultationsView() {
                 document.body
             ) : null}
 
+            {mounted && showRescheduleSuccess && typeof document !== "undefined"
+                ? createPortal(
+                    <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+                        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 text-center border border-[#E2E8F0] animate-in fade-in zoom-in duration-200">
+
+                            <div className="w-20 h-20 mx-auto bg-amber-50 rounded-full flex items-center justify-center text-4xl mb-6 shadow-inner">
+                                📅
+                            </div>
+
+                            <h2 className="text-2xl font-extrabold text-[#0F172A]">
+                                Reschedule Sent
+                            </h2>
+
+                            <p className="text-[#64748B] mt-4 font-medium leading-relaxed">
+                                Your reschedule request has been sent successfully to the client.
+                            </p>
+
+                            <button
+                                onClick={() => setShowRescheduleSuccess(false)}
+                                className="mt-8 w-full py-4 bg-[#D97706] hover:bg-[#b45309] text-white rounded-full font-bold uppercase tracking-wider text-xs transition-all shadow-lg active:scale-95"
+                            >
+                                OK
+                            </button>
+                        </div>
+                    </div>,
+                    document.body
+                )
+                : null}
+
+
             {/* Decline/Reschedule Modal */}
             {mounted && showDeclineModal && typeof document !== "undefined" ? createPortal(
                 <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
@@ -741,7 +887,7 @@ export default function ConsultationsView() {
                                 ✕
                             </button>
                         </div>
-                        
+
                         {selectedAppointment && (
                             <div className="mb-8 p-4 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">
                                 <p className="font-bold text-[#0F172A] text-sm">
@@ -799,7 +945,7 @@ export default function ConsultationsView() {
                                     const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
                                     const dd = String(selectedDate.getDate()).padStart(2, '0');
                                     const formattedDate = `${yyyy}-${mm}-${dd}`;
-                                    
+
                                     const hours = String(selectedDate.getHours()).padStart(2, '0');
                                     const minutes = String(selectedDate.getMinutes()).padStart(2, '0');
                                     const formattedTime = `${hours}:${minutes}`;
@@ -811,11 +957,12 @@ export default function ConsultationsView() {
                                             body: JSON.stringify({
                                                 date: formattedDate,
                                                 time: formattedTime,
-                                                reason: rescheduleReason || "Rescheduled by advocate"
+                                                reason: rescheduleReason || "Rescheduled by advocate",
+                                                status: "Rescheduled"
                                             })
                                         });
                                         if (res.ok) {
-                                            alert("Reschedule request sent");
+                                            setShowRescheduleSuccess(true);
                                             fetchConsultations(user);
                                         } else {
                                             alert("Failed to reschedule");

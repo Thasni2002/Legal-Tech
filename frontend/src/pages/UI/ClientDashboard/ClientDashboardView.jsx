@@ -25,7 +25,7 @@ export default function ClientDashboard() {
     const fetchAll = async () => {
       try {
         const [casesRes, hearingsRes, consultRes, activitiesRes, invoicesRes] = await Promise.all([
-          fetch(`${BASE_URL}/clients/cases`),
+          fetch(`${BASE_URL}/case-management/`),
           fetch(`${BASE_URL}/clients/hearings`),
           fetch(`${BASE_URL}/consultations`),
           fetch(`${BASE_URL}/clients/activities`),
@@ -43,32 +43,104 @@ export default function ClientDashboard() {
         setInvoices(Array.isArray(invoicesData) ? invoicesData : []);
 
         // Filter cases for this client by client_name matching username
-        const clientCases = name
-          ? casesData.filter((c) => {
-              const normalized = (c.client_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-              const normalizedUser = name.toLowerCase().replace(/[^a-z0-9]/g, "");
-              return normalized === normalizedUser;
+        const clientCases = Array.isArray(casesData)
+          ? (name
+            ? casesData.filter((c) => {
+              const normalized = (c.client_name || "")
+                .toLowerCase()
+                .replace(/[^a-z0-9]/g, "");
+
+              const normalizedUser = name
+                .toLowerCase()
+                .replace(/[^a-z0-9]/g, "");
+
+              return (
+                normalized.includes(normalizedUser) ||
+                normalizedUser.includes(normalized)
+              );
             })
-          : casesData;
+            : casesData)
+          : [];
 
         setCases(clientCases);
-        setHearings(hearingsData);
+        const clientHearings = Array.isArray(hearingsData)
+          ? hearingsData.filter((h) => {
+            const normalized = (h.client_name || "")
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, "");
+
+            const normalizedUser = name
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, "");
+
+            return (
+              normalized.includes(normalizedUser) ||
+              normalizedUser.includes(normalized)
+            );
+          })
+          : [];
+
+        setHearings(clientHearings);
 
         // Filter consultations for this client by client_name
         const clientConsults = name
           ? consultData.filter((c) => {
-              const normalized = (c.client_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-              const normalizedUser = name.toLowerCase().replace(/[^a-z0-9]/g, "");
-              return normalized === normalizedUser;
-            })
+            const normalized = (c.client_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            const normalizedUser = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+            return (
+              normalized.includes(normalizedUser) ||
+              normalizedUser.includes(normalized)
+            );
+          })
           : consultData;
 
-        setConsultations(clientConsults.slice(-5).reverse());
-        setActivities(activitiesData.slice(-4).reverse());
+        setConsultations(
+          Array.isArray(clientConsults)
+            ? clientConsults.slice(-5).reverse()
+            : []
+        ); const recentActivities = [];
 
+        // Latest case updates
+        clientCases.forEach((c) => {
+          recentActivities.push({
+            title: `Case updated: ${c.case_title}`,
+            timestamp: c.updated_at || c.created_at,
+          });
+        });
+
+        // Latest hearings
+        hearingsData.forEach((h) => {
+          recentActivities.push({
+            title: `Hearing scheduled for ${h.case_title}`,
+            timestamp: h.date,
+          });
+        });
+
+        // Latest consultations
+        clientConsults.forEach((c) => {
+          recentActivities.push({
+            title: `Consultation ${c.status}`,
+            timestamp: c.date,
+          });
+        });
+
+        // Latest payments
+        invoicesData.forEach((inv) => {
+          recentActivities.push({
+            title: `Payment ${inv.status} - ₹${inv.grand_total}`,
+            timestamp: inv.created_at,
+          });
+        });
+
+        // Sort latest first
+        recentActivities.sort(
+          (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+        );
+
+        // Show top 4
+        setActivities(recentActivities.slice(0, 4));
         // Derive assigned advocate info from the first case that has an advocate
-        const caseWithAdvocate = hearingsData.find((h) => h.advocate_name);
-        if (caseWithAdvocate) {
+const caseWithAdvocate = clientHearings.find((h) => h.advocate_name);        if (caseWithAdvocate) {
           setAssignedAdvocate({
             name: caseWithAdvocate.advocate_name,
             phone: "—",
@@ -201,18 +273,17 @@ export default function ClientDashboard() {
                   <tr key={index} className="hover:bg-[#F8FAFC] transition-colors duration-150">
                     <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">{item.case_no}</td>
                     <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">
-                      <span className="block font-bold text-[#0F172A]">{item.title}</span>
-                      <span className="text-xs text-[#64748B]">{item.type}</span>
+                      <span className="block font-bold text-[#0F172A]">{item.case_title}</span>
+                      <span className="text-xs text-[#64748B]">{item.case_type}</span>
                     </td>
-                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.court}</td>
+                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.court_name}</td>
                     <td className="p-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                        item.status === "Active"
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${item.status === "Active"
                           ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                           : item.status === "Hearing"
-                          ? "bg-blue-50 text-blue-700 border-blue-200"
-                          : "bg-amber-50 text-amber-700 border-amber-200"
-                      }`}>
+                            ? "bg-blue-50 text-blue-700 border-blue-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}>
                         {item.status}
                       </span>
                     </td>
@@ -254,13 +325,12 @@ export default function ClientDashboard() {
                       {item.advocate_name || "—"} · {item.type}
                     </span>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                    item.status === "Completed"
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${item.status === "Completed"
                       ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                       : item.status === "In Progress"
-                      ? "bg-blue-50 text-blue-700 border-blue-200"
-                      : "bg-amber-50 text-amber-700 border-amber-200"
-                  }`}>
+                        ? "bg-blue-50 text-blue-700 border-blue-200"
+                        : "bg-amber-50 text-amber-700 border-amber-200"
+                    }`}>
                     {item.status}
                   </span>
                 </div>
@@ -292,7 +362,7 @@ export default function ClientDashboard() {
                   </div>
                   <div className="flex-1 bg-[#F8FAFC] p-4 rounded-2xl border border-[#E2E8F0] group-hover:bg-white group-hover:shadow-md transition-all">
                     <span className="font-bold text-[#1E293B] block">{item.title}</span>
-                    <span className="text-xs text-[#64748B] mt-1 block">{item.timestamp_str}</span>
+                    <span className="text-xs text-[#64748B] mt-1 block">{fmtDate(item.timestamp)}</span>
                   </div>
                 </div>
               ))
@@ -327,13 +397,12 @@ export default function ClientDashboard() {
                       {fmtDate(h.date)} · {h.time}
                     </td>
                     <td className="p-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                        h.status === "Scheduled"
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${h.status === "Scheduled"
                           ? "bg-blue-50 text-blue-700 border-blue-200"
                           : h.status === "Completed"
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : "bg-amber-50 text-amber-700 border-amber-200"
-                      }`}>
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}>
                         {h.status}
                       </span>
                     </td>

@@ -356,6 +356,7 @@ export default function ClientDocuments() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[#E2E8F0] bg-[#F1F5F9]">
+                <th className="text-left p-3">Case Title</th>
                 <th className="text-left p-3">Title</th>
                 <th className="text-left p-3">Type</th>
                 <th className="text-left p-3">File Name</th>
