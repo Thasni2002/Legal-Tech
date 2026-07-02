@@ -61,6 +61,40 @@ def startup():
     db = SessionLocal()
     create_default_user(db)
     
+    # Auto-seed database from database_seed.json if empty on startup
+    try:
+        from app.advocate.case_management.models import Case
+        from sqlalchemy import MetaData, Table, text, inspect
+        # If case table is empty, auto-seed the database
+        case_count = db.query(Case).count()
+        if case_count == 0:
+            root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            seed_path = os.path.join(root_dir, "database_seed.json")
+            if os.path.exists(seed_path):
+                print(f"Auto-importing database seed on startup from {seed_path}...")
+                import json
+                with open(seed_path, "r", encoding="utf-8") as f:
+                    seed_data = json.load(f)
+                
+                inspector = inspect(engine)
+                is_mysql = "mysql" in engine.url.drivername.lower()
+                with engine.begin() as conn:
+                    if is_mysql:
+                        conn.execute(text("SET FOREIGN_KEY_CHECKS = 0;"))
+                        
+                    for t_name, rows in seed_data.items():
+                        if inspector.has_table(t_name):
+                            table = Table(t_name, MetaData(), autoload_with=engine)
+                            conn.execute(table.delete())
+                            if rows:
+                                conn.execute(table.insert(), rows)
+                                
+                    if is_mysql:
+                        conn.execute(text("SET FOREIGN_KEY_CHECKS = 1;"))
+                print("Successfully auto-imported database state on startup.")
+    except Exception as seed_err:
+        print(f"Error auto-importing database state on startup: {seed_err}")
+    
     # Clean up duplicate assigned cases
     try:
         from app.advocate.lawfirm_management.models import AssignedCase

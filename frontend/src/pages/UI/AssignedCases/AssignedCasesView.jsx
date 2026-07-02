@@ -106,7 +106,14 @@ export default function AssignedCasesView() {
       return;
     }
 
-    const fileUrl = selectedDocument.url || selectedDocument.file_path;
+    let fileUrl = selectedDocument.url || selectedDocument.file_path;
+    if (!fileUrl && selectedDocument.file) {
+      const title = selectedDocument.file;
+      if (title.includes(".") || title.toLowerCase().endsWith(".pdf") || title.toLowerCase().endsWith(".jpg") || title.toLowerCase().endsWith(".png") || title.toLowerCase().endsWith(".jpeg")) {
+        fileUrl = `http://localhost:8000/uploads/${title}`;
+      }
+    }
+
     if (!fileUrl) {
       setViewerUrl("");
       setIsPdf(false);
@@ -291,11 +298,27 @@ export default function AssignedCasesView() {
     if (doc.view === false) return; // blocked
     setSelectedDocument(doc);
     let fileUrl = doc.url || doc.file_path || null;
+    if (!fileUrl && doc.file) {
+      const title = doc.file;
+      if (title.includes(".") || title.toLowerCase().endsWith(".pdf") || title.toLowerCase().endsWith(".jpg") || title.toLowerCase().endsWith(".png") || title.toLowerCase().endsWith(".jpeg")) {
+        fileUrl = `http://localhost:8000/uploads/${title}`;
+      }
+    }
     if (!fileUrl) {
       const content = `Mock preview content for ${doc.file}\nDocument Type: ${doc.documentType}`;
       const blob = new Blob([content], { type: "text/plain" });
       fileUrl = URL.createObjectURL(blob);
     }
+    
+    // Normalize localhost
+    if (fileUrl && typeof window !== "undefined") {
+      if (window.location.hostname === "127.0.0.1") {
+        fileUrl = fileUrl.replace("localhost:8000", "127.0.0.1:8000");
+      } else {
+        fileUrl = fileUrl.replace("127.0.0.1:8000", "localhost:8000");
+      }
+    }
+
     setSelectedDoc({
       fileUrl: fileUrl,
       title: doc.file,
@@ -494,11 +517,11 @@ export default function AssignedCasesView() {
     <div className="w-full space-y-6 md:space-y-8">
 
         {/* Page Header */}
-        <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6">
-          <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
+        <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 sm:p-6">
+          <h1 className="text-[#0F172A] font-bold text-2xl sm:text-3xl md:text-4xl" style={{ fontWeight: 700, lineHeight: 1.2 }}>
             Assigned Cases
           </h1>
-          <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
+          <p className="text-[#64748B] mt-1.5 text-xs sm:text-sm">
             View and manage your assigned legal cases
           </p>
         </div>
@@ -630,15 +653,6 @@ export default function AssignedCasesView() {
                             View
                           </button>
 
-                          <button
-                            onClick={() => handleOpenDetails(item, "document")}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#64748B] bg-[#F1F5F9] hover:bg-[#E2E8F0] rounded-lg transition-colors cursor-pointer"
-                            title="Case Documents"
-                          >
-                            <FileText size={14} />
-                            Docs
-                          </button>
-
                           {perms.delete && (
                             <button
                               onClick={() => setDeleteConfirm(item.id)}
@@ -680,19 +694,19 @@ export default function AssignedCasesView() {
           />
 
           {/* Modal Container */}
-          <div className="relative bg-white rounded-3xl w-full max-w-5xl border border-[#E2E8F0] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] transition-all animate-in fade-in zoom-in-95 duration-200">
+          <div className="relative bg-white rounded-3xl w-full max-w-5xl border border-[#E2E8F0] shadow-2xl flex flex-col max-h-[92vh] lg:max-h-[85vh] overflow-hidden transition-all animate-in fade-in zoom-in-95 duration-200">
             
             {/* Header */}
-            <div className="p-6 border-b border-[#E2E8F0] flex items-center justify-between bg-[#F1F5F9]/50">
+            <div className="p-4 sm:p-6 border-b border-[#E2E8F0] flex items-center justify-between bg-[#F1F5F9]/50">
               <div className="flex items-center gap-3">
                 <span className="bg-blue-50 text-[#2563EB] p-2.5 rounded-2xl border border-blue-100">
                   <Gavel size={20} />
                 </span>
                 <div>
-                  <h3 className="font-bold text-[#0F172A] text-xl leading-tight">
+                  <h3 className="font-bold text-[#0F172A] text-lg sm:text-xl leading-tight">
                     {selectedCase.title}
                   </h3>
-                  <p className="text-xs text-[#64748B] font-semibold uppercase tracking-wider mt-1">
+                  <p className="text-[10px] sm:text-xs text-[#64748B] font-semibold uppercase tracking-wider mt-1">
                     Case No: {selectedCase.caseNo}
                   </p>
                 </div>
@@ -705,11 +719,11 @@ export default function AssignedCasesView() {
               </button>
             </div>
 
-            {/* Body: Split Layout */}
-            <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-5 gap-6 p-6 min-h-0 bg-white">
+            {/* Body Layout: Split Columns */}
+            <div className="flex-1 overflow-y-auto lg:overflow-hidden grid grid-cols-1 lg:grid-cols-5 gap-6 p-4 sm:p-6 min-h-0 bg-white">
               
-              {/* Left Column */}
-              <div className={`${modalViewMode === "full" ? "lg:col-span-3" : "lg:col-span-2"} overflow-y-auto pr-2 space-y-6 flex flex-col h-full`}>
+              {/* Left Column: Metadata & Notes */}
+              <div className="lg:col-span-3 space-y-6 flex flex-col lg:h-full lg:overflow-y-auto pr-0 lg:pr-4">
                 
                 {modalViewMode === "full" && (
                   <>
@@ -760,6 +774,10 @@ export default function AssignedCasesView() {
                   </>
                 )}
 
+              </div>
+
+              {/* Right Column: Documents Section */}
+              <div className="lg:col-span-2 flex flex-col space-y-4 lg:h-full min-h-[300px] lg:min-h-0 lg:overflow-y-auto pl-0 lg:pl-4 border-t lg:border-t-0 lg:border-l border-[#E2E8F0]/40 pt-6 lg:pt-0">
                 {/* ── Documents Section ── */}
                 <div className="flex-1 flex flex-col min-h-0 space-y-3">
                   <div className="flex items-center justify-between">
@@ -800,7 +818,7 @@ export default function AssignedCasesView() {
                     </div>
                   )}
 
-                  <div className={`space-y-2 overflow-y-auto flex-1 pr-1 ${modalViewMode === "full" ? "max-h-[220px]" : ""}`}>
+                  <div className="space-y-2 overflow-y-auto flex-1 pr-1 max-h-[320px] lg:max-h-[480px]">
                     {selectedCase.documents?.length > 0 ? (
                       selectedCase.documents.map((doc, idx) => {
                         const isSelected = selectedDocument?.file === doc.file;
@@ -941,160 +959,7 @@ export default function AssignedCasesView() {
 
               </div>
 
-              {/* Right Column: Document Viewer */}
-              <div className={`${modalViewMode === "full" ? "lg:col-span-2" : "lg:col-span-3"} bg-[#F1F5F9] rounded-3xl border border-[#E2E8F0]/50 flex flex-col overflow-hidden h-full min-h-[300px]`}>
-                
-                {selectedDocument ? (
-                  selectedDocument.view === false ? (
-                    /* ── ACCESS DENIED PREVIEW ── */
-                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center gap-4">
-                      <div className="w-16 h-16 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center">
-                        <Lock size={28} className="text-red-400" />
-                      </div>
-                      <div>
-                        <h5 className="font-bold text-[#0F172A] text-sm mb-1">Access Restricted</h5>
-                        <p className="text-[11px] text-[#64748B] max-w-[180px] leading-relaxed">
-                          You do not have <span className="font-bold text-red-500">view</span> permission for this document.
-                        </p>
-                      </div>
-                      <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-red-500 bg-red-50 border border-red-200 px-2.5 py-1 rounded-full">
-                        <ShieldOff size={10} /> Permission Denied
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col h-full">
-                      {/* Doc Preview Header */}
-                      <div className="p-3.5 bg-[#F8FAFC]/80 border-b border-[#E2E8F0]/60 flex items-center justify-between text-xs font-bold text-[#64748B]">
-                        <span className="truncate pr-4 flex items-center gap-1.5">
-                          <File size={14} className="text-blue-500" />
-                         {selectedDocument.file}
-                        </span>
-                        <button
-                          className="flex items-center gap-1 p-1 px-2.5 rounded-lg hover:bg-slate-200 text-[#64748B] hover:text-[#0F172A] transition-colors text-xxs font-bold uppercase tracking-wider bg-white/80 border border-[#E2E8F0]/40 cursor-pointer"
-                          onClick={() => handleDownloadDocument(selectedDocument)}
-                        >
-                          <Download size={12} />
-                          <span>Download</span>
-                        </button>
-                      </div>
 
-                      {/* Doc Preview Content */}
-
-                      {/* <div className="flex-1 p-2 bg-slate-100 overflow-auto">
-
-  {!viewerUrl ? (
-    <div className="flex h-full items-center justify-center">
-      <div className="text-center">
-        <FileText className="mx-auto text-gray-400 mb-2" size={40} />
-        <p className="text-gray-500 font-semibold">
-          No Preview Available
-        </p>
-      </div>
-    </div>
-  ) : isImage ? (
-
-    <img
-      src={viewerUrl}
-      alt={selectedDocument.file}
-      className="w-full h-auto object-contain rounded-lg"
-    />
-
-  ) : isPdf ? (
-
-    <iframe
-      src={viewerUrl}
-      title={selectedDocument.file}
-      className="w-full h-[650px] rounded-lg border"
-    />
-
-  ) : (
-
-    <iframe
-      src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
-        viewerUrl
-      )}`}
-      title={selectedDocument.file}
-      className="w-full h-[650px] rounded-lg border"
-    />
-
-  )}
-
-</div> */}
-                      <div className="flex-1 p-4 overflow-y-auto bg-slate-200/30 flex justify-center items-start h-full min-h-[320px]">
-                        {!viewerUrl ? (
-                          <div className="flex flex-col items-center justify-center py-16 gap-4 text-center w-full">
-                            <div className="w-16 h-16 bg-slate-200 text-slate-400 rounded-2xl flex items-center justify-center">
-                              <FileText size={32} />
-                            </div>
-                            <div>
-                              <p className="font-bold text-slate-700 text-sm">No preview available</p>
-                              <p className="text-xs text-slate-500 mt-1">This document has no uploaded file data to preview.</p>
-                            </div>
-                          </div>
-                        ) : isPdf ? (
-                          <iframe 
-                            src={viewerUrl} 
-                            title={selectedDocument.file} 
-                            className="w-full h-full min-h-[320px] rounded-xl border border-[#E2E8F0] shadow-sm bg-white" 
-                          />
-                        ) : isImage ? (
-                          <div className="p-2 w-full flex justify-center">
-                            <img 
-                              src={viewerUrl} 
-                              alt={selectedDocument.file} 
-                              className="max-w-full max-h-[50vh] object-contain rounded-xl shadow-md bg-white" 
-                            />
-                          </div>
-                        ) : isAudio ? (
-                          <div className="p-6 flex flex-col items-center justify-center gap-3 bg-white rounded-xl border border-slate-200 w-full max-w-sm mx-auto shadow-xs">
-                            <div className="w-12 h-12 bg-blue-50 text-[#2563EB] rounded-full flex items-center justify-center">
-                              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                              </svg>
-                            </div>
-                            <p className="font-semibold text-slate-700 text-xs text-center truncate max-w-full">{selectedDocument.file}</p>
-                            <audio controls src={viewerUrl} className="w-full focus:outline-none" />
-                          </div>
-                        ) : isVideo ? (
-                          <div className="p-2 w-full flex justify-center items-center">
-                            <video controls src={viewerUrl} className="max-w-full max-h-[50vh] rounded-xl shadow-md border border-slate-200" />
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center py-16 gap-4 text-center w-full">
-                            <div className="w-16 h-16 bg-slate-200 text-slate-400 rounded-2xl flex items-center justify-center">
-                              <FileText size={32} />
-                            </div>
-                            <div>
-                              <p className="font-bold text-slate-700 text-sm">Preview not available</p>
-                              <p className="text-xs text-slate-500 mt-1">This file type cannot be previewed in the browser.</p>
-                            </div>
-                            <button
-                              onClick={() => handleDownloadDocument(selectedDocument)}
-                              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition cursor-pointer"
-                            >
-                              <Download size={14} /> Download File
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )
-                ) : (
-                  /* Empty State */
-                  <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                    <div className="w-12 h-12 bg-[#F8FAFC] rounded-2xl flex items-center justify-center text-[#64748B] mb-4 border border-[#E2E8F0]/50">
-                      <FileText size={20} />
-                    </div>
-                    <h5 className="font-bold text-[#0F172A] text-xs">
-                      No Document Selected
-                    </h5>
-                    <p className="text-[11px] text-[#64748B] max-w-[200px] mt-1.5 leading-normal">
-                      Click the <span className="font-bold text-blue-500">View</span> button on any document to see a live preview.
-                    </p>
-                  </div>
-                )}
-
-              </div>
 
             </div>
 
