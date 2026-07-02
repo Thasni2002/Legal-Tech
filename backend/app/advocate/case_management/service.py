@@ -110,6 +110,9 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
 
     case.updated_at = datetime.utcnow()
 
+    if isinstance(case.documents, (list, dict)):
+        case.documents = json.dumps(case.documents)
+
     db.commit()
     db.refresh(case)
 

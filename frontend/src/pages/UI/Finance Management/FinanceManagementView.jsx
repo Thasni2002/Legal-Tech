@@ -162,6 +162,28 @@ export default function CourtFeeCalView() {
 
       if (res.ok) {
         const savedInvoice = await res.json();
+        
+        let backendPdfPath = null;
+        try {
+          const doc = generateInvoicePDF(savedInvoice);
+          const pdfBlob = doc.output("blob");
+          
+          const formData = new FormData();
+          formData.append("file", pdfBlob, `invoice_${savedInvoice.id}.pdf`);
+          
+          const uploadRes = await fetch(`http://127.0.0.1:8000/finance/upload-invoice/${savedInvoice.id}`, {
+            method: "POST",
+            body: formData,
+          });
+          
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json();
+            backendPdfPath = uploadData.file_path;
+          }
+        } catch (pdfErr) {
+          console.error("Error generating/uploading invoice PDF:", pdfErr);
+        }
+
         await fetch("http://127.0.0.1:8000/finance/send-payment-email", {
           method: "POST",
           headers: {
@@ -175,8 +197,7 @@ export default function CourtFeeCalView() {
             gpay_number: gpayNumber,
             upi_id: upiId,
             payment_link: `http://localhost:3000/client-payments/${savedInvoice.id}`,
-            invoice_pdf_path: `invoices/invoice_${savedInvoice.id}.pdf`
-
+            invoice_pdf_path: backendPdfPath || `invoices/invoice_${savedInvoice.id}.pdf`
           })
         });
 
@@ -355,8 +376,7 @@ export default function CourtFeeCalView() {
     doc.save(`Invoice_${clientName || "Calculation"}.pdf`);
   };
 
-  // Download PDF for a specific saved invoice from history
-  const handleDownloadInvoicePDF = (inv) => {
+  const generateInvoicePDF = (inv) => {
     const doc = new jsPDF();
 
     // Header banner - only title and invoice info, no company name
@@ -446,6 +466,12 @@ export default function CourtFeeCalView() {
     doc.text("This document is a computer-generated invoice and does not require a physical signature.", 20, 275);
     doc.text("Thank you for your trust in our services.", 20, 281);
 
+    return doc;
+  };
+
+  // Download PDF for a specific saved invoice from history
+  const handleDownloadInvoicePDF = (inv) => {
+    const doc = generateInvoicePDF(inv);
     doc.save(`Invoice_${inv.id}_${inv.client_name || "Record"}.pdf`);
   };
 

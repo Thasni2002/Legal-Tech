@@ -10,23 +10,6 @@ import { ArrowLeft } from "lucide-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-const hearings = [
-  {
-    caseNo: "CIV/101",
-    type: "Property Dispute",
-    hearing: "20 June 2026",
-    advocate: "Rahul Sharma",
-    status: "Active",
-  },
-  {
-    caseNo: "CR/202",
-    type: "Criminal Case",
-    hearing: "25 June 2026",
-    advocate: "Priya Nair",
-    status: "Hearing",
-  },
-];
-
 export default function ClientConsultationView() {
   const [showModal, setShowModal] = useState(false);
   const [appointments, setAppointments] = useState([]);
@@ -34,6 +17,7 @@ export default function ClientConsultationView() {
   const [user, setUser] = useState(null);
   const [mounted, setMounted] = useState(false);
   const [dismissedNotifications, setDismissedNotifications] = useState([]);
+  const [hearings, setHearings] = useState([]);
 
   const formatDateString = (dateStr) => {
     if (!dateStr) return "N/A";
@@ -127,6 +111,56 @@ export default function ClientConsultationView() {
     }
   };
 
+  const fetchHearings = async (currentUser, currentAdvocates = []) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/case-management/`);
+      if (res.ok) {
+        const data = await res.json();
+        const filtered = data.filter((c) => {
+          if (!c.next_hearing_date || c.next_hearing_date === "N/A") {
+            return false;
+          }
+          if (currentUser) {
+            if (currentUser.role === "Client") {
+              const clientEmailMatch = c.email_id && currentUser.email && c.email_id.toLowerCase() === currentUser.email.toLowerCase();
+              const clientNameMatch = c.client_name && currentUser.username && c.client_name.toLowerCase() === currentUser.username.toLowerCase();
+              return clientEmailMatch || clientNameMatch;
+            } else if (
+              currentUser.role === "Senior Advocate" ||
+              currentUser.role === "Junior Advocate"
+            ) {
+              let advocateName = currentUser.username;
+              const matchingAdv = currentAdvocates.find(
+                (a) => (a.email_address || a.email) && currentUser.email && 
+                       (a.email_address || a.email).toLowerCase() === currentUser.email.toLowerCase()
+              );
+              if (matchingAdv) {
+                advocateName = matchingAdv.advocate_name || matchingAdv.advocateName;
+              }
+              
+              const advocateNameMatch = c.selected_advocate && advocateName && c.selected_advocate.toLowerCase() === advocateName.toLowerCase();
+              const advocateUsernameMatch = c.selected_advocate && currentUser.username && c.selected_advocate.toLowerCase() === currentUser.username.toLowerCase();
+              return advocateNameMatch || advocateUsernameMatch;
+            }
+          }
+          return true;
+        });
+
+        const mapped = filtered.map((c) => ({
+          caseNo: c.case_no || "N/A",
+          type: c.case_title || c.case_type || "N/A",
+          hearing: c.next_hearing_date,
+          advocate: c.selected_advocate || "N/A",
+          status: c.status || "Active",
+        }));
+
+        setHearings(mapped);
+      }
+    } catch (err) {
+      console.error("Failed to fetch hearings:", err);
+    }
+  };
+
   // Resolve effective permission for Consultation → add
   const resolveConsultationAddPermission = async (loggedInUser) => {
     if (!loggedInUser) return;
@@ -183,10 +217,15 @@ export default function ClientConsultationView() {
       try {
         const res = await fetch(`${API_BASE_URL}/lawfirm-management/`);
         if (res.ok) {
-          setAdvocates(await res.json());
+          const advList = await res.json();
+          setAdvocates(advList);
+          fetchHearings(loggedIn, advList);
+        } else {
+          fetchHearings(loggedIn, []);
         }
       } catch (err) {
         console.error("Failed to fetch advocates:", err);
+        fetchHearings(loggedIn, []);
       }
     };
     loadAdvocates();
@@ -558,7 +597,7 @@ appointments.filter(
                   <tr key={index} className="hover:bg-[#F8FAFC] transition-colors duration-150">
                     <td className="p-4 font-bold text-[#0F172A] whitespace-nowrap">{item.caseNo}</td>
                     <td className="p-4 text-[#475569] text-sm whitespace-nowrap">{item.type}</td>
-                    <td className="p-4 text-[#475569] text-sm font-medium whitespace-nowrap">{item.hearing}</td>
+                    <td className="p-4 text-[#475569] text-sm font-medium whitespace-nowrap">{formatDateString(item.hearing)}</td>
                     <td className="p-4 text-[#475569] text-sm whitespace-nowrap font-medium">{item.advocate}</td>
                     <td className="p-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${item.status === 'Active'

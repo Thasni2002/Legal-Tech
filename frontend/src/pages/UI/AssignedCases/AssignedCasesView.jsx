@@ -408,6 +408,52 @@ export default function AssignedCasesView() {
     return caseItem.documents.some((d) => d.upload === true);
   };
 
+  // Helper to persist documents to MySQL table case_management_cases
+  const saveDocumentsToBackend = async (caseNo, updatedDocs) => {
+    try {
+      // 1. Fetch all case management cases to find the target case ID
+      const res = await fetch(`${API_BASE_URL}/case-management/`);
+      if (!res.ok) throw new Error("Failed to fetch cases list");
+      const casesList = await res.json();
+      
+      const targetCase = casesList.find(c => c.case_no === caseNo);
+      if (!targetCase) {
+        console.error("Target case not found in case management:", caseNo);
+        return;
+      }
+      
+      // 2. Build the CaseUpdate payload
+      const payload = {
+        documents: updatedDocs.map(d => ({
+          documentType: d.documentType,
+          advocate: d.advocate || "",
+          file: d.file,
+          url: d.url || null,
+          view: d.view !== undefined ? d.view : true,
+          upload: d.upload !== undefined ? d.upload : true,
+          edit: d.edit !== undefined ? d.edit : true,
+          delete: d.delete !== undefined ? d.delete : true,
+        }))
+      };
+      
+      // 3. Make PUT request to update case documents
+      const updateRes = await fetch(`${API_BASE_URL}/case-management/${targetCase.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      
+      if (!updateRes.ok) {
+        throw new Error("Failed to update case documents in database");
+      }
+    } catch (err) {
+      console.error("Error saving documents to backend:", err);
+      alert("Failed to save documents to database: " + err.message);
+    }
+  };
+
   const handleUploadFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !selectedCase) return;
@@ -415,7 +461,7 @@ export default function AssignedCasesView() {
     setUploadLoading(true);
     try {
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         const newDoc = {
           file: file.name,
           documentType: "Uploaded",
@@ -427,11 +473,16 @@ export default function AssignedCasesView() {
         };
         const updatedDocs = [...(selectedCase.documents || []), newDoc];
         const updatedCase = { ...selectedCase, documents: updatedDocs };
+        
         setSelectedCase(updatedCase);
         setCases((prev) =>
           prev.map((c) => (c.id === selectedCase.id ? updatedCase : c))
         );
         setSelectedDocument(newDoc);
+
+        await saveDocumentsToBackend(selectedCase.caseNo, updatedDocs);
+        fetchAssignedCases();
+
         setUploadSuccess(true);
         setUploadLoading(false);
         setTimeout(() => setUploadSuccess(false), 3000);
@@ -464,6 +515,9 @@ export default function AssignedCasesView() {
     );
     setEditingDocIdx(null);
     setEditingDocName("");
+
+    await saveDocumentsToBackend(selectedCase.caseNo, updatedDocs);
+    fetchAssignedCases();
   };
 
   // ── DELETE document: check doc.delete ──
@@ -480,6 +534,9 @@ export default function AssignedCasesView() {
       setSelectedDocument(null);
     }
     setDocDeleteIdx(null);
+
+    await saveDocumentsToBackend(selectedCase.caseNo, updatedDocs);
+    fetchAssignedCases();
   };
 
   // ── DELETE assigned case ──

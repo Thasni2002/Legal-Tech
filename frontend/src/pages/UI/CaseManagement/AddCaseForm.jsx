@@ -38,6 +38,7 @@ export default function AddCaseForm() {
     clientName: "",
     contactNumber: "",
     emailId: "",
+    tempPassword: "",
     courtName: "",
     courtType: "",
     status: "Active",
@@ -210,6 +211,12 @@ export default function AddCaseForm() {
       case "nextHearingDate":
         if (!value) return "Date is required";
         return "";
+      case "tempPassword":
+        if (clientMode === "new") {
+          if (!value.trim()) return "Temporary Password is required";
+          if (value.trim().length < 6) return "Password must be at least 6 characters";
+        }
+        return "";
       default:
         return "";
     }
@@ -218,7 +225,7 @@ export default function AddCaseForm() {
   const handleExistingClientChange = (e) => {
     const selectedName = e.target.value;
     if (!selectedName) {
-      setFormData(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "" }));
+      setFormData(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "", tempPassword: "" }));
       return;
     }
     const client = existingClients.find(c => c.clientName === selectedName);
@@ -228,15 +235,19 @@ export default function AddCaseForm() {
         clientName: client.clientName,
         contactNumber: client.contactNumber,
         emailId: client.emailId,
+        tempPassword: "",
       }));
-      setErrors(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "" }));
+      setErrors(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "", tempPassword: "" }));
     } else {
-      setFormData(prev => ({ ...prev, clientName: selectedName, contactNumber: "", emailId: "" }));
+      setFormData(prev => ({ ...prev, clientName: selectedName, contactNumber: "", emailId: "", tempPassword: "" }));
     }
   };
 
   function validateAll() {
     const fields = ["cnrNumber", "caseId", "caseTitle", "caseNo", "caseType", "caseDes", "clientName", "contactNumber", "emailId", "courtName", "courtType", "nextHearingDate"];
+    if (clientMode === "new") {
+      fields.push("tempPassword");
+    }
     const newErrors = {};
     const newTouched = {};
     let valid = true;
@@ -362,6 +373,40 @@ export default function AddCaseForm() {
         throw new Error(errData?.detail || "Failed to save case");
       }
 
+      // Provision user if New Client mode and tempPassword is provided
+      if (clientMode === "new" && formData.tempPassword) {
+        const nameParts = formData.clientName.trim().split(" ");
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.slice(1).join(" ") || "";
+        const username = formData.emailId.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+
+        try {
+          const provRes = await fetch(`${API_BASE_URL}/permissions/users/provision`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              firstName,
+              lastName,
+              phone: formData.contactNumber,
+              username,
+              email: formData.emailId,
+              role: "client",
+              tempPassword: formData.tempPassword,
+            }),
+          });
+          if (!provRes.ok) {
+            const errData = await provRes.json().catch(() => null);
+            console.error("User provisioning failed:", errData?.detail);
+            alert("Error: Case was saved, but client user account could not be created: " + (errData?.detail || "Unknown error"));
+          }
+        } catch (provErr) {
+          console.error("Connection error while provisioning user:", provErr);
+          alert("Error: Case was saved, but client user account could not be created due to connection issue.");
+        }
+      }
+
       setShowSuccessPopup(true);
 
       setTimeout(() => {
@@ -482,9 +527,14 @@ export default function AddCaseForm() {
                   type="button"
                   onClick={() => {
                     setClientMode("new");
-                    setFormData(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "" }));
-                    setErrors(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "" }));
-                    setTouched(prev => ({ ...prev, clientName: false, contactNumber: false, emailId: false }));
+                    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+                    let password = "temp_";
+                    for (let i = 0; i < 8; i++) {
+                      password += chars.charAt(Math.floor(Math.random() * chars.length));
+                    }
+                    setFormData(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "", tempPassword: password }));
+                    setErrors(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "", tempPassword: "" }));
+                    setTouched(prev => ({ ...prev, clientName: false, contactNumber: false, emailId: false, tempPassword: false }));
                   }}
                   className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${clientMode === "new" ? "bg-white text-[#2563EB] shadow-sm" : "text-[#64748B] hover:text-[#0F172A]"}`}
                 >
@@ -494,9 +544,9 @@ export default function AddCaseForm() {
                   type="button"
                   onClick={() => {
                     setClientMode("existing");
-                    setFormData(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "" }));
-                    setErrors(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "" }));
-                    setTouched(prev => ({ ...prev, clientName: false, contactNumber: false, emailId: false }));
+                    setFormData(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "", tempPassword: "" }));
+                    setErrors(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "", tempPassword: "" }));
+                    setTouched(prev => ({ ...prev, clientName: false, contactNumber: false, emailId: false, tempPassword: false }));
                   }}
                   className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${clientMode === "existing" ? "bg-white text-[#2563EB] shadow-sm" : "text-[#64748B] hover:text-[#0F172A]"}`}
                 >
@@ -505,45 +555,94 @@ export default function AddCaseForm() {
               </div>
             </div>
 
-            {clientMode === "existing" && (
-              <div className="mb-5">
-                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Select Existing Client</label>
-                <select
-                  onChange={handleExistingClientChange}
-                  value={formData.clientName}
-                  className={baseInputClass}
-                >
-                  <option value="">— Select Client —</option>
-                  {existingClients.map((c, i) => (
-                    <option key={i} value={c.clientName}>{c.clientName} ({c.contactNumber || "No contact"})</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
             {clientMode !== "" && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div>
-                  <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Client Name</label>
-                  <input type="text" name="clientName" placeholder="Full Name" value={formData.clientName} onChange={handleChange}
-                    readOnly={clientMode === "existing"}
-                    className={`${baseInputClass} ${getBorderClass("clientName")} ${clientMode === "existing" ? "bg-gray-50" : ""}`} />
-                  {touched.clientName && errors.clientName && <ErrorMsg message={errors.clientName} />}
+              <div className="space-y-5">
+                {/* Main Client Fields Row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client Name</label>
+                    </div>
+                    {clientMode === "existing" ? (
+                      <select
+                        name="clientName"
+                        value={formData.clientName}
+                        onChange={handleExistingClientChange}
+                        className={`${baseInputClass} ${getBorderClass("clientName")}`}
+                      >
+                        <option value="">— Select Client —</option>
+                        {existingClients.map((c, i) => (
+                          <option key={i} value={c.clientName}>
+                            {c.clientName}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        name="clientName"
+                        placeholder="Full Name"
+                        value={formData.clientName}
+                        onChange={handleChange}
+                        className={`${baseInputClass} ${getBorderClass("clientName")}`}
+                      />
+                    )}
+                    {touched.clientName && errors.clientName && <ErrorMsg message={errors.clientName} />}
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Contact Number</label>
+                    </div>
+                    <input type="tel" name="contactNumber" placeholder="e.g. 9876543210" value={formData.contactNumber} onChange={handleChange}
+                      readOnly={clientMode === "existing"}
+                      className={`${baseInputClass} ${getBorderClass("contactNumber")} ${clientMode === "existing" ? "bg-gray-50" : ""}`} />
+                    {touched.contactNumber && errors.contactNumber && <ErrorMsg message={errors.contactNumber} />}
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Email Address</label>
+                    </div>
+                    <input type="email" name="emailId" placeholder="client@example.com" value={formData.emailId} onChange={handleChange}
+                      readOnly={clientMode === "existing"}
+                      className={`${baseInputClass} ${getBorderClass("emailId")} ${clientMode === "existing" ? "bg-gray-50" : ""}`} />
+                    {touched.emailId && errors.emailId && <ErrorMsg message={errors.emailId} />}
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Contact Number</label>
-                  <input type="tel" name="contactNumber" placeholder="e.g. 9876543210" value={formData.contactNumber} onChange={handleChange}
-                    readOnly={clientMode === "existing"}
-                    className={`${baseInputClass} ${getBorderClass("contactNumber")} ${clientMode === "existing" ? "bg-gray-50" : ""}`} />
-                  {touched.contactNumber && errors.contactNumber && <ErrorMsg message={errors.contactNumber} />}
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Email Address</label>
-                  <input type="email" name="emailId" placeholder="client@example.com" value={formData.emailId} onChange={handleChange}
-                    readOnly={clientMode === "existing"}
-                    className={`${baseInputClass} ${getBorderClass("emailId")} ${clientMode === "existing" ? "bg-gray-50" : ""}`} />
-                  {touched.emailId && errors.emailId && <ErrorMsg message={errors.emailId} />}
-                </div>
+
+                {/* Password Row (only for new client mode) */}
+                {clientMode === "new" && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Temporary Password</label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+                            let password = "temp_";
+                            for (let i = 0; i < 8; i++) {
+                              password += chars.charAt(Math.floor(Math.random() * chars.length));
+                            }
+                            setFormData(prev => ({ ...prev, tempPassword: password }));
+                            setErrors(prev => ({ ...prev, tempPassword: "" }));
+                          }}
+                          className="text-[10px] text-blue-600 hover:text-blue-700 font-bold hover:underline cursor-pointer"
+                        >
+                          Generate Password
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        name="tempPassword"
+                        placeholder="e.g. TempPass123"
+                        value={formData.tempPassword || ""}
+                        onChange={handleChange}
+                        className={`${baseInputClass} ${getBorderClass("tempPassword")}`}
+                      />
+                      {touched.tempPassword && errors.tempPassword && <ErrorMsg message={errors.tempPassword} />}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             
@@ -743,7 +842,7 @@ export default function AddCaseForm() {
                   <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Upload File</label>
                   <div className="flex items-center gap-2">
                     <input
-                      key={`${index}-${doc.file?.name || "empty"}`}
+                      id={`file-upload-${index}`}
                       type="file"
                       accept="audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.gif"
                       onChange={(e) => {
@@ -768,8 +867,28 @@ export default function AddCaseForm() {
                           setDocuments(updated);
                         }
                       }}
-                      className="w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-sm"
+                      className="hidden"
                     />
+                    {doc.file ? (
+                      <div className="flex items-center justify-between w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2 text-sm h-10">
+                        <span className="text-[#0F172A] font-medium truncate max-w-[180px]">
+                          {doc.file.name}
+                        </span>
+                        <label
+                          htmlFor={`file-upload-${index}`}
+                          className="text-xs text-[#2563EB] hover:text-[#1d4ed8] font-semibold hover:underline cursor-pointer"
+                        >
+                          Change
+                        </label>
+                      </div>
+                    ) : (
+                      <label
+                        htmlFor={`file-upload-${index}`}
+                        className="flex items-center justify-center gap-2 w-full h-10 rounded-lg border border-dashed border-[#E2E8F0] hover:border-[#2563EB] bg-white px-3 py-2 text-sm text-[#64748B] hover:text-[#2563EB] cursor-pointer transition-all duration-200"
+                      >
+                        Choose File
+                      </label>
+                    )}
                     {doc.file && (
                       <button
                         type="button"

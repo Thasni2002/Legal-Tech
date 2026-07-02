@@ -222,6 +222,9 @@ def update_assigned_case(
     for key, value in case_dict.items():
         setattr(assigned_case, key, value)
 
+    if isinstance(assigned_case.assigned_documents, (list, dict)):
+        assigned_case.assigned_documents = json.dumps(assigned_case.assigned_documents)
+
     db.commit()
     db.refresh(assigned_case)
 

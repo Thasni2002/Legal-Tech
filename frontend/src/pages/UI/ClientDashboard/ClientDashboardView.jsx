@@ -42,43 +42,43 @@ export default function ClientDashboard() {
 
         setInvoices(Array.isArray(invoicesData) ? invoicesData : []);
 
-        // Filter cases for this client by client_name matching username
+        // Filter cases for this client by email or client_name matching username
         const clientCases = Array.isArray(casesData)
-          ? (name
+          ? (user
             ? casesData.filter((c) => {
-              const normalized = (c.client_name || "")
-                .toLowerCase()
-                .replace(/[^a-z0-9]/g, "");
+              // 1. Match by email
+              const caseEmail = (c.email_id || "").toLowerCase().trim();
+              const userEmail = (user.email || "").toLowerCase().trim();
+              if (caseEmail && userEmail && caseEmail === userEmail) {
+                return true;
+              }
 
-              const normalizedUser = name
-                .toLowerCase()
-                .replace(/[^a-z0-9]/g, "");
-
-              return (
-                normalized.includes(normalizedUser) ||
-                normalizedUser.includes(normalized)
-              );
+              // 2. Match by normalized client name vs username
+              if (c.client_name) {
+                const normalizedName = c.client_name.toLowerCase().replace(/[^a-z0-9]/g, "");
+                const normalizedUsername = (user.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                if (normalizedName === normalizedUsername) {
+                  return true;
+                }
+              }
+              return false;
             })
             : casesData)
           : [];
 
         setCases(clientCases);
-        const clientHearings = Array.isArray(hearingsData)
-          ? hearingsData.filter((h) => {
-            const normalized = (h.client_name || "")
-              .toLowerCase()
-              .replace(/[^a-z0-9]/g, "");
 
-            const normalizedUser = name
-              .toLowerCase()
-              .replace(/[^a-z0-9]/g, "");
-
-            return (
-              normalized.includes(normalizedUser) ||
-              normalizedUser.includes(normalized)
-            );
-          })
-          : [];
+        // Derive upcoming hearings from client's active cases that have next_hearing_date
+        const clientHearings = clientCases
+          .filter((c) => c.next_hearing_date && c.next_hearing_date !== "N/A")
+          .map((c) => ({
+            case_title: c.case_title || "Untitled Case",
+            court: c.court_name || "Civil Court",
+            advocate_name: c.selected_advocate || "—",
+            date: c.next_hearing_date,
+            time: "10:00 AM",
+            status: "Scheduled",
+          }));
 
         setHearings(clientHearings);
 
@@ -109,7 +109,7 @@ export default function ClientDashboard() {
         });
 
         // Latest hearings
-        hearingsData.forEach((h) => {
+        clientHearings.forEach((h) => {
           recentActivities.push({
             title: `Hearing scheduled for ${h.case_title}`,
             timestamp: h.date,

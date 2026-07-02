@@ -16,7 +16,7 @@ import useModulePermission from "@/utils/useModulePermission";
 import { getLoggedInUser } from "@/utils/auth";
 
 export default function ClientCaseTrackingView() {
-  const { perms, loading } = useModulePermission("Case Tracking");
+  const { perms, loading, user } = useModulePermission("Case Tracking");
   const [advocateName, setAdvocateName] = useState("");
   const [caseNumber, setCaseNumber] = useState("");
   const [searchClient, setSearchClient] = useState("");
@@ -41,7 +41,6 @@ export default function ClientCaseTrackingView() {
   useEffect(() => {
     const fetchCases = async () => {
       try {
-        const user = getLoggedInUser();
         const res = await fetch("http://127.0.0.1:8000/case-management/");
         const data = await res.json();
         
@@ -98,10 +97,10 @@ export default function ClientCaseTrackingView() {
         setDataLoading(false);
       }
     };
-    if (perms.view) {
+    if (!loading && perms.view) {
       fetchCases();
     }
-  }, [perms.view]);
+  }, [loading, perms.view, user]);
 
   const statusSteps = [
     "Case Submit",

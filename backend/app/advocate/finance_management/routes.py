@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.database import SessionLocal
@@ -17,6 +17,7 @@ from app.utils.email import send_email
 from app.advocate.case_management.models import Case
 import razorpay
 import os
+import shutil
 
 router = APIRouter(prefix="/finance", tags=["Finance Management"])
 
@@ -260,4 +261,29 @@ def verify_payment(
         raise HTTPException(
             status_code=400,
             detail="Payment verification failed"
+        )
+
+
+# -----------------------------
+# Upload Invoice PDF
+# -----------------------------
+@router.post("/upload-invoice/{invoice_id}")
+def upload_invoice(invoice_id: int, file: UploadFile = File(...)):
+    uploads_dir = os.path.abspath("uploads")
+    invoices_dir = os.path.join(uploads_dir, "invoices")
+    if not os.path.exists(invoices_dir):
+        os.makedirs(invoices_dir)
+
+    file_path = os.path.join(invoices_dir, f"invoice_{invoice_id}.pdf")
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        return {
+            "success": True,
+            "file_path": file_path
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to save uploaded PDF: {str(e)}"
         )

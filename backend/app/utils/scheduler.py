@@ -125,6 +125,6 @@ def check_hearing_reminders():
 
 def start_scheduler():
     # Runs the check_hearing_reminders job immediately once, then schedules it daily
-    scheduler.add_job(check_hearing_reminders, "interval", minutes=1)
+    scheduler.add_job(check_hearing_reminders, "interval", days=1)
     scheduler.start()
     logger.info("Hearing reminder scheduler started successfully.")

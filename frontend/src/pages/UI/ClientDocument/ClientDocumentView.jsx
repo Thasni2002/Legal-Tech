@@ -15,7 +15,7 @@ const AccessDenied = ({ action }) => (
 );
 
 export default function ClientDocuments() {
-  const { perms, loading } = useModulePermission("Documents");
+  const { perms, loading, user } = useModulePermission("Documents");
 
   const [documentName, setDocumentName] = useState("");
   const [documentType, setDocumentType] = useState("");
@@ -28,7 +28,6 @@ export default function ClientDocuments() {
 
   const fetchClientDocs = async () => {
     try {
-      const user = getLoggedInUser();
       const clientName = (user?.username || user?.name || "").trim().toLowerCase();
       if (!clientName) {
         setLoadingDocs(false);
@@ -67,6 +66,7 @@ export default function ClientDocuments() {
             if (!doc.file && !doc.url) return; // skip empty entries
             docItems.push({
               id: `db-doc-${item.id}-${idx}`,
+              caseTitle: item.case_title || "Untitled Case",
               name: doc.documentType || "Document",
               type: doc.documentType || "Document",
               fileName: doc.file || "File",
@@ -86,8 +86,10 @@ export default function ClientDocuments() {
   };
 
   useEffect(() => {
-    fetchClientDocs();
-  }, []);
+    if (!loading && perms.view) {
+      fetchClientDocs();
+    }
+  }, [loading, perms.view, user]);
 
   const handleUpload = () => {
     if (!perms.add) {
@@ -369,7 +371,8 @@ export default function ClientDocuments() {
             <tbody>
               {documents.map((doc) => (
                 <tr key={doc.id} className="border-b border-[#E2E8F0]">
-                  <td className="p-3 font-semibold text-slate-800">{doc.name}</td>
+                  <td className="p-3 font-semibold text-slate-800">{doc.caseTitle}</td>
+                  <td className="p-3 text-slate-600">{doc.name}</td>
                   <td className="p-3 text-slate-600">{doc.type}</td>
                   <td className="p-3 text-slate-600 font-mono text-xs">{doc.fileName}</td>
                   <td className="p-3 text-slate-500">{doc.date}</td>

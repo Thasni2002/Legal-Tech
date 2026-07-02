@@ -351,6 +351,56 @@
         }
       ],
       "temp_password": "temp_^JdEfsW$"
+    },
+    {
+      "id": 19,
+      "username": "thasnishareer4",
+      "email": "thasnishareer4@gmail.com",
+      "password": "$2b$12$mQdmmT3czcih4EQbJhYNGeMjjYgozXCome7O9R9lM6yfbkjDNP2Ce",
+      "role": "client",
+      "first_name": "risvan",
+      "last_name": "",
+      "phone": "0920753016",
+      "custom_permissions": {},
+      "document_access": [
+        {
+          "edit": false,
+          "name": "Smith v. State - Case Brief.pdf",
+          "type": "Case File",
+          "view": true,
+          "docId": "doc_1",
+          "delete": false,
+          "upload": true
+        },
+        {
+          "edit": false,
+          "name": "Land Title Deed - John Doe.pdf",
+          "type": "Property Document",
+          "view": true,
+          "docId": "doc_2",
+          "delete": false,
+          "upload": false
+        },
+        {
+          "edit": true,
+          "name": "Consultation Agreement - TechCorp.pdf",
+          "type": "Contract",
+          "view": true,
+          "docId": "doc_3",
+          "delete": false,
+          "upload": true
+        },
+        {
+          "edit": false,
+          "name": "Divorce Decree - Final.pdf",
+          "type": "Court Order",
+          "view": false,
+          "docId": "doc_4",
+          "delete": false,
+          "upload": false
+        }
+      ],
+      "temp_password": "temp_D5iwAWWG"
     }
   ],
   "advocates": [
@@ -412,8 +462,8 @@
       "case_number": "cr/1244/2026",
       "case_title": "Accident",
       "advocate_name": "chithra",
-      "practice_area": "Family",
-      "priority": "Normal",
+      "practice_area": "Criminal Law",
+      "priority": "Medium",
       "due_date": "2026-07-03",
       "assignment_notes": "Assigned from Case Management - Case #cr/1244/2026",
       "assigned_documents": "[{\"documentType\": \"Petition\", \"advocate\": \"\", \"file\": \"Invoice_1_thasni (1).pdf\", \"url\": null, \"view\": true, \"upload\": false, \"edit\": false, \"delete\": false}]",
@@ -510,6 +560,21 @@
       "status": "Active",
       "client_name": "ashfah",
       "created_at": "2026-07-02T12:01:46"
+    },
+    {
+      "id": 18,
+      "case_name": "criminal",
+      "case_number": "cr/1234/2026",
+      "case_title": "criminal",
+      "advocate_name": "chithra",
+      "practice_area": "Property",
+      "priority": "Normal",
+      "due_date": "2090-12-12",
+      "assignment_notes": "Assigned from Case Management - Case #cr/1234/2026",
+      "assigned_documents": "[{\"documentType\": \"\", \"advocate\": \"\", \"file\": null, \"url\": \"\", \"view\": true, \"upload\": false, \"edit\": false, \"delete\": true}]",
+      "status": "Active",
+      "client_name": "risvan",
+      "created_at": "2026-07-02T18:32:08"
     }
   ],
   "case_management_cases": [
@@ -612,6 +677,26 @@
       "created_at": "2026-07-02T06:31:13",
       "updated_at": "2026-07-02T07:48:00",
       "cnr_number": "KLAL010012342026"
+    },
+    {
+      "id": 20,
+      "case_id": "case-2026-001",
+      "case_title": "criminal",
+      "case_no": "cr/1234/2026",
+      "case_type": "Property",
+      "case_description": "fjewfhoewjfew",
+      "client_name": "risvan",
+      "contact_number": "0920753016",
+      "email_id": "thasnishareer4@gmail.com",
+      "court_name": "High Court",
+      "court_type": "Consumer",
+      "status": "Active",
+      "selected_advocate": "chithra",
+      "documents": "[{\"documentType\": \"\", \"advocate\": \"\", \"file\": null, \"url\": \"\", \"view\": true, \"upload\": false, \"edit\": false, \"delete\": true}]",
+      "next_hearing_date": "2090-12-12",
+      "created_at": "2026-07-02T12:53:43",
+      "updated_at": "2026-07-02T13:02:20",
+      "cnr_number": "KLAL010012342025"
     }
   ],
   "cases": [],
@@ -731,6 +816,34 @@
       "grand_total": 6644.58,
       "status": "Sent",
       "created_at": "2026-06-26T06:56:37",
+      "payment_method": "gpay",
+      "gpay_number": "",
+      "upi_id": ""
+    },
+    {
+      "id": 4,
+      "advocate_id": null,
+      "client_name": "thasnishareer4",
+      "case_number": "",
+      "mobile_number": "0920753016",
+      "email": "thasnishareer4@gmail.com",
+      "court_fee_case_type": "Criminal Appeal",
+      "court_fee_amount": 100.0,
+      "court_fee_jurisdiction": "High Court",
+      "stamp_duty_doc_type": "N/A",
+      "stamp_duty_amount": 0.0,
+      "stamp_duty_state": "N/A",
+      "advocate_fee_case_type": "N/A",
+      "advocate_fee_amount": 0.0,
+      "advocate_fee_remarks": "N/A",
+      "filing_cost_pages": 0,
+      "filing_cost_amount": 0.0,
+      "filing_cost_notes": "N/A",
+      "subtotal": 100.0,
+      "gst": 18.0,
+      "grand_total": 118.0,
+      "status": "Sent",
+      "created_at": "2026-07-02T13:11:37",
       "payment_method": "gpay",
       "gpay_number": "",
       "upi_id": ""
