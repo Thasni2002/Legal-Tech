@@ -67,3 +67,9 @@ class CaseResponse(CaseCreate):
 
     class Config:
         from_attributes = True
+
+# AI Assistant Schema
+class AIAssistantRequest(BaseModel):
+    query: str
+    role: Optional[str] = None
+    advocateName: Optional[str] = None
