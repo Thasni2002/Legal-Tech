@@ -135,7 +135,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         { name: "Client Management", path: "/client-management", icon: Users, moduleKey: "Client Management" },
         { name: "Law Firm Management", path: "/lawfirm-management", icon: Scale, moduleKey: "Law Firm Management" },
         { name: "Case Discussion", path: "/consultations", icon: BookOpen, moduleKey: "Consultations" },
-        { name: "Finance Management", path: "/finance-management", icon: CreditCard, moduleKey: "Finance Management" },
+        { name: "Billing", path: "/finance-management", icon: CreditCard, moduleKey: "Finance Management" },
         { name: "Calendar", path: "/calendar", icon: Calendar, moduleKey: "Calendar" },
       ],
     },
