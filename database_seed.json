@@ -2,208 +2,28 @@
   "activities": [],
   "users": [
     {
-      "id": 7,
+      "id": 104,
       "username": "admin",
       "email": "admin@example.com",
-      "password": "$2b$12$EwXylBhdJbRV5mUQ59JT9Ow08wNIL77oqz4RmG5Mcc5/CchkmCO8K",
+      "password": "$2b$12$7RBMrtFp0YjHxFGKS/ue3eQQIPRFw4qPvDOm6wtbCi44BPXILLL.u",
       "role": "Senior Advocate",
-      "first_name": null,
-      "last_name": null,
-      "phone": null,
+      "first_name": "",
+      "last_name": "",
+      "phone": "",
+      "temp_password": "",
       "custom_permissions": {},
-      "document_access": [],
-      "temp_password": null
+      "document_access": []
     },
     {
-      "id": 8,
-      "username": "thasni",
-      "email": "thasni01@gmail.com",
-      "password": "$2b$12$fYb6FCZvKAJ4IZ.hma0jMexdN4UpUlJXzL6QyFBwOW8nBsMqzqtKe",
+      "id": 123,
+      "username": "jameel",
+      "email": "jameel4@gmail.com",
+      "password": "$2b$12$nV8VOIvGpvNeL8Fp7JZzSuMZ2q2Albo3KxI7viP693BuW.isMrLvW",
       "role": "Client",
-      "first_name": "Thasni",
-      "last_name": "S",
-      "phone": "8974567892",
-      "custom_permissions": {},
-      "document_access": [
-        {
-          "edit": false,
-          "name": "Smith v. State - Case Brief.pdf",
-          "type": "Case File",
-          "view": true,
-          "docId": "doc_1",
-          "delete": false,
-          "upload": true
-        },
-        {
-          "edit": false,
-          "name": "Land Title Deed - John Doe.pdf",
-          "type": "Property Document",
-          "view": true,
-          "docId": "doc_2",
-          "delete": false,
-          "upload": false
-        },
-        {
-          "edit": true,
-          "name": "Consultation Agreement - TechCorp.pdf",
-          "type": "Contract",
-          "view": true,
-          "docId": "doc_3",
-          "delete": false,
-          "upload": true
-        },
-        {
-          "edit": false,
-          "name": "Divorce Decree - Final.pdf",
-          "type": "Court Order",
-          "view": false,
-          "docId": "doc_4",
-          "delete": false,
-          "upload": false
-        }
-      ],
-      "temp_password": "temp_XBrKKlua"
-    },
-    {
-      "id": 9,
-      "username": "chithra",
-      "email": "chithra01@gmail.com",
-      "password": "$2b$12$2s9GUuYfq93Uo0t/88yPcuiuF2.t3WiB2.ivs7iD6urCLxcJOoyP.",
-      "role": "Junior Advocate",
-      "first_name": "Chithra",
-      "last_name": "KS",
-      "phone": "8974561236",
-      "custom_permissions": {
-        "Profile": {
-          "add": false,
-          "edit": false,
-          "view": false,
-          "delete": false
-        },
-        "Consultations": {
-          "add": false,
-          "edit": false,
-          "view": false,
-          "delete": false
-        },
-        "Case Management": {
-          "add": false,
-          "edit": false,
-          "view": false,
-          "delete": false
-        },
-        "Client Management": {
-          "add": false,
-          "edit": false,
-          "view": false,
-          "delete": false
-        },
-        "Law Firm Management": {
-          "add": false,
-          "edit": false,
-          "view": false,
-          "delete": false
-        }
-      },
-      "document_access": [
-        {
-          "edit": false,
-          "name": "Smith v. State - Case Brief.pdf",
-          "type": "Case File",
-          "view": true,
-          "docId": "doc_1",
-          "delete": false,
-          "upload": true
-        },
-        {
-          "edit": false,
-          "name": "Land Title Deed - John Doe.pdf",
-          "type": "Property Document",
-          "view": true,
-          "docId": "doc_2",
-          "delete": false,
-          "upload": false
-        },
-        {
-          "edit": true,
-          "name": "Consultation Agreement - TechCorp.pdf",
-          "type": "Contract",
-          "view": true,
-          "docId": "doc_3",
-          "delete": false,
-          "upload": true
-        },
-        {
-          "edit": false,
-          "name": "Divorce Decree - Final.pdf",
-          "type": "Court Order",
-          "view": false,
-          "docId": "doc_4",
-          "delete": false,
-          "upload": false
-        }
-      ],
-      "temp_password": "temp_NipQDY0^"
-    },
-    {
-      "id": 10,
-      "username": "shiya",
-      "email": "thasni7530@gmail.com",
-      "password": "$2b$12$g0HiPc8KjG4moaLBSAfoneT/s7sESRcqJyuYBtqK232hUPl6yaSla",
-      "role": "Junior Advocate",
-      "first_name": "shiya",
-      "last_name": "Advocate",
-      "phone": "9207530164",
-      "custom_permissions": {},
-      "document_access": [
-        {
-          "edit": false,
-          "name": "Smith v. State - Case Brief.pdf",
-          "type": "Case File",
-          "view": true,
-          "docId": "doc_1",
-          "delete": false,
-          "upload": true
-        },
-        {
-          "edit": false,
-          "name": "Land Title Deed - John Doe.pdf",
-          "type": "Property Document",
-          "view": true,
-          "docId": "doc_2",
-          "delete": false,
-          "upload": false
-        },
-        {
-          "edit": true,
-          "name": "Consultation Agreement - TechCorp.pdf",
-          "type": "Contract",
-          "view": true,
-          "docId": "doc_3",
-          "delete": false,
-          "upload": true
-        },
-        {
-          "edit": false,
-          "name": "Divorce Decree - Final.pdf",
-          "type": "Court Order",
-          "view": false,
-          "docId": "doc_4",
-          "delete": false,
-          "upload": false
-        }
-      ],
-      "temp_password": "temp_Ywx5GGbK"
-    },
-    {
-      "id": 11,
-      "username": "sdfcgvbh",
-      "email": "thasni02@gmail.com",
-      "password": "$2b$12$izwVRXaBOlGxple9mW09ue.m0kTpnLOXYRP5r7ExGIKTzxVWbSJ0K",
-      "role": "Client",
-      "first_name": "sdfcgvbh",
+      "first_name": "jameel",
       "last_name": "Client",
-      "phone": "8974561200",
+      "phone": "9995474951",
+      "temp_password": "temp_4jXbvElF",
       "custom_permissions": {},
       "document_access": [
         {
@@ -242,20 +62,20 @@
           "delete": false,
           "upload": false
         }
-      ],
-      "temp_password": "temp_grV3IM%I"
+      ]
     },
     {
-      "id": 12,
-      "username": "liya",
-      "email": "liya02@gmail.com",
-      "password": "$2b$12$EZBqpbrpvAy8yJI4v9n25.1AIAiu0mnEOVvxJlvhqy.vAk5amw0.O",
-      "role": "Client",
-      "first_name": "liya",
-      "last_name": "s",
-      "phone": "9974561200",
+      "id": 124,
+      "username": "jemshiya",
+      "email": "jemshiyajameel4@gmail.com",
+      "password": "$2b$12$LaYA13KB.noU3L6uKA1R5eMl4Sle36DVq25Rc.8FGlhuLJ2thlEe2",
+      "role": "Junior Advocate",
+      "first_name": "jemshiya",
+      "last_name": "Advocate",
+      "phone": "8075507112",
+      "temp_password": "temp_vhJsJdeu",
       "custom_permissions": {
-        "Documents": {
+        "Junior Calendar": {
           "add": true,
           "edit": true,
           "view": true,
@@ -299,18 +119,81 @@
           "delete": false,
           "upload": false
         }
-      ],
-      "temp_password": "temp_R&IVarBa"
+      ]
     },
     {
-      "id": 13,
-      "username": "jemshiya",
-      "email": "jemshiyajameel4@gmail.com",
-      "password": "$2b$12$7JvMiX00YXvedvUG1OagV.8OGcLn2m/dX7Lr3qe5Uhv0lPRItp4VW",
+      "id": 128,
+      "username": "john",
+      "email": "john@gmail.com",
+      "password": "$2b$12$Mp7blaEPFFN9i8IiXucjU.GF44u.xOeSFHlYtgtWMiuSRJhgVfQci",
+      "role": "Junior Advocate",
+      "first_name": "john",
+      "last_name": "Advocate",
+      "phone": "8075507112",
+      "temp_password": "temp_Pu%@p6zb",
+      "custom_permissions": {
+        "Assigned Cases": {
+          "add": true,
+          "edit": true,
+          "view": true,
+          "delete": true
+        },
+        "Junior Calendar": {
+          "add": true,
+          "edit": true,
+          "view": true,
+          "delete": true
+        }
+      },
+      "document_access": [
+        {
+          "edit": false,
+          "name": "Smith v. State - Case Brief.pdf",
+          "type": "Case File",
+          "view": true,
+          "docId": "doc_1",
+          "delete": false,
+          "upload": true
+        },
+        {
+          "edit": false,
+          "name": "Land Title Deed - John Doe.pdf",
+          "type": "Property Document",
+          "view": true,
+          "docId": "doc_2",
+          "delete": false,
+          "upload": false
+        },
+        {
+          "edit": true,
+          "name": "Consultation Agreement - TechCorp.pdf",
+          "type": "Contract",
+          "view": true,
+          "docId": "doc_3",
+          "delete": false,
+          "upload": true
+        },
+        {
+          "edit": false,
+          "name": "Divorce Decree - Final.pdf",
+          "type": "Court Order",
+          "view": false,
+          "docId": "doc_4",
+          "delete": false,
+          "upload": false
+        }
+      ]
+    },
+    {
+      "id": 134,
+      "username": "ashfah",
+      "email": "jemishiyajamel4@gmail.com",
+      "password": "$2b$12$zqchB97tgcI8nin1K5QOUOf6a7EuSnV7W5OPZDbXbwbFk2h2mKEgS",
       "role": "Client",
-      "first_name": "Jemshiya",
+      "first_name": "ashfah",
       "last_name": "Client",
-      "phone": "8974561201",
+      "phone": "8075507112",
+      "temp_password": "temp_g17e9I3N",
       "custom_permissions": {},
       "document_access": [
         {
@@ -405,52 +288,27 @@
   ],
   "advocates": [
     {
-      "id": 1,
-      "advocate_name": "chithra",
-      "bar_council_id": "44653653",
-      "enrollment_number": "58465123",
-      "phone_number": "8899654758",
-      "email_address": "chithra02@gmail.com",
-      "specialization": "dxfcvgbhnj",
-      "city": "xdcfvgbh",
+      "id": 15,
+      "advocate_name": "mathew",
+      "bar_council_id": "",
+      "enrollment_number": "",
+      "phone_number": "8075507112",
+      "email_address": "mathew@gmail.com",
+      "specialization": "",
+      "city": "",
       "status": "Active",
-      "date_of_birth": "2002-06-12",
-      "gender": "Female",
-      "aadhaar_number": "589674589612",
-      "pan_number": "145789962",
-      "practice_area": "dfghjk",
-      "court_type": "dfcgvhbjnkm",
-      "years_of_experience": "2",
-      "languages_known": "malayalam",
-      "law_firm_name": "dfcgvbnjm",
-      "state": "dfxcvghj",
-      "pincode": "856532",
-      "chambers_address": "weyhjklvbnm",
-      "about": "dcfvgbhnjm",
-      "profile_image": ""
-    },
-    {
-      "id": 2,
-      "advocate_name": "shiya",
-      "bar_council_id": "44653653",
-      "enrollment_number": "58465123",
-      "phone_number": "9207530164",
-      "email_address": "thasni7530@gmail.com",
-      "specialization": "ghbjk",
-      "city": "Thiruvananthapuram",
-      "status": "Active",
-      "date_of_birth": "2026-06-11",
+      "date_of_birth": null,
       "gender": "Male",
-      "aadhaar_number": "589674589612",
-      "pan_number": "sdtyuikjnb ",
-      "practice_area": "dfghjk",
-      "court_type": "dfcgvhbjnkm",
-      "years_of_experience": "5",
-      "languages_known": "malayalam",
-      "law_firm_name": "shiya",
-      "state": "Kerala",
-      "pincode": "695316",
-      "chambers_address": "Sabeena Manzil,Pachira,Pallippuram(P.O),Thiruvananthapuram\nSabeena Manzil,Pachira,Pallippuram(P.O),Thiruvananthapuram",
+      "aadhaar_number": "",
+      "pan_number": "",
+      "practice_area": "",
+      "court_type": "",
+      "years_of_experience": null,
+      "languages_known": "",
+      "law_firm_name": "",
+      "state": "",
+      "pincode": "",
+      "chambers_address": "",
       "about": "",
       "profile_image": ""
     }
@@ -534,14 +392,13 @@
     {
       "id": 15,
       "case_name": "man missing",
-      "case_number": "cr/2127/2026",
+      "case_number": "cr/1234/2028",
       "case_title": "man missing",
-      "advocate_name": "shiya",
-      "practice_area": "Consumer",
+      "advocate_name": "mathew",
+      "practice_area": "Corporate",
       "priority": "Normal",
-      "due_date": "2026-07-02",
-      "assignment_notes": "Assigned from Case Management - Case #cr/2127/2026",
-      "assigned_documents": "[{\"documentType\": \"Petition\", \"advocate\": \"\", \"file\": \"Invoice_1_thasni (1).pdf\", \"url\": null, \"view\": true, \"upload\": false, \"edit\": false, \"delete\": false}, {\"documentType\": \"Evidence\", \"advocate\": \"\", \"file\": \"images.jpg\", \"url\": null, \"view\": true, \"upload\": true, \"edit\": true, \"delete\": true}, {\"documentType\": \"Audio Recording\", \"advocate\": \"\", \"file\": \"WhatsApp Ptt 2026-07-02 at 11.03.37 AM.ogg\", \"url\": null, \"view\": true, \"upload\": true, \"edit\": true, \"delete\": true}, {\"documentType\": \"Video Footage\", \"advocate\": \"\", \"file\": \"WhatsApp Video 2026-07-02 at 11.09.00 AM.mp4\", \"url\": null, \"view\": true, \"upload\": true, \"edit\": true, \"delete\": true}]",
+      "due_date": "2026-07-10",
+      "assignment_notes": "Assigned from Case Management - Case #cr/1234/2028",
       "status": "Active",
       "client_name": "samual",
       "created_at": "2026-07-02T11:32:58"
@@ -579,95 +436,15 @@
   ],
   "case_management_cases": [
     {
-      "id": 7,
-      "case_id": "case-2026-003",
+      "id": 4,
+      "case_id": "case-2026-001",
       "case_title": "man missing",
-      "case_no": "cr/3698/2026",
-      "case_type": "Motor Accident",
-      "case_description": "sdfghuiop;lkjhgf",
-      "client_name": "john",
-      "contact_number": "8075507112",
-      "email_id": "john@gmail.com",
-      "court_name": "Family Court",
-      "court_type": "Consumer",
-      "status": "Active",
-      "selected_advocate": null,
-      "documents": "[{\"documentType\": \"Evidence\", \"advocate\": \"\", \"file\": \"photo_6156523014376329664_w.jpg\", \"url\": \"http://localhost:8000/uploads/dfa395f065e2465fb79695f2e067266c_photo_6156523014376329664_w.jpg\", \"view\": true, \"upload\": true, \"edit\": true, \"delete\": true}]",
-      "next_hearing_date": "2026-06-26",
-      "created_at": null,
-      "updated_at": null,
-      "cnr_number": null
-    },
-    {
-      "id": 11,
-      "case_id": "case-2026-008",
-      "case_title": "Accident",
-      "case_no": "cr/1244/2026",
-      "case_type": "Family",
-      "case_description": "srdftghjeetryu",
-      "client_name": "James mohann",
-      "contact_number": "8974561200",
-      "email_id": "james01@gmail.com",
-      "court_name": "Supreme Court",
-      "court_type": "Criminal",
-      "status": "Active",
-      "selected_advocate": null,
-      "documents": "[{\"documentType\": \"Petition\", \"advocate\": \"\", \"file\": \"Invoice_1_thasni (1).pdf\", \"url\": null, \"view\": true, \"upload\": true, \"edit\": false, \"delete\": false}]",
-      "next_hearing_date": "2026-07-03",
-      "created_at": "2026-06-30T09:02:39",
-      "updated_at": "2026-07-01T07:25:52",
-      "cnr_number": "KLAL010012342025"
-    },
-    {
-      "id": 12,
-      "case_id": "case-2026-008",
-      "case_title": "Accident",
-      "case_no": "cr/3698/2026",
-      "case_type": "Labour",
-      "case_description": "qwertyuioplkjhgfdsdfgbnm,",
-      "client_name": "samual",
-      "contact_number": "8974561200",
-      "email_id": "samual@gmail.com",
-      "court_name": "Family Court",
-      "court_type": "Family",
-      "status": "Active",
-      "selected_advocate": null,
-      "documents": "[{\"documentType\": \"Evidence\", \"advocate\": \"\", \"file\": \"photo_6156523014376329664_w (1).jpg\", \"url\": null, \"view\": true, \"upload\": false, \"edit\": false, \"delete\": false}, {\"documentType\": \"Affidavit\", \"advocate\": \"\", \"file\": \"Python FastAPI Syllabus (1).pdf\", \"url\": \"data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA1OTUgODQyXSAvUmVzb3VyY2VzIDw8ID4+IC9Db250ZW50cyA0IDAgUiA+PgplbmRvYmoKNCAwIG9iago8PCAvTGVuZ3RoIDU3ID4+CnN0cmVhbQpCVAovRjEgMTIgVGYKNzIgNzEyIFRkCihNb2NrIFB5dGhvbiBGYXN0QVBJIFN5bGxhYnVzIERvY3VtZW50KSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA1CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKMDAwMDAwMDIxNiAwMDAwMCBuIAp0cmFpbGVyCjw8IC9TaXplIDUgL1Jvb3QgMSAwIFIgPj4Kc3RhcnR4cmVmCjMyNAolJUVPRgo=\", \"view\": true, \"upload\": true, \"edit\": true, \"delete\": true}]",
-      "next_hearing_date": "2026-07-17",
-      "created_at": "2026-07-01T08:45:07",
-      "updated_at": "2026-07-01T10:55:19",
-      "cnr_number": "KLAL010012342025"
-    },
-    {
-      "id": 13,
-      "case_id": "case-2026-002",
-      "case_title": "man missing",
-      "case_no": "cr/2127/2026",
+      "case_no": "cr/1234/2028",
       "case_type": "Consumer",
-      "case_description": "wertfgyjhjkl",
-      "client_name": "samual",
-      "contact_number": "8974561200",
-      "email_id": "samual@gmail.com",
-      "court_name": "High Court",
-      "court_type": "Family",
-      "status": "Active",
-      "selected_advocate": null,
-      "documents": "[{\"documentType\": \"Petition\", \"advocate\": \"\", \"file\": \"Invoice_1_thasni (1).pdf\", \"url\": null, \"view\": true, \"upload\": false, \"edit\": false, \"delete\": false}, {\"documentType\": \"Evidence\", \"advocate\": \"\", \"file\": \"images.jpg\", \"url\": null, \"view\": true, \"upload\": true, \"edit\": true, \"delete\": true}, {\"documentType\": \"Audio Recording\", \"advocate\": \"\", \"file\": \"WhatsApp Ptt 2026-07-02 at 11.03.37 AM.ogg\", \"url\": null, \"view\": true, \"upload\": true, \"edit\": true, \"delete\": true}, {\"documentType\": \"Video Footage\", \"advocate\": \"\", \"file\": \"WhatsApp Video 2026-07-02 at 11.09.00 AM.mp4\", \"url\": null, \"view\": true, \"upload\": true, \"edit\": true, \"delete\": true}]",
-      "next_hearing_date": "2026-07-02",
-      "created_at": "2026-07-02T05:39:48",
-      "updated_at": "2026-07-02T06:18:07",
-      "cnr_number": "KLAL010012342025"
-    },
-    {
-      "id": 14,
-      "case_id": "case-2026-007",
-      "case_title": "Accident",
-      "case_no": "cr/2128/2026",
-      "case_type": "Motor Accident",
-      "case_description": "fsdfgchjbklm",
-      "client_name": "ashfah",
-      "contact_number": "8945622256",
-      "email_id": "ashfahashraf@gmail.com",
+      "case_description": "eersdsgcahdgydtgfjbsfa",
+      "client_name": "shan",
+      "contact_number": "8075507112",
+      "email_id": "jemshiyajameel4@gmail.com",
       "court_name": "High Court",
       "court_type": "Criminal",
       "status": "Active",
@@ -704,51 +481,13 @@
   "clients": [],
   "consultations": [
     {
-      "id": 9,
-      "client_id": 7,
-      "client_name": "jemshiya",
-      "advocate_id": 9,
-      "advocate_name": "chithra",
-      "date": "2026-06-18",
-      "time": "11:30 PM",
-      "type": "Video Consultation",
-      "issue": "Consultation Request",
-      "fee": "\u20b9500",
-      "status": "Pending",
-      "duration": null,
-      "summary": null,
-      "reschedule_reason": null,
-      "created_at": "2026-06-23T18:02:59",
-      "updated_at": null,
-      "meeting_link": null
-    },
-    {
-      "id": 10,
-      "client_id": 12,
-      "client_name": "liya",
-      "advocate_id": 10,
-      "advocate_name": "shiya",
-      "date": "2026-06-27",
-      "time": "9:30 PM",
-      "type": "Video Consultation",
-      "issue": "Consultation Request",
-      "fee": "\u20b9500",
-      "status": "Approved",
-      "duration": null,
-      "summary": null,
-      "reschedule_reason": "Approved by advocate",
-      "created_at": "2026-06-24T22:13:53",
-      "updated_at": null,
-      "meeting_link": null
-    },
-    {
-      "id": 11,
-      "client_id": 12,
-      "client_name": "liya",
-      "advocate_id": 7,
+      "id": 5,
+      "client_id": 123,
+      "client_name": "jameel",
+      "advocate_id": 104,
       "advocate_name": "admin",
-      "date": "2026-06-29",
-      "time": "9:15 PM",
+      "date": "2026-06-26",
+      "time": "1:30 PM",
       "type": "Video Call",
       "issue": null,
       "fee": "\u20b9500",
@@ -756,8 +495,198 @@
       "duration": null,
       "summary": null,
       "reschedule_reason": "Approved by client",
-      "created_at": "2026-06-24T22:20:33",
+      "created_at": "2026-06-24T07:49:35",
       "updated_at": null,
+      "meeting_link": null
+    },
+    {
+      "id": 6,
+      "client_id": 123,
+      "client_name": "jameel",
+      "advocate_id": null,
+      "advocate_name": "jemshiya",
+      "date": "2026-06-14",
+      "time": "14:30",
+      "type": "Chat Consultation",
+      "issue": "Consultation Request",
+      "fee": "\u20b9500",
+      "status": "Approved",
+      "duration": null,
+      "summary": null,
+      "reschedule_reason": "Rescheduled by advocate",
+      "created_at": "2026-06-24T07:50:56",
+      "updated_at": "2026-07-02T15:11:22",
+      "meeting_link": null
+    },
+    {
+      "id": 11,
+      "client_id": 123,
+      "client_name": "jameel",
+      "advocate_id": 124,
+      "advocate_name": "ash",
+      "date": "2026-06-24",
+      "time": "14:16",
+      "type": "Chat Consultation",
+      "issue": "Consultation Request",
+      "fee": "\u20b9500",
+      "status": "Approved",
+      "duration": null,
+      "summary": null,
+      "reschedule_reason": "Rescheduled by advocate",
+      "created_at": "2026-06-24T08:46:49",
+      "updated_at": "2026-07-02T15:11:24",
+      "meeting_link": null
+    },
+    {
+      "id": 14,
+      "client_id": 123,
+      "client_name": "jameel",
+      "advocate_id": 128,
+      "advocate_name": "john",
+      "date": "2026-07-03",
+      "time": "4:30 PM",
+      "type": "Chat Consultation",
+      "issue": "Consultation Request",
+      "fee": "\u20b9500",
+      "status": "Approved",
+      "duration": null,
+      "summary": null,
+      "reschedule_reason": "Approved by advocate",
+      "created_at": "2026-06-25T10:30:09",
+      "updated_at": null,
+      "meeting_link": null
+    },
+    {
+      "id": 16,
+      "client_id": 134,
+      "client_name": "rejeena",
+      "advocate_id": 104,
+      "advocate_name": "admin",
+      "date": "2016-07-27",
+      "time": "12:30 PM",
+      "type": "Chat",
+      "issue": null,
+      "fee": "\u20b9500",
+      "status": "Approved",
+      "duration": null,
+      "summary": null,
+      "reschedule_reason": "Approved by client",
+      "created_at": "2026-07-01T07:07:26",
+      "updated_at": "2026-07-02T15:11:21",
+      "meeting_link": null
+    },
+    {
+      "id": 17,
+      "client_id": 124,
+      "client_name": "rejeena",
+      "advocate_id": 104,
+      "advocate_name": "admin",
+      "date": "2029-12-12",
+      "time": "1:15 PM",
+      "type": "Chat",
+      "issue": null,
+      "fee": "\u20b9500",
+      "status": "Approved",
+      "duration": null,
+      "summary": null,
+      "reschedule_reason": "Approved by client",
+      "created_at": "2026-07-01T07:26:48",
+      "updated_at": "2026-07-01T07:48:27",
+      "meeting_link": null
+    },
+    {
+      "id": 18,
+      "client_id": 134,
+      "client_name": "ashfah ashraf",
+      "advocate_id": 104,
+      "advocate_name": "admin",
+      "date": "2006-12-26",
+      "time": "12:45 PM",
+      "type": "Chat",
+      "issue": null,
+      "fee": "\u20b9500",
+      "status": "Approved",
+      "duration": null,
+      "summary": null,
+      "reschedule_reason": "Approved by client",
+      "created_at": "2026-07-01T07:33:16",
+      "updated_at": "2026-07-02T15:11:19",
+      "meeting_link": null
+    },
+    {
+      "id": 19,
+      "client_id": 134,
+      "client_name": "ashfah ashraf",
+      "advocate_id": 104,
+      "advocate_name": "admin",
+      "date": "1111-11-11",
+      "time": "12:45 PM",
+      "type": "Person to Person",
+      "issue": null,
+      "fee": "\u20b9500",
+      "status": "Approved",
+      "duration": null,
+      "summary": null,
+      "reschedule_reason": "Approved by client",
+      "created_at": "2026-07-01T07:38:49",
+      "updated_at": "2026-07-02T15:11:18",
+      "meeting_link": null
+    },
+    {
+      "id": 20,
+      "client_id": null,
+      "client_name": "test",
+      "advocate_id": 104,
+      "advocate_name": "admin",
+      "date": "2026-07-01",
+      "time": "12:00 PM",
+      "type": "Chat",
+      "issue": null,
+      "fee": "\u20b9500",
+      "status": "Approved",
+      "duration": null,
+      "summary": null,
+      "reschedule_reason": "Approved by client",
+      "created_at": "2026-07-01T07:42:10",
+      "updated_at": "2026-07-02T15:11:26",
+      "meeting_link": null
+    },
+    {
+      "id": 21,
+      "client_id": null,
+      "client_name": "test",
+      "advocate_id": 104,
+      "advocate_name": "admin",
+      "date": "2026-07-01",
+      "time": "12:00 PM",
+      "type": "Chat",
+      "issue": null,
+      "fee": "\u20b9500",
+      "status": "Approved",
+      "duration": null,
+      "summary": null,
+      "reschedule_reason": "Approved by client",
+      "created_at": "2026-07-01T07:44:44",
+      "updated_at": "2026-07-02T15:11:27",
+      "meeting_link": null
+    },
+    {
+      "id": 22,
+      "client_id": null,
+      "client_name": "ashfah ashraf",
+      "advocate_id": 104,
+      "advocate_name": "admin",
+      "date": "2027-11-11",
+      "time": "12:45 PM",
+      "type": "Chat",
+      "issue": null,
+      "fee": "\u20b9500",
+      "status": "Approved",
+      "duration": null,
+      "summary": null,
+      "reschedule_reason": "Approved by client",
+      "created_at": "2026-07-01T07:47:13",
+      "updated_at": "2026-07-02T15:11:26",
       "meeting_link": null
     }
   ],
@@ -768,55 +697,65 @@
       "id": 2,
       "advocate_id": null,
       "client_name": "jemshiya",
-      "case_number": "",
-      "mobile_number": "8974561201",
+      "case_number": "zsxdcfvb",
+      "mobile_number": "sdfghbnjm",
       "email": "jemshiyajameel4@gmail.com",
-      "court_fee_case_type": "Criminal Appeal",
-      "court_fee_amount": 500.0,
-      "court_fee_jurisdiction": "District Court",
-      "stamp_duty_doc_type": "Sale Deed",
-      "stamp_duty_amount": 50.0,
-      "stamp_duty_state": "kerala",
-      "advocate_fee_case_type": "Consultation / Advice",
-      "advocate_fee_amount": 500.0,
-      "advocate_fee_remarks": "rdfthgj",
-      "filing_cost_pages": 2,
-      "filing_cost_amount": 100.0,
-      "filing_cost_notes": "dfghjk",
-      "subtotal": 1150.0,
-      "gst": 207.0,
-      "grand_total": 1357.0,
-      "status": "Sent",
-      "created_at": "2026-06-26T05:05:21",
-      "payment_method": "gpay",
       "gpay_number": "",
-      "upi_id": ""
+      "upi_id": "",
+      "court_fee_case_type": "Criminal Appeal",
+      "court_fee_amount": 5.0,
+      "court_fee_jurisdiction": "N/A",
+      "stamp_duty_doc_type": "Lease Agreement",
+      "stamp_duty_amount": 5.0,
+      "stamp_duty_state": "N/A",
+      "advocate_fee_case_type": "Trial Representation",
+      "advocate_fee_amount": 5.0,
+      "advocate_fee_remarks": "N/A",
+      "filing_cost_pages": 5,
+      "filing_cost_amount": 55.0,
+      "filing_cost_notes": "N/A",
+      "subtotal": 70.0,
+      "gst": 12.6,
+      "grand_total": 82.6,
+      "status": "Sent",
+      "created_at": "2026-06-25T09:59:22",
+      "payment_method": "gpay"
     },
     {
-      "id": 3,
+      "id": 4,
       "advocate_id": null,
-      "client_name": "Thasni S",
-      "case_number": "cr/2466/2026",
-      "mobile_number": "9207530164",
-      "email": "thasni7530@gmail.com",
+      "client_name": "jemshiya",
+      "case_number": "sdfgh",
+      "mobile_number": "78564523",
+      "email": "jemshiyajameel4@gmail.com",
+      "gpay_number": "",
+      "upi_id": "",
       "court_fee_case_type": "Criminal Appeal",
-      "court_fee_amount": 4556.0,
+      "court_fee_amount": 75.0,
       "court_fee_jurisdiction": "Supreme Court",
       "stamp_duty_doc_type": "Sale Deed",
-      "stamp_duty_amount": 55.0,
-      "stamp_duty_state": "vb",
+      "stamp_duty_amount": 525.0,
+      "stamp_duty_state": "N/A",
       "advocate_fee_case_type": "Trial Representation",
-      "advocate_fee_amount": 455.0,
-      "advocate_fee_remarks": "fghjv",
-      "filing_cost_pages": 52,
-      "filing_cost_amount": 565.0,
-      "filing_cost_notes": "gtu",
-      "subtotal": 5631.0,
-      "gst": 1013.58,
-      "grand_total": 6644.58,
+      "advocate_fee_amount": 45254.0,
+      "advocate_fee_remarks": "N/A",
+      "filing_cost_pages": 5354,
+      "filing_cost_amount": 52325.0,
+      "filing_cost_notes": "N/A",
+      "subtotal": 98179.0,
+      "gst": 17672.2,
+      "grand_total": 115851.0,
       "status": "Sent",
-      "created_at": "2026-06-26T06:56:37",
-      "payment_method": "gpay",
+      "created_at": "2026-06-25T10:09:52",
+      "payment_method": "gpay"
+    },
+    {
+      "id": 5,
+      "advocate_id": null,
+      "client_name": "jemshiya",
+      "case_number": "sdfgh",
+      "mobile_number": "78564523",
+      "email": "jemshiyajameel4@gmail.com",
       "gpay_number": "",
       "upi_id": ""
     },
@@ -851,7 +790,7 @@
   ],
   "permissions": [
     {
-      "id": 97,
+      "id": 1023,
       "role_id": "senioradvocate",
       "module": "Dashboard",
       "view": 1,
@@ -860,7 +799,7 @@
       "delete": 1
     },
     {
-      "id": 98,
+      "id": 1024,
       "role_id": "senioradvocate",
       "module": "Junior Dashboard",
       "view": 1,
@@ -869,7 +808,7 @@
       "delete": 1
     },
     {
-      "id": 99,
+      "id": 1025,
       "role_id": "senioradvocate",
       "module": "Client Dashboard",
       "view": 1,
@@ -878,7 +817,7 @@
       "delete": 1
     },
     {
-      "id": 100,
+      "id": 1026,
       "role_id": "senioradvocate",
       "module": "Law Firm Management",
       "view": 1,
@@ -887,7 +826,7 @@
       "delete": 1
     },
     {
-      "id": 101,
+      "id": 1027,
       "role_id": "senioradvocate",
       "module": "Client Management",
       "view": 1,
@@ -896,7 +835,7 @@
       "delete": 1
     },
     {
-      "id": 102,
+      "id": 1028,
       "role_id": "senioradvocate",
       "module": "Case Management",
       "view": 1,
@@ -905,7 +844,7 @@
       "delete": 1
     },
     {
-      "id": 103,
+      "id": 1029,
       "role_id": "senioradvocate",
       "module": "Consultations",
       "view": 1,
@@ -914,7 +853,7 @@
       "delete": 1
     },
     {
-      "id": 104,
+      "id": 1030,
       "role_id": "senioradvocate",
       "module": "Finance Management",
       "view": 1,
@@ -923,7 +862,7 @@
       "delete": 1
     },
     {
-      "id": 105,
+      "id": 1031,
       "role_id": "senioradvocate",
       "module": "Calendar",
       "view": 1,
@@ -932,7 +871,7 @@
       "delete": 1
     },
     {
-      "id": 106,
+      "id": 1032,
       "role_id": "senioradvocate",
       "module": "Junior Calendar",
       "view": 1,
@@ -941,7 +880,7 @@
       "delete": 1
     },
     {
-      "id": 107,
+      "id": 1033,
       "role_id": "senioradvocate",
       "module": "Profile",
       "view": 1,
@@ -950,7 +889,7 @@
       "delete": 1
     },
     {
-      "id": 108,
+      "id": 1034,
       "role_id": "senioradvocate",
       "module": "Assigned Cases",
       "view": 1,
@@ -959,7 +898,7 @@
       "delete": 1
     },
     {
-      "id": 109,
+      "id": 1035,
       "role_id": "senioradvocate",
       "module": "Consultation",
       "view": 1,
@@ -968,7 +907,7 @@
       "delete": 1
     },
     {
-      "id": 110,
+      "id": 1036,
       "role_id": "senioradvocate",
       "module": "Case Tracking",
       "view": 1,
@@ -977,7 +916,7 @@
       "delete": 1
     },
     {
-      "id": 111,
+      "id": 1037,
       "role_id": "senioradvocate",
       "module": "Documents",
       "view": 1,
@@ -986,7 +925,7 @@
       "delete": 1
     },
     {
-      "id": 112,
+      "id": 1038,
       "role_id": "senioradvocate",
       "module": "Payments",
       "view": 1,
@@ -995,7 +934,7 @@
       "delete": 1
     },
     {
-      "id": 113,
+      "id": 1039,
       "role_id": "senioradvocate",
       "module": "User Roles",
       "view": 1,
@@ -1004,7 +943,7 @@
       "delete": 1
     },
     {
-      "id": 114,
+      "id": 1040,
       "role_id": "senioradvocate",
       "module": "Roles",
       "view": 1,
@@ -1013,7 +952,7 @@
       "delete": 1
     },
     {
-      "id": 115,
+      "id": 1041,
       "role_id": "senioradvocate",
       "module": "Users",
       "view": 1,
@@ -1022,7 +961,7 @@
       "delete": 1
     },
     {
-      "id": 116,
+      "id": 1042,
       "role_id": "senioradvocate",
       "module": "Permissions",
       "view": 1,
@@ -1031,8 +970,8 @@
       "delete": 1
     },
     {
-      "id": 117,
-      "role_id": "junioradvocate",
+      "id": 1063,
+      "role_id": "client",
       "module": "Dashboard",
       "view": 0,
       "add": 0,
@@ -1040,62 +979,62 @@
       "delete": 0
     },
     {
-      "id": 118,
-      "role_id": "junioradvocate",
+      "id": 1064,
+      "role_id": "client",
       "module": "Junior Dashboard",
-      "view": 1,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 119,
-      "role_id": "junioradvocate",
-      "module": "Client Dashboard",
       "view": 0,
       "add": 0,
       "edit": 0,
       "delete": 0
     },
     {
-      "id": 120,
-      "role_id": "junioradvocate",
-      "module": "Law Firm Management",
+      "id": 1065,
+      "role_id": "client",
+      "module": "Client Dashboard",
       "view": 1,
       "add": 0,
       "edit": 0,
       "delete": 0
     },
     {
-      "id": 121,
-      "role_id": "junioradvocate",
-      "module": "Client Management",
-      "view": 1,
-      "add": 1,
-      "edit": 1,
-      "delete": 0
-    },
-    {
-      "id": 122,
-      "role_id": "junioradvocate",
-      "module": "Case Management",
-      "view": 1,
-      "add": 1,
-      "edit": 1,
-      "delete": 0
-    },
-    {
-      "id": 123,
-      "role_id": "junioradvocate",
-      "module": "Consultations",
-      "view": 1,
-      "add": 1,
+      "id": 1066,
+      "role_id": "client",
+      "module": "Law Firm Management",
+      "view": 0,
+      "add": 0,
       "edit": 0,
       "delete": 0
     },
     {
-      "id": 124,
-      "role_id": "junioradvocate",
+      "id": 1067,
+      "role_id": "client",
+      "module": "Client Management",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1068,
+      "role_id": "client",
+      "module": "Case Management",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1069,
+      "role_id": "client",
+      "module": "Consultations",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1070,
+      "role_id": "client",
       "module": "Finance Management",
       "view": 0,
       "add": 0,
@@ -1103,8 +1042,8 @@
       "delete": 0
     },
     {
-      "id": 125,
-      "role_id": "junioradvocate",
+      "id": 1071,
+      "role_id": "client",
       "module": "Calendar",
       "view": 0,
       "add": 0,
@@ -1112,17 +1051,17 @@
       "delete": 0
     },
     {
-      "id": 126,
-      "role_id": "junioradvocate",
+      "id": 1072,
+      "role_id": "client",
       "module": "Junior Calendar",
-      "view": 1,
-      "add": 1,
-      "edit": 1,
+      "view": 0,
+      "add": 0,
+      "edit": 0,
       "delete": 0
     },
     {
-      "id": 127,
-      "role_id": "junioradvocate",
+      "id": 1073,
+      "role_id": "client",
       "module": "Profile",
       "view": 1,
       "add": 0,
@@ -1130,26 +1069,26 @@
       "delete": 0
     },
     {
-      "id": 128,
-      "role_id": "junioradvocate",
+      "id": 1074,
+      "role_id": "client",
       "module": "Assigned Cases",
-      "view": 1,
+      "view": 0,
       "add": 0,
       "edit": 0,
       "delete": 0
     },
     {
-      "id": 129,
-      "role_id": "junioradvocate",
+      "id": 1075,
+      "role_id": "client",
       "module": "Consultation",
       "view": 1,
-      "add": 0,
+      "add": 1,
       "edit": 0,
       "delete": 0
     },
     {
-      "id": 130,
-      "role_id": "junioradvocate",
+      "id": 1076,
+      "role_id": "client",
       "module": "Case Tracking",
       "view": 1,
       "add": 0,
@@ -1157,8 +1096,8 @@
       "delete": 0
     },
     {
-      "id": 131,
-      "role_id": "junioradvocate",
+      "id": 1077,
+      "role_id": "client",
       "module": "Documents",
       "view": 1,
       "add": 0,
@@ -1166,17 +1105,17 @@
       "delete": 0
     },
     {
-      "id": 132,
-      "role_id": "junioradvocate",
+      "id": 1078,
+      "role_id": "client",
       "module": "Payments",
-      "view": 0,
+      "view": 1,
       "add": 0,
       "edit": 0,
       "delete": 0
     },
     {
-      "id": 133,
-      "role_id": "junioradvocate",
+      "id": 1079,
+      "role_id": "client",
       "module": "User Roles",
       "view": 0,
       "add": 0,
@@ -1184,8 +1123,8 @@
       "delete": 0
     },
     {
-      "id": 134,
-      "role_id": "junioradvocate",
+      "id": 1080,
+      "role_id": "client",
       "module": "Roles",
       "view": 0,
       "add": 0,
@@ -1193,8 +1132,8 @@
       "delete": 0
     },
     {
-      "id": 135,
-      "role_id": "junioradvocate",
+      "id": 1081,
+      "role_id": "client",
       "module": "Users",
       "view": 0,
       "add": 0,
@@ -1202,8 +1141,8 @@
       "delete": 0
     },
     {
-      "id": 136,
-      "role_id": "junioradvocate",
+      "id": 1082,
+      "role_id": "client",
       "module": "Permissions",
       "view": 0,
       "add": 0,
@@ -1211,8 +1150,8 @@
       "delete": 0
     },
     {
-      "id": 137,
-      "role_id": "client",
+      "id": 1123,
+      "role_id": "junioradvocate",
       "module": "Dashboard",
       "view": 0,
       "add": 0,
@@ -1220,26 +1159,26 @@
       "delete": 0
     },
     {
-      "id": 138,
-      "role_id": "client",
+      "id": 1124,
+      "role_id": "junioradvocate",
       "module": "Junior Dashboard",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 139,
-      "role_id": "client",
-      "module": "Client Dashboard",
       "view": 1,
       "add": 0,
       "edit": 0,
       "delete": 0
     },
     {
-      "id": 140,
-      "role_id": "client",
+      "id": 1125,
+      "role_id": "junioradvocate",
+      "module": "Client Dashboard",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1126,
+      "role_id": "junioradvocate",
       "module": "Law Firm Management",
       "view": 0,
       "add": 0,
@@ -1247,8 +1186,8 @@
       "delete": 0
     },
     {
-      "id": 141,
-      "role_id": "client",
+      "id": 1127,
+      "role_id": "junioradvocate",
       "module": "Client Management",
       "view": 0,
       "add": 0,
@@ -1256,8 +1195,8 @@
       "delete": 0
     },
     {
-      "id": 142,
-      "role_id": "client",
+      "id": 1128,
+      "role_id": "junioradvocate",
       "module": "Case Management",
       "view": 0,
       "add": 0,
@@ -1265,8 +1204,8 @@
       "delete": 0
     },
     {
-      "id": 143,
-      "role_id": "client",
+      "id": 1129,
+      "role_id": "junioradvocate",
       "module": "Consultations",
       "view": 0,
       "add": 0,
@@ -1274,8 +1213,8 @@
       "delete": 0
     },
     {
-      "id": 144,
-      "role_id": "client",
+      "id": 1130,
+      "role_id": "junioradvocate",
       "module": "Finance Management",
       "view": 0,
       "add": 0,
@@ -1283,8 +1222,8 @@
       "delete": 0
     },
     {
-      "id": 145,
-      "role_id": "client",
+      "id": 1131,
+      "role_id": "junioradvocate",
       "module": "Calendar",
       "view": 0,
       "add": 0,
@@ -1292,17 +1231,17 @@
       "delete": 0
     },
     {
-      "id": 146,
-      "role_id": "client",
+      "id": 1132,
+      "role_id": "junioradvocate",
       "module": "Junior Calendar",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
+      "view": 1,
+      "add": 1,
+      "edit": 1,
       "delete": 0
     },
     {
-      "id": 147,
-      "role_id": "client",
+      "id": 1133,
+      "role_id": "junioradvocate",
       "module": "Profile",
       "view": 1,
       "add": 0,
@@ -1310,53 +1249,53 @@
       "delete": 0
     },
     {
-      "id": 148,
-      "role_id": "client",
+      "id": 1134,
+      "role_id": "junioradvocate",
       "module": "Assigned Cases",
+      "view": 1,
+      "add": 0,
+      "edit": 0,
+      "delete": 1
+    },
+    {
+      "id": 1135,
+      "role_id": "junioradvocate",
+      "module": "Consultation",
       "view": 0,
       "add": 0,
       "edit": 0,
       "delete": 0
     },
     {
-      "id": 149,
-      "role_id": "client",
-      "module": "Consultation",
-      "view": 1,
-      "add": 1,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 150,
-      "role_id": "client",
+      "id": 1136,
+      "role_id": "junioradvocate",
       "module": "Case Tracking",
-      "view": 1,
+      "view": 0,
       "add": 0,
       "edit": 0,
       "delete": 0
     },
     {
-      "id": 151,
-      "role_id": "client",
+      "id": 1137,
+      "role_id": "junioradvocate",
       "module": "Documents",
-      "view": 1,
+      "view": 0,
       "add": 0,
       "edit": 0,
       "delete": 0
     },
     {
-      "id": 152,
-      "role_id": "client",
+      "id": 1138,
+      "role_id": "junioradvocate",
       "module": "Payments",
-      "view": 1,
+      "view": 0,
       "add": 0,
       "edit": 0,
       "delete": 0
     },
     {
-      "id": 153,
-      "role_id": "client",
+      "id": 1139,
+      "role_id": "junioradvocate",
       "module": "User Roles",
       "view": 0,
       "add": 0,
@@ -1364,8 +1303,8 @@
       "delete": 0
     },
     {
-      "id": 154,
-      "role_id": "client",
+      "id": 1140,
+      "role_id": "junioradvocate",
       "module": "Roles",
       "view": 0,
       "add": 0,
@@ -1373,8 +1312,8 @@
       "delete": 0
     },
     {
-      "id": 155,
-      "role_id": "client",
+      "id": 1141,
+      "role_id": "junioradvocate",
       "module": "Users",
       "view": 0,
       "add": 0,
@@ -1382,8 +1321,8 @@
       "delete": 0
     },
     {
-      "id": 156,
-      "role_id": "client",
+      "id": 1142,
+      "role_id": "junioradvocate",
       "module": "Permissions",
       "view": 0,
       "add": 0,
@@ -1395,17 +1334,17 @@
     {
       "id": "client",
       "name": "Client",
-      "description": "Default Role"
+      "description": "Client access"
     },
     {
       "id": "junioradvocate",
       "name": "Junior Advocate",
-      "description": "Default Role"
+      "description": "Limited access"
     },
     {
       "id": "senioradvocate",
       "name": "Senior Advocate",
-      "description": "Default Role"
+      "description": "Full system access"
     }
   ]
 }
