@@ -20,24 +20,26 @@ export default function ClientDashboard() {
   useEffect(() => {
     const user = getLoggedInUser();
     const name = user?.username || user?.name || "";
-    setUserName(name);
 
     const fetchAll = async () => {
+      setUserName(name);
       try {
-        const [casesRes, hearingsRes, consultRes, activitiesRes, invoicesRes] = await Promise.all([
+        const [casesRes, hearingsRes, consultRes, activitiesRes, invoicesRes, advocatesRes] = await Promise.all([
           fetch(`${BASE_URL}/case-management/`),
           fetch(`${BASE_URL}/clients/hearings`),
           fetch(`${BASE_URL}/consultations`),
           fetch(`${BASE_URL}/clients/activities`),
           fetch(`${BASE_URL}/finance/invoices${name ? `?client_name=${encodeURIComponent(name)}` : ""}`),
+          fetch(`${BASE_URL}/lawfirm-management/`),
         ]);
 
-        const [casesData, hearingsData, consultData, activitiesData, invoicesData] = await Promise.all([
+        const [casesData, hearingsData, consultData, activitiesData, invoicesData, advocatesData] = await Promise.all([
           casesRes.json(),
           hearingsRes.json(),
           consultRes.json(),
           activitiesRes.json(),
           invoicesRes.json(),
+          advocatesRes.json(),
         ]);
 
         setInvoices(Array.isArray(invoicesData) ? invoicesData : []);
@@ -139,14 +141,38 @@ export default function ClientDashboard() {
 
         // Show top 4
         setActivities(recentActivities.slice(0, 4));
-        // Derive assigned advocate info from the first case that has an advocate
-const caseWithAdvocate = clientHearings.find((h) => h.advocate_name);        if (caseWithAdvocate) {
-          setAssignedAdvocate({
-            name: caseWithAdvocate.advocate_name,
-            phone: "—",
-            email: "—",
-            specialization: "—",
-          });
+        // Derive assigned advocate info
+        const caseWithAdvocate = clientCases.find(
+          (c) => c.selected_advocate && c.selected_advocate !== "—" && c.selected_advocate !== ""
+        );
+        const advocateName = caseWithAdvocate
+          ? caseWithAdvocate.selected_advocate
+          : (clientHearings.find((h) => h.advocate_name && h.advocate_name !== "—")?.advocate_name || null);
+
+        if (advocateName) {
+          const matchedAdvocate = Array.isArray(advocatesData)
+            ? advocatesData.find(
+                (adv) => (adv.advocate_name || adv.advocateName || "").toLowerCase().trim() === advocateName.toLowerCase().trim()
+              )
+            : null;
+
+          if (matchedAdvocate) {
+            setAssignedAdvocate({
+              name: matchedAdvocate.advocate_name || matchedAdvocate.advocateName || advocateName,
+              phone: matchedAdvocate.phone_number || matchedAdvocate.phoneNumber || "—",
+              email: matchedAdvocate.email_address || matchedAdvocate.emailAddress || "—",
+              specialization: matchedAdvocate.specialization || "—",
+            });
+          } else {
+            setAssignedAdvocate({
+              name: advocateName,
+              phone: "—",
+              email: "—",
+              specialization: "—",
+            });
+          }
+        } else {
+          setAssignedAdvocate(null);
         }
       } catch (err) {
         console.error("ClientDashboard fetch error:", err);
