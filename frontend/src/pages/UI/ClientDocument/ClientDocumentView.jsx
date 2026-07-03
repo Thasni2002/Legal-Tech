@@ -25,11 +25,16 @@ export default function ClientDocuments() {
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [matchedCases, setMatchedCases] = useState([]);
   const [selectedCaseId, setSelectedCaseId] = useState("");
+  const [filterCaseTitle, setFilterCaseTitle] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [successToast, setSuccessToast] = useState("");
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const fetchClientDocs = async () => {
     try {
-      const clientName = (user?.username || user?.name || "").trim().toLowerCase();
-      if (!clientName) {
+      const userEmail = (user?.email || "").trim().toLowerCase();
+      if (!userEmail) {
         setLoadingDocs(false);
         return;
       }
@@ -37,7 +42,7 @@ export default function ClientDocuments() {
       const res = await fetch(`${API_BASE_URL}/case-management/`);
       if (res.ok) {
         const casesData = await res.json();
-        // Filter cases matching client name
+        // Filter cases matching client email (reliable — same email used at case creation and login)
         const casesArray = Array.isArray(casesData)
           ? casesData
           : Array.isArray(casesData.results)
@@ -47,8 +52,8 @@ export default function ClientDocuments() {
           : [];
 
         const filtered = casesArray.filter(item => {
-          const itemClientName = (item.client_name || "").trim().toLowerCase();
-          return itemClientName === clientName || clientName.includes(itemClientName) || itemClientName.includes(clientName);
+          const itemEmail = (item.email_id || "").trim().toLowerCase();
+          return itemEmail === userEmail;
         });
 
         setMatchedCases(filtered);
@@ -91,7 +96,7 @@ export default function ClientDocuments() {
     }
   }, [loading, perms.view, user]);
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!perms.add) {
       alert("You do not have permission to upload documents.");
       return;
@@ -107,15 +112,30 @@ export default function ClientDocuments() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64Url = reader.result;
+    setUploading(true);
+    try {
+      // 1. Upload file directly via multipart/form-data to support files up to 5GB
+      const formDataObj = new FormData();
+      formDataObj.append("file", file);
 
+      const uploadRes = await fetch(`${API_BASE_URL}/case-management/upload`, {
+        method: "POST",
+        body: formDataObj,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error("Failed to upload file to storage server");
+      }
+
+      const uploadData = await uploadRes.json();
+      const uploadedUrl = uploadData.url;
+
+      // 2. Put the metadata payload with the file URL into case management
       const newDoc = {
         documentType: documentType,
         advocate: targetCase.selected_advocate || "",
         file: file.name,
-        url: base64Url,
+        url: uploadedUrl,
         view: true,
         upload: true,
         edit: true,
@@ -152,38 +172,42 @@ export default function ClientDocuments() {
         nextHearingDate: targetCase.next_hearing_date,
       };
 
-      try {
-        const response = await fetch(`${API_BASE_URL}/case-management/${targetCase.id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
+      const response = await fetch(`${API_BASE_URL}/case-management/${targetCase.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-        if (response.ok) {
-          alert("Document uploaded successfully!");
-          setDocumentName("");
-          setDocumentType("");
-          setFile(null);
-          fetchClientDocs();
-        } else {
-          const errData = await response.json().catch(() => null);
-          throw new Error(errData?.detail || "Failed to upload document");
-        }
-      } catch (err) {
-        console.error("Upload document failed:", err);
-        alert(err.message || "Failed to upload document. Please try again.");
+      if (response.ok) {
+        setUploadSuccess(true);
+        setDocumentName("");
+        setDocumentType("");
+        setFile(null);
+        fetchClientDocs();
+      } else {
+        const errData = await response.json().catch(() => null);
+        throw new Error(errData?.detail || "Failed to update case with document metadata");
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("Upload document failed:", err);
+      alert(err.message || "Failed to upload document. Please try again.");
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const handleDelete = async (docId) => {
-    if (!perms.delete) {
-      alert("You do not have permission to delete documents.");
-      return;
-    }
+  // Step 1: Show confirm modal
+  const handleDelete = (docId) => {
+    if (!perms.delete) return;
+    setConfirmDeleteId(docId);
+  };
+
+  // Step 2: Actually perform deletion after confirmation
+  const confirmDeleteAction = async () => {
+    const docId = confirmDeleteId;
+    setConfirmDeleteId(null);
 
     if (typeof docId === "string" && docId.startsWith("db-doc-")) {
       const parts = docId.split("-");
@@ -191,10 +215,7 @@ export default function ClientDocuments() {
       const docIndex = parseInt(parts[3], 10);
 
       const targetCase = matchedCases.find(c => c.id.toString() === caseIdStr);
-      if (!targetCase) {
-        alert("Case associated with document not found.");
-        return;
-      }
+      if (!targetCase) return;
 
       const existingDocs = Array.isArray(targetCase.documents) ? targetCase.documents : [];
       const updatedDocs = existingDocs.filter((_, idx) => idx !== docIndex);
@@ -229,25 +250,25 @@ export default function ClientDocuments() {
       try {
         const response = await fetch(`${API_BASE_URL}/case-management/${targetCase.id}`, {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
 
         if (response.ok) {
-          alert("Document deleted successfully!");
           fetchClientDocs();
+          setSuccessToast("Document deleted successfully!");
+          setTimeout(() => setSuccessToast(""), 3000);
         } else {
           const errData = await response.json().catch(() => null);
           throw new Error(errData?.detail || "Failed to delete document");
         }
       } catch (err) {
         console.error("Delete document failed:", err);
-        alert(err.message || "Failed to delete document. Please try again.");
       }
     } else {
       setDocuments(documents.filter((doc) => doc.id !== docId));
+      setSuccessToast("Document deleted successfully!");
+      setTimeout(() => setSuccessToast(""), 3000);
     }
   };
 
@@ -323,22 +344,31 @@ export default function ClientDocuments() {
               </select>
               <input
                 type="file"
-                accept="audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.gif"
                 onChange={(e) => setFile(e.target.files[0])}
                 className="border border-[#E2E8F0] rounded-lg p-2"
               />
             </div>
             {matchedCases.length === 0 && (
               <p className="text-xs text-red-500 mt-2">
-                ⚠️ No cases found matching your client name. Please contact your advocate to create a case for you.
+                ⚠️ No cases found linked to your account. Please contact your advocate to create a case for you.
               </p>
             )}
             <button
               onClick={handleUpload}
-              className="mt-5 bg-[#2563EB] text-white px-5 py-2 rounded-lg flex items-center gap-2 cursor-pointer"
+              disabled={uploading}
+              className={`mt-5 bg-[#2563EB] text-white px-5 py-2 rounded-lg flex items-center gap-2 ${uploading ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
             >
-              <Upload size={18} />
-              Upload Document
+              {uploading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload size={18} />
+                  Upload Document
+                </>
+              )}
             </button>
           </>
         ) : (
@@ -348,7 +378,22 @@ export default function ClientDocuments() {
 
       {/* Documents Table */}
       <div className="bg-white rounded-xl border-[#E2E8F0] p-6 shadow-sm overflow-x-auto">
-        <h2 className="text-xl font-bold mb-4">Uploaded Documents</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold">Uploaded Documents</h2>
+          {/* Filter by Case Title */}
+          {documents.length > 0 && (
+            <select
+              value={filterCaseTitle}
+              onChange={(e) => setFilterCaseTitle(e.target.value)}
+              className="border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm bg-white text-slate-700 min-w-[200px]"
+            >
+              <option value="">All Cases</option>
+              {[...new Set(documents.map((d) => d.caseTitle))].map((title) => (
+                <option key={title} value={title}>{title}</option>
+              ))}
+            </select>
+          )}
+        </div>
 
         {loadingDocs ? (
           <div className="py-8 text-center text-slate-500">Loading documents...</div>
@@ -360,7 +405,6 @@ export default function ClientDocuments() {
               <tr className="border-b border-[#E2E8F0] bg-[#F1F5F9]">
                 <th className="text-left p-3">Case Title</th>
                 <th className="text-left p-3">Title</th>
-                <th className="text-left p-3">Type</th>
                 <th className="text-left p-3">File Name</th>
                 <th className="text-left p-3">Uploaded Date</th>
                 <th className="text-left p-3">Status</th>
@@ -369,11 +413,12 @@ export default function ClientDocuments() {
             </thead>
 
             <tbody>
-              {documents.map((doc) => (
+              {documents
+                .filter((doc) => !filterCaseTitle || doc.caseTitle === filterCaseTitle)
+                .map((doc) => (
                 <tr key={doc.id} className="border-b border-[#E2E8F0]">
                   <td className="p-3 font-semibold text-slate-800">{doc.caseTitle}</td>
                   <td className="p-3 text-slate-600">{doc.name}</td>
-                  <td className="p-3 text-slate-600">{doc.type}</td>
                   <td className="p-3 text-slate-600 font-mono text-xs">{doc.fileName}</td>
                   <td className="p-3 text-slate-500">{doc.date}</td>
 
@@ -424,6 +469,72 @@ export default function ClientDocuments() {
           badge={selectedDoc.badge}
           onClose={() => setSelectedDoc(null)}
         />
+      )}
+
+      {/* ── Confirm Delete Modal (portal → covers sidebar + navbar) ── */}
+      {confirmDeleteId && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center">
+            <div className="mx-auto w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4">
+              <Trash size={26} className="text-red-500" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 mb-1">Delete Document?</h3>
+            <p className="text-sm text-slate-500 mb-6">
+              Are you sure you want to delete this document? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                className="px-5 py-2.5 rounded-lg border border-[#E2E8F0] text-slate-600 font-medium text-sm hover:bg-slate-50 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteAction}
+                className="px-5 py-2.5 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium text-sm transition cursor-pointer"
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Success Toast (portal → always on top) ── */}
+      {successToast && createPortal(
+        <div className="fixed bottom-6 right-6 z-[99999] flex items-center gap-3 bg-emerald-600 text-white px-5 py-3.5 rounded-xl shadow-lg">
+          <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <span className="text-sm font-semibold">{successToast}</span>
+        </div>,
+        document.body
+      )}
+      {/* ── Upload Success Modal (portal → covers sidebar + navbar) ── */}
+      {uploadSuccess && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center">
+            <div className="mx-auto w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
+              <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 mb-1">Uploaded Successfully!</h3>
+            <p className="text-sm text-slate-500 mb-6">
+              Your document has been uploaded successfully.
+            </p>
+            <button
+              onClick={() => setUploadSuccess(false)}
+              className="px-6 py-2.5 rounded-lg bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium text-sm transition cursor-pointer"
+            >
+              OK
+            </button>
+          </div>
+        </div>,
+        document.body
       )}
 
     </div>

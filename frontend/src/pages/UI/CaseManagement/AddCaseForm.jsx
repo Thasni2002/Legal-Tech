@@ -321,39 +321,74 @@ export default function AddCaseForm() {
 
     if (!validateAll()) return;
 
-    const payload = {
-      cnrNumber: formData.cnrNumber || null,
-      caseId: formData.caseId || "",
-      caseTitle: formData.caseTitle,
-      caseNo: formData.caseNo,
-      caseType: formData.caseType,
-      caseDes: formData.caseDes,
-
-      clientName: formData.clientName,
-      contactNumber: formData.contactNumber,
-      emailId: formData.emailId,
-
-      courtName: formData.courtName,
-      courtType: formData.courtType,
-
-      status: formData.status,
-
-      selectedAdvocate: selectedAdvocate || null,
-
-      documents: documents.map((doc) => ({
-        documentType: doc.documentType || "",
-        advocate: selectedAdvocate || "",
-        file: doc.file ? doc.file.name : null,
-        url: doc.url || null,
-        view: doc.view !== undefined ? doc.view : true,
-        upload: doc.upload !== undefined ? doc.upload : true,
-        edit: doc.edit !== undefined ? doc.edit : true,
-        delete: doc.delete !== undefined ? doc.delete : true,
-      })),
-      nextHearingDate: formData.nextHearingDate || null,
-    };
-
     try {
+      // 1. Process and upload any new files using FormData
+      const processedDocs = await Promise.all(
+        documents.map(async (doc) => {
+          // If doc.file is an actual File object, we need to upload it
+          if (doc.file && doc.file instanceof File) {
+            const formDataObj = new FormData();
+            formDataObj.append("file", doc.file);
+
+            const uploadRes = await fetch(`${API_BASE_URL}/case-management/upload`, {
+              method: "POST",
+              body: formDataObj,
+            });
+
+            if (!uploadRes.ok) {
+              throw new Error(`Failed to upload document: ${doc.file.name}`);
+            }
+
+            const uploadData = await uploadRes.json();
+            return {
+              documentType: doc.documentType || "",
+              advocate: selectedAdvocate || "",
+              file: doc.file.name,
+              url: uploadData.url,
+              view: doc.view !== undefined ? doc.view : true,
+              upload: doc.upload !== undefined ? doc.upload : true,
+              edit: doc.edit !== undefined ? doc.edit : true,
+              delete: doc.delete !== undefined ? doc.delete : true,
+            };
+          }
+
+          // If doc.file is already uploaded previously (it won't be an instance of File), keep as-is
+          return {
+            documentType: doc.documentType || "",
+            advocate: selectedAdvocate || "",
+            file: doc.file ? doc.file.name : null,
+            url: doc.url || null,
+            view: doc.view !== undefined ? doc.view : true,
+            upload: doc.upload !== undefined ? doc.upload : true,
+            edit: doc.edit !== undefined ? doc.edit : true,
+            delete: doc.delete !== undefined ? doc.delete : true,
+          };
+        })
+      );
+
+      const payload = {
+        cnrNumber: formData.cnrNumber || null,
+        caseId: formData.caseId || "",
+        caseTitle: formData.caseTitle,
+        caseNo: formData.caseNo,
+        caseType: formData.caseType,
+        caseDes: formData.caseDes,
+
+        clientName: formData.clientName,
+        contactNumber: formData.contactNumber,
+        emailId: formData.emailId,
+
+        courtName: formData.courtName,
+        courtType: formData.courtType,
+
+        status: formData.status,
+
+        selectedAdvocate: selectedAdvocate || null,
+
+        documents: processedDocs,
+        nextHearingDate: formData.nextHearingDate || null,
+      };
+
       const url = isEditMode
         ? `${API_BASE_URL}/case-management/${editId}`
         : `${API_BASE_URL}/case-management/`;
@@ -844,22 +879,17 @@ export default function AddCaseForm() {
                     <input
                       id={`file-upload-${index}`}
                       type="file"
-                      accept="audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.gif"
                       onChange={(e) => {
                         const file = e.target.files[0];
                         if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setDocuments((prev) => {
-                              const updated = [...prev];
-                              if (updated[index]) {
-                                updated[index].file = file;
-                                updated[index].url = reader.result;
-                              }
-                              return updated;
-                            });
-                          };
-                          reader.readAsDataURL(file);
+                          setDocuments((prev) => {
+                            const updated = [...prev];
+                            if (updated[index]) {
+                              updated[index].file = file;
+                              updated[index].url = null; // Will upload on submit
+                            }
+                            return updated;
+                          });
                         } else {
                           const updated = [...documents];
                           updated[index].file = null;

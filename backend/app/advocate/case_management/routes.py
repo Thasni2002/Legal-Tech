@@ -72,4 +72,40 @@ def generate_document(
     db: Session = Depends(get_db)
 ):
     from .service import generate_legal_document
-    return generate_legal_document(db, case_id, request.prompt)
+    return generate_legal_document(db, case_id, request.prompt)
+
+
+import os
+import shutil
+from fastapi import UploadFile, File
+
+@router.post("/upload")
+def upload_case_document(file: UploadFile = File(...)):
+    uploads_dir = os.path.abspath("uploads")
+    docs_dir = os.path.join(uploads_dir, "case_documents")
+    if not os.path.exists(docs_dir):
+        os.makedirs(docs_dir)
+
+    # Use a secure filename
+    filename = file.filename
+    # Avoid path traversal attacks
+    safe_filename = os.path.basename(filename)
+    file_path = os.path.join(docs_dir, safe_filename)
+
+    try:
+        # Copy file stream directly to disk to handle files up to 5GB without RAM limit
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        # Return static url of the document
+        file_url = f"http://localhost:8000/uploads/case_documents/{safe_filename}"
+        return {
+            "success": True,
+            "url": file_url,
+            "filename": safe_filename
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to save uploaded document: {str(e)}"
+        )
