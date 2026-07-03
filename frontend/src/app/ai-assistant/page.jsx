@@ -11,7 +11,7 @@ export default function AIAssistantView() {
   const [messages, setMessages] = useState([
     {
       role: "ai",
-      text: "Hello! I am your AI Legal Assistant. How can I help you with your cases, clients, or documents today?",
+      text: "Hello! I am your AI Legal Assistant. How can I help you ?",
     },
   ]);
   const [input, setInput] = useState("");
