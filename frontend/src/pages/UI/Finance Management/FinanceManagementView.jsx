@@ -497,7 +497,7 @@ export default function CourtFeeCalView() {
       <div className="relative overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-3xl shadow-sm p-8 md:p-10">
         <div className="relative z-10">
           <h1 className="text-[#0F172A] font-extrabold text-3xl md:text-4xl tracking-tight leading-tight">
-            Finance Management
+            Billing
           </h1>
          
         </div>
