@@ -4,10 +4,19 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 import { FileText, Bot } from "lucide-react";
+import { getLoggedInUser } from "@/utils/auth";
 
 export default function FloatingAIIcon() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isClientUser, setIsClientUser] = useState(false);
   const menuRef = useRef(null);
+
+  useEffect(() => {
+    const user = getLoggedInUser();
+    if (user && user.role && user.role.toLowerCase() === "client") {
+      setIsClientUser(true);
+    }
+  }, []);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -21,6 +30,10 @@ export default function FloatingAIIcon() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  if (isClientUser) {
+    return null;
+  }
 
   return (
     <div className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-[100]" ref={menuRef}>

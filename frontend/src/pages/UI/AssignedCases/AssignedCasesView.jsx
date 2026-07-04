@@ -67,6 +67,7 @@ export default function AssignedCasesView() {
   const { perms, loading } = useModulePermission("Assigned Cases");
   const [cases, setCases] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
   const [selectedCase, setSelectedCase] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [modalViewMode, setModalViewMode] = useState("full");
@@ -562,12 +563,15 @@ export default function AssignedCasesView() {
 
   const filteredCases = cases.filter((item) => {
     const query = searchQuery.toLowerCase();
-    return (
+    const matchesSearch =
       item.title?.toLowerCase().includes(query) ||
       item.caseNo?.toLowerCase().includes(query) ||
       item.client?.toLowerCase().includes(query) ||
-      item.court?.toLowerCase().includes(query)
-    );
+      item.court?.toLowerCase().includes(query);
+      
+    const matchesStatus = statusFilter === "All" || item.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
   });
 
   return (
@@ -615,23 +619,36 @@ export default function AssignedCasesView() {
 
         </div>
 
-        {/* Search */}
-        <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-4">
-          <input
-            type="text"
-            placeholder="Search by case title, case no, client or court..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
-          />
-        </div>
-
         {/* Cases Table */}
         <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
 
-          <div className="p-5 border-b border-[#E2E8F0] flex items-center justify-between">
-            <h2 className="text-lg font-bold text-[#0F172A]">My Assigned Cases</h2>
-            <span className="text-xs font-semibold text-[#64748B] bg-[#F1F5F9] px-3 py-1 rounded-full">{filteredCases.length} cases</span>
+          <div className="p-5 border-b border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h2 className="text-lg font-bold text-[#0F172A] whitespace-nowrap">My Assigned Cases</h2>
+            
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+              <div className="flex w-full sm:w-auto items-center gap-3">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full sm:w-auto border border-[#E2E8F0] rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all text-sm text-[#0F172A] cursor-pointer bg-white"
+                >
+                  <option value="All">All Statuses</option>
+                  <option value="Active">Active</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Closed">Closed</option>
+                </select>
+                <input
+                  type="text"
+                  placeholder="Search by case title, case no, client or court..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full sm:w-72 border border-[#E2E8F0] rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
+                />
+              </div>
+              <span className="text-xs font-semibold text-[#64748B] bg-[#F1F5F9] px-3 py-1.5 rounded-full whitespace-nowrap self-end sm:self-auto">
+                {filteredCases.length} cases
+              </span>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
