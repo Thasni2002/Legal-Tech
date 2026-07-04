@@ -45,8 +45,8 @@ def create_invoice(db: Session, data: InvoiceCreate) -> Invoice:
         (data.filing_cost_amount or 0.0)
     )
 
-    gst = round(subtotal * 0.18, 2)
-    grand_total = round(subtotal + gst, 2)
+    gst = round((data.advocate_fee_amount or 0.0) * 0.18, 2)
+    grand_total = subtotal + gst
 
     new_invoice = Invoice(
         advocate_id=data.advocate_id,

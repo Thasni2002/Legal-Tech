@@ -108,4 +108,15 @@ def upload_case_document(file: UploadFile = File(...)):
         raise HTTPException(
             status_code=500,
             detail=f"Failed to save uploaded document: {str(e)}"
-        )
+        )
+
+
+from .schemas import AIAssistantRequest
+
+@router.post("/ai-assistant")
+def ai_assistant_endpoint(
+    request: AIAssistantRequest,
+    db: Session = Depends(get_db)
+):
+    from .service import ask_ai_assistant
+    return ask_ai_assistant(db, request.query, request.role, request.advocateName)
