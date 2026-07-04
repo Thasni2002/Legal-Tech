@@ -72,6 +72,20 @@ export default function CourtFeeCalView() {
     Number(advocateFee || 0) +
     Number(filingCost || 0);
 
+  const currentMonthInvoiced = invoices
+    .filter((invoice) => {
+      if (!invoice.created_at) return false;
+
+      const invoiceDate = new Date(invoice.created_at);
+      const today = new Date();
+
+      return (
+        invoiceDate.getMonth() === today.getMonth() &&
+        invoiceDate.getFullYear() === today.getFullYear()
+      );
+    })
+    .reduce((sum, invoice) => sum + Number(invoice.grand_total || 0), 0);
+
   // Fetch data from FastAPI backend
   const fetchInvoicesAndStats = useCallback(async () => {
     try {
@@ -118,9 +132,10 @@ export default function CourtFeeCalView() {
     }
 
     try {
+      const gst = Number(advocateFee || 0) * 0.18;
+
       const grandTotal = (
-        Number(total) +
-        Number((total * 18) / 100)
+        Number(total) + gst
       ).toFixed(2);
 
       const payload = {
@@ -162,20 +177,20 @@ export default function CourtFeeCalView() {
 
       if (res.ok) {
         const savedInvoice = await res.json();
-        
+
         let backendPdfPath = null;
         try {
           const doc = generateInvoicePDF(savedInvoice);
           const pdfBlob = doc.output("blob");
-          
+
           const formData = new FormData();
           formData.append("file", pdfBlob, `invoice_${savedInvoice.id}.pdf`);
-          
+
           const uploadRes = await fetch(`http://127.0.0.1:8000/finance/upload-invoice/${savedInvoice.id}`, {
             method: "POST",
             body: formData,
           });
-          
+
           if (uploadRes.ok) {
             const uploadData = await uploadRes.json();
             backendPdfPath = uploadData.file_path;
@@ -359,13 +374,19 @@ export default function CourtFeeCalView() {
     currentY += 8;
 
     doc.text("GST (18%):", 130, currentY);
-    doc.text(`Rs. ${((total * 18) / 100).toFixed(2)}`, 165, currentY);
-    currentY += 8;
+    doc.text(
+      `Rs. ${(Number(advocateFee || 0) * 0.18).toFixed(2)}`,
+      165,
+      currentY
+    ); currentY += 8;
 
     doc.setFont("helvetica", "bold");
     doc.text("Grand Total:", 130, currentY);
-    doc.text(`Rs. ${(Number(total) + Number((total * 18) / 100)).toFixed(2)}`, 165, currentY);
-
+    doc.text(
+      `Rs. ${(Number(total) + Number(advocateFee || 0) * 0.18).toFixed(2)}`,
+      165,
+      currentY
+    );
     // 4. Footer info
     doc.setFont("helvetica", "italic");
     doc.setFontSize(9);
@@ -499,7 +520,7 @@ export default function CourtFeeCalView() {
           <h1 className="text-[#0F172A] font-extrabold text-3xl md:text-4xl tracking-tight leading-tight">
             Billing
           </h1>
-         
+
         </div>
         <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 opacity-10 pointer-events-none text-blue-600">
           <Landmark size={200} />
@@ -518,11 +539,14 @@ export default function CourtFeeCalView() {
               <span className="text-sm font-bold text-[#64748B] uppercase tracking-wider">Total Invoiced</span>
             </div>
             <h3 className="text-3xl font-extrabold text-[#0F172A]">
-              ₹{stats.total_invoiced.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              ₹{currentMonthInvoiced.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+              })}
             </h3>
           </div>
-          <div className="relative z-10 text-xs font-medium text-[#94A3B8] mt-4">Overall calculations generated</div>
-        </div>
+          <div className="relative z-10 text-xs font-medium text-[#94A3B8] mt-4">
+            Current Month Invoiced
+          </div>        </div>
 
         <div className="group bg-white border border-[#E2E8F0] p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-emerald-50 rounded-full blur-2xl group-hover:bg-emerald-100 transition-colors"></div>
@@ -897,7 +921,7 @@ export default function CourtFeeCalView() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">GST (18%)</span>
-                <span className="font-bold">₹{((total * 18) / 100).toFixed(2)}</span>
+                <span className="font-bold">₹{(Number(advocateFee || 0) * 0.18).toFixed(2)}</span>
               </div>
             </div>
 
@@ -905,8 +929,7 @@ export default function CourtFeeCalView() {
               <div className="absolute top-0 right-0 p-4 opacity-10"><Landmark size={80} /></div>
               <p className="text-xs text-blue-200 uppercase tracking-wider font-bold mb-1 relative z-10">Grand Total</p>
               <p className="text-4xl font-black tracking-tight relative z-10">
-                ₹{(Number(total) + Number((total * 18) / 100)).toFixed(2)}
-              </p>
+                ₹{(Number(total) + Number(advocateFee || 0) * 0.18).toFixed(2)}              </p>
               <div className="mt-2 inline-flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full text-xs font-medium text-white backdrop-blur-sm relative z-10">
                 <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
                 Pending Payment
