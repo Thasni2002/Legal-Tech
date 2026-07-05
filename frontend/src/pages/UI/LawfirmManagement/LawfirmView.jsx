@@ -6,12 +6,9 @@ import { useRouter } from "next/navigation";
 import {
   Building2,
   Users,
-  History,
-  Briefcase,
   Search,
   Eye,
   Trash2,
-  FolderOpen,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Image from "next/image";
@@ -30,7 +27,11 @@ export default function LawfirmView() {
   const [caseSearch, setCaseSearch] = useState("");
   const [caseFilter, setCaseFilter] = useState("All");
   const [selectedCaseId, setSelectedCaseId] = useState(null);
-  
+
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteType, setDeleteType] = useState("");
+  const [deleteId, setDeleteId] = useState(null);
   const actions = [
     {
       title: "Add Advocate",
@@ -104,36 +105,18 @@ export default function LawfirmView() {
     fetchAssignedCases();
   }, []);
 
-const handleAdvocateDelete = async (id) => {
-  try {
-    await fetch(`${API_BASE_URL}/lawfirm-management/${id}`, {
-      method: "DELETE",
-    });
 
-    setAdvocates((prev) =>
-      prev.filter((item) => item.id !== id)
-    );
-  } catch (error) {
-    console.error("Delete advocate failed:", error);
-  }
-};
+  const confirmDelete = () => {
+    if (deleteType === "advocate") {
+      handleAdvocateDelete(deleteId);
+    } else {
+      handleCaseDelete(deleteId);
+    }
 
-const handleCaseDelete = async (id) => {
-  try {
-    await fetch(
-      `${API_BASE_URL}/lawfirm-management/assigned-cases/${id}`,
-      {
-        method: "DELETE",
-      }
-    );
-
-    setAssignedCases((prev) =>
-      prev.filter((item) => item.id !== id)
-    );
-  } catch (error) {
-    console.error("Delete case failed:", error);
-  }
-};
+    setShowDeleteModal(false);
+    setDeleteId(null);
+    setDeleteType("");
+  };
 
   const filteredAdvocates = advocates.filter((item) => {
     const matchesSearch =
@@ -238,8 +221,13 @@ const handleCaseDelete = async (id) => {
       {/* Search + Filter + Table Card */}
       {!loading && advocates.length > 0 && (
         <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 overflow-hidden">
+
           {/* Header with Search + Filter */}
           <div className="p-8 border-b border-[#F1F5F9] flex flex-col md:flex-row gap-6 justify-between items-center bg-white">
+
+            <h2 className="text-xl font-extrabold text-[#0F172A]">
+              Advocate Profile
+            </h2>
             <div className="flex items-center border border-[#E2E8F0] rounded-full px-5 py-3 w-full md:w-[400px] bg-[#F8FAFC] focus-within:ring-2 focus-within:ring-[#2563EB]/20 focus-within:border-[#2563EB] transition-all">
               <Search className="w-5 h-5 text-[#94A3B8]" />
               <input
@@ -359,10 +347,13 @@ const handleCaseDelete = async (id) => {
                             <Eye size={16} />
                           </button>
 
-                           {hasPermission("Law Firm Management", "delete") && (
+                          {hasPermission("Law Firm Management", "delete") && (
                             <button
-                              onClick={() => handleAdvocateDelete(item.id)}
-                              className="w-9 h-9 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors"
+                              onClick={() => {
+                                setDeleteType("advocate");
+                                setDeleteId(item.id);
+                                setShowDeleteModal(true);
+                              }} className="w-9 h-9 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors"
                             >
                               <Trash2 size={16} />
                             </button>
@@ -386,150 +377,191 @@ const handleCaseDelete = async (id) => {
         </div>
       )}
 
- {assignedCases.length > 0 && (
-  <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 overflow-hidden mt-8">
+      {assignedCases.length > 0 && (
+        <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 overflow-hidden mt-8">
 
-    {/* Header */}
-    <div className="p-8 border-b border-[#F1F5F9] flex flex-col md:flex-row gap-6 justify-between items-center bg-white">
-      <h2 className="text-xl font-extrabold text-[#0F172A]">
-        Assigned Cases
-      </h2>
+          {/* Header */}
+          <div className="p-8 border-b border-[#F1F5F9] flex flex-col md:flex-row gap-6 justify-between items-center bg-white">
+            <h2 className="text-xl font-extrabold text-[#0F172A]">
+              Assigned Cases
+            </h2>
 
-      {/* Search */}
-      <div className="flex items-center border border-[#E2E8F0] rounded-full px-5 py-3 w-full md:w-80 bg-[#F8FAFC] focus-within:ring-2 focus-within:ring-[#2563EB]/20 focus-within:border-[#2563EB] transition-all">
-        <Search className="w-5 h-5 text-[#94A3B8]" />
-        <input
-          type="text"
-          placeholder="Search case..."
-          className="w-full ml-3 bg-transparent outline-none text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
-          value={caseSearch}
-          onChange={(e) => setCaseSearch(e.target.value)}
-        />
-      </div>
+            {/* Search */}
+            <div className="flex items-center border border-[#E2E8F0] rounded-full px-5 py-3 w-full md:w-80 bg-[#F8FAFC] focus-within:ring-2 focus-within:ring-[#2563EB]/20 focus-within:border-[#2563EB] transition-all">
+              <Search className="w-5 h-5 text-[#94A3B8]" />
+              <input
+                type="text"
+                placeholder="Search case..."
+                className="w-full ml-3 bg-transparent outline-none text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
+                value={caseSearch}
+                onChange={(e) => setCaseSearch(e.target.value)}
+              />
+            </div>
 
-      {/* Filter */}
-      <select
-        className="border border-[#E2E8F0] rounded-full px-6 py-3 text-sm bg-[#F8FAFC] text-[#0F172A] font-medium outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
-        value={caseFilter}
-        onChange={(e) => setCaseFilter(e.target.value)}
-      >
-        <option value="All">All Priority</option>
-        <option value="High">High</option>
-        <option value="Medium">Medium</option>
-        <option value="Low">Low</option>
-      </select>
-    </div>
+            {/* Filter */}
+            <select
+              className="border border-[#E2E8F0] rounded-full px-6 py-3 text-sm bg-[#F8FAFC] text-[#0F172A] font-medium outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
+              value={caseFilter}
+              onChange={(e) => setCaseFilter(e.target.value)}
+            >
+              <option value="All">All Priority</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
 
-    {/* Table */}
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-          <tr>
-            <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-              Case Name
-            </th>
-            <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-              Case Number
-            </th>
-            <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-              Case Title
-            </th>
-            <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-              Advocate Name
-            </th>
-            <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-              Priority
-            </th>
-            <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-              Due Date
-            </th>
-            <th className="px-8 py-5 text-center text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-              Actions
-            </th>
-          </tr>
-        </thead>
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
+                <tr>
+                  <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                    Case Name
+                  </th>
+                  <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                    Case Number
+                  </th>
+                  <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                    Case Title
+                  </th>
+                  <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                    Advocate Name
+                  </th>
+                  <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                    Priority
+                  </th>
+                  <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                    Due Date
+                  </th>
+                  <th className="px-8 py-5 text-center text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
 
-        <tbody className="divide-y divide-[#F1F5F9]">
-          {assignedCases
-            .filter((item) => {
-              const matchesSearch =
-                item.case_title
-                  ?.toLowerCase()
-                  .includes(caseSearch.toLowerCase()) ||
-                item.case_number
-                  ?.toLowerCase()
-                  .includes(caseSearch.toLowerCase());
+              <tbody className="divide-y divide-[#F1F5F9]">
+                {assignedCases
+                  .filter((item) => {
+                    const matchesSearch =
+                      item.case_title
+                        ?.toLowerCase()
+                        .includes(caseSearch.toLowerCase()) ||
+                      item.case_number
+                        ?.toLowerCase()
+                        .includes(caseSearch.toLowerCase());
 
-              const matchesFilter =
-                caseFilter === "All" || item.priority === caseFilter;
+                    const matchesFilter =
+                      caseFilter === "All" || item.priority === caseFilter;
 
-              return matchesSearch && matchesFilter;
-            })
-            .map((item) => (
-              <tr
-                key={item.id}
-                className="hover:bg-slate-50/50 transition duration-200 group"
-              >
-                <td className="px-8 py-5 text-sm font-bold text-[#0F172A]">{item.case_name}</td>
-                <td className="px-8 py-5 text-sm font-medium text-[#475569]">{item.case_number}</td>
-                <td className="px-8 py-5 text-sm font-medium text-[#475569]">{item.case_title}</td>
-                <td className="px-8 py-5 text-sm font-medium text-[#475569]">
-                  <div className="flex items-center gap-2">
-                    <img src={`https://ui-avatars.com/api/?name=${item.advocate_name || 'Advocate'}&background=E2E8F0&color=64748B&rounded=true&bold=true`} className="w-6 h-6 rounded-full" />
-                    {item.advocate_name}
-                  </div>
-                </td>
+                    return matchesSearch && matchesFilter;
+                  })
+                  .map((item) => (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-slate-50/50 transition duration-200 group"
+                    >
+                      <td className="px-8 py-5 text-sm font-bold text-[#0F172A]">{item.case_name}</td>
+                      <td className="px-8 py-5 text-sm font-medium text-[#475569]">{item.case_number}</td>
+                      <td className="px-8 py-5 text-sm font-medium text-[#475569]">{item.case_title}</td>
+                      <td className="px-8 py-5 text-sm font-medium text-[#475569]">
+                        <div className="flex items-center gap-2">
+                          <img src={`https://ui-avatars.com/api/?name=${item.advocate_name || 'Advocate'}&background=E2E8F0&color=64748B&rounded=true&bold=true`} className="w-6 h-6 rounded-full" />
+                          {item.advocate_name}
+                        </div>
+                      </td>
 
-                <td className="px-8 py-5">
-                  <span
-                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                      item.priority === "High"
-                        ? "bg-red-100 text-red-700"
-                        : item.priority === "Medium"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-green-100 text-green-700"
-                    }`}
-                  >
-                    {item.priority}
-                  </span>
-                </td>
+                      <td className="px-8 py-5">
+                        <span
+                          className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${item.priority === "High"
+                            ? "bg-red-100 text-red-700"
+                            : item.priority === "Medium"
+                              ? "bg-yellow-100 text-yellow-700"
+                              : "bg-green-100 text-green-700"
+                            }`}
+                        >
+                          {item.priority}
+                        </span>
+                      </td>
 
-                <td className="px-8 py-5 text-sm font-medium text-[#475569]">{item.due_date}</td>
+                      <td className="px-8 py-5 text-sm font-medium text-[#475569]">{item.due_date}</td>
 
-                {/* Actions */}
-                <td className="px-8 py-5">
-                  <div className="flex justify-center gap-2">
-                    {hasPermission("Law Firm Management", "edit") && (
-                      <button
-                        onClick={() =>
-                          router.push(
-                            `/lawfirm-management/assign-advocate?id=${item.id}`
-                          )
-                        }
-                        className="px-4 py-1.5 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-yellow-100 hover:text-yellow-600 text-[11px] font-bold uppercase tracking-widest transition-colors"
-                      >
-                        Edit
-                      </button>
-                    )}
+                      {/* Actions */}
+                      <td className="px-8 py-5">
+                        <div className="flex justify-center gap-2">
+                          {hasPermission("Law Firm Management", "edit") && (
+                            <button
+                              onClick={() =>
+                                router.push(
+                                  `/lawfirm-management/assign-advocate?id=${item.id}`
+                                )
+                              }
+                              className="px-4 py-1.5 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-yellow-100 hover:text-yellow-600 text-[11px] font-bold uppercase tracking-widest transition-colors"
+                            >
+                              Edit
+                            </button>
+                          )}
 
-                    {hasPermission("Law Firm Management", "delete") && (
-                      <button
-                        onClick={() => handleCaseDelete(item.id)}
-                        className="w-8 h-8 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-)}
+                          {hasPermission("Law Firm Management", "delete") && (
+                            <button
+                              onClick={() => {
+                                setDeleteType("case");
+                                setDeleteId(item.id);
+                                setShowDeleteModal(true);
+                              }} className="w-8 h-8 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">        <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl border border-slate-200 p-8 animate-in fade-in zoom-in-95 duration-200">
 
+          <div className="flex justify-center">
+            <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+              <Trash2 className="w-8 h-8 text-red-600" />
+            </div>
+          </div>
+
+          <h2 className="text-2xl font-bold text-center text-slate-900 mt-6">
+            Confirm Delete
+          </h2>
+
+          <p className="text-center text-slate-500 mt-3 leading-relaxed">
+            {deleteType === "advocate"
+              ? "Are you sure you want to delete this advocate profile?"
+              : "Are you sure you want to remove this assigned case?"}
+          </p>
+
+          <div className="flex justify-center gap-4 mt-8">
+
+            <button
+              onClick={() => setShowDeleteModal(false)}
+              className="px-6 py-3 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold hover:bg-slate-100 transition"
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={confirmDelete}
+              className="px-6 py-3 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition"
+            >
+              Delete
+            </button>
+
+          </div>
+
+        </div>
+        </div>
+      )}
     </div>
   );
 }

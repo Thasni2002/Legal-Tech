@@ -2,7 +2,7 @@
 
 import { API_BASE_URL } from "@/utils/api";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getLoggedInUser } from "@/utils/auth";
 import {
@@ -11,7 +11,65 @@ import {
     FolderOpen,
     Gavel,
     FileText,
+    RefreshCw,
+    Upload,
+    PlusCircle,
+    ClipboardList,
+    UserCheck,
+    Phone,
 } from "lucide-react";
+
+// ─── Activity type config ────────────────────────────────────
+const ACTIVITY_CONFIG = {
+    case_new: {
+        icon: PlusCircle,
+        bg: "bg-emerald-50",
+        iconColor: "text-emerald-600",
+        border: "border-emerald-200",
+        badge: "bg-emerald-100 text-emerald-700",
+        label: "New Case",
+    },
+    case_update: {
+        icon: ClipboardList,
+        bg: "bg-amber-50",
+        iconColor: "text-amber-600",
+        border: "border-amber-200",
+        badge: "bg-amber-100 text-amber-700",
+        label: "Case Update",
+    },
+    assignment: {
+        icon: UserCheck,
+        bg: "bg-blue-50",
+        iconColor: "text-blue-600",
+        border: "border-blue-200",
+        badge: "bg-blue-100 text-blue-700",
+        label: "Assignment",
+    },
+    document: {
+        icon: Upload,
+        bg: "bg-purple-50",
+        iconColor: "text-purple-600",
+        border: "border-purple-200",
+        badge: "bg-purple-100 text-purple-700",
+        label: "Document",
+    },
+    consultation: {
+        icon: Phone,
+        bg: "bg-teal-50",
+        iconColor: "text-teal-600",
+        border: "border-teal-200",
+        badge: "bg-teal-100 text-teal-700",
+        label: "Consultation",
+    },
+};
+
+// ─── Role badge colours ─────────────────────────────────────
+const ROLE_BADGE = {
+    "Junior Advocate": "bg-indigo-100 text-indigo-700",
+    "Senior Advocate": "bg-slate-100 text-slate-700",
+    "Client": "bg-rose-100 text-rose-700",
+    "Advocate": "bg-slate-100 text-slate-600",
+};
 
 export default function AdvDashboardView() {
     const router = useRouter();
@@ -19,6 +77,8 @@ export default function AdvDashboardView() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [user, setUser] = useState(null);
+    const [lastRefreshed, setLastRefreshed] = useState(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     const hour = new Date().getHours();
     let greeting = "";
@@ -40,160 +100,154 @@ export default function AdvDashboardView() {
         year: "numeric",
     });
 
+    const fetchDashboardData = useCallback(async (showRefreshIndicator = false) => {
+        if (showRefreshIndicator) setIsRefreshing(true);
+
+        try {
+            const loggedIn = getLoggedInUser();
+            if (!user && loggedIn) setUser(loggedIn);
+
+            const advParam = loggedIn && loggedIn.id ? `?advocate_id=${loggedIn.id}` : "";
+
+            const [resUsers, resCases] = await Promise.all([
+                fetch(`${API_BASE_URL}/permissions/users`),
+                fetch(`${API_BASE_URL}/case-management/`),
+            ]);
+
+            if (!resUsers.ok || !resCases.ok) {
+                throw new Error("Failed to fetch dashboard data from backend resources");
+            }
+
+            const [users, cases] = await Promise.all([
+                resUsers.json(),
+                resCases.json(),
+            ]);
+
+            // Activities — fetched separately so backend restart isn't required
+            let activities = [];
+            try {
+                const resActivities = await fetch(`${API_BASE_URL}/dashboard/recent-activity?limit=10`);
+                if (resActivities.ok) activities = await resActivities.json();
+            } catch (e) {
+                console.warn("Recent activities endpoint not available:", e.message);
+            }
+
+            // Documents — fetched separately so backend restart isn't required
+            let documents = [];
+            try {
+                const resDocs = await fetch(`${API_BASE_URL}/dashboard/recent-documents?limit=8`);
+                if (resDocs.ok) documents = await resDocs.json();
+            } catch (e) {
+                console.warn("Recent documents endpoint not available:", e.message);
+            }
+
+            // 1. Total advocates count
+            const total_advocates = users.filter(u => u.role && u.role.toLowerCase().includes("advocate")).length;
+
+            // 2. Cases stats
+            const active_cases = cases.filter(c => c.status === "Active" || c.status === "Hearing").length;
+            const pending_cases = cases.filter(c => c.status === "Pending").length;
+            const closed_cases = cases.filter(c => c.status === "Closed").length;
+
+            // 3. Upcoming hearings count
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const todayStr = `${year}-${month}-${day}`;
+
+            const extractedHearings = [];
+            cases.forEach(c => {
+                if (c.next_hearing_date) {
+                    const isIso = c.next_hearing_date.includes('T');
+                    const datePart = isIso ? c.next_hearing_date.split('T')[0] : c.next_hearing_date.split(' ')[0];
+
+                    if (datePart >= todayStr) {
+                        extractedHearings.push({
+                            date: datePart,
+                            case_title: c.case_title,
+                            court: c.court_name,
+                            advocate_name: c.selected_advocate || ""
+                        });
+                    }
+                }
+            });
+
+            const upcoming_hearings_count = extractedHearings.length;
+
+            // 4. Case Overview list
+            const casesList = [...cases]
+                .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
+                .slice(0, 5)
+                .map(c => ({
+                    case_no: c.case_no,
+                    client_name: c.client_name,
+                    type: c.case_type,
+                    court: c.court_name,
+                    status: c.status
+                }));
+
+            // 5. Hearings list
+            const formatHearingDate = (dateStr) => {
+                if (!dateStr) return "";
+                const parts = dateStr.split("-");
+                if (parts.length !== 3) return dateStr;
+                const dNum = parseInt(parts[2], 10);
+                const mNum = parseInt(parts[1], 10) - 1;
+                const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                return `${dNum} ${months[mNum]}`;
+            };
+
+            const hearingsList = [...extractedHearings]
+                .sort((a, b) => {
+                    if (a.date !== b.date) return a.date.localeCompare(b.date);
+                    return (a.time || "").localeCompare(b.time || "");
+                })
+                .slice(0, 5)
+                .map(h => ({
+                    date: formatHearingDate(h.date),
+                    case_title: h.case_title,
+                    court: h.court,
+                    advocate_name: h.advocate_name || "",
+                }));
+
+            setData({
+                stats: {
+                    total_advocates,
+                    active_cases,
+                    pending_cases,
+                    closed_cases,
+                    upcoming_hearings_count
+                },
+                cases: casesList,
+                hearings: hearingsList,
+                activities,
+                documents,
+            });
+
+            setLastRefreshed(new Date());
+        } catch (err) {
+            console.error("Dashboard fetch error:", err);
+            if (!data) setError(err.message); // Only show full error on first load
+        } finally {
+            setLoading(false);
+            setIsRefreshing(false);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     useEffect(() => {
         const loggedIn = getLoggedInUser();
         setUser(loggedIn);
-
-        const fetchDashboardData = async () => {
-            try {
-                const advParam = loggedIn && loggedIn.id ? `?advocate_id=${loggedIn.id}` : "";
-                
-                const [resUsers, resCases, resHearings, resActivities, resDocs] = await Promise.all([
-                    fetch(`${API_BASE_URL}/permissions/users`),
-                    fetch(`${API_BASE_URL}/case-management/`),
-                    fetch(`${API_BASE_URL}/clients/hearings${advParam}`), // keeping as fallback, but won't be used for dashboard count
-                    fetch(`${API_BASE_URL}/clients/activities${advParam}`),
-                    fetch(`${API_BASE_URL}/clients/documents${advParam}`)
-                ]);
-
-                if (!resUsers.ok || !resCases.ok || !resHearings.ok || !resActivities.ok || !resDocs.ok) {
-                    throw new Error("Failed to fetch dashboard data from backend resources");
-                }
-
-                const [users, cases, oldHearings, activities, documents] = await Promise.all([
-                    resUsers.json(),
-                    resCases.json(),
-                    resHearings.json(),
-                    resActivities.json(),
-                    resDocs.json()
-                ]);
-
-                // 1. Total advocates count
-                const total_advocates = users.filter(u => u.role && u.role.toLowerCase().includes("advocate")).length;
-
-                // 2. Cases stats
-                // case_management/ returns status like "Active", "Pending", "Closed"
-                const active_cases = cases.filter(c => c.status === "Active" || c.status === "Hearing").length;
-                const pending_cases = cases.filter(c => c.status === "Pending").length;
-                const closed_cases = cases.filter(c => c.status === "Closed").length;
-
-                // 3. Upcoming hearings count
-                const today = new Date();
-                const year = today.getFullYear();
-                const month = String(today.getMonth() + 1).padStart(2, '0');
-                const day = String(today.getDate()).padStart(2, '0');
-                const todayStr = `${year}-${month}-${day}`;
-
-                // Extract hearings from cases' next_hearing_date
-                const extractedHearings = [];
-                cases.forEach(c => {
-                    if (c.next_hearing_date) {
-                        // Handle ISO string or YYYY-MM-DD
-                        const isIso = c.next_hearing_date.includes('T');
-                        const datePart = isIso ? c.next_hearing_date.split('T')[0] : c.next_hearing_date.split(' ')[0];
-                        const timePart = isIso ? c.next_hearing_date.split('T')[1]?.substring(0, 5) : (c.next_hearing_date.split(' ')[1] || "10:00");
-                        
-                        if (datePart >= todayStr) {
-                            extractedHearings.push({
-                                date: datePart,
-                                time: timePart || "10:00",
-                                case_title: c.case_title,
-                                court: c.court_name,
-                                advocate_name: c.selected_advocate || ""
-                            });
-                        }
-                    }
-                });
-
-                const upcoming_hearings_count = extractedHearings.length;
-
-                // 4. Case Overview list (sort by created_at desc, limit 5)
-                const casesList = [...cases]
-                    .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
-                    .slice(0, 5)
-                    .map(c => ({
-                        case_no: c.case_no,
-                        client_name: c.client_name,
-                        type: c.case_type,
-                        court: c.court_name,
-                        status: c.status
-                    }));
-
-                // 5. Hearings list (sort by date asc, time asc, limit 5)
-                const formatHearingDate = (dateStr) => {
-                    if (!dateStr) return "";
-                    const parts = dateStr.split("-");
-                    if (parts.length !== 3) return dateStr;
-                    const dNum = parseInt(parts[2], 10);
-                    const mNum = parseInt(parts[1], 10) - 1;
-                    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                    return `${dNum} ${months[mNum]}`;
-                };
-
-                const hearingsList = [...extractedHearings]
-                    .sort((a, b) => {
-                        if (a.date !== b.date) return a.date.localeCompare(b.date);
-                        return (a.time || "").localeCompare(b.time || "");
-                    })
-                    .slice(0, 5)
-                    .map(h => ({
-                        date: formatHearingDate(h.date),
-                        case_title: h.case_title,
-                        court: h.court,
-                        advocate_name: h.advocate_name || "",
-                        time: h.time
-                    }));
-
-                // 6. Activities list (sort by created_at desc, limit 5)
-                const activitiesList = [...activities]
-                    .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
-                    .slice(0, 5);
-
-                // 7. Documents list (sort by created_at desc, limit 5)
-                // If the old API works we keep it, otherwise extract from cases
-                let documentsList = [...documents]
-                    .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
-                    .slice(0, 5);
-                
-                if (documentsList.length === 0) {
-                     // Try extracting from cases
-                     const caseDocs = [];
-                     cases.forEach(c => {
-                         if (c.documents && Array.isArray(c.documents)) {
-                             c.documents.forEach(d => {
-                                 caseDocs.push({
-                                     document_name: d.file_name || d.name || "Document",
-                                     created_at: c.created_at
-                                 });
-                             });
-                         }
-                     });
-                     documentsList = caseDocs.sort((a, b) => (b.created_at || "").localeCompare(a.created_at || "")).slice(0, 5);
-                }
-
-                setData({
-                    stats: {
-                        total_advocates,
-                        active_cases,
-                        pending_cases,
-                        closed_cases,
-                        upcoming_hearings_count
-                    },
-                    cases: casesList,
-                    hearings: hearingsList,
-                    activities: activitiesList,
-                    documents: documentsList
-                });
-            } catch (err) {
-                console.error("Dashboard fetch error:", err);
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchDashboardData();
-    }, []);
+
+        // Auto-refresh every 30 seconds
+        const interval = setInterval(() => {
+            fetchDashboardData(true);
+        }, 30000);
+
+        return () => clearInterval(interval);
+    }, [fetchDashboardData]);
 
     if (loading) {
         return (
@@ -209,7 +263,7 @@ export default function AdvDashboardView() {
             <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center max-w-lg mx-auto mt-12">
                 <h3 className="text-red-800 font-semibold text-lg mb-2">Error Loading Dashboard</h3>
                 <p className="text-red-600 text-sm mb-4">{error}</p>
-                <button 
+                <button
                     onClick={() => window.location.reload()}
                     className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors cursor-pointer"
                 >
@@ -221,9 +275,9 @@ export default function AdvDashboardView() {
 
     const displayName = user
         ? user.username
-              .split(" ")
-              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-              .join(" ")
+            .split(" ")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ")
         : "";
 
     const displayRole = user ? user.role : "";
@@ -264,9 +318,23 @@ export default function AdvDashboardView() {
                         {displayRole}
                     </p>
                 </div>
-                <div className="text-left md:text-right bg-[#F8FAFC] px-6 py-4 rounded-2xl border border-[#E2E8F0]">
-                    <p className="text-[#475569] font-bold text-sm uppercase tracking-wider">Today's Date</p>
-                    <p className="text-[#0F172A] font-extrabold text-lg mt-1">{currentDate}</p>
+                <div className="flex flex-col items-end gap-3">
+                    <div className="text-left md:text-right bg-[#F8FAFC] px-6 py-4 rounded-2xl border border-[#E2E8F0]">
+                        <p className="text-[#475569] font-bold text-sm uppercase tracking-wider">Today's Date</p>
+                        <p className="text-[#0F172A] font-extrabold text-lg mt-1">{currentDate}</p>
+                    </div>
+                    {/* Refresh button */}
+                    <button
+                        onClick={() => fetchDashboardData(true)}
+                        disabled={isRefreshing}
+                        title="Refresh dashboard"
+                        className="flex items-center gap-2 text-xs font-semibold text-[#2563EB] bg-blue-50 border border-blue-200 px-4 py-2 rounded-xl hover:bg-blue-100 transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+                        {isRefreshing ? "Refreshing…" : lastRefreshed
+                            ? `Last updated ${lastRefreshed.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`
+                            : "Refresh"}
+                    </button>
                 </div>
             </div>
 
@@ -274,7 +342,6 @@ export default function AdvDashboardView() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {stats.map((item, index) => {
                     const Icon = item.icon;
-                    // Provide a unique soft color for each stat card based on index
                     const colors = [
                         { bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-200" },
                         { bg: "bg-emerald-50", text: "text-emerald-600", border: "border-emerald-200" },
@@ -304,7 +371,7 @@ export default function AdvDashboardView() {
                 })}
             </div>
 
-            {/* Case Overview + Activities */}
+            {/* Case Overview + Recent Activities */}
             <div className="grid grid-cols-12 gap-8">
 
                 <div className="col-span-12 lg:col-span-8 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
@@ -332,7 +399,7 @@ export default function AdvDashboardView() {
                             <tbody className="divide-y divide-[#E2E8F0] bg-white">
                                 {data && data.cases.length > 0 ? (
                                     data.cases.map((c, index) => (
-                                        <tr 
+                                        <tr
                                             key={index}
                                             className="hover:bg-[#F8FAFC] transition-colors duration-150"
                                         >
@@ -341,13 +408,12 @@ export default function AdvDashboardView() {
                                             <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{c.type}</td>
                                             <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{c.court}</td>
                                             <td className="p-4 whitespace-nowrap">
-                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                                                    c.status === "Hearing" 
-                                                        ? "bg-blue-50 text-blue-700 border-blue-200" 
-                                                        : c.status === "Active" 
-                                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
+                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${c.status === "Hearing"
+                                                    ? "bg-blue-50 text-blue-700 border-blue-200"
+                                                    : c.status === "Active"
+                                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                                         : "bg-amber-50 text-amber-700 border-amber-200"
-                                                }`}>
+                                                    }`}>
                                                     {c.status}
                                                 </span>
                                             </td>
@@ -365,55 +431,92 @@ export default function AdvDashboardView() {
                     </div>
                 </div>
 
+                {/* ─── Recent Activities Panel ─── */}
                 <div className="col-span-12 lg:col-span-4 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
-                    <div className="flex justify-between items-center mb-8">
+                    <div className="flex justify-between items-center mb-6">
                         <h2 className="text-2xl font-extrabold text-[#0F172A]">
                             Recent Activities
                         </h2>
+                        {isRefreshing && (
+                            <RefreshCw className="w-4 h-4 text-[#2563EB] animate-spin" />
+                        )}
                     </div>
 
-                    <div className="space-y-6 flex-1 overflow-y-auto pr-2">
+                    <div className="space-y-4 flex-1 overflow-y-auto pr-1 max-h-[480px]">
                         {data && data.activities.length > 0 ? (
                             data.activities.map((act, index) => {
-                                let bgColor = "bg-blue-50";
-                                let textColor = "text-blue-600";
-                                let icon = "🔔";
-                                
-                                if (act.type === "hearing") {
-                                    bgColor = "bg-amber-50";
-                                    textColor = "text-amber-600";
-                                    icon = "⚖️";
-                                } else if (act.type === "meeting") {
-                                    bgColor = "bg-emerald-50";
-                                    textColor = "text-emerald-600";
-                                    icon = "🤝";
-                                }
-                                
+                                const cfg = ACTIVITY_CONFIG[act.type] || ACTIVITY_CONFIG.case_update;
+                                const Icon = cfg.icon;
+                                const roleBadgeClass = ROLE_BADGE[act.actor_role] || "bg-slate-100 text-slate-600";
+
                                 return (
-                                    <div key={index} className="flex gap-4 items-start group">
-                                        <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-lg ${bgColor} ${textColor} shadow-sm group-hover:scale-110 transition-transform`}>
-                                            {icon}
+                                    <div
+                                        key={act.id || index}
+                                        className={`flex gap-3 items-start group p-3 rounded-2xl border ${cfg.border} ${cfg.bg} hover:shadow-md transition-all duration-200`}
+                                    >
+                                        {/* Icon */}
+                                        <div className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center ${cfg.bg} ${cfg.iconColor} border ${cfg.border} group-hover:scale-110 transition-transform`}>
+                                            <Icon className="w-4 h-4" />
                                         </div>
-                                        <div>
-                                            <h4 className="font-bold text-sm text-[#0F172A] leading-tight mb-1 group-hover:text-[#2563EB] transition-colors">
+
+                                        {/* Content */}
+                                        <div className="min-w-0 flex-1">
+                                            {/* Type label + Role badge row */}
+                                            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                                                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${cfg.badge}`}>
+                                                    {cfg.label}
+                                                </span>
+                                                {act.actor_role && (
+                                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${roleBadgeClass}`}>
+                                                        {act.actor_role}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Activity title */}
+                                            <p className="text-xs font-semibold text-[#0F172A] leading-snug mb-1 line-clamp-2">
                                                 {act.title}
-                                            </h4>
-                                            <p className="text-xs font-medium text-[#64748B]">
-                                                {act.timestamp_str}
+                                            </p>
+
+                                            {/* Actor name + case ref */}
+                                            <div className="flex items-center gap-1 flex-wrap">
+                                                {act.actor && act.actor !== "Unknown" && (
+                                                    <span className="text-[10px] text-[#475569] font-medium truncate max-w-[120px]">
+                                                        by {act.actor}
+                                                    </span>
+                                                )}
+                                                {act.case_no && (
+                                                    <span className="text-[10px] text-[#94A3B8] font-mono">· {act.case_no}</span>
+                                                )}
+                                            </div>
+
+                                            {/* Time ago */}
+                                            <p className="text-[10px] font-medium text-[#94A3B8] mt-1">
+                                                {act.timestamp_display || "Recently"}
                                             </p>
                                         </div>
                                     </div>
                                 );
                             })
                         ) : (
-                            <p className="text-sm font-medium text-[#64748B] text-center p-8 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">No recent activities.</p>
+                            <div className="text-center p-8 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">
+                                <ClipboardList className="w-8 h-8 text-[#CBD5E1] mx-auto mb-2" />
+                                <p className="text-sm font-medium text-[#64748B]">No recent activities yet.</p>
+                                <p className="text-xs text-[#94A3B8] mt-1">Activities from Junior Advocates and Clients will appear here.</p>
+                            </div>
                         )}
+                    </div>
+
+                    {/* Auto-refresh indicator */}
+                    <div className="mt-4 pt-4 border-t border-[#F1F5F9] flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                        <p className="text-[10px] font-medium text-[#94A3B8]">Auto-refreshes every 30 seconds</p>
                     </div>
                 </div>
 
             </div>
 
-            {/* Upcoming Hearings + Documents */}
+            {/* Upcoming Hearings + Recent Documents */}
             <div className="grid grid-cols-12 gap-8">
 
                 <div className="col-span-12 lg:col-span-8 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
@@ -421,7 +524,7 @@ export default function AdvDashboardView() {
                         <h2 className="text-2xl font-extrabold text-[#0F172A]">
                             Upcoming Hearings
                         </h2>
-                        <button 
+                        <button
                             onClick={() => router.push("/calendar")}
                             className="text-xs font-bold text-[#2563EB] uppercase tracking-wider hover:text-[#1d4ed8] transition-colors cursor-pointer"
                         >
@@ -437,15 +540,14 @@ export default function AdvDashboardView() {
                                     <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case</th>
                                     <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Court</th>
                                     <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Advocate</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
                                 </tr>
                             </thead>
 
                             <tbody className="divide-y divide-[#E2E8F0] bg-white">
                                 {data && data.hearings.length > 0 ? (
                                     data.hearings.map((h, index) => (
-                                        <tr 
-                                            key={index} 
+                                        <tr
+                                            key={index}
                                             className="hover:bg-[#F8FAFC] transition-colors duration-150"
                                         >
                                             <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">
@@ -471,35 +573,116 @@ export default function AdvDashboardView() {
                     </div>
                 </div>
 
+                {/* ─── Recent Documents Panel ─── */}
                 <div className="col-span-12 lg:col-span-4 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
-                    <div className="flex justify-between items-center mb-8">
+                    <div className="flex justify-between items-center mb-6">
                         <h2 className="text-2xl font-extrabold text-[#0F172A]">
                             Recent Documents
                         </h2>
+                        {isRefreshing && (
+                            <RefreshCw className="w-4 h-4 text-[#2563EB] animate-spin" />
+                        )}
                     </div>
 
-                    <div className="space-y-4 flex-1 overflow-y-auto">
+                    <div className="space-y-3 flex-1 overflow-y-auto max-h-[480px]">
                         {data && data.documents.length > 0 ? (
-                            data.documents.map((doc, index) => (
-                                <div
-                                    key={index}
-                                    className="flex items-center justify-between p-4 rounded-2xl bg-[#F8FAFC] hover:bg-white border border-transparent hover:border-[#E2E8F0] hover:shadow-md transition-all duration-300 cursor-pointer group"
-                                >
-                                    <div className="flex items-center gap-4 min-w-0">
-                                        <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                                            <FileText className="w-5 h-5" />
-                                        </div>
-                                        <span className="truncate text-sm font-bold text-[#1E293B] group-hover:text-[#2563EB] transition-colors">{doc.filename}</span>
-                                    </div>
+                            data.documents.map((doc, index) => {
+                                const roleBadgeClass = ROLE_BADGE[doc.uploaded_by_role] || "bg-slate-100 text-slate-600";
+                                return (
+                                    <div
+                                        key={doc.id || index}
+                                        className="p-4 rounded-2xl bg-[#F8FAFC] hover:bg-white border border-transparent hover:border-[#E2E8F0] hover:shadow-md transition-all duration-300 cursor-pointer group"
+                                    >
+                                        {/* Top row: icon + filename + view button */}
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-9 h-9 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                                <FileText className="w-4 h-4" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-bold text-[#1E293B] group-hover:text-[#2563EB] transition-colors truncate leading-tight">
+                                                    {doc.filename}
+                                                </p>
 
-                                    <button className="font-bold text-xs uppercase tracking-wider text-[#2563EB] hover:text-[#1d4ed8] ml-3 shrink-0 bg-blue-50 px-3 py-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-x-2 group-hover:translate-x-0">
-                                        View
-                                    </button>
-                                </div>
-                            ))
+                                                {/* Doc type badge */}
+                                                {doc.document_type && doc.document_type !== "File" && (
+                                                    <span className="inline-block mt-0.5 text-[10px] font-semibold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                                                        {doc.document_type}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+
+                                                    localStorage.setItem(
+                                                        "clientData",
+                                                        JSON.stringify({
+                                                            clientId: doc.client_name,
+                                                            fullName: doc.client_name,
+                                                        })
+                                                    );
+
+                                                    router.push("/client-management/view-history");
+                                                }}
+                                                className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-[#2563EB] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full hover:bg-blue-100 transition-colors opacity-0 group-hover:opacity-100"
+                                            >
+                                                View Case
+                                            </button>
+                                        </div>
+
+                                        {/* Case name */}
+                                        {doc.case_title && (
+                                            <p className="text-[10px] text-[#475569] font-medium mt-2 truncate">
+                                                📁 {doc.case_title}
+                                                {doc.case_no && <span className="text-[#94A3B8] ml-1">({doc.case_no})</span>}
+                                            </p>
+                                        )}
+
+                                        {/* Uploader + time row */}
+                                        <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
+                                            <div className="flex items-center flex-wrap gap-1">
+                                                <span className="text-[10px] text-[#94A3B8]">
+                                                    by
+                                                </span>
+
+                                                <span className="text-[10px] font-semibold text-[#0F172A]">
+                                                    {doc.uploaded_by && doc.uploaded_by !== "Unknown"
+                                                        ? doc.uploaded_by
+                                                        : "Unknown"}
+                                                </span>
+
+                                                <span className="text-[#CBD5E1] text-[10px]">
+                                                    ·
+                                                </span>
+
+                                                <span
+                                                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${roleBadgeClass}`}
+                                                >
+                                                    {doc.uploaded_by_role || "Advocate"}
+                                                </span>
+                                            </div>
+
+                                            <span className="text-[10px] text-[#94A3B8] font-medium">
+                                                {doc.timestamp_display || "Recently"}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })
                         ) : (
-                            <p className="text-sm font-medium text-[#64748B] text-center p-8 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">No recent documents.</p>
+                            <div className="text-center p-8 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">
+                                <FileText className="w-8 h-8 text-[#CBD5E1] mx-auto mb-2" />
+                                <p className="text-sm font-medium text-[#64748B]">No documents uploaded yet.</p>
+                                <p className="text-xs text-[#94A3B8] mt-1">Documents uploaded via cases will appear here.</p>
+                            </div>
                         )}
+                    </div>
+
+                    {/* Auto-refresh indicator */}
+                    <div className="mt-4 pt-4 border-t border-[#F1F5F9] flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                        <p className="text-[10px] font-medium text-[#94A3B8]">Auto-refreshes every 30 seconds</p>
                     </div>
                 </div>
 
