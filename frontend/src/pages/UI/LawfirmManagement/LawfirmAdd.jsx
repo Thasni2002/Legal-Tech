@@ -474,6 +474,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
               <InputField
                 label="Aadhaar Number (Optional)"
                 name="aadhaarNumber"
+                placeholder="1234 5678 9012"
                 value={formData.aadhaarNumber}
                 onChange={handleChange}
                 maxLength={12}
