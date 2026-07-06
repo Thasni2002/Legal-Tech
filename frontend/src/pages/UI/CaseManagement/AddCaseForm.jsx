@@ -57,6 +57,7 @@ export default function AddCaseForm() {
   const [selectedAdvocate, setSelectedAdvocate] = useState("");
   const [clientMode, setClientMode] = useState(""); // "" | "new" | "existing"
   const [existingClients, setExistingClients] = useState([]);
+  const [existingUsers, setExistingUsers] = useState([]);
   const [originalEmail, setOriginalEmail] = useState("");
 
   // ─── Fetch case data for edit mode ───
@@ -136,8 +137,22 @@ export default function AddCaseForm() {
     }
   };
 
+  // ─── Fetch existing users ───
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/permissions/users`);
+      if (res.ok) {
+        const data = await res.json();
+        setExistingUsers(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch users:", err);
+    }
+  };
+
   useEffect(() => {
     fetchClients();
+    fetchUsers();
     if (isEditMode) {
       fetchCaseForEdit(editId);
     }
@@ -199,6 +214,19 @@ export default function AddCaseForm() {
           );
           if (emailExists) {
             return "This email is already associated with another client";
+          }
+          const emailExistsInUsers = existingUsers.some(
+            (u) => u.email.trim().toLowerCase() === value.trim().toLowerCase()
+          );
+          if (emailExistsInUsers) {
+            return "A user account with this email already exists";
+          }
+          const username = value.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+          const usernameExistsInUsers = existingUsers.some(
+            (u) => u.username.trim().toLowerCase() === username
+          );
+          if (usernameExistsInUsers) {
+            return "This email address generates a username that already exists";
           }
         }
         return "";
