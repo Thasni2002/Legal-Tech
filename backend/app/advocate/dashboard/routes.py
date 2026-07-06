@@ -183,7 +183,7 @@ def get_recent_activity(
     def sort_key(item):
         dt = item.get("_dt")
         if dt is None:
-            return datetime.min
+            return datetime.min.replace(tzinfo=timezone.utc)
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         return dt
@@ -271,7 +271,7 @@ def get_recent_documents(
     def sort_key(item):
         dt = item.get("_dt")
         if dt is None:
-            return datetime.min
+            return datetime.min.replace(tzinfo=timezone.utc)
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         return dt
