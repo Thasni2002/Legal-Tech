@@ -6,6 +6,94 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, X, Eye, CheckCircle, Edit3 } from "lucide-react";
 
+const courtMappings = {
+  "Supreme Court": ["Civil","Criminal", "Constitutional","Appellate","Public Interest Litigation (PIL)","Election", "Tax","Corporate","Environmental", "Other"],
+  "High Court": [
+    "Civil",
+    "Criminal",
+    "Family",
+    "Company",
+    "Labour",
+    "Consumer",
+    "Tax",
+    "Writ Petition",
+    "Appeal",
+    "Bail",
+    "Public Interest Litigation (PIL)",
+    "Other"
+  ],
+  "District Court": [
+    "Civil",
+    "Criminal",
+    "Property",
+    "Money Recovery",
+    "Execution",
+    "Appeal",
+    "Succession",
+    "Other"
+  ],
+  "Family Court": [
+    "Divorce",
+    "Child Custody",
+    "Maintenance",
+    "Domestic Violence",
+    "Adoption",
+    "Guardianship",
+    "Marriage",
+    "Other"
+  ],
+  "Consumer Court": [
+    "Consumer Complaint",
+    "Medical Negligence",
+    "Banking",
+    "Insurance",
+    "E-Commerce",
+    "Defective Products",
+    "Unfair Trade Practice",
+    "Other"
+  ],
+  "Motor Accident Claims Tribunal (MACT)": [
+    "Motor Accident Claim",
+    "Compensation",
+    "Insurance Claim",
+    "Fatal Accident",
+    "Permanent Disability",
+    "Vehicle Damage",
+    "Other"
+  ],
+  "Labour Court": [
+    "Termination",
+    "Salary Dispute",
+    "Industrial Dispute",
+    "Retirement Benefits",
+    "PF",
+    "ESI",
+    "Compensation",
+    "Other"
+  ],
+  "Sessions Court": [
+    "Murder",
+    "Attempt to Murder",
+    "Robbery",
+    "Rape",
+    "NDPS",
+    "Economic Offence",
+    "Appeal",
+    "Other"
+  ],
+  "Commercial Court": [
+    "Contract Dispute",
+    "Company Dispute",
+    "Partnership",
+    "Trademark",
+    "Copyright",
+    "Patent",
+    "Commercial Recovery",
+    "Other"
+  ],
+  "Other": ["Other"]
+};
+
 // Error message component
 function ErrorMsg({ message }) {
   if (!message) return null;
@@ -316,10 +404,18 @@ export default function AddCaseForm() {
     }
 
     // Update form data
-    setFormData((prev) => ({
-      ...prev,
-      [name]: val,
-    }));
+    if (name === "courtName") {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: val,
+        courtType: courtMappings[val] && courtMappings[val].length > 0 ? courtMappings[val][0] : "",
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: val,
+      }));
+    }
 
     // Validate while typing
     const error = validateField(name, val);
@@ -842,26 +938,23 @@ export default function AddCaseForm() {
                 <select name="courtName" value={formData.courtName} onChange={handleChange}
                   className={`${baseInputClass} ${getBorderClass("courtName")}`}>
                   <option value="">Select Court Name</option>
-                  <option value="Supreme Court">Supreme Court</option>
-                  <option value="High Court">High Court</option>
-                  <option value="District Court">District Court</option>
-                  <option value="Family Court">Family Court</option>
-                  <option value="Consumer Court">Consumer Court</option>
-                  <option value="Motor Accident Tribunal">Motor Accident Tribunal</option>
+                  {Object.keys(courtMappings).map((court) => (
+                    <option key={court} value={court}>{court}</option>
+                  ))}
                 </select>
                 {touched.courtName && errors.courtName && <ErrorMsg message={errors.courtName} />}
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Court Type</label>
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">
+                  {formData.courtName ? `${formData.courtName} Type` : "Court Type"}
+                </label>
                 <select name="courtType" value={formData.courtType} onChange={handleChange}
-                  className={`${baseInputClass} ${getBorderClass("courtType")}`}>
-                  <option value="">Select Court Type</option>
-                  <option value="Civil">Civil</option>
-                  <option value="Criminal">Criminal</option>
-                  <option value="Family">Family</option>
-                  <option value="Consumer">Consumer</option>
-                  <option value="Corporate">Corporate</option>
-                  <option value="Labour">Labour</option>
+                  className={`${baseInputClass} ${getBorderClass("courtType")}`}
+                  disabled={!formData.courtName}>
+                  <option value="">{formData.courtName ? `Select ${formData.courtName} Type` : "Select Court Type"}</option>
+                  {formData.courtName && courtMappings[formData.courtName]?.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
                 </select>
                 {touched.courtType && errors.courtType && <ErrorMsg message={errors.courtType} />}
               </div>
