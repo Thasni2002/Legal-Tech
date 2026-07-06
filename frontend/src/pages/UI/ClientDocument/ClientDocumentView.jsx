@@ -76,7 +76,14 @@ export default function ClientDocuments() {
               type: doc.documentType || "Document",
               fileName: doc.file || "File",
               fileUrl: doc.url || null,
-              date: item.created_at ? item.created_at.replace(" ", "T").split("T")[0] : new Date().toISOString().split("T")[0],
+              date: (() => {
+                // Use the document's own upload date; fall back to today if not stored
+                const raw = doc.uploadedAt || null;
+                const d = raw ? new Date(raw) : new Date();
+                return isNaN(d.getTime())
+                  ? new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+                  : d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+              })(),
               status: "Submitted",
             });
           });
@@ -136,6 +143,7 @@ export default function ClientDocuments() {
         advocate: targetCase.selected_advocate || "",
         file: file.name,
         url: uploadedUrl,
+        uploadedAt: new Date().toISOString(), // capture exact upload date/time
         view: true,
         upload: true,
         edit: true,
