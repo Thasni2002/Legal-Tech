@@ -43,21 +43,28 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
 
+  const [user, setUser] = useState(null);
+  const isClient = user?.role === "Client";
+
+  useEffect(() => {
+    setUser(getLoggedInUser());
+  }, []);
+
   function validateField(name, value) {
     switch (name) {
-      case "advocateName": if (!value.trim()) return "Advocate Name is required"; return "";
-      case "barCouncilId": if (!value.trim()) return "Bar Council ID is required"; if (!/^K\/\d{1,5}\/\d{4}$/i.test(value.trim())) return "Must be Kerala format (e.g., K/1234/2023)"; return "";
-      case "enrollmentNumber": if (!value.trim()) return "Enrollment Number is required"; if (!/^K\/\d{1,5}\/\d{4}$/i.test(value.trim())) return "Must be Kerala format (e.g., K/1234/2023)"; return "";
+      case "advocateName": if (!value.trim()) return isClient ? "Full Name is required" : "Advocate Name is required"; return "";
+      case "barCouncilId": if (!isClient) { if (!value.trim()) return "Bar Council ID is required"; if (!/^K\/\d{1,5}\/\d{4}$/i.test(value.trim())) return "Must be Kerala format (e.g., K/1234/2023)"; } return "";
+      case "enrollmentNumber": if (!isClient) { if (!value.trim()) return "Enrollment Number is required"; if (!/^K\/\d{1,5}\/\d{4}$/i.test(value.trim())) return "Must be Kerala format (e.g., K/1234/2023)"; } return "";
       case "phoneNumber": if (value && !/^\d{10}$/.test(value)) return "Phone Number must be 10 digits"; return "";
       case "aadhaarNumber": if (value && !/^\d{12}$/.test(value)) return "Aadhaar Number must be 12 digits"; return "";
       case "emailAddress": if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Invalid email address"; return "";
       case "panNumber": if (value && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(value)) return "Invalid PAN Number format (e.g. ABCDE1234F)"; return "";
-      case "practiceArea": if (!value.trim()) return "Practice Area is required"; return "";
-      case "courtType": if (!value.trim()) return "Court Type is required"; return "";
+      case "practiceArea": if (!isClient && !value.trim()) return "Practice Area is required"; return "";
+      case "courtType": if (!isClient && !value.trim()) return "Court Type is required"; return "";
       case "city": if (!value.trim()) return "City is required"; return "";
       case "state": if (!value.trim()) return "State is required"; return "";
       case "pincode": if (value && !/^\d{6}$/.test(value)) return "Pincode must be 6 digits"; return "";
-      case "chambersAddress": if (!value.trim()) return "Chambers Address is required"; return "";
+      case "chambersAddress": if (!isClient && !value.trim()) return "Address is required"; return "";
       case "yearsOfExperience": if (value && (isNaN(value) || Number(value) < 0)) return "Experience must be positive"; return "";
       default: return "";
     }
@@ -79,11 +86,7 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
     return valid;
   }
 
-  const [user, setUser] = useState(null);
 
-  useEffect(() => {
-    setUser(getLoggedInUser());
-  }, []);
 
   const getSpecializationOptions = () => {
     return formData?.practiceArea && specializationOptionsMap[formData.practiceArea] 
@@ -197,8 +200,8 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               <div>
               <InputField
-                label="Advocate Name"
-                placeholder="Enter Advocate Name"
+                label={isClient ? "Full Name" : "Advocate Name"}
+                placeholder={isClient ? "Enter Full Name" : "Enter Advocate Name"}
                 name="advocateName"
                 value={formData.advocateName}
                 onChange={handleChange}
@@ -208,31 +211,35 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
               )}
             </div>
 
-              <div>
-              <InputField
-                label="Bar Council ID"
-                placeholder="e.g. K/1234/2023"
-                name="barCouncilId"
-                value={formData.barCouncilId}
-                onChange={handleChange}
-              />
-              {touched.barCouncilId && errors.barCouncilId && (
-                <p className="text-red-500 text-sm mt-1">{errors.barCouncilId}</p>
-              )}
-            </div>
+              {!isClient && (
+                <>
+                  <div>
+                    <InputField
+                      label="Bar Council ID"
+                      placeholder="e.g. K/1234/2023"
+                      name="barCouncilId"
+                      value={formData.barCouncilId}
+                      onChange={handleChange}
+                    />
+                    {touched.barCouncilId && errors.barCouncilId && (
+                      <p className="text-red-500 text-sm mt-1">{errors.barCouncilId}</p>
+                    )}
+                  </div>
 
-              <div>
-              <InputField
-                label="Enrollment Number"
-                placeholder="e.g. K/1234/2023"
-                name="enrollmentNumber"
-                value={formData.enrollmentNumber}
-                onChange={handleChange}
-              />
-              {touched.enrollmentNumber && errors.enrollmentNumber && (
-                <p className="text-red-500 text-sm mt-1">{errors.enrollmentNumber}</p>
+                  <div>
+                    <InputField
+                      label="Enrollment Number"
+                      placeholder="e.g. K/1234/2023"
+                      name="enrollmentNumber"
+                      value={formData.enrollmentNumber}
+                      onChange={handleChange}
+                    />
+                    {touched.enrollmentNumber && errors.enrollmentNumber && (
+                      <p className="text-red-500 text-sm mt-1">{errors.enrollmentNumber}</p>
+                    )}
+                  </div>
+                </>
               )}
-            </div>
 
               <div>
               <InputField
@@ -316,78 +323,80 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
           </div>
 
           {/* Professional Information */}
-          <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
-            <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
-              <span className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">⚖️</span>
-              Professional Information
-            </h2>
+          {!isClient && (
+            <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
+              <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
+                <span className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">⚖️</span>
+                Professional Information
+              </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              <div>
-              <SelectField
-                label="Practice Area"
-                options={[
-                  "Civil Law",
-                  "Criminal Law",
-                  "Corporate Law",
-                  "Family Law",
-                  "Property Law",
-                ]}
-                name="practiceArea"
-                value={formData.practiceArea}
-                onChange={handleChange}
-              />
-              {touched.practiceArea && errors.practiceArea && (
-                <p className="text-red-500 text-sm mt-1">{errors.practiceArea}</p>
-              )}
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div>
+                <SelectField
+                  label="Practice Area"
+                  options={[
+                    "Civil Law",
+                    "Criminal Law",
+                    "Corporate Law",
+                    "Family Law",
+                    "Property Law",
+                  ]}
+                  name="practiceArea"
+                  value={formData.practiceArea}
+                  onChange={handleChange}
+                />
+                {touched.practiceArea && errors.practiceArea && (
+                  <p className="text-red-500 text-sm mt-1">{errors.practiceArea}</p>
+                )}
+              </div>
 
-              <div>
-              <SelectField
-                label="Court Type"
-                options={[
-                  "District Court",
-                  "High Court",
-                  "Supreme Court",
-                ]}
-                name="courtType"
-                value={formData.courtType}
-                onChange={handleChange}
-              />
-              {touched.courtType && errors.courtType && (
-                <p className="text-red-500 text-sm mt-1">{errors.courtType}</p>
-              )}
-            </div>
+                <div>
+                <SelectField
+                  label="Court Type"
+                  options={[
+                    "District Court",
+                    "High Court",
+                    "Supreme Court",
+                  ]}
+                  name="courtType"
+                  value={formData.courtType}
+                  onChange={handleChange}
+                />
+                {touched.courtType && errors.courtType && (
+                  <p className="text-red-500 text-sm mt-1">{errors.courtType}</p>
+                )}
+              </div>
 
-              <div>
-              <InputField
-                label="Years of Experience"
-                type="number"
-                placeholder="Enter Experience"
-                name="yearsOfExperience"
-                value={formData.yearsOfExperience}
-                onChange={handleChange}
-              />
-              {touched.yearsOfExperience && errors.yearsOfExperience && (
-                <p className="text-red-500 text-sm mt-1">{errors.yearsOfExperience}</p>
-              )}
-            </div>
+                <div>
+                <InputField
+                  label="Years of Experience"
+                  type="number"
+                  placeholder="Enter Experience"
+                  name="yearsOfExperience"
+                  value={formData.yearsOfExperience}
+                  onChange={handleChange}
+                />
+                {touched.yearsOfExperience && errors.yearsOfExperience && (
+                  <p className="text-red-500 text-sm mt-1">{errors.yearsOfExperience}</p>
+                )}
+              </div>
 
-              <div>
-              <SelectField
-                label="Specialization"
-                options={getSpecializationOptions()}
-                name="specialization"
-                value={formData.specialization}
-                onChange={handleChange}
-                disabled={!formData.practiceArea}
-              />
-              {touched.specialization && errors.specialization && (
-                <p className="text-red-500 text-sm mt-1">{errors.specialization}</p>
-              )}
+                <div>
+                <SelectField
+                  label="Specialization"
+                  options={getSpecializationOptions()}
+                  name="specialization"
+                  value={formData.specialization}
+                  onChange={handleChange}
+                  disabled={!formData.practiceArea}
+                />
+                {touched.specialization && errors.specialization && (
+                  <p className="text-red-500 text-sm mt-1">{errors.specialization}</p>
+                )}
+              </div>
+              </div>
             </div>
-            </div>
-          </div>
+          )}
 
           {/* Address Information */}
           <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
@@ -439,12 +448,13 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
 
             <div className="mt-8">
               <label className="block mb-2 text-sm font-medium text-[#0F172A]">
-                Chambers Address
+                {isClient ? "Residential Address" : "Chambers Address"}
               </label>
 
-                            <div><textarea
-                rows="4"
-                placeholder="Enter Chambers Address"
+              <div>
+                <textarea
+                  rows="4"
+                  placeholder={isClient ? "Enter Residential Address" : "Enter Chambers Address"}
                 className={`w-full rounded-xl border px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 outline-none transition-all duration-200 ${
                   touched.chambersAddress && errors.chambersAddress
                     ? "border-red-500 focus:ring-red-500/20"
@@ -464,7 +474,7 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
           <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
             <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
               <span className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">📝</span>
-              About Advocate
+              {isClient ? "About Me" : "About Advocate"}
             </h2>
 
             <textarea

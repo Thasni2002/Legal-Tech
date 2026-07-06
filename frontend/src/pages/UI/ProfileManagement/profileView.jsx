@@ -10,11 +10,13 @@ export default function ProfileView({ profile = {}, onEdit }) {
     setUser(getLoggedInUser());
   }, []);
 
+  const isClient = user?.role === "Client";
+
   // Compute role label dynamically
   const roleParts = [];
   if (profile.courtType) roleParts.push(profile.courtType);
   if (profile.specialization) roleParts.push(profile.specialization);
-  const roleLabel = roleParts.length > 0 ? `${roleParts.join(" (")} Advocate${roleParts.length > 1 ? ")" : ""}` : "Advocate";
+  const roleLabel = isClient ? "Client" : (roleParts.length > 0 ? `${roleParts.join(" (")} Advocate${roleParts.length > 1 ? ")" : ""}` : "Advocate");
 
   return (
     <div className="w-full space-y-8 max-w-6xl mx-auto">
@@ -34,7 +36,7 @@ export default function ProfileView({ profile = {}, onEdit }) {
               {/* Profile Info */}
               <div className="flex-1">
                 <h1 className="text-[#0F172A] font-extrabold text-4xl tracking-tight">
-                  {profile.advocateName || "Advocate Name"}
+                  {profile.advocateName || profile.clientName || user?.username || (isClient ? "Client Name" : "Advocate Name")}
                 </h1>
 
                 <p className="text-[#64748B] mt-2 text-lg font-medium">
@@ -83,38 +85,42 @@ export default function ProfileView({ profile = {}, onEdit }) {
           </div>
 
           {/* Professional Information */}
-          <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
-            <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
-              <span className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">⚖️</span>
-              Professional Information
-            </h2>
+          {!isClient && (
+            <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
+              <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
+                <span className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">⚖️</span>
+                Professional Information
+              </h2>
 
-            <div className="space-y-5">
-              <InfoRow label="Bar Council ID" value={profile.barCouncilId} />
-              <InfoRow label="Enrollment No" value={profile.enrollmentNumber} />
-              <InfoRow label="Experience" value={profile.yearsOfExperience ? `${profile.yearsOfExperience} Years` : ""} />
-              <InfoRow label="Practice Area" value={profile.practiceArea} />
-              <InfoRow label="Court Type" value={profile.courtType} />
-              <InfoRow label="Specialization" value={profile.specialization} />
-              <InfoRow label="Law Firm Name" value={profile.lawFirmName} />
-              <InfoRow label="Languages Known" value={profile.languagesKnown} />
+              <div className="space-y-5">
+                <InfoRow label="Bar Council ID" value={profile.barCouncilId} />
+                <InfoRow label="Enrollment No" value={profile.enrollmentNumber} />
+                <InfoRow label="Experience" value={profile.yearsOfExperience ? `${profile.yearsOfExperience} Years` : ""} />
+                <InfoRow label="Practice Area" value={profile.practiceArea} />
+                <InfoRow label="Court Type" value={profile.courtType} />
+                <InfoRow label="Specialization" value={profile.specialization} />
+                <InfoRow label="Law Firm Name" value={profile.lawFirmName} />
+                <InfoRow label="Languages Known" value={profile.languagesKnown} />
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Address */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
-          <h2 className="text-xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-3">
-            <span className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">🏢</span>
-            Chambers Address
-          </h2>
+        {!isClient && (
+          <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
+            <h2 className="text-xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-3">
+              <span className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">🏢</span>
+              Chambers Address
+            </h2>
 
-          <div className="bg-[#F8FAFC] rounded-2xl p-6 border border-[#E2E8F0]">
-            <p className="text-[#334155] font-medium text-sm leading-relaxed whitespace-pre-wrap">
-              {profile.chambersAddress || "No chambers address provided."}
-            </p>
+            <div className="bg-[#F8FAFC] rounded-2xl p-6 border border-[#E2E8F0]">
+              <p className="text-[#334155] font-medium text-sm leading-relaxed whitespace-pre-wrap">
+                {profile.chambersAddress || "No chambers address provided."}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
     </div>
   );
 }

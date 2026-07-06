@@ -224,7 +224,13 @@ def get_recent_documents(
                 for idx, doc in enumerate(docs):
                     fname = doc.get("file") or doc.get("filename") or doc.get("name") or "Document"
                     doc_type = doc.get("documentType") or doc.get("document_type") or "File"
-                    uploaded_by = doc.get("uploadedBy") or doc.get("uploaded_by") or "Unknown"
+                    uploaded_by = (
+                        doc.get("advocate")
+                        or doc.get("uploadedBy")
+                        or doc.get("uploaded_by")
+                        or case.selected_advocate
+                        or "Unknown"
+                    )
 
                     # Determine uploader role label
                     ul_lower = uploaded_by.lower()
