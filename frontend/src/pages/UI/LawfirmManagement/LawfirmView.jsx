@@ -1,7 +1,7 @@
 "use client";
 
 import { API_BASE_URL } from "@/utils/api";
-
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   Building2,
@@ -522,7 +522,7 @@ export default function LawfirmView() {
           </div>
         </div>
       )}
-      {showDeleteModal && (
+      {showDeleteModal &&  createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">        <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl border border-slate-200 p-8 animate-in fade-in zoom-in-95 duration-200">
 
           <div className="flex justify-center">
@@ -560,7 +560,8 @@ export default function LawfirmView() {
           </div>
 
         </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
