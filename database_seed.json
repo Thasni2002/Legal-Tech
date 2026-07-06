@@ -401,6 +401,56 @@
         }
       ],
       "temp_password": "temp_D5iwAWWG"
+    },
+    {
+      "id": 20,
+      "username": "thasnisharee4",
+      "email": "thasnisharee4@gmail.com",
+      "password": "$2b$12$ihgrER2E/4yXXgMqXQkKeOGxO8l9LTFwROObra5Ggz46i26Px6a8W",
+      "role": "client",
+      "first_name": "SHAREER",
+      "last_name": "A",
+      "phone": "0920753016",
+      "custom_permissions": {},
+      "document_access": [
+        {
+          "edit": false,
+          "name": "Smith v. State - Case Brief.pdf",
+          "type": "Case File",
+          "view": true,
+          "docId": "doc_1",
+          "delete": false,
+          "upload": true
+        },
+        {
+          "edit": false,
+          "name": "Land Title Deed - John Doe.pdf",
+          "type": "Property Document",
+          "view": true,
+          "docId": "doc_2",
+          "delete": false,
+          "upload": false
+        },
+        {
+          "edit": true,
+          "name": "Consultation Agreement - TechCorp.pdf",
+          "type": "Contract",
+          "view": true,
+          "docId": "doc_3",
+          "delete": false,
+          "upload": true
+        },
+        {
+          "edit": false,
+          "name": "Divorce Decree - Final.pdf",
+          "type": "Court Order",
+          "view": false,
+          "docId": "doc_4",
+          "delete": false,
+          "upload": false
+        }
+      ],
+      "temp_password": "temp_M7x9fXzh"
     }
   ],
   "advocates": [
@@ -586,6 +636,21 @@
       "status": "Active",
       "client_name": "risvan",
       "created_at": "2026-07-06T11:24:00"
+    },
+    {
+      "id": 20,
+      "case_name": "criminal",
+      "case_number": "cr/2111/2026",
+      "case_title": "criminal",
+      "advocate_name": "shiya",
+      "practice_area": "Criminal",
+      "priority": "Normal",
+      "due_date": "2025-06-06",
+      "assignment_notes": "Assigned from Case Management - Case #cr/2111/2026",
+      "assigned_documents": "[{\"documentType\": \"Evidence\", \"advocate\": \"\", \"file\": \"Invoice_1_thasni (1).pdf\", \"url\": \"http://localhost:8000/uploads/case_documents/Invoice_1_thasni (1).pdf\", \"view\": true, \"upload\": true, \"edit\": true, \"delete\": true}]",
+      "status": "Active",
+      "client_name": "Liya",
+      "created_at": "2026-07-06T12:00:13"
     }
   ],
   "case_management_cases": [
@@ -762,12 +827,32 @@
       "court_name": "Consumer Court",
       "court_type": "Consumer",
       "status": "Active",
-      "selected_advocate": null,
+      "selected_advocate": "shiya",
       "documents": "[{\"documentType\": \"Evidence\", \"advocate\": \"\", \"file\": \"Invoice_1_thasni (1).pdf\", \"url\": \"http://localhost:8000/uploads/case_documents/Invoice_1_thasni (1).pdf\", \"view\": true, \"upload\": true, \"edit\": true, \"delete\": true}]",
       "next_hearing_date": "2025-06-06",
       "created_at": "2026-07-06T06:08:51",
-      "updated_at": "2026-07-06T06:08:51",
+      "updated_at": "2026-07-06T06:30:14",
       "cnr_number": "KLAL010012342029"
+    },
+    {
+      "id": 24,
+      "case_id": "case-2026-004",
+      "case_title": "land case",
+      "case_no": "cr/2128/2026",
+      "case_type": "Labour",
+      "case_description": "wfgsatbn nhyjk ",
+      "client_name": "SHAREER A",
+      "contact_number": "0920753016",
+      "email_id": "thasnisharee4@gmail.com",
+      "court_name": "District Court",
+      "court_type": "Family",
+      "status": "Active",
+      "selected_advocate": null,
+      "documents": "[{\"documentType\": \"Other\", \"advocate\": \"\", \"file\": \"Legal_Tech_Project_One_Page_Summary.docx\", \"url\": \"http://localhost:8000/uploads/case_documents/Legal_Tech_Project_One_Page_Summary.docx\", \"view\": true, \"upload\": true, \"edit\": true, \"delete\": true}]",
+      "next_hearing_date": "2026-07-14",
+      "created_at": "2026-07-06T06:33:07",
+      "updated_at": "2026-07-06T06:33:07",
+      "cnr_number": "KLAL010012342028"
     }
   ],
   "cases": [],
