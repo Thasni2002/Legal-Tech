@@ -190,7 +190,7 @@ export default function AddCaseForm() {
       case "emailId":
         if (!value.trim()) return "Email Address is required";
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Please enter a valid email address";
-        if (clientMode === "new") {
+        if (!isEditMode && clientMode === "new") {
           if (isEditMode && value.trim().toLowerCase() === originalEmail.trim().toLowerCase()) {
             return "";
           }
@@ -212,7 +212,7 @@ export default function AddCaseForm() {
         if (!value) return "Date is required";
         return "";
       case "tempPassword":
-        if (clientMode === "new") {
+        if (!isEditMode && clientMode === "new") {
           if (!value.trim()) return "Temporary Password is required";
           if (value.trim().length < 6) return "Password must be at least 6 characters";
         }
@@ -245,7 +245,7 @@ export default function AddCaseForm() {
 
   function validateAll() {
     const fields = ["cnrNumber", "caseId", "caseTitle", "caseNo", "caseType", "caseDes", "clientName", "contactNumber", "emailId", "courtName", "courtType", "nextHearingDate"];
-    if (clientMode === "new") {
+    if (!isEditMode && clientMode === "new") {
       fields.push("tempPassword");
     }
     const newErrors = {};
@@ -409,7 +409,7 @@ export default function AddCaseForm() {
       }
 
       // Provision user if New Client mode and tempPassword is provided
-      if (clientMode === "new" && formData.tempPassword) {
+      if (!isEditMode && clientMode === "new" && formData.tempPassword) {
         const nameParts = formData.clientName.trim().split(" ");
         const firstName = nameParts[0] || "";
         const lastName = nameParts.slice(1).join(" ") || "";
@@ -645,7 +645,7 @@ export default function AddCaseForm() {
                 </div>
 
                 {/* Password Row (only for new client mode) */}
-                {clientMode === "new" && (
+                {clientMode === "new" && !isEditMode && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div>
                       <div className="flex items-center justify-between mb-2">
