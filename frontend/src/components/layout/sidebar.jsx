@@ -45,18 +45,20 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
     const loggedIn = getLoggedInUser();
     if (loggedIn && loggedIn.id) {
       Promise.all([
-        fetch(`${API_BASE_URL}/permissions/users/${loggedIn.id}`).then((res) => {
-          return res.status === 200 ? res.json() : { customPermissions: {} };
-        }),
-        fetch(`${API_BASE_URL}/permissions`).then((res) => {
-          return res.status === 200 ? res.json() : {};
-        })
+        fetch(`${API_BASE_URL}/permissions/users/${loggedIn.id}`)
+          .then((res) => (res.status === 200 ? res.json() : { customPermissions: {} }))
+          .catch(() => ({ customPermissions: {} })),
+        fetch(`${API_BASE_URL}/permissions`)
+          .then((res) => (res.status === 200 ? res.json() : {}))
+          .catch(() => ({})),
       ])
         .then(([userData, matrix]) => {
           setCustomPermissions(userData.customPermissions || {});
-          
+
           const roleKey = Object.keys(matrix).find(
-            (k) => k.toLowerCase().replace(/\s+/g, "") === loggedIn.role.toLowerCase().replace(/\s+/g, "")
+            (k) =>
+              k.toLowerCase().replace(/\s+/g, "") ===
+              (loggedIn.role || "").toLowerCase().replace(/\s+/g, "")
           );
           if (roleKey) {
             setRolePermissions(matrix[roleKey] || {});
@@ -65,7 +67,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
           }
         })
         .catch((err) => {
-          console.error("Error loading permissions in sidebar:", err);
+          console.warn("Sidebar: could not load permissions —", err?.message || err);
         })
         .finally(() => {
           setLoading(false);
