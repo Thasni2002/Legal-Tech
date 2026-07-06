@@ -19,49 +19,6 @@ import {
     Phone,
 } from "lucide-react";
 
-// ─── Activity type config ────────────────────────────────────
-const ACTIVITY_CONFIG = {
-    case_new: {
-        icon: PlusCircle,
-        bg: "bg-emerald-50",
-        iconColor: "text-emerald-600",
-        border: "border-emerald-200",
-        badge: "bg-emerald-100 text-emerald-700",
-        label: "New Case",
-    },
-    case_update: {
-        icon: ClipboardList,
-        bg: "bg-amber-50",
-        iconColor: "text-amber-600",
-        border: "border-amber-200",
-        badge: "bg-amber-100 text-amber-700",
-        label: "Case Update",
-    },
-    assignment: {
-        icon: UserCheck,
-        bg: "bg-blue-50",
-        iconColor: "text-blue-600",
-        border: "border-blue-200",
-        badge: "bg-blue-100 text-blue-700",
-        label: "Assignment",
-    },
-    document: {
-        icon: Upload,
-        bg: "bg-purple-50",
-        iconColor: "text-purple-600",
-        border: "border-purple-200",
-        badge: "bg-purple-100 text-purple-700",
-        label: "Document",
-    },
-    consultation: {
-        icon: Phone,
-        bg: "bg-teal-50",
-        iconColor: "text-teal-600",
-        border: "border-teal-200",
-        badge: "bg-teal-100 text-teal-700",
-        label: "Consultation",
-    },
-};
 
 // ─── Role badge colours ─────────────────────────────────────
 const ROLE_BADGE = {
@@ -123,14 +80,6 @@ export default function AdvDashboardView() {
                 resCases.json(),
             ]);
 
-            // Activities — fetched separately so backend restart isn't required
-            let activities = [];
-            try {
-                const resActivities = await fetch(`${API_BASE_URL}/dashboard/recent-activity?limit=10`);
-                if (resActivities.ok) activities = await resActivities.json();
-            } catch (e) {
-                console.warn("Recent activities endpoint not available:", e.message);
-            }
 
             // Documents — fetched separately so backend restart isn't required
             let documents = [];
@@ -221,7 +170,6 @@ export default function AdvDashboardView() {
                 },
                 cases: casesList,
                 hearings: hearingsList,
-                activities,
                 documents,
             });
 
@@ -371,10 +319,10 @@ export default function AdvDashboardView() {
                 })}
             </div>
 
-            {/* Case Overview + Recent Activities */}
+            {/* Case Overview */}
             <div className="grid grid-cols-12 gap-8">
 
-                <div className="col-span-12 lg:col-span-8 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
+                <div className="col-span-12 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
                     <div className="flex justify-between items-center mb-8">
                         <h2 className="text-2xl font-extrabold text-[#0F172A]">
                             Case Overview
@@ -431,88 +379,6 @@ export default function AdvDashboardView() {
                     </div>
                 </div>
 
-                {/* ─── Recent Activities Panel ─── */}
-                <div className="col-span-12 lg:col-span-4 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-extrabold text-[#0F172A]">
-                            Recent Activities
-                        </h2>
-                        {isRefreshing && (
-                            <RefreshCw className="w-4 h-4 text-[#2563EB] animate-spin" />
-                        )}
-                    </div>
-
-                    <div className="space-y-4 flex-1 overflow-y-auto pr-1 max-h-[480px]">
-                        {data && data.activities.length > 0 ? (
-                            data.activities.map((act, index) => {
-                                const cfg = ACTIVITY_CONFIG[act.type] || ACTIVITY_CONFIG.case_update;
-                                const Icon = cfg.icon;
-                                const roleBadgeClass = ROLE_BADGE[act.actor_role] || "bg-slate-100 text-slate-600";
-
-                                return (
-                                    <div
-                                        key={act.id || index}
-                                        className={`flex gap-3 items-start group p-3 rounded-2xl border ${cfg.border} ${cfg.bg} hover:shadow-md transition-all duration-200`}
-                                    >
-                                        {/* Icon */}
-                                        <div className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center ${cfg.bg} ${cfg.iconColor} border ${cfg.border} group-hover:scale-110 transition-transform`}>
-                                            <Icon className="w-4 h-4" />
-                                        </div>
-
-                                        {/* Content */}
-                                        <div className="min-w-0 flex-1">
-                                            {/* Type label + Role badge row */}
-                                            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                                                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${cfg.badge}`}>
-                                                    {cfg.label}
-                                                </span>
-                                                {act.actor_role && (
-                                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${roleBadgeClass}`}>
-                                                        {act.actor_role}
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {/* Activity title */}
-                                            <p className="text-xs font-semibold text-[#0F172A] leading-snug mb-1 line-clamp-2">
-                                                {act.title}
-                                            </p>
-
-                                            {/* Actor name + case ref */}
-                                            <div className="flex items-center gap-1 flex-wrap">
-                                                {act.actor && act.actor !== "Unknown" && (
-                                                    <span className="text-[10px] text-[#475569] font-medium truncate max-w-[120px]">
-                                                        by {act.actor}
-                                                    </span>
-                                                )}
-                                                {act.case_no && (
-                                                    <span className="text-[10px] text-[#94A3B8] font-mono">· {act.case_no}</span>
-                                                )}
-                                            </div>
-
-                                            {/* Time ago */}
-                                            <p className="text-[10px] font-medium text-[#94A3B8] mt-1">
-                                                {act.timestamp_display || "Recently"}
-                                            </p>
-                                        </div>
-                                    </div>
-                                );
-                            })
-                        ) : (
-                            <div className="text-center p-8 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">
-                                <ClipboardList className="w-8 h-8 text-[#CBD5E1] mx-auto mb-2" />
-                                <p className="text-sm font-medium text-[#64748B]">No recent activities yet.</p>
-                                <p className="text-xs text-[#94A3B8] mt-1">Activities from Junior Advocates and Clients will appear here.</p>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Auto-refresh indicator */}
-                    <div className="mt-4 pt-4 border-t border-[#F1F5F9] flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                        <p className="text-[10px] font-medium text-[#94A3B8]">Auto-refreshes every 30 seconds</p>
-                    </div>
-                </div>
 
             </div>
 
