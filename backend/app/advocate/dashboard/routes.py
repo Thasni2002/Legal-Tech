@@ -244,9 +244,11 @@ def get_recent_documents(
                         role_label = "Advocate"
 
                     # Build file URL
-                    import urllib.parse
-                    safe_name = urllib.parse.quote(fname)
-                    file_url = f"http://localhost:8000/uploads/case_documents/{safe_name}"
+                    file_url = doc.get("url") or doc.get("file_url")
+                    if not file_url:
+                        import urllib.parse
+                        safe_name = urllib.parse.quote(fname)
+                        file_url = f"http://localhost:8000/uploads/case_documents/{safe_name}"
 
                     ref_dt = case.updated_at or case.created_at
                     documents.append({
