@@ -90,6 +90,18 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
         case.court_type = data.courtType
     if data.status is not None:
         case.status = data.status
+        try:
+            from app.advocate.lawfirm_management.models import AssignedCase
+            assigned_cases = db.query(AssignedCase).filter(AssignedCase.case_number == case.case_no).all()
+            for ac in assigned_cases:
+                if data.status == "Pending":
+                    ac.status = "In Progress"
+                elif data.status == "Closed":
+                    ac.status = "Closed"
+                else:
+                    ac.status = data.status
+        except Exception as e:
+            print(f"Error synchronizing case status to assignment: {e}")
     if data.selectedAdvocate is not None:
         case.selected_advocate = data.selectedAdvocate
     if data.documents is not None:

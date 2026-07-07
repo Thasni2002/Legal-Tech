@@ -6,7 +6,8 @@ from .schemas import (
     AdvocateUpdate,
     AdvocateOut,
     AssignedCaseCreate,
-    AssignedCaseOut
+    AssignedCaseOut,
+    AssignedCaseStatusUpdate
 )
 from .service import (
     get_all_advocates,
@@ -147,6 +148,44 @@ def edit_assigned_case(
         )
 
     return updated
+
+
+# Update assigned case status
+@router.put(
+    "/assigned-cases/{case_id}/status"
+)
+def edit_assigned_case_status(
+    case_id: int,
+    data: AssignedCaseStatusUpdate,
+    db: Session = Depends(get_db)
+):
+    # 1. Update status of AssignedCase in the database
+    from .models import AssignedCase
+    assigned_case = db.query(AssignedCase).filter(AssignedCase.id == case_id).first()
+    if not assigned_case:
+        raise HTTPException(
+            status_code=404,
+            detail="Assigned case not found"
+        )
+    
+    assigned_case.status = data.status
+    
+    # 2. Find the corresponding case in Case Management table
+    from app.advocate.case_management.models import Case
+    related_case = db.query(Case).filter(Case.case_no == assigned_case.case_number).first()
+    if related_case:
+        # Sync status: Active <-> Active, In Progress <-> Pending, Closed <-> Closed
+        if data.status == "In Progress":
+            related_case.status = "Pending"
+        elif data.status == "Closed":
+            related_case.status = "Closed"
+        else:
+            related_case.status = data.status
+            
+    db.commit()
+    db.refresh(assigned_case)
+    
+    return {"message": "Status updated successfully", "status": assigned_case.status}
 
 
 # Get single advocate

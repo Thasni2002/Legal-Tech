@@ -247,10 +247,8 @@ export default function AssignedCasesView() {
   if (!perms.edit) return;
 
   try {
-    // Optional backend update
-    /*
-    await fetch(
-      `http://localhost:8000/lawfirm-management/assigned-cases/${id}/status`,
+    const res = await fetch(
+      `${API_BASE_URL}/lawfirm-management/assigned-cases/${id}/status`,
       {
         method: "PUT",
         headers: {
@@ -261,7 +259,10 @@ export default function AssignedCasesView() {
         }),
       }
     );
-    */
+
+    if (!res.ok) {
+      throw new Error("Failed to update status on server");
+    }
 
     setCases((prevCases) =>
       prevCases.map((c) =>
@@ -277,6 +278,7 @@ export default function AssignedCasesView() {
     }
   } catch (error) {
     console.error("Status update error:", error);
+    alert("Failed to update status. Please try again.");
   }
 };
 
