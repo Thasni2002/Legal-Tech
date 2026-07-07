@@ -75,40 +75,54 @@ def generate_document(
     return generate_legal_document(db, case_id, request.prompt)
 
 
-import os
-import shutil
-from fastapi import UploadFile, File
+from fastapi import UploadFile, File, Response
+from .models import UploadedFile
 
 @router.post("/upload")
-def upload_case_document(file: UploadFile = File(...)):
-    uploads_dir = os.path.abspath("uploads")
-    docs_dir = os.path.join(uploads_dir, "case_documents")
-    if not os.path.exists(docs_dir):
-        os.makedirs(docs_dir)
-
-    # Use a secure filename
-    filename = file.filename
-    # Avoid path traversal attacks
-    safe_filename = os.path.basename(filename)
-    file_path = os.path.join(docs_dir, safe_filename)
-
+def upload_case_document(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
     try:
-        # Copy file stream directly to disk to handle files up to 5GB without RAM limit
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        content = file.file.read()
+        db_file = UploadedFile(
+            filename=file.filename,
+            content_type=file.content_type,
+            data=content
+        )
+        db.add(db_file)
+        db.commit()
+        db.refresh(db_file)
         
-        # Return static url of the document
-        file_url = f"http://localhost:8000/uploads/case_documents/{safe_filename}"
+        file_url = f"http://localhost:8000/case-management/documents/{db_file.id}"
         return {
             "success": True,
             "url": file_url,
-            "filename": safe_filename
+            "filename": file.filename
         }
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Failed to save uploaded document: {str(e)}"
         )
+
+
+@router.get("/documents/{file_id}")
+def get_uploaded_document(
+    file_id: int,
+    db: Session = Depends(get_db)
+):
+    db_file = db.query(UploadedFile).filter(UploadedFile.id == file_id).first()
+    if not db_file:
+        raise HTTPException(status_code=404, detail="File not found")
+        
+    return Response(
+        content=db_file.data,
+        media_type=db_file.content_type,
+        headers={
+            "Content-Disposition": f'inline; filename="{db_file.filename}"'
+        }
+    )
 
 
 from .schemas import AIAssistantRequest

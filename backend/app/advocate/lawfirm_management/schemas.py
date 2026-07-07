@@ -64,3 +64,8 @@ class AssignedCaseOut(AssignedCaseCreate):
 
     class Config:
         from_attributes = True
+
+
+class AssignedCaseStatusUpdate(BaseModel):
+    status: str
+

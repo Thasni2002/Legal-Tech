@@ -29,22 +29,37 @@ import {
 } from "lucide-react";
 import { usePermissions } from "@/utils/usePermissions";
 
+// Helper to normalize status capitalization
+function getNormalizedStatus(status) {
+  const s = String(status || "").trim().toLowerCase();
+  if (s === "in progress") return "In Progress";
+  if (s === "pending") return "Pending";
+  if (s === "closed" || s === "completed") return "Completed";
+  if (s === "to do") return "To Do";
+  return "Active";
+}
+
 // ─── Status badge helper ───
 function StatusBadge({ status }) {
+  const displayStatus = getNormalizedStatus(status);
   const map = {
     Active: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+    "In Progress": "bg-blue-50 text-blue-700 border border-blue-200",
     Pending: "bg-amber-50 text-amber-700 border border-amber-200",
-    Closed: "bg-red-50 text-red-700 border border-red-200",
+    Completed: "bg-red-50 text-red-700 border border-red-200",
+    "To Do": "bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]",
   };
   const icons = {
     Active: <CheckCircle size={11} />,
+    "In Progress": <Clock size={11} />,
     Pending: <Clock size={11} />,
-    Closed: <AlertCircle size={11} />,
+    Completed: <AlertCircle size={11} />,
+    "To Do": <Clock size={11} />,
   };
   return (
-    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${map[status] || "bg-gray-50 text-gray-600 border border-gray-200"}`}>
-      {icons[status]}
-      {status}
+    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${map[displayStatus] || "bg-gray-50 text-gray-600 border border-gray-200"}`}>
+      {icons[displayStatus]}
+      {displayStatus}
     </span>
   );
 }
@@ -97,17 +112,42 @@ export default function CaseView() {
 
   const fetchCases = async () => {
     try {
+      // 1. Fetch cases
       const response = await fetch(`${API_BASE_URL}/case-management/`);
       const data = await response.json();
-      setCases(
-        Array.isArray(data)
-          ? data
-          : Array.isArray(data.results)
-          ? data.results
-          : Array.isArray(data.data)
-          ? data.data
-          : []
-      );
+      const rawCases = Array.isArray(data)
+        ? data
+        : Array.isArray(data.results)
+        ? data.results
+        : Array.isArray(data.data)
+        ? data.data
+        : [];
+      
+      // 2. Fetch assigned cases to get the live status from AssignedCasesView.jsx
+      let assignedCases = [];
+      try {
+        const assignedRes = await fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases`);
+        if (assignedRes.ok) {
+          assignedCases = await assignedRes.json();
+        }
+      } catch (err) {
+        console.error("Error fetching assigned cases status:", err);
+      }
+
+      // 3. Map status from Assigned Cases
+      const normalizedCases = rawCases.map(c => {
+        // Find corresponding assigned case by case number/no
+        const assigned = assignedCases.find(
+          ac => String(ac.case_number || "").trim().toLowerCase() === String(c.case_no || "").trim().toLowerCase()
+        );
+        const resolvedStatus = assigned ? assigned.status : c.status;
+        return {
+          ...c,
+          status: getNormalizedStatus(resolvedStatus)
+        };
+      });
+
+      setCases(normalizedCases);
     } catch (error) {
       console.error(error);
     }
@@ -292,9 +332,15 @@ export default function CaseView() {
   });
 
   const totalCases = cases.length;
-  const activeCases = cases.filter((c) => c.status === "Active").length;
-  const pendingCases = cases.filter((c) => c.status === "Pending").length;
-  const closedCases = cases.filter((c) => c.status === "Closed").length;
+  const activeCases = cases.filter((c) => getNormalizedStatus(c.status) === "Active").length;
+  const pendingCases = cases.filter((c) => {
+    const s = getNormalizedStatus(c.status);
+    return s === "Pending" || s === "In Progress" || s === "To Do";
+  }).length;
+  const completedCases = cases.filter((c) => {
+    const s = getNormalizedStatus(c.status);
+    return s === "Closed" || s === "Completed";
+  }).length;
 
   return (
     <div className="p-6 bg-[#F8FAFC] min-h-screen">
@@ -319,7 +365,7 @@ export default function CaseView() {
         <StatCard label="Total Cases" value={totalCases} color="text-[#0F172A]" bg="bg-white border-[#E2E8F0]" />
         <StatCard label="Active" value={activeCases} color="text-emerald-600" bg="bg-emerald-50 border-emerald-100" />
         <StatCard label="Pending" value={pendingCases} color="text-amber-600" bg="bg-amber-50 border-amber-100" />
-        <StatCard label="Closed" value={closedCases} color="text-red-600" bg="bg-red-50 border-red-100" />
+        <StatCard label="Completed" value={completedCases} color="text-red-600" bg="bg-red-50 border-red-100" />
       </div>
 
       {/* ──── QUICK ACCESS CARDS ──── */}

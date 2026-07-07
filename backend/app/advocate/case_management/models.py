@@ -1,6 +1,6 @@
 
 from sqlalchemy import Column, Integer, String, Text, DateTime
-from sqlalchemy.dialects.mysql import LONGTEXT
+from sqlalchemy.dialects.mysql import LONGTEXT, LONGBLOB
 from app.database import Base
 from datetime import datetime
 
@@ -30,3 +30,12 @@ class Case(Base):
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class UploadedFile(Base):
+    __tablename__ = "uploaded_files"
+
+    id = Column(Integer, primary_key=True, index=True)
+    filename = Column(String(255), nullable=False)
+    content_type = Column(String(100), nullable=True)
+    data = Column(LONGBLOB, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
