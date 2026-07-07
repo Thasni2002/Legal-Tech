@@ -10,7 +10,7 @@ export default function ProfileView({ profile = {}, onEdit }) {
     setUser(getLoggedInUser());
   }, []);
 
-  const isClient = user?.role === "Client";
+  const isClient = user?.role?.toLowerCase() === "client";
 
   // Compute role label dynamically
   const roleParts = [];
@@ -77,7 +77,7 @@ export default function ProfileView({ profile = {}, onEdit }) {
               <InfoRow label="Date of Birth" value={profile.dateOfBirth} />
               <InfoRow label="Gender" value={profile.gender} />
               <InfoRow label="Aadhaar Number" value={profile.aadhaarNumber} />
-              <InfoRow label="PAN Number" value={profile.panNumber} />
+              {!isClient && <InfoRow label="PAN Number" value={profile.panNumber} />}
               <InfoRow label="City" value={profile.city} />
               <InfoRow label="State" value={profile.state} />
               <InfoRow label="Pincode" value={profile.pincode} />
@@ -105,20 +105,18 @@ export default function ProfileView({ profile = {}, onEdit }) {
         </div>
 
         {/* Address */}
-        {!isClient && (
-          <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
-            <h2 className="text-xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-3">
-              <span className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">🏢</span>
-              Chambers Address
-            </h2>
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
+          <h2 className="text-xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-3">
+            <span className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">🏢</span>
+            {isClient ? "Residential Address" : "Chambers Address"}
+          </h2>
 
-            <div className="bg-[#F8FAFC] rounded-2xl p-6 border border-[#E2E8F0]">
-              <p className="text-[#334155] font-medium text-sm leading-relaxed whitespace-pre-wrap">
-                {profile.chambersAddress || "No chambers address provided."}
-              </p>
-            </div>
+          <div className="bg-[#F8FAFC] rounded-2xl p-6 border border-[#E2E8F0]">
+            <p className="text-[#334155] font-medium text-sm leading-relaxed whitespace-pre-wrap">
+              {profile.chambersAddress || (isClient ? "No residential address provided." : "No chambers address provided.")}
+            </p>
           </div>
-        )}
+        </div>
     </div>
   );
 }
