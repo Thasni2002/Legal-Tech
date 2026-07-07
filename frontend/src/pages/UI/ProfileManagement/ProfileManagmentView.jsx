@@ -15,6 +15,10 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
     "Property Law": ["Real Estate", "Land Disputes", "Tenant Rights", "Wills & Estates"]
   };
 
+  const cleanInitialData = initialData
+    ? Object.fromEntries(Object.entries(initialData).map(([k, v]) => [k, v === null ? "" : v]))
+    : {};
+
   const [formData, setFormData] = useState({
     advocateName: "",
     barCouncilId: "",
@@ -37,7 +41,7 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
     chambersAddress: "",
     about: "",
     profileImage: "",
-    ...initialData,
+    ...cleanInitialData,
   });
 
   const [errors, setErrors] = useState({});
