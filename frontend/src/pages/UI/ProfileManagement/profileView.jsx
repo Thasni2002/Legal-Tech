@@ -99,8 +99,6 @@ export default function ProfileView({ profile = {}, onEdit }) {
                 <InfoRow label="Practice Area" value={profile.practiceArea} />
                 <InfoRow label="Court Type" value={profile.courtType} />
                 <InfoRow label="Specialization" value={profile.specialization} />
-                <InfoRow label="Law Firm Name" value={profile.lawFirmName} />
-                <InfoRow label="Languages Known" value={profile.languagesKnown} />
               </div>
             </div>
           )}
