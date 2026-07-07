@@ -130,8 +130,8 @@ async def provision_new_user(data: UserProvision, db: Session = Depends(get_db))
             <html>
                 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                     <h2>Welcome to Legal-Tech</h2>
-                    <p>Dear {data.firstName or 'Client'},</p>
-                    <p>Your client portal account has been successfully provisioned and linked to your case file. Below are your login credentials:</p>
+                    <p>Dear {data.firstName or data.role},</p>
+                    <p>Your {data.role} account has been successfully provisioned{" and linked to your case file" if data.role.lower() == 'client' else ""}. Below are your login credentials:</p>
                     <div style="background-color: #f5f5f5; padding: 15px; border-left: 4px solid #2563EB; margin: 15px 0;">
                         <p style="margin: 5px 0;"><strong>Login URL:</strong> <a href="http://localhost:3000/">http://localhost:3000/</a></p>
                         <p style="margin: 5px 0;"><strong>Username / Email:</strong> {data.email}</p>
