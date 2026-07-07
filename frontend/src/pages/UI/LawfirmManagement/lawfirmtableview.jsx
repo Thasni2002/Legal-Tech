@@ -116,8 +116,6 @@ export default function LawfirmTableView({ advocate }) {
               <InfoRow label="Enrollment Number" value={advocate.enrollmentNumber} />
               <InfoRow label="Practice Area" value={advocate.practiceArea} />
               <InfoRow label="Court Type" value={advocate.courtType} />
-              <InfoRow label="Languages Known" value={advocate.languagesKnown} />
-              <InfoRow label="Law Firm Name" value={advocate.lawFirmName} />
               <InfoRow label="Specialization" value={advocate.specialization} />
             </div>
           </div>
