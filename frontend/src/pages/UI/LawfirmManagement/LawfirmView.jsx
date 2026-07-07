@@ -414,7 +414,7 @@ export default function LawfirmView() {
           {/* Header */}
           <div className="p-8 border-b border-[#F1F5F9] flex flex-col md:flex-row gap-6 justify-between items-center bg-white">
             <h2 className="text-xl font-extrabold text-[#0F172A]">
-              Assigned Cases
+              Junior Assigned Cases
             </h2>
 
             {/* Search */}
