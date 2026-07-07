@@ -105,6 +105,37 @@ export default function LawfirmView() {
     fetchAssignedCases();
   }, []);
 
+  const handleAdvocateDelete = async (id) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/lawfirm-management/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setAdvocates((prev) => prev.filter((a) => a.id !== id));
+      } else {
+        alert("Failed to delete advocate.");
+      }
+    } catch (e) {
+      console.error("Error deleting advocate:", e);
+      alert("Error deleting advocate.");
+    }
+  };
+
+  const handleCaseDelete = async (id) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setAssignedCases((prev) => prev.filter((c) => c.id !== id));
+      } else {
+        alert("Failed to delete assigned case.");
+      }
+    } catch (e) {
+      console.error("Error deleting assigned case:", e);
+      alert("Error deleting assigned case.");
+    }
+  };
 
   const confirmDelete = () => {
     if (deleteType === "advocate") {

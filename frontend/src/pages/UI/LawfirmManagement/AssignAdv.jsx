@@ -2,13 +2,18 @@
 
 import { API_BASE_URL } from "@/utils/api";
 
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { Trash2 } from "lucide-react";
+
 export default function AssignAdv({ isOpen, onClose }) {
 
+  const router = useRouter();
   const searchParams = useSearchParams();
   const caseId = searchParams.get("id");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
 
   const [formData, setFormData] = useState({
@@ -145,6 +150,25 @@ export default function AssignAdv({ isOpen, onClose }) {
     }
   };
 
+  const handleUnassign = async () => {
+    if (!caseId) return;
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases/${caseId}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        if (onClose) onClose();
+        else router.back();
+      } else {
+        alert("Failed to unassign case.");
+      }
+    } catch (error) {
+      console.error("Error unassigning case:", error);
+      alert("Error unassigning case.");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -228,7 +252,8 @@ export default function AssignAdv({ isOpen, onClose }) {
             type="button"
             onClick={() => {
               setShowSuccess(false);
-              onClose();
+              if (onClose) onClose();
+              else router.back();
             }}
             className="w-full py-3 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold rounded-xl shadow-lg shadow-blue-500/20 transition duration-200"
           >
@@ -249,7 +274,7 @@ export default function AssignAdv({ isOpen, onClose }) {
             {caseId ? "Update Assigned Case" : "Assign Case to Advocate"}
           </h2>
           <button
-            onClick={onClose}
+            onClick={onClose || (() => router.back())}
             className="w-10 h-10 rounded-full flex items-center justify-center bg-[#F8FAFC] text-[#64748B] hover:bg-rose-100 hover:text-rose-600 transition-colors"
           >
             <span className="text-xl font-bold">✕</span>
@@ -406,9 +431,18 @@ export default function AssignAdv({ isOpen, onClose }) {
 
   {/* Footer */}
   <div className="flex justify-end gap-3 mt-10 border-t border-[#F1F5F9] pt-8">
+    {caseId && (
+      <button
+        type="button"
+        onClick={() => setShowDeleteConfirm(true)}
+        className="px-8 py-3.5 rounded-full bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold uppercase tracking-wider transition-colors w-full sm:w-auto mr-auto"
+      >
+        Remove Assignment
+      </button>
+    )}
     <button
       type="button"
-      onClick={onClose}
+      onClick={onClose || (() => router.back())}
       className="px-8 py-3.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[#475569] text-xs font-bold uppercase tracking-wider transition-colors w-full sm:w-auto"
     >
       Cancel
@@ -423,6 +457,41 @@ export default function AssignAdv({ isOpen, onClose }) {
   </div>
 </form>
       </div>
+
+      {showDeleteConfirm && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl border border-slate-200 p-8 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-center">
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                <Trash2 className="w-8 h-8 text-red-600" />
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold text-center text-slate-900 mt-6">
+              Confirm Removal
+            </h2>
+            <p className="text-center text-slate-500 mt-3 leading-relaxed">
+              Are you sure you want to remove this assignment?
+            </p>
+            <div className="flex justify-center gap-4 mt-8">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-6 py-3 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold hover:bg-slate-100 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleUnassign}
+                className="px-6 py-3 rounded-xl bg-red-600 text-white font-semibold shadow-lg shadow-red-600/30 hover:bg-red-700 transition"
+              >
+                Yes, Remove
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
