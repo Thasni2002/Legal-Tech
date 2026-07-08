@@ -46,6 +46,8 @@ def export_database_state():
                             row[k] = v.isoformat()
                         elif hasattr(v, "to_eng_string"):
                             row[k] = float(v)
+                        elif isinstance(v, bytes):
+                            row[k] = v.hex()
                 data[table_name] = rows
                 
         root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

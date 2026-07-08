@@ -17,6 +17,8 @@ from app.advocate.lawfirm_management.routes import router as lawfirm_router
 from app.advocate.case_management.routes import router as case_router
 from app.utils.scheduler import start_scheduler
 from app.advocate.dashboard import router as dashboard_router
+from app.advocate.tasks import router as tasks_router
+from app.advocate.tasks.models import Task, TaskMessage
 
 app = FastAPI()
 
@@ -172,6 +174,59 @@ def startup():
     except Exception as e:
         print(f"Error checking/adding migration columns: {e}")
 
+    # Ensure Assigned Tasks tables exist and have all required columns
+    try:
+        from app.advocate.tasks.models import Task as _Task, TaskMessage as _TaskMsg
+        from app.database import Base as _Base
+        # Create tables if they don't exist at all
+        _Base.metadata.create_all(bind=engine, tables=[_Task.__table__, _TaskMsg.__table__])
+
+        # Migrate advocate_tasks: add any columns that are missing (table may exist from old schema)
+        if inspector.has_table('advocate_tasks'):
+            existing_cols = {col['name'] for col in inspector.get_columns('advocate_tasks')}
+            needed_cols = {
+                'description':       "ALTER TABLE advocate_tasks ADD COLUMN description TEXT NULL",
+                'priority':          "ALTER TABLE advocate_tasks ADD COLUMN priority VARCHAR(50) NULL DEFAULT 'Medium'",
+                'due_date':          "ALTER TABLE advocate_tasks ADD COLUMN due_date VARCHAR(100) NULL",
+                'senior_advocate_id':"ALTER TABLE advocate_tasks ADD COLUMN senior_advocate_id INT NOT NULL DEFAULT 0",
+                'junior_advocate_id':"ALTER TABLE advocate_tasks ADD COLUMN junior_advocate_id INT NOT NULL DEFAULT 0",
+                'case_id':           "ALTER TABLE advocate_tasks ADD COLUMN case_id INT NULL",
+                'case_title':        "ALTER TABLE advocate_tasks ADD COLUMN case_title VARCHAR(255) NULL",
+                'case_no':           "ALTER TABLE advocate_tasks ADD COLUMN case_no VARCHAR(100) NULL",
+                'senior_name':       "ALTER TABLE advocate_tasks ADD COLUMN senior_name VARCHAR(255) NULL",
+                'junior_name':       "ALTER TABLE advocate_tasks ADD COLUMN junior_name VARCHAR(255) NULL",
+                'status':            "ALTER TABLE advocate_tasks ADD COLUMN status VARCHAR(50) NULL DEFAULT 'todo'",
+                'created_at':        "ALTER TABLE advocate_tasks ADD COLUMN created_at DATETIME NULL",
+                'updated_at':        "ALTER TABLE advocate_tasks ADD COLUMN updated_at DATETIME NULL",
+            }
+            with engine.begin() as conn:
+                for col_name, alter_sql in needed_cols.items():
+                    if col_name not in existing_cols:
+                        conn.execute(text(alter_sql))
+                        print(f"advocate_tasks: added missing column '{col_name}'")
+
+        # Migrate advocate_task_messages similarly
+        if inspector.has_table('advocate_task_messages'):
+            existing_cols = {col['name'] for col in inspector.get_columns('advocate_task_messages')}
+            needed_cols = {
+                'task_id':     "ALTER TABLE advocate_task_messages ADD COLUMN task_id INT NOT NULL DEFAULT 0",
+                'sender_id':   "ALTER TABLE advocate_task_messages ADD COLUMN sender_id INT NOT NULL DEFAULT 0",
+                'sender_name': "ALTER TABLE advocate_task_messages ADD COLUMN sender_name VARCHAR(255) NULL",
+                'sender_role': "ALTER TABLE advocate_task_messages ADD COLUMN sender_role VARCHAR(100) NULL",
+                'message':     "ALTER TABLE advocate_task_messages ADD COLUMN message TEXT NOT NULL",
+                'message_type':"ALTER TABLE advocate_task_messages ADD COLUMN message_type VARCHAR(50) NULL DEFAULT 'general'",
+                'created_at':  "ALTER TABLE advocate_task_messages ADD COLUMN created_at DATETIME NULL",
+            }
+            with engine.begin() as conn:
+                for col_name, alter_sql in needed_cols.items():
+                    if col_name not in existing_cols:
+                        conn.execute(text(alter_sql))
+                        print(f"advocate_task_messages: added missing column '{col_name}'")
+
+        print("Advocate tasks tables migration complete.")
+    except Exception as te:
+        print(f"Error migrating tasks tables: {te}")
+
     # Start hearing reminder scheduler
     start_scheduler()
 
@@ -191,3 +246,4 @@ app.include_router(lawfirm_router)
 app.include_router(permissions_router)
 app.include_router(case_router)
 app.include_router(dashboard_router)
+app.include_router(tasks_router)
