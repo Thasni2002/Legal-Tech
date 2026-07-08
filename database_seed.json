@@ -382,7 +382,7 @@
       "id": 140,
       "username": "liya",
       "email": "liyafathima141@gmail.com",
-      "password": "$2b$12$DxgzTS2T5Eab8ekFEueKVutwsBgejLdo4MBZ.U4bs7T1pAs1vx7Um",
+      "password": "$2b$12$N1wJadB2oh9ZlxEY.x1H4eouVbYH1WGvAOILAUmo4GANcomGRhJSm",
       "role": "Junior Advocate",
       "first_name": "liya",
       "last_name": "Advocate",
@@ -522,7 +522,8 @@
       "case_no": null,
       "senior_name": "admin",
       "junior_name": "john Advocate",
-      "updated_at": "2026-07-08T07:40:52"
+      "updated_at": "2026-07-08T07:40:52",
+      "is_pinned": 0
     },
     {
       "id": 2,
@@ -532,7 +533,7 @@
       "junior_advocate_id": 137,
       "case_id": null,
       "deadline": "2026-07-30T00:00:00",
-      "status": "To Do",
+      "status": "progress",
       "created_at": "2026-07-07T06:17:32",
       "priority": "Medium",
       "due_date": null,
@@ -540,7 +541,65 @@
       "case_no": null,
       "senior_name": "admin",
       "junior_name": "thasni Advocate",
-      "updated_at": "2026-07-08T06:37:27"
+      "updated_at": "2026-07-08T09:36:11",
+      "is_pinned": 0
+    },
+    {
+      "id": 3,
+      "title": "client meeting",
+      "description": "meeting with a client",
+      "senior_advocate_id": 104,
+      "junior_advocate_id": 140,
+      "case_id": null,
+      "deadline": null,
+      "status": "todo",
+      "created_at": "2026-07-08T10:15:51",
+      "priority": "Urgent",
+      "due_date": "2026-07-09",
+      "case_title": null,
+      "case_no": null,
+      "senior_name": "admin",
+      "junior_name": "liya Advocate",
+      "updated_at": "2026-07-08T10:15:51",
+      "is_pinned": 0
+    },
+    {
+      "id": 4,
+      "title": "client document",
+      "description": "print client document",
+      "senior_advocate_id": 104,
+      "junior_advocate_id": 140,
+      "case_id": null,
+      "deadline": null,
+      "status": "review",
+      "created_at": "2026-07-08T10:16:43",
+      "priority": "High",
+      "due_date": "2026-07-30",
+      "case_title": null,
+      "case_no": null,
+      "senior_name": "admin",
+      "junior_name": "liya Advocate",
+      "updated_at": "2026-07-08T10:25:12",
+      "is_pinned": 1
+    },
+    {
+      "id": 5,
+      "title": "sheduling date",
+      "description": "dates",
+      "senior_advocate_id": 104,
+      "junior_advocate_id": 140,
+      "case_id": 4,
+      "deadline": null,
+      "status": "todo",
+      "created_at": "2026-07-08T10:17:31",
+      "priority": "Low",
+      "due_date": "2026-08-01",
+      "case_title": "man missing",
+      "case_no": "cr/1234/2028",
+      "senior_name": "admin",
+      "junior_name": "liya Advocate",
+      "updated_at": "2026-07-08T10:17:31",
+      "is_pinned": 0
     }
   ],
   "case_management_cases": [
@@ -1468,393 +1527,6 @@
       "delete": 0
     },
     {
-      "id": 1333,
-      "role_id": "legalspecialist",
-      "module": "Dashboard",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1334,
-      "role_id": "legalspecialist",
-      "module": "Junior Dashboard",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1335,
-      "role_id": "legalspecialist",
-      "module": "Client Dashboard",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1336,
-      "role_id": "legalspecialist",
-      "module": "Law Firm Management",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1337,
-      "role_id": "legalspecialist",
-      "module": "Client Management",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1338,
-      "role_id": "legalspecialist",
-      "module": "Case Management",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1339,
-      "role_id": "legalspecialist",
-      "module": "Consultations",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1340,
-      "role_id": "legalspecialist",
-      "module": "Finance Management",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1341,
-      "role_id": "legalspecialist",
-      "module": "Calendar",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1342,
-      "role_id": "legalspecialist",
-      "module": "Junior Calendar",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1343,
-      "role_id": "legalspecialist",
-      "module": "Profile",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1344,
-      "role_id": "legalspecialist",
-      "module": "Assigned Cases",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1345,
-      "role_id": "legalspecialist",
-      "module": "Assigned Tasks",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1346,
-      "role_id": "legalspecialist",
-      "module": "Junior Assigned Tasks",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1347,
-      "role_id": "legalspecialist",
-      "module": "Consultation",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1348,
-      "role_id": "legalspecialist",
-      "module": "Case Tracking",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1349,
-      "role_id": "legalspecialist",
-      "module": "Documents",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1350,
-      "role_id": "legalspecialist",
-      "module": "Payments",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1351,
-      "role_id": "legalspecialist",
-      "module": "User Roles",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1352,
-      "role_id": "legalspecialist",
-      "module": "Roles",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1353,
-      "role_id": "legalspecialist",
-      "module": "Users",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1354,
-      "role_id": "legalspecialist",
-      "module": "Permissions",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1355,
-      "role_id": "junioradvocate",
-      "module": "Dashboard",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1356,
-      "role_id": "junioradvocate",
-      "module": "Junior Dashboard",
-      "view": 1,
-      "add": 1,
-      "edit": 1,
-      "delete": 1
-    },
-    {
-      "id": 1357,
-      "role_id": "junioradvocate",
-      "module": "Client Dashboard",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1358,
-      "role_id": "junioradvocate",
-      "module": "Law Firm Management",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1359,
-      "role_id": "junioradvocate",
-      "module": "Client Management",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1360,
-      "role_id": "junioradvocate",
-      "module": "Case Management",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1361,
-      "role_id": "junioradvocate",
-      "module": "Consultations",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1362,
-      "role_id": "junioradvocate",
-      "module": "Finance Management",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1363,
-      "role_id": "junioradvocate",
-      "module": "Calendar",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1364,
-      "role_id": "junioradvocate",
-      "module": "Junior Calendar",
-      "view": 1,
-      "add": 1,
-      "edit": 1,
-      "delete": 1
-    },
-    {
-      "id": 1365,
-      "role_id": "junioradvocate",
-      "module": "Profile",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1366,
-      "role_id": "junioradvocate",
-      "module": "Assigned Cases",
-      "view": 1,
-      "add": 1,
-      "edit": 1,
-      "delete": 1
-    },
-    {
-      "id": 1367,
-      "role_id": "junioradvocate",
-      "module": "Consultation",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1368,
-      "role_id": "junioradvocate",
-      "module": "Case Tracking",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1369,
-      "role_id": "junioradvocate",
-      "module": "Documents",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1370,
-      "role_id": "junioradvocate",
-      "module": "Payments",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1371,
-      "role_id": "junioradvocate",
-      "module": "User Roles",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1372,
-      "role_id": "junioradvocate",
-      "module": "Roles",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1373,
-      "role_id": "junioradvocate",
-      "module": "Users",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1374,
-      "role_id": "junioradvocate",
-      "module": "Permissions",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
-      "id": 1375,
-      "role_id": "junioradvocate",
-      "module": "Assigned Tasks",
-      "view": 0,
-      "add": 0,
-      "edit": 0,
-      "delete": 0
-    },
-    {
       "id": 1376,
       "role_id": "senioradvocate",
       "module": "Dashboard",
@@ -2051,6 +1723,204 @@
       "add": 1,
       "edit": 1,
       "delete": 1
+    },
+    {
+      "id": 1398,
+      "role_id": "junioradvocate",
+      "module": "Dashboard",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1399,
+      "role_id": "junioradvocate",
+      "module": "Junior Dashboard",
+      "view": 1,
+      "add": 1,
+      "edit": 1,
+      "delete": 1
+    },
+    {
+      "id": 1400,
+      "role_id": "junioradvocate",
+      "module": "Client Dashboard",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1401,
+      "role_id": "junioradvocate",
+      "module": "Law Firm Management",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1402,
+      "role_id": "junioradvocate",
+      "module": "Client Management",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1403,
+      "role_id": "junioradvocate",
+      "module": "Case Management",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1404,
+      "role_id": "junioradvocate",
+      "module": "Consultations",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1405,
+      "role_id": "junioradvocate",
+      "module": "Finance Management",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1406,
+      "role_id": "junioradvocate",
+      "module": "Calendar",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1407,
+      "role_id": "junioradvocate",
+      "module": "Junior Calendar",
+      "view": 1,
+      "add": 1,
+      "edit": 1,
+      "delete": 1
+    },
+    {
+      "id": 1408,
+      "role_id": "junioradvocate",
+      "module": "Profile",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1409,
+      "role_id": "junioradvocate",
+      "module": "Assigned Cases",
+      "view": 1,
+      "add": 1,
+      "edit": 1,
+      "delete": 1
+    },
+    {
+      "id": 1410,
+      "role_id": "junioradvocate",
+      "module": "Consultation",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1411,
+      "role_id": "junioradvocate",
+      "module": "Case Tracking",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1412,
+      "role_id": "junioradvocate",
+      "module": "Documents",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1413,
+      "role_id": "junioradvocate",
+      "module": "Payments",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1414,
+      "role_id": "junioradvocate",
+      "module": "User Roles",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1415,
+      "role_id": "junioradvocate",
+      "module": "Roles",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1416,
+      "role_id": "junioradvocate",
+      "module": "Users",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1417,
+      "role_id": "junioradvocate",
+      "module": "Permissions",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1418,
+      "role_id": "junioradvocate",
+      "module": "Assigned Tasks",
+      "view": 0,
+      "add": 0,
+      "edit": 0,
+      "delete": 0
+    },
+    {
+      "id": 1419,
+      "role_id": "junioradvocate",
+      "module": "Junior Assigned Tasks",
+      "view": 1,
+      "add": 1,
+      "edit": 1,
+      "delete": 1
     }
   ],
   "roles": [
@@ -2063,11 +1933,6 @@
       "id": "junioradvocate",
       "name": "Junior Advocate",
       "description": "Limited access"
-    },
-    {
-      "id": "legalspecialist",
-      "name": "Legal Specialist",
-      "description": "Handles document filing and scheduling"
     },
     {
       "id": "senioradvocate",

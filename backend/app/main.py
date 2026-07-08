@@ -171,6 +171,14 @@ def startup():
                 print("Successfully updated NULL client_name fields in assigned_cases.")
             except Exception as update_err:
                 print(f"Error updating existing client_names in assigned_cases: {update_err}")
+
+        if inspector.has_table('advocate_tasks'):
+            columns = [col['name'] for col in inspector.get_columns('advocate_tasks')]
+            if 'is_pinned' not in columns:
+                with engine.begin() as conn:
+                    # using integer 0 since SQLite doesn't have a strict BOOLEAN type, and 0 is false. MySQL also works with 0.
+                    conn.execute(text("ALTER TABLE advocate_tasks ADD COLUMN is_pinned BOOLEAN DEFAULT 0;"))
+                print("Successfully added is_pinned column to advocate_tasks table.")
     except Exception as e:
         print(f"Error checking/adding migration columns: {e}")
 

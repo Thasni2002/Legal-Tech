@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import {
   Calendar,
   AlertCircle,
@@ -9,6 +9,7 @@ import {
   MoreVertical,
   GripVertical,
   ChevronRight,
+  Pin,
 } from "lucide-react";
 
 const COLUMNS = [
@@ -70,8 +71,9 @@ function formatDueDate(dateStr) {
   }
 }
 
-function TaskCard({ task, onOpen, onStatusChange, currentUserId, isSenior, colKey, perms }) {
+function TaskCard({ task, onOpen, onStatusChange, currentUserId, isSenior, colKey, perms, onPinToggle }) {
   const dragRef = useRef(null);
+  const [hovered, setHovered] = useState(false);
   const due = formatDueDate(task.due_date);
   const priority = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.Medium;
 
@@ -95,26 +97,37 @@ function TaskCard({ task, onOpen, onStatusChange, currentUserId, isSenior, colKe
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={() => onOpen(task)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         background: "#fff",
-        border: "1.5px solid #E2E8F0",
+        border: task.is_pinned ? "1.5px solid #F59E0B" : "1.5px solid #E2E8F0",
         borderRadius: "12px",
         padding: "14px 14px 12px",
         marginBottom: "10px",
         cursor: "pointer",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.04),0 1px 8px rgba(0,0,0,0.04)",
+        boxShadow: task.is_pinned 
+          ? "0 4px 12px rgba(245,158,11,0.08), 0 1px 3px rgba(0,0,0,0.04)"
+          : "0 1px 3px rgba(0,0,0,0.04),0 1px 8px rgba(0,0,0,0.04)",
         transition: "all 0.2s ease",
         userSelect: "none",
         position: "relative",
         overflow: "hidden",
       }}
+      // Overriding inline hover styles via JS
       onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = "0 4px 16px rgba(37,99,235,0.10),0 2px 4px rgba(0,0,0,0.06)";
-        e.currentTarget.style.borderColor = "#BFDBFE";
+        setHovered(true);
+        e.currentTarget.style.boxShadow = task.is_pinned
+          ? "0 6px 16px rgba(245,158,11,0.15), 0 2px 4px rgba(0,0,0,0.06)"
+          : "0 4px 16px rgba(37,99,235,0.10),0 2px 4px rgba(0,0,0,0.06)";
+        e.currentTarget.style.borderColor = task.is_pinned ? "#F59E0B" : "#BFDBFE";
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04),0 1px 8px rgba(0,0,0,0.04)";
-        e.currentTarget.style.borderColor = "#E2E8F0";
+        setHovered(false);
+        e.currentTarget.style.boxShadow = task.is_pinned
+          ? "0 4px 12px rgba(245,158,11,0.08), 0 1px 3px rgba(0,0,0,0.04)"
+          : "0 1px 3px rgba(0,0,0,0.04),0 1px 8px rgba(0,0,0,0.04)";
+        e.currentTarget.style.borderColor = task.is_pinned ? "#F59E0B" : "#E2E8F0";
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px", gap: "6px" }}>
@@ -128,9 +141,35 @@ function TaskCard({ task, onOpen, onStatusChange, currentUserId, isSenior, colKe
         }}>
           {priority.label}
         </span>
-        <span style={{ fontSize: "11px", color: "#94A3B8", fontWeight: 500, marginLeft: "auto" }}>
-          #{task.id}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "auto" }}>
+          {(task.is_pinned || (hovered && perms?.edit)) && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onPinToggle(task.id, task.is_pinned);
+              }}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "2px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: task.is_pinned ? "#F59E0B" : "#94A3B8",
+                opacity: task.is_pinned ? 1 : 0.6,
+                transform: task.is_pinned ? "rotate(-45deg)" : "none",
+                transition: "all 0.15s ease",
+              }}
+              title={task.is_pinned ? "Unpin task" : "Pin task"}
+            >
+              <Pin size={13} fill={task.is_pinned ? "#F59E0B" : "none"} />
+            </button>
+          )}
+          <span style={{ fontSize: "11px", color: "#94A3B8", fontWeight: 500 }}>
+            #{task.id}
+          </span>
+        </div>
       </div>
 
       <h4 style={{
@@ -204,12 +243,22 @@ function TaskCard({ task, onOpen, onStatusChange, currentUserId, isSenior, colKe
   );
 }
 
-export default function KanbanBoard({ tasks, onOpenTask, onStatusChange, currentUserId, isSenior, perms }) {
+export default function KanbanBoard({ tasks, onOpenTask, onStatusChange, currentUserId, isSenior, perms, onPinToggle }) {
   const tasksByCol = {};
   COLUMNS.forEach((c) => { tasksByCol[c.key] = []; });
   tasks.forEach((t) => {
     const col = t.status in tasksByCol ? t.status : "todo";
     tasksByCol[col].push(t);
+  });
+
+  // Sort within columns: pinned tasks first, then by id desc
+  COLUMNS.forEach((c) => {
+    tasksByCol[c.key].sort((a, b) => {
+      const pinA = a.is_pinned ? 1 : 0;
+      const pinB = b.is_pinned ? 1 : 0;
+      if (pinA !== pinB) return pinB - pinA;
+      return b.id - a.id;
+    });
   });
 
   const handleDragOver = (e) => { e.preventDefault(); };
@@ -305,6 +354,7 @@ export default function KanbanBoard({ tasks, onOpenTask, onStatusChange, current
                   currentUserId={currentUserId}
                   isSenior={isSenior}
                   perms={perms}
+                  onPinToggle={onPinToggle}
                 />
               ))
             )}

@@ -30,6 +30,7 @@ def create_task(db: Session, data: TaskCreate, senior_id: int, senior_name: str)
         case_id=data.case_id,
         case_title=data.case_title,
         case_no=data.case_no,
+        is_pinned=getattr(data, "is_pinned", False),
         senior_name=senior_name,
         junior_name=junior_name,
     )
@@ -145,6 +146,7 @@ def task_to_dict(task: Task, messages: List[TaskMessage] = None) -> dict:
         "case_id": task.case_id,
         "case_title": task.case_title,
         "case_no": task.case_no,
+        "is_pinned": task.is_pinned,
         "senior_name": task.senior_name,
         "junior_name": task.junior_name,
         "created_at": task.created_at.isoformat() if task.created_at else None,

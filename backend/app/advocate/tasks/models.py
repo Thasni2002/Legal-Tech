@@ -16,6 +16,9 @@ class Task(Base):
     # Status: todo, progress, review, completed
     status = Column(String(50), default="todo")
 
+    # Pin status
+    is_pinned = Column(Boolean, default=False)
+
     # Deadline / time limit
     due_date = Column(String(100), nullable=True)
 
