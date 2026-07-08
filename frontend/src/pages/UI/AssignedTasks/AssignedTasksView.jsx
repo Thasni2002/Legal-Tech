@@ -143,6 +143,38 @@ export default function AssignedTasksView({ isJuniorView = false }) {
     setShowForm(true);
   };
 
+  const handlePinToggle = async (taskId, currentPinStatus) => {
+    if (!perms.edit) return;
+    const newPinStatus = !currentPinStatus;
+
+    // Optimistic update
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, is_pinned: newPinStatus } : t))
+    );
+    if (selectedTask && selectedTask.id === taskId) {
+      setSelectedTask((prev) => ({ ...prev, is_pinned: newPinStatus }));
+    }
+
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`${API_BASE_URL}/advocate/tasks/${taskId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ is_pinned: newPinStatus }),
+      });
+      if (!res.ok) {
+        console.warn("Failed to persist task pin status change in backend, reverting...");
+        fetchTasks(true);
+      }
+    } catch (err) {
+      console.error("Error persisting task pin status change:", err);
+      fetchTasks(true);
+    }
+  };
+
   const handleDeleteTask = async (taskId) => {
     if (!perms.delete) return;
     const token = localStorage.getItem("token");
@@ -264,7 +296,7 @@ export default function AssignedTasksView({ isJuniorView = false }) {
               Refresh
             </button>
 
-            {!isJuniorView && isSenior && perms.add && (
+            {perms.add && (
               <button
                 onClick={() => { setEditingTask(null); setShowForm(true); }}
                 style={{
@@ -477,6 +509,7 @@ export default function AssignedTasksView({ isJuniorView = false }) {
             currentUserId={user?.id}
             isSenior={isSenior}
             perms={perms}
+            onPinToggle={handlePinToggle}
           />
         )}
       </div>
@@ -499,6 +532,7 @@ export default function AssignedTasksView({ isJuniorView = false }) {
           onEdit={handleEditTask}
           perms={perms}
           onDelete={handleDeleteTask}
+          onPinToggle={handlePinToggle}
         />
       )}
 
