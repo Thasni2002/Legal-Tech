@@ -73,3 +73,10 @@ class AIAssistantRequest(BaseModel):
     query: str
     role: Optional[str] = None
     advocateName: Optional[str] = None
+
+
+# Format Document Generation Schema
+class FormatDocumentRequest(BaseModel):
+    case_id: int
+    template_key: str
+    draft_text: str

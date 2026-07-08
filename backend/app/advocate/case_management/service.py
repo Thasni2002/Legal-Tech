@@ -287,4 +287,152 @@ User Question:
                 
         return {"response": response_text}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI Assistant failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"AI Assistant failed: {str(e)}")
+
+
+# Document templates configuration for the "Document Format Generate" feature
+DOCUMENT_TEMPLATES = {
+    "name_change_affidavit": {
+        "name": "Name Change Affidavit",
+        "description": "Scaffolds an affidavit declaring a change of name for official gazette publication.",
+        "fields": ["client_name", "father_spouse_name", "age", "address", "city", "old_name", "new_name", "date"],
+        "template": """AFFIDAVIT FOR CHANGE OF NAME
+
+I, {{client_name}}, son/daughter of {{father_spouse_name}}, aged {{age}} years, residing at {{address}}, {{city}}, do hereby solemnly affirm and state on oath as follows:
+
+1. That my birth name was {{old_name}}, which is recorded in my official documents.
+2. That I have recently changed my name to {{new_name}} for personal/professional reasons.
+3. That I declare that {{old_name}} and {{new_name}} refer to one and the same person, i.e., myself.
+
+VERIFICATION
+Verified at {{city}} on this {{date}} that the contents of this affidavit are true to my knowledge.
+"""
+    },
+    "vakalatnama": {
+        "name": "Vakalatnama",
+        "description": "Authorizes an advocate to represent the client in court.",
+        "fields": ["client_name", "opposite_party", "case_number", "court_name", "advocate_name"],
+        "template": """VAKALATNAMA
+
+IN THE COURT OF {{court_name}}
+Case No. {{case_number}} of 2026
+
+Between:
+{{client_name}} ... Petitioner/Plaintiff
+AND
+{{opposite_party}} ... Respondent/Defendant
+
+I, {{client_name}}, do hereby appoint and authorize Advocate {{advocate_name}} to appear, plead, and act for me in the above-mentioned case.
+"""
+    },
+    "general_affidavit": {
+        "name": "General Affidavit",
+        "description": "A general-purpose sworn statement to declare facts under oath.",
+        "fields": ["client_name", "father_spouse_name", "age", "address", "city", "declarations", "date"],
+        "template": """GENERAL AFFIDAVIT
+
+I, {{client_name}}, son/daughter of {{father_spouse_name}}, aged {{age}} years, residing at {{address}}, {{city}}, do hereby solemnly affirm and state on oath as follows:
+
+{{declarations}}
+
+VERIFICATION
+Verified at {{city}} on this {{date}} that the contents of this affidavit are true to my knowledge and belief.
+"""
+    }
+}
+
+
+def get_document_formats():
+    return DOCUMENT_TEMPLATES
+
+
+def generate_document_from_format(db: Session, case_id: int, template_key: str, draft_text: str):
+    import os
+    import json
+    import google.generativeai as genai
+    from fastapi import HTTPException
+    from .models import UploadedFile
+
+    template_info = DOCUMENT_TEMPLATES.get(template_key)
+    if not template_info:
+        raise HTTPException(status_code=400, detail="Invalid template key")
+
+    case = get_case(db, case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    # Call Gemini to polish the user's draft_text
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured in backend")
+
+    genai.configure(api_key=api_key)
+    
+    prompt = f"""
+You are an expert legal assistant. Use the following context about a case and the user's raw draft text to generate a highly polished, professional, legally-sound document in clean Markdown. Preserve all factual names, addresses, dates, and terms specified in the raw draft. Do not add any conversational text before or after the document text.
+
+Case Context:
+Case Number: {case.case_no}
+Court Name: {case.court_name}
+Case Title: {case.case_title}
+
+User Raw Draft Text:
+{draft_text}
+"""
+    try:
+        model = genai.GenerativeModel('gemini-flash-latest')
+        response = model.generate_content(prompt)
+        polished_text = response.text.strip()
+    except Exception as e:
+        # Fallback to raw text if AI fails
+        polished_text = draft_text
+
+    # Create UploadedFile record
+    filename = f"{template_info['name'].replace(' ', '_')}_{case.case_no}.md"
+    db_file = UploadedFile(
+        filename=filename,
+        content_type="text/markdown",
+        data=polished_text.encode('utf-8')
+    )
+    db.add(db_file)
+    db.commit()
+    db.refresh(db_file)
+
+    # Attach to case
+    file_url = f"http://localhost:8000/case-management/documents/{db_file.id}"
+    
+    current_docs = []
+    if case.documents:
+        try:
+            current_docs = json.loads(case.documents) if isinstance(case.documents, str) else list(case.documents)
+        except Exception:
+            current_docs = []
+            
+    new_doc_obj = {
+        "documentType": template_info["name"],
+        "advocate": case.selected_advocate or "System",
+        "file": filename,
+        "url": file_url,
+        "view": True,
+        "upload": True,
+        "edit": False,
+        "delete": False
+    }
+    current_docs.append(new_doc_obj)
+    
+    # Save back to database
+    case.documents = json.dumps(current_docs)
+    db.commit()
+    db.refresh(case)
+
+    # Return structure
+    if isinstance(case.documents, str):
+        case.documents = json.loads(case.documents or "[]")
+        
+    return {
+        "success": True,
+        "document": polished_text,
+        "file_url": file_url,
+        "filename": filename,
+        "case": case
+    }

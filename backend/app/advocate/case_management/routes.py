@@ -125,7 +125,7 @@ def get_uploaded_document(
     )
 
 
-from .schemas import AIAssistantRequest
+from .schemas import AIAssistantRequest, FormatDocumentRequest
 
 @router.post("/ai-assistant")
 def ai_assistant_endpoint(
@@ -133,4 +133,19 @@ def ai_assistant_endpoint(
     db: Session = Depends(get_db)
 ):
     from .service import ask_ai_assistant
-    return ask_ai_assistant(db, request.query, request.role, request.advocateName)
+    return ask_ai_assistant(db, request.query, request.role, request.advocateName)
+
+
+@router.get("/document-formats")
+def get_document_formats_endpoint():
+    from .service import get_document_formats
+    return get_document_formats()
+
+
+@router.post("/generate-format-document")
+def generate_format_document_endpoint(
+    request: FormatDocumentRequest,
+    db: Session = Depends(get_db)
+):
+    from .service import generate_document_from_format
+    return generate_document_from_format(db, request.case_id, request.template_key, request.draft_text)

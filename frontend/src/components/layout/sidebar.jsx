@@ -19,6 +19,7 @@ import {
   ChevronUp,
   Shield,
   ClipboardList,
+  FileText,
 } from "lucide-react";
 import Image from "next/image";
 import { API_BASE_URL } from "@/utils/api";
@@ -165,6 +166,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         { name: "Dashboard", path: "/client-dashboard", icon: Home, moduleKey: "Client Dashboard" },
         { name: "Case Discussion", path: "/client-consultation", icon: BookOpen, moduleKey: "Consultation" },
         { name: "Case Tracking", path: "/client-case-tracking", icon: Folder, moduleKey: "Case Tracking" },
+        { name: "Document Format Generate", path: "/client-document-format-generate", icon: FileText, moduleKey: "Client Document Generate" },
         { name: "Documents", path: "/client-documents", icon: Settings, moduleKey: "Documents" },
         { name: "Payments", path: "/client-payments", icon: CreditCard, moduleKey: "Payments" },
       ],
