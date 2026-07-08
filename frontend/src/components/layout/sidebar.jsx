@@ -18,6 +18,7 @@ import {
   ChevronDown,
   ChevronUp,
   Shield,
+  ClipboardList,
 } from "lucide-react";
 import Image from "next/image";
 import { API_BASE_URL } from "@/utils/api";
@@ -139,6 +140,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         { name: "Case Discussion", path: "/consultations", icon: BookOpen, moduleKey: "Consultations" },
         { name: "Billing", path: "/finance-management", icon: CreditCard, moduleKey: "Finance Management" },
         { name: "Calendar", path: "/calendar", icon: Calendar, moduleKey: "Calendar" },
+        { name: "Assigned Tasks", path: "/assigned-tasks", icon: ClipboardList, moduleKey: "Assigned Tasks" },
       ],
     },
   ];
@@ -149,6 +151,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
       items: [
         { name: "Dashboard", path: "/junior-dashboard", icon: Home, moduleKey: "Junior Dashboard" },
         { name: "Assigned Cases", path: "/assigned-cases", icon: Folder, moduleKey: "Assigned Cases" },
+        { name: "Assigned Tasks", path: "/junior-assigned-tasks", icon: ClipboardList, moduleKey: "Junior Assigned Tasks" },
         { name: "Calendar", path: "/junior-calendar", icon: Calendar, moduleKey: "Junior Calendar" },
       ],
     },
