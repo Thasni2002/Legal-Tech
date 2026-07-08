@@ -18,6 +18,7 @@ import {
   Tag,
   Trash2,
   AlertTriangle,
+  Pin,
 } from "lucide-react";
 import { API_BASE_URL } from "@/utils/api";
 import { getLoggedInUser } from "@/utils/auth";
@@ -50,7 +51,7 @@ function formatTime(dateStr) {
   return d.toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
-export default function TaskDetailsModal({ task: initialTask, onClose, onStatusChange, isSenior, onEdit, perms, onDelete }) {
+export default function TaskDetailsModal({ task: initialTask, onClose, onStatusChange, isSenior, onEdit, perms, onDelete, onPinToggle }) {
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => {
@@ -58,6 +59,11 @@ export default function TaskDetailsModal({ task: initialTask, onClose, onStatusC
   }, []);
 
   const [task, setTask] = useState(initialTask);
+
+  useEffect(() => {
+    setTask(initialTask);
+  }, [initialTask]);
+
   const [messages, setMessages] = useState(initialTask.messages || []);
   const [newMessage, setNewMessage] = useState("");
   const [messageType, setMessageType] = useState("general");
@@ -77,6 +83,14 @@ export default function TaskDetailsModal({ task: initialTask, onClose, onStatusC
     setDeleting(true);
     onDelete && onDelete(task.id);
   };
+
+  const handlePinClick = async () => {
+    if (!perms?.edit || !onPinToggle) return;
+    const nextPinned = !task.is_pinned;
+    setTask(prev => ({ ...prev, is_pinned: nextPinned }));
+    await onPinToggle(task.id, task.is_pinned);
+  };
+
   const user = getLoggedInUser();
 
   useEffect(() => {
@@ -238,6 +252,28 @@ export default function TaskDetailsModal({ task: initialTask, onClose, onStatusC
           </div>
 
           <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+            {perms?.edit && (
+              <button
+                onClick={handlePinClick}
+                style={{
+                  background: task.is_pinned ? "rgba(245,158,11,0.25)" : "rgba(255,255,255,0.15)",
+                  border: "none",
+                  borderRadius: "50%",
+                  width: "36px",
+                  height: "36px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: task.is_pinned ? "#F59E0B" : "#fff",
+                  transform: task.is_pinned ? "rotate(-45deg)" : "none",
+                  transition: "all 0.2s",
+                }}
+                title={task.is_pinned ? "Unpin Task" : "Pin Task"}
+              >
+                <Pin size={16} fill={task.is_pinned ? "#F59E0B" : "none"} />
+              </button>
+            )}
             {isSenior && perms?.edit && (
               <button
                 onClick={() => onEdit && onEdit(task)}
