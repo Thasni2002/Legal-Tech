@@ -15,6 +15,10 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
     "Property Law": ["Real Estate", "Land Disputes", "Tenant Rights", "Wills & Estates"]
   };
 
+  const cleanInitialData = initialData
+    ? Object.fromEntries(Object.entries(initialData).map(([k, v]) => [k, v === null ? "" : v]))
+    : {};
+
   const [formData, setFormData] = useState({
     advocateName: "",
     barCouncilId: "",
@@ -37,14 +41,14 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
     chambersAddress: "",
     about: "",
     profileImage: "",
-    ...initialData,
+    ...cleanInitialData,
   });
 
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
 
   const [user, setUser] = useState(null);
-  const isClient = user?.role === "Client";
+  const isClient = user?.role?.toLowerCase() === "client";
 
   useEffect(() => {
     setUser(getLoggedInUser());
@@ -307,18 +311,20 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
               )}
             </div>
 
-              <div>
-              <InputField
-                label="PAN Number"
-                placeholder="e.g. ABCDE1234F"
-                name="panNumber"
-                value={formData.panNumber}
-                onChange={handleChange}
-              />
-              {touched.panNumber && errors.panNumber && (
-                <p className="text-red-500 text-sm mt-1">{errors.panNumber}</p>
+              {!isClient && (
+                <div>
+                  <InputField
+                    label="PAN Number"
+                    placeholder="e.g. ABCDE1234F"
+                    name="panNumber"
+                    value={formData.panNumber}
+                    onChange={handleChange}
+                  />
+                  {touched.panNumber && errors.panNumber && (
+                    <p className="text-red-500 text-sm mt-1">{errors.panNumber}</p>
+                  )}
+                </div>
               )}
-            </div>
             </div>
           </div>
 

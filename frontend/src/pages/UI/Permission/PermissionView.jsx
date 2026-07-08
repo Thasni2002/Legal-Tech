@@ -64,6 +64,7 @@ const ALL_GROUPS = [
       { key: "Consultations", label: "Case Discussion (Senior)" },
       { key: "Finance Management", label: "Finance Management" },
       { key: "Calendar", label: "Calendar" },
+      { key: "Assigned Tasks", label: "Assigned Tasks" },
       { key: "Profile", label: "Profile" },
     ],
   },
@@ -72,6 +73,7 @@ const ALL_GROUPS = [
     modules: [
       { key: "Junior Dashboard", label: "Dashboard (Junior)" },
       { key: "Assigned Cases", label: "Assigned Cases" },
+      { key: "Junior Assigned Tasks", label: "Assigned Tasks (Junior)" },
       { key: "Junior Calendar", label: "Calendar (Junior)" },
     ],
   },

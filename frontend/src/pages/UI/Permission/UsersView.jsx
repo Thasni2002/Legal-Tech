@@ -71,6 +71,8 @@ const ALL_MODULES = [
   "Junior Calendar",
   "Profile",
   "Assigned Cases",
+  "Assigned Tasks",
+  "Junior Assigned Tasks",
   "Client Section",
   "Consultation",
   "Case Tracking",
@@ -93,6 +95,7 @@ const SENIOR_JUNIOR_MODULES = [
       { key: "Consultations", label: "Case Discussion (Senior)" },
       { key: "Finance Management", label: "Finance Management" },
       { key: "Calendar", label: "Calendar" },
+      { key: "Assigned Tasks", label: "Assigned Tasks" },
       { key: "Profile", label: "Profile" }
     ]
   },
@@ -101,6 +104,7 @@ const SENIOR_JUNIOR_MODULES = [
     modules: [
       { key: "Junior Dashboard", label: "Dashboard (Junior)" },
       { key: "Assigned Cases", label: "Assigned Cases" },
+      { key: "Junior Assigned Tasks", label: "Assigned Tasks (Junior)" },
       { key: "Junior Calendar", label: "Calendar (Junior)" }
     ]
   },
