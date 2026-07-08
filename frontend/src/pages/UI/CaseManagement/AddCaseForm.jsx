@@ -294,24 +294,24 @@ export default function AddCaseForm() {
         if (!value.trim()) return "Email Address is required";
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Please enter a valid email address";
         if (!isEditMode && clientMode === "new") {
-          if (isEditMode && value.trim().toLowerCase() === originalEmail.trim().toLowerCase()) {
+          if (isEditMode && value.trim().toLowerCase() === (originalEmail || "").trim().toLowerCase()) {
             return "";
           }
-          const emailExists = existingClients.some(
-            (c) => c.emailId.trim().toLowerCase() === value.trim().toLowerCase()
+          const emailExists = (existingClients || []).some(
+            (c) => c.emailId && typeof c.emailId === "string" && c.emailId.trim().toLowerCase() === value.trim().toLowerCase()
           );
           if (emailExists) {
             return "This email is already associated with another client";
           }
-          const emailExistsInUsers = existingUsers.some(
-            (u) => u.email.trim().toLowerCase() === value.trim().toLowerCase()
+          const emailExistsInUsers = (existingUsers || []).some(
+            (u) => u.email && typeof u.email === "string" && u.email.trim().toLowerCase() === value.trim().toLowerCase()
           );
           if (emailExistsInUsers) {
             return "A user account with this email already exists";
           }
           const username = value.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
-          const usernameExistsInUsers = existingUsers.some(
-            (u) => u.username.trim().toLowerCase() === username
+          const usernameExistsInUsers = (existingUsers || []).some(
+            (u) => u.username && typeof u.username === "string" && u.username.trim().toLowerCase() === username
           );
           if (usernameExistsInUsers) {
             return "This email address generates a username that already exists";
@@ -444,6 +444,32 @@ export default function AddCaseForm() {
     }
 
     if (!validateAll()) return;
+
+    if (!isEditMode && clientMode === "new") {
+      const emailLower = (formData.emailId || "").trim().toLowerCase();
+      const emailExists = (existingClients || []).some(
+        (c) => c.emailId && typeof c.emailId === "string" && c.emailId.trim().toLowerCase() === emailLower
+      );
+      if (emailExists) {
+        alert("This email is already associated with another client.");
+        return;
+      }
+      const emailExistsInUsers = (existingUsers || []).some(
+        (u) => u.email && typeof u.email === "string" && u.email.trim().toLowerCase() === emailLower
+      );
+      if (emailExistsInUsers) {
+        alert("A user account with this email already exists.");
+        return;
+      }
+      const username = emailLower.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+      const usernameExistsInUsers = (existingUsers || []).some(
+        (u) => u.username && typeof u.username === "string" && u.username.trim().toLowerCase() === username
+      );
+      if (usernameExistsInUsers) {
+        alert("This email address generates a username that already exists in the system.");
+        return;
+      }
+    }
 
     try {
       // 1. Process and upload any new files using FormData

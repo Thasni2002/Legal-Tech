@@ -20,6 +20,8 @@ const ALL_MODULES = [
   "Junior Calendar",
   "Profile",
   "Assigned Cases",
+  "Assigned Tasks",
+  "Junior Assigned Tasks",
   "Client Section",
   "Consultation",
   "Case Tracking",

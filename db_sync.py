@@ -40,6 +40,8 @@ def export_db():
                         row[k] = v.isoformat()
                     elif hasattr(v, "to_eng_string"):
                         row[k] = float(v)
+                    elif isinstance(v, bytes):
+                        row[k] = v.hex()
             data[table_name] = rows
             print(f" - Exported {len(rows)} rows from '{table_name}'")
             
@@ -77,6 +79,16 @@ def import_db():
             print(f" - Cleared table '{table_name}'")
             
             if rows:
+                from sqlalchemy import LargeBinary, BLOB, BINARY, VARBINARY
+                binary_cols = [c.name for c in table.columns if isinstance(c.type, (LargeBinary, BLOB, BINARY, VARBINARY))]
+                if binary_cols:
+                    for row in rows:
+                        for col in binary_cols:
+                            if col in row and isinstance(row[col], str):
+                                try:
+                                    row[col] = bytes.fromhex(row[col])
+                                except Exception:
+                                    pass
                 # Convert back string dates to appropriate column types if necessary (SQLAlchemy handles ISO string formats usually)
                 conn.execute(table.insert(), rows)
                 print(f" - Imported {len(rows)} rows into '{table_name}'")
