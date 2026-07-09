@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, Header
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.database import SessionLocal
 from .schemas import ConsultationCreate, ConsultationStart, ConsultationReschedule, ConsultationUpdateStatus, ConsultationOut, ConsultationStats
 from . import service
+from app.utils.google_calendar import generate_google_meet_link
 
 router = APIRouter(prefix="/consultations", tags=["Consultations"])
 
@@ -50,6 +51,27 @@ def reschedule(consultation_id: int, data: ConsultationReschedule, db: Session =
     if not consultation:
         raise HTTPException(status_code=404, detail="Consultation not found")
     return consultation
+
+@router.get("/generate-meet-link")
+def generate_meet_link(
+    client_name: str = Query(...),
+    date: str = Query(...),
+    time: str = Query(...),
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db)
+):
+    from app.advocate.tasks.routes import get_current_user
+    user_id = None
+    if authorization:
+        try:
+            current_user = get_current_user(authorization=authorization, db=db)
+            user_id = current_user.id
+        except Exception:
+            pass
+            
+    link = generate_google_meet_link(client_name, date, time, user_id=user_id)
+    return {"meeting_link": link}
+
 
 @router.get("/stats", response_model=ConsultationStats)
 def get_stats(

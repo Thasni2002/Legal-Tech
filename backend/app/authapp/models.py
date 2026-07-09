@@ -15,4 +15,5 @@ class User(Base):
     temp_password = Column(String(100), nullable=True)
     custom_permissions = Column(JSON, nullable=True, default=dict)
     document_access = Column(JSON, nullable=True, default=list)
+    google_refresh_token = Column(String(500), nullable=True)
 
