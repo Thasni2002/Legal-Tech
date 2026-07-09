@@ -271,18 +271,15 @@ export default function AdvDashboardView() {
                         <p className="text-[#475569] font-bold text-sm uppercase tracking-wider">Today's Date</p>
                         <p className="text-[#0F172A] font-extrabold text-lg mt-1">{currentDate}</p>
                     </div>
-                    {/* Refresh button */}
-                    <button
-                        onClick={() => fetchDashboardData(true)}
-                        disabled={isRefreshing}
-                        title="Refresh dashboard"
-                        className="flex items-center gap-2 text-xs font-semibold text-[#2563EB] bg-blue-50 border border-blue-200 px-4 py-2 rounded-xl hover:bg-blue-100 transition-colors disabled:opacity-50 cursor-pointer"
-                    >
-                        <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
-                        {isRefreshing ? "Refreshing…" : lastRefreshed
-                            ? `Last updated ${lastRefreshed.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`
-                            : "Refresh"}
-                    </button>
+                    <div className="flex items-center gap-2 flex-wrap justify-end">
+                        {/* View Calendar button */}
+                        <button
+                            onClick={() => router.push("/calendar")}
+                            className="flex items-center gap-2 text-xs font-bold text-white bg-[#2563EB] hover:bg-[#1D4ED8] border border-transparent px-4 py-2.5 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer uppercase tracking-wider"
+                        >
+                            View Calendar
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -390,12 +387,6 @@ export default function AdvDashboardView() {
                         <h2 className="text-2xl font-extrabold text-[#0F172A]">
                             Upcoming Hearings
                         </h2>
-                        <button
-                            onClick={() => router.push("/calendar")}
-                            className="text-xs font-bold text-[#2563EB] uppercase tracking-wider hover:text-[#1d4ed8] transition-colors cursor-pointer"
-                        >
-                            View Calendar
-                        </button>
                     </div>
 
                     <div className="w-full overflow-x-auto rounded-2xl border border-[#E2E8F0]">

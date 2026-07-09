@@ -97,8 +97,6 @@ function TaskCard({ task, onOpen, onStatusChange, currentUserId, isSenior, colKe
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={() => onOpen(task)}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       style={{
         background: "#fff",
         border: task.is_pinned ? "1.5px solid #F59E0B" : "1.5px solid #E2E8F0",
