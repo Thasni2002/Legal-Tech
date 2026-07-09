@@ -602,23 +602,38 @@ export default function CaseView() {
             </div>
 
             {/* ── Tabs ── */}
-            <div className="flex border-b border-[#F1F5F9] bg-[#F8FAFC]">
-              {["overview", "documents"].map((tab) => (
+            <div className="flex items-center border-b border-[#F1F5F9] bg-[#F8FAFC]">
+              <div className="flex">
+                {["overview", "documents"].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-6 py-3.5 text-sm font-bold capitalize transition-colors relative ${
+                      activeTab === tab
+                        ? "text-[#2563EB]"
+                        : "text-[#64748B] hover:text-[#0F172A]"
+                    }`}
+                  >
+                    {tab === "overview" ? "Case Overview" : "Case Documents"}
+                    {activeTab === tab && (
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2563EB] rounded-t-full" />
+                    )}
+                  </button>
+                ))}
+              </div>
+              {/* Direct Assign Advocate button */}
+              <div className="ml-auto px-4">
                 <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-6 py-3.5 text-sm font-bold capitalize transition-colors relative ${
-                    activeTab === tab
-                      ? "text-[#2563EB]"
-                      : "text-[#64748B] hover:text-[#0F172A]"
-                  }`}
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    router.push("/lawfirm-management/assign-advocate");
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
                 >
-                  {tab === "overview" ? "Case Overview" : "Case Documents"}
-                  {activeTab === tab && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2563EB] rounded-t-full" />
-                  )}
+                  <UserCheck size={14} />
+                  Direct Assign Advocate
                 </button>
-              ))}
+              </div>
             </div>
 
             {/* ── Modal Body ── */}

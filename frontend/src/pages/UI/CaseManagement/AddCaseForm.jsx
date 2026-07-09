@@ -238,6 +238,16 @@ export default function AddCaseForm() {
     }
   };
 
+  // ─── Auto-generate Case ID for new cases ───
+  useEffect(() => {
+    if (!isEditMode) {
+      const year = new Date().getFullYear();
+      const seq = String(Date.now()).slice(-3).padStart(3, "0");
+      const generated = `case-${year}-${seq}`;
+      setFormData(prev => ({ ...prev, caseId: generated }));
+    }
+  }, [isEditMode]);
+
   useEffect(() => {
     fetchClients();
     fetchUsers();
@@ -259,20 +269,11 @@ export default function AddCaseForm() {
         }
         return "";
       case "caseId":
-        if (!value.trim()) return "Case ID is required";
-        if (!/^[a-zA-Z0-9]+-\d{4}-\d+$/.test(value.trim())) {
-          return "Format must be like CASE-2026-001";
-        }
+        // Auto-generated — no validation needed
         return "";
       case "caseTitle":
         if (!value.trim()) return "Case Title is required";
         if (value.trim().length < 3) return "Case Title must be at least 3 characters";
-        return "";
-      case "caseNo":
-        if (!value.trim()) return "Case Number is required";
-        if (!/^[a-zA-Z0-9\s/\\-]+$/.test(value.trim())) {
-          return "Please enter a valid Case Number (e.g. OS/123/2026)";
-        }
         return "";
       case "caseType":
         if (!value) return "Please select a Case Type";
@@ -360,7 +361,7 @@ export default function AddCaseForm() {
   };
 
   function validateAll() {
-    const fields = ["cnrNumber", "caseId", "caseTitle", "caseNo", "caseType", "caseDes", "clientName", "contactNumber", "emailId", "courtName", "courtType", "nextHearingDate"];
+    const fields = ["cnrNumber", "caseTitle", "caseType", "caseDes", "clientName", "contactNumber", "emailId", "courtName", "courtType", "nextHearingDate"];
     if (!isEditMode && clientMode === "new") {
       fields.push("tempPassword");
     }
@@ -858,18 +859,19 @@ export default function AddCaseForm() {
                 {touched.cnrNumber && errors.cnrNumber && <ErrorMsg message={errors.cnrNumber} />}
               </div>
 
-              {/* Case ID */}
+              {/* Case ID — auto-generated */}
               <div>
-                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Case ID</label>
+                <div className="flex items-center gap-2 mb-2">
+                  <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Case ID</label>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">Auto</span>
+                </div>
                 <input
                   type="text"
                   name="caseId"
-                  placeholder="e.g. CASE-2026-001"
                   value={formData.caseId || ""}
-                  onChange={handleChange}
-                  className={`${baseInputClass} ${getBorderClass("caseId")}`}
+                  readOnly
+                  className={`${baseInputClass} bg-slate-50 text-[#475569] cursor-not-allowed border-[#E2E8F0]`}
                 />
-                {touched.caseId && errors.caseId && <ErrorMsg message={errors.caseId} />}
               </div>
 
               {/* Case Title */}
@@ -884,20 +886,6 @@ export default function AddCaseForm() {
                   className={`${baseInputClass} ${getBorderClass("caseTitle")}`}
                 />
                 {touched.caseTitle && errors.caseTitle && <ErrorMsg message={errors.caseTitle} />}
-              </div>
-
-              {/* Case Number */}
-              <div>
-                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Case Number</label>
-                <input
-                  type="text"
-                  name="caseNo"
-                  placeholder="Indian Court of Kerala"
-                  value={formData.caseNo}
-                  onChange={handleChange}
-                  className={`${baseInputClass} ${getBorderClass("caseNo")}`}
-                />
-                {touched.caseNo && errors.caseNo && <ErrorMsg message={errors.caseNo} />}
               </div>
 
               {/* Case Type */}

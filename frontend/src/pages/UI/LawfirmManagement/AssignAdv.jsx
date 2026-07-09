@@ -19,11 +19,7 @@ export default function AssignAdv({ isOpen, onClose }) {
   const [formData, setFormData] = useState({
     caseName: "",
     caseNumber: "",
-    caseTitle: "",
     advocateName: "",
-    practiceArea: "",
-    priority: "",
-    dueDate: "",
     assignmentNotes: "",
     status: "Active",
     clientName: "",
@@ -43,11 +39,7 @@ export default function AssignAdv({ isOpen, onClose }) {
         setFormData({
           caseName: data.case_name || "",
           caseNumber: data.case_number || "",
-          caseTitle: data.case_title || "",
           advocateName: data.advocate_name || "",
-          practiceArea: data.practice_area || "",
-          priority: data.priority || "",
-          dueDate: data.due_date || "",
           assignmentNotes: data.assignment_notes || "",
           status: data.status || "Active",
           clientName: data.client_name || "",
@@ -103,17 +95,7 @@ export default function AssignAdv({ isOpen, onClose }) {
     fetchCases();
   }, []);
 
-  const practiceAreas = [
-    "Civil Law",
-    "Criminal Law",
-    "Corporate Law",
-    "Family Law",
-    "Property Law",
-    "Cyber Law",
-    "Tax Law",
-  ];
 
-  const priorities = ["High", "Medium", "Low"];
 
   const handleChange = (e) => {
     setFormData({
@@ -135,7 +117,6 @@ export default function AssignAdv({ isOpen, onClose }) {
         ...formData,
         caseName: selectedValue,
         caseNumber: selectedCase.caseNumber,
-        caseTitle: selectedCase.caseTitle,
         clientName: selectedCase.clientName,
       });
     } else {
@@ -144,7 +125,6 @@ export default function AssignAdv({ isOpen, onClose }) {
         ...formData,
         caseName: "",
         caseNumber: "",
-        caseTitle: "",
         clientName: "",
       });
     }
@@ -173,13 +153,9 @@ export default function AssignAdv({ isOpen, onClose }) {
     e.preventDefault();
 
     const payload = {
-       case_name: formData.caseName,
+      case_name: formData.caseName,
       case_number: formData.caseNumber,
-      case_title: formData.caseTitle,
       advocate_name: formData.advocateName,
-      practice_area: formData.practiceArea,
-      priority: formData.priority,
-      due_date: formData.dueDate,
       assignment_notes: formData.assignmentNotes,
       status: formData.status,
       client_name: formData.clientName,
@@ -210,11 +186,7 @@ export default function AssignAdv({ isOpen, onClose }) {
         setFormData({
           caseName: "",
           caseNumber: "",
-          caseTitle: "",
           advocateName: "",
-          practiceArea: "",
-          priority: "",
-          dueDate: "",
           assignmentNotes: "",
           status: "Active",
           clientName: "",
@@ -319,18 +291,6 @@ export default function AssignAdv({ isOpen, onClose }) {
       />
     </div>
 
-    {/* Case Title */}
-    <div>
-      <label className="block mb-2 text-sm font-bold text-[#0F172A]">
-        Case Title
-      </label>
-      <input
-        type="text"
-        value={formData.caseTitle}
-        readOnly
-        className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3.5 bg-slate-100 text-[#475569] text-sm outline-none cursor-not-allowed"
-      />
-    </div>
 
     {/* Advocate Name */}
     <div>
@@ -357,62 +317,6 @@ export default function AssignAdv({ isOpen, onClose }) {
       </select>
     </div>
 
-    {/* Practice Area */}
-    <div>
-      <label className="block mb-2 text-sm font-bold text-[#0F172A]">
-        Practice Area
-      </label>
-      <select
-        name="practiceArea"
-        value={formData.practiceArea}
-        onChange={handleChange}
-        className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-        required
-      >
-        <option value="">Select Practice Area</option>
-        {practiceAreas.map((area) => (
-          <option key={area} value={area}>
-            {area}
-          </option>
-        ))}
-      </select>
-    </div>
-
-    {/* Priority */}
-    <div>
-      <label className="block mb-2 text-sm font-bold text-[#0F172A]">
-        Priority
-      </label>
-      <select
-        name="priority"
-        value={formData.priority}
-        onChange={handleChange}
-        className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-        required
-      >
-        <option value="">Select Priority</option>
-        {priorities.map((priority) => (
-          <option key={priority} value={priority}>
-            {priority}
-          </option>
-        ))}
-      </select>
-    </div>
-
-    {/* Due Date */}
-    <div>
-      <label className="block mb-2 text-sm font-bold text-[#0F172A]">
-        Due Date
-      </label>
-      <input
-        type="date"
-        name="dueDate"
-        value={formData.dueDate}
-        onChange={handleChange}
-        className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-        required
-      />
-    </div>
   </div>
 
   {/* Notes */}
