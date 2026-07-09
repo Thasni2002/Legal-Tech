@@ -1,7 +1,9 @@
 import os
+import random
 import urllib.parse
 from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import Optional, List
@@ -10,7 +12,7 @@ from jose import jwt
 from app.database import SessionLocal
 from .schemas import LoginSchema, TokenSchema
 from . import service
-from .service import SECRET_KEY, ALGORITHM
+from .service import SECRET_KEY, ALGORITHM, hash_password
 from .models import User
 
 router = APIRouter(tags=["Authentication"])
@@ -21,6 +23,101 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# ── In-memory OTP store: { email -> {otp, expires_at} } ──────────────────────
+_otp_store: dict = {}
+OTP_EXPIRE_MINUTES = 4
+
+
+class ForgotSendOtpRequest(BaseModel):
+    email: str
+
+
+class ForgotVerifyOtpRequest(BaseModel):
+    email: str
+    otp: str
+
+
+class ForgotResetRequest(BaseModel):
+    email: str
+    otp: str
+    new_password: str
+
+
+@router.post("/forgot-password/send-otp", tags=["Password Reset"])
+async def forgot_password_send_otp(
+    data: ForgotSendOtpRequest,
+    db: Session = Depends(get_db)
+):
+    """Step 1 – validate email exists, generate OTP, email it."""
+    user = service.get_user_by_email(db, data.email)
+    if not user:
+        raise HTTPException(status_code=404, detail="No account found with that email address.")
+
+    otp = str(random.randint(100000, 999999))
+    _otp_store[data.email] = {
+        "otp": otp,
+        "expires_at": datetime.utcnow() + timedelta(minutes=OTP_EXPIRE_MINUTES),
+    }
+
+    try:
+        from app.utils.email import send_email
+        await send_email(
+            to_email=data.email,
+            subject="Your Password Reset OTP",
+            body=(
+                f"<p>Hi <strong>{user.username}</strong>,</p>"
+                f"<p>Your one-time password (OTP) for resetting your password is:</p>"
+                f"<h2 style='letter-spacing:8px;color:#2563EB;'>{otp}</h2>"
+                f"<p>This OTP is valid for <strong>{OTP_EXPIRE_MINUTES} minutes</strong>. Do not share it with anyone.</p>"
+                f"<p>If you did not request a password reset, please ignore this email.</p>"
+            ),
+        )
+    except Exception as e:
+        # If email is misconfigured in dev, still respond but log the OTP
+        print(f"[DEV] OTP for {data.email}: {otp} (email failed: {e})")
+
+    return {"message": "OTP sent to your email address.", "email": data.email}
+
+
+@router.post("/forgot-password/verify-otp", tags=["Password Reset"])
+def forgot_password_verify_otp(data: ForgotVerifyOtpRequest):
+    """Step 2 – verify OTP without resetting yet."""
+    entry = _otp_store.get(data.email)
+    if not entry:
+        raise HTTPException(status_code=400, detail="No OTP requested for this email. Please request a new one.")
+    if datetime.utcnow() > entry["expires_at"]:
+        _otp_store.pop(data.email, None)
+        raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
+    if entry["otp"] != data.otp:
+        raise HTTPException(status_code=400, detail="Incorrect OTP. Please try again.")
+    return {"message": "OTP verified successfully."}
+
+
+@router.post("/forgot-password/reset", tags=["Password Reset"])
+def forgot_password_reset(
+    data: ForgotResetRequest,
+    db: Session = Depends(get_db)
+):
+    """Step 3 – verify OTP again and set new password."""
+    entry = _otp_store.get(data.email)
+    if not entry:
+        raise HTTPException(status_code=400, detail="No OTP requested for this email.")
+    if datetime.utcnow() > entry["expires_at"]:
+        _otp_store.pop(data.email, None)
+        raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
+    if entry["otp"] != data.otp:
+        raise HTTPException(status_code=400, detail="Incorrect OTP.")
+
+    user = service.get_user_by_email(db, data.email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    user.password = hash_password(data.new_password)
+    user.temp_password = data.new_password   # keep temp_password in sync
+    db.commit()
+    _otp_store.pop(data.email, None)         # consume OTP
+    return {"message": "Password reset successfully."}
 
 @router.post("/login", response_model=TokenSchema)
 def login(user: LoginSchema, db: Session = Depends(get_db)):

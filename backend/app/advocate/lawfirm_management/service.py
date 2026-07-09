@@ -6,6 +6,9 @@ from .schemas import (
     AdvocateUpdate,
     AssignedCaseCreate
 )
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 # Get all advocates
@@ -29,12 +32,16 @@ def create_advocate(
     advocate: AdvocateCreate
 ):
     advocate_data = advocate.model_dump(
-        by_alias=False
-    )
+    by_alias=False,
+    exclude={"confirm_password"}
+)
 
-    new_advocate = Advocate(
-        **advocate_data
-    )
+    password = advocate_data.pop("password", None)
+
+    if password:
+        advocate_data["hashed_password"] = pwd_context.hash(password)
+
+    new_advocate = Advocate(**advocate_data)
 
     db.add(new_advocate)
     db.commit()
@@ -58,9 +65,15 @@ def update_advocate(
         return None
 
     update_data = advocate_data.model_dump(
-        exclude_unset=True,
-        by_alias=False
-    )
+    exclude_unset=True,
+    by_alias=False,
+    exclude={"confirm_password"}
+)
+
+    password = update_data.pop("password", None)
+
+    if password:
+        advocate.hashed_password = pwd_context.hash(password)
 
     for key, value in update_data.items():
         setattr(advocate, key, value)

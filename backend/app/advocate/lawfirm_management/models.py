@@ -31,6 +31,8 @@ class Advocate(Base):
     about = Column(String(1000), nullable=True)
     profile_image = Column(LONGTEXT, nullable=True)
 
+     # Login password
+    hashed_password = Column(String(255), nullable=False)
 
 
 class AssignedCase(Base):
@@ -48,3 +50,4 @@ class AssignedCase(Base):
     status = Column(String(50), default="Active")
     assigned_documents = Column(LONGTEXT, nullable=True)
     client_name = Column(String(255), nullable=True)
+    

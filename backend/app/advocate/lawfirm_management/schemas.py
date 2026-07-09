@@ -25,17 +25,20 @@ class AdvocateBase(BaseModel):
     profile_image: Optional[str] = Field(None, alias="profileImage")
     date_of_birth: Optional[date] = Field(None, alias="dateOfBirth")
     years_of_experience: Optional[int] = Field(None, alias="yearsOfExperience")
+
+    
     class Config:
         populate_by_name = True
         from_attributes = True
 
 
 class AdvocateCreate(AdvocateBase):
-    pass
-
+    password: Optional[str] = Field(None, alias="password")
+    confirm_password: Optional[str] = Field(None, alias="confirmPassword")
 
 class AdvocateUpdate(AdvocateBase):
-    pass
+    password: Optional[str] = Field(None, alias="password")
+    confirm_password: Optional[str] = Field(None, alias="confirmPassword")
 
 
 class AdvocateOut(AdvocateBase):

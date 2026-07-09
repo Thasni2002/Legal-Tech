@@ -187,6 +187,12 @@ def startup():
                 with engine.begin() as conn:
                     conn.execute(text("ALTER TABLE users ADD COLUMN google_refresh_token VARCHAR(500) NULL;"))
                 print("Successfully added google_refresh_token column to users table.")
+        if inspector.has_table('advocates'):
+            columns = [col['name'] for col in inspector.get_columns('advocates')]
+            if 'hashed_password' not in columns:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE advocates ADD COLUMN hashed_password VARCHAR(255) NULL;"))
+                print("Successfully added hashed_password column to advocates table.")
     except Exception as e:
         print(f"Error checking/adding migration columns: {e}")
 
