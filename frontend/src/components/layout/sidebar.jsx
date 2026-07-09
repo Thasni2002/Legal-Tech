@@ -168,10 +168,9 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
   ];
 
   // Returns the correct base menu for the logged-in user's role.
-  // Clients ONLY see clientMenu, junior advocates ONLY see juniorMenu,
-  // senior advocates / admin see seniorMenu + User Roles.
-  // This is a hard structural guard — database permissions then further
-  // filter individual items within that menu.
+  // Clients ONLY see clientMenu, junior advocates ONLY see juniorMenu.
+  // Senior advocates / admin get ALL sections — permissions then filter
+  // individual items based on what has been granted in the database.
   const getBaseMenuForRole = (roleName) => {
     const norm = (roleName || "").toLowerCase().replace(/\s+/g, "");
     if (norm === "client") {
@@ -180,9 +179,12 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
     if (norm === "junioradvocate") {
       return juniorMenu;
     }
-    // Senior Advocate, admin, or any other role
+    // Senior Advocate, admin, or any other role:
+    // Provide the full menu pool so permissions can selectively show each item.
     return [
       ...seniorMenu,
+      ...juniorMenu,
+      ...clientMenu,
       {
         title: "User Roles",
         items: [
