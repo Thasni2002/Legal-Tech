@@ -107,14 +107,14 @@ export default function ConsultationsView() {
 
     // Fetch user and consultations on mount
     useEffect(() => {
-        setMounted(true);
-        const loggedIn = getLoggedInUser();
-        setUser(loggedIn);
-        fetchConsultations(loggedIn);
-        const dismissed = JSON.parse(localStorage.getItem("dismissed_consultation_notifications") || "[]");
-        setDismissedNotifications(dismissed);
+        const initialize = async () => {
+            setMounted(true);
+            const loggedIn = getLoggedInUser();
+            setUser(loggedIn);
+            await fetchConsultations(loggedIn);
+            const dismissed = JSON.parse(localStorage.getItem("dismissed_consultation_notifications") || "[]");
+            setDismissedNotifications(dismissed);
 
-        const loadClients = async () => {
             try {
                 const res = await fetch(`${API_BASE_URL}/case-management/`);
                 if (res.ok) {
@@ -136,7 +136,7 @@ export default function ConsultationsView() {
                 console.error("Failed to fetch clients:", err);
             }
         };
-        loadClients();
+        initialize();
     }, []);
 
     const formatDateString = (dateStr) => {
@@ -762,6 +762,92 @@ export default function ConsultationsView() {
                         Schedule Consultation
                     </button>
                 </div>
+            </div>
+
+            {/* Scheduled Consultations Table */}
+            <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
+                <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">
+                    Scheduled Consultations
+                </h2>
+                {history.length === 0 ? (
+                    <div className="text-center py-12 text-[#64748B] font-medium bg-[#F8FAFC] rounded-2xl border border-dashed border-[#E2E8F0]">
+                        No scheduled consultations.
+                    </div>
+                ) : (
+                    <div className="w-full overflow-x-auto rounded-xl border border-[#E2E8F0]">
+                        <table className="min-w-full divide-y divide-[#E2E8F0]">
+                            <thead className="bg-[#F8FAFC]">
+                                <tr>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client Name</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Google Meet Link</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[#E2E8F0] bg-white">
+                                {history.map((item) => (
+                                    <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors">
+                                        <td className="p-4 whitespace-nowrap font-bold text-[#0F172A] capitalize">{item.client}</td>
+                                        <td className="p-4 whitespace-nowrap text-sm text-[#475569]">{formatDateString(item.date)}</td>
+                                        <td className="p-4 whitespace-nowrap text-sm font-medium text-[#475569]">{formatTimeString(item.time)}</td>
+                                        <td className="p-4 whitespace-nowrap">
+                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${item.type === "Video Call" || item.type === "Video Consultation"
+                                                ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                                : item.type === "Chat" || item.type === "Chat Consultation"
+                                                    ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                                    : "bg-amber-50 text-amber-700 border border-amber-200"
+                                                }`}>
+                                                {item.type}
+                                            </span>
+                                        </td>
+                                        <td className="p-4 whitespace-nowrap text-sm">
+                                            {item.meeting_link ? (
+                                                <a
+                                                    href={item.meeting_link.startsWith("http") ? item.meeting_link : `https://${item.meeting_link}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-[#2563EB] hover:text-[#1D4ED8] hover:underline font-semibold flex items-center gap-1.5"
+                                                >
+                                                    📹 Open Google Meet
+                                                </a>
+                                            ) : (
+                                                <span className="text-[#94A3B8] font-medium">-</span>
+                                            )}
+                                        </td>
+                                        <td className="p-4 whitespace-nowrap">
+                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${item.status === "Completed"
+                                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                                : item.status === "Approved"
+                                                    ? "bg-green-50 text-green-700 border border-green-200"
+                                                    : item.status === "Rescheduled"
+                                                        ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                                        : item.status === "Pending Client"
+                                                            ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                                            : "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                                                }`}>
+                                                {item.status}
+                                            </span>
+                                        </td>
+                                        <td className="p-4 whitespace-nowrap">
+                                            <button
+                                                onClick={() => {
+                                                    setDeleteId(item.id);
+                                                    setShowDeleteModal(true);
+                                                }}
+                                                className="px-4 py-2 bg-slate-100 hover:bg-rose-100 text-[#475569] hover:text-rose-600 rounded-full transition-colors text-xs font-bold uppercase tracking-wider active:scale-95 shadow-sm cursor-pointer"
+                                            >
+                                                Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
 
             {mounted && showScheduleSuccess && typeof document !== "undefined"

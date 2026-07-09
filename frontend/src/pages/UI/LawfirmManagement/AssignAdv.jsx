@@ -12,6 +12,7 @@ export default function AssignAdv({ isOpen, onClose }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const caseId = searchParams.get("id");
+  const directCaseId = searchParams.get("directCaseId");
   const [showSuccess, setShowSuccess] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -80,12 +81,26 @@ export default function AssignAdv({ isOpen, onClose }) {
         if (res.ok) {
           const data = await res.json();
           const mappedCases = data.map((c) => ({
+            id: c.id,
             name: c.case_title || `Case ${c.id}`,
             caseNumber: c.case_no || `CASE-${c.id}`,
             caseTitle: c.case_title || `Case ${c.id}`,
             clientName: c.client_name || "",
           }));
           setCases(mappedCases);
+
+          // Handle auto-preselection when directCaseId is passed
+          if (directCaseId) {
+            const selected = mappedCases.find((c) => String(c.id) === String(directCaseId));
+            if (selected) {
+              setFormData((prev) => ({
+                ...prev,
+                caseName: selected.name,
+                caseNumber: selected.caseNumber,
+                clientName: selected.clientName,
+              }));
+            }
+          }
         }
       } catch (error) {
         console.error("Error fetching cases:", error);
@@ -93,7 +108,7 @@ export default function AssignAdv({ isOpen, onClose }) {
     };
 
     fetchCases();
-  }, []);
+  }, [directCaseId]);
 
 
 
@@ -263,19 +278,28 @@ export default function AssignAdv({ isOpen, onClose }) {
       <label className="block mb-2 text-sm font-bold text-[#0F172A]">
         Case Name
       </label>
-      <select
-        value={formData.caseName}
-        onChange={handleCaseSelect}
-        className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-        required
-      >
-        <option value="">Select Case</option>
-        {cases.map((item, index) => (
-          <option key={`${item.caseNumber}-${index}`} value={item.name}>
-            {item.name}
-          </option>
-        ))}
-      </select>
+      {directCaseId || caseId ? (
+        <input
+          type="text"
+          value={formData.caseName}
+          readOnly
+          className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3.5 bg-slate-100 text-[#475569] text-sm outline-none cursor-not-allowed"
+        />
+      ) : (
+        <select
+          value={formData.caseName}
+          onChange={handleCaseSelect}
+          className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+          required
+        >
+          <option value="">Select Case</option>
+          {cases.map((item, index) => (
+            <option key={`${item.caseNumber}-${index}`} value={item.name}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+      )}
     </div>
 
     {/* Case Number */}
