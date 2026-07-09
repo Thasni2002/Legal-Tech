@@ -63,6 +63,8 @@ Base.metadata.create_all(bind=engine)
 def startup():
     db = SessionLocal()
     create_default_user(db)
+    from app.advocate.permissions.service import seed_roles_and_permissions
+    seed_roles_and_permissions(db)
     
     # Auto-seed database from database_seed.json if empty on startup
     try:
