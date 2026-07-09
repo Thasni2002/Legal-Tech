@@ -231,6 +231,7 @@ export default function AssignAdv({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
+
   if (showSuccess) {
     return (
       <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
@@ -265,8 +266,8 @@ export default function AssignAdv({ isOpen, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/40 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl shadow-slate-900/20 max-h-[90vh] overflow-y-auto border border-[#E2E8F0] overflow-hidden">
+    <div className="w-full">
+      <div className="bg-white w-full max-w-4xl mx-auto rounded-3xl shadow-xl shadow-slate-200/60 border border-[#E2E8F0]">
 
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#F1F5F9] px-8 py-6 sticky top-0 bg-white/95 backdrop-blur z-10">
@@ -458,7 +459,7 @@ export default function AssignAdv({ isOpen, onClose }) {
 </form>
       </div>
 
-      {showDeleteConfirm && typeof document !== "undefined" && createPortal(
+    {showDeleteConfirm && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl border border-slate-200 p-8 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-center">
