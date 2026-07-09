@@ -179,6 +179,12 @@ def startup():
                     # using integer 0 since SQLite doesn't have a strict BOOLEAN type, and 0 is false. MySQL also works with 0.
                     conn.execute(text("ALTER TABLE advocate_tasks ADD COLUMN is_pinned BOOLEAN DEFAULT 0;"))
                 print("Successfully added is_pinned column to advocate_tasks table.")
+        if inspector.has_table('users'):
+            columns = [col['name'] for col in inspector.get_columns('users')]
+            if 'google_refresh_token' not in columns:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN google_refresh_token VARCHAR(500) NULL;"))
+                print("Successfully added google_refresh_token column to users table.")
     except Exception as e:
         print(f"Error checking/adding migration columns: {e}")
 

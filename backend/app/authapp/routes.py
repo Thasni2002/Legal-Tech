@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Header, Query
+import os
+import urllib.parse
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import Optional, List
@@ -577,3 +580,97 @@ def get_notifications(
     # Sort all compiled notifications in descending chronological order
     notifications.sort(key=lambda x: x["created_at"], reverse=True)
     return notifications
+
+
+@router.get("/google/login")
+def google_login(token: str, request: Request):
+    """
+    Initiate the Google OAuth flow.
+    Decrypt user JWT to verify identity and encode their user_id in the 'state' parameter.
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    base_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+    base_url = base_url.rstrip("/")
+    redirect_uri = f"{base_url}/google/callback"
+    
+    from app.utils.google_auth import get_authorization_url
+    auth_url = get_authorization_url(redirect_uri, state=str(user_id))
+    return RedirectResponse(auth_url)
+
+
+@router.get("/google/callback")
+def google_callback(code: str, state: str, db: Session = Depends(get_db)):
+    """
+    Google OAuth Callback endpoint.
+    Retrieves the authorization code, exchanges it for refresh token,
+    and stores it in the database for the user identified by state (user_id).
+    """
+    try:
+        user_id = int(state)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid state parameter")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    base_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+    base_url = base_url.rstrip("/")
+    redirect_uri = f"{base_url}/google/callback"
+
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    frontend_url = frontend_url.rstrip("/")
+
+    try:
+        from app.utils.google_auth import get_refresh_token_from_code
+        refresh_token = get_refresh_token_from_code(redirect_uri, code)
+        if refresh_token:
+            user.google_refresh_token = refresh_token
+            db.commit()
+            db.refresh(user)
+        else:
+            if not user.google_refresh_token:
+                raise Exception("No refresh token returned. Try disconnecting and reconnecting again.")
+    except Exception as e:
+        err_msg = urllib.parse.quote(str(e))
+        return RedirectResponse(f"{frontend_url}/profile-management?google=error&detail={err_msg}")
+
+    return RedirectResponse(f"{frontend_url}/profile-management?google=success")
+
+
+@router.get("/google/status")
+def google_status(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
+    """Check if the logged-in user is integrated with Google Calendar."""
+    from app.advocate.tasks.routes import get_current_user
+    if not authorization:
+        return {"connected": False}
+    try:
+        user = get_current_user(authorization=authorization, db=db)
+        return {
+            "connected": user.google_refresh_token is not None,
+            "email": user.email if user.google_refresh_token else None
+        }
+    except Exception:
+        return {"connected": False}
+
+
+@router.delete("/google/disconnect")
+def google_disconnect(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
+    """Disconnect Google Calendar integration for the logged-in user."""
+    from app.advocate.tasks.routes import get_current_user
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        user = get_current_user(authorization=authorization, db=db)
+        user.google_refresh_token = None
+        db.commit()
+        return {"message": "Successfully disconnected Google Calendar."}
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")

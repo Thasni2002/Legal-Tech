@@ -2,13 +2,76 @@
 
 import React, { useState, useEffect } from "react";
 import { getLoggedInUser } from "@/utils/auth";
+import { API_BASE_URL } from "@/utils/api";
 
 export default function ProfileView({ profile = {}, onEdit }) {
   const [user, setUser] = useState(null);
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [googleEmail, setGoogleEmail] = useState("");
+  const [googleStatusMessage, setGoogleStatusMessage] = useState(null);
+
+  const fetchGoogleStatus = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/google/status`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setGoogleConnected(data.connected);
+        setGoogleEmail(data.email);
+      }
+    } catch (e) {
+      console.error("Error fetching Google integration status:", e);
+    }
+  };
 
   useEffect(() => {
-    setUser(getLoggedInUser());
+    const loggedIn = getLoggedInUser();
+    setUser(loggedIn);
+    fetchGoogleStatus();
+
+    // Check URL parameters for status alerts
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const googleParam = urlParams.get("google");
+      if (googleParam === "success") {
+        setGoogleStatusMessage({ type: "success", text: "Successfully connected to Google Calendar!" });
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (googleParam === "error") {
+        const detail = urlParams.get("detail") || "Authentication failed";
+        setGoogleStatusMessage({ type: "error", text: `Failed to connect: ${detail}` });
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
   }, []);
+
+  const handleConnectGoogle = () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    window.location.href = `${API_BASE_URL}/google/login?token=${token}`;
+  };
+
+  const handleDisconnectGoogle = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    if (!confirm("Are you sure you want to disconnect Google Calendar integration?")) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/google/disconnect`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setGoogleConnected(false);
+        setGoogleEmail("");
+        setGoogleStatusMessage({ type: "success", text: "Successfully disconnected Google Calendar integration." });
+      }
+    } catch (e) {
+      console.error(e);
+      setGoogleStatusMessage({ type: "error", text: "Failed to disconnect Google Calendar." });
+    }
+  };
 
   const isClient = user?.role?.toLowerCase() === "client";
 
@@ -20,6 +83,25 @@ export default function ProfileView({ profile = {}, onEdit }) {
 
   return (
     <div className="w-full space-y-8 max-w-6xl mx-auto">
+        {/* Google Status Alert Banners */}
+        {googleStatusMessage && (
+          <div className={`p-4 rounded-xl border flex items-center justify-between transition-all duration-300 ${
+            googleStatusMessage.type === "success" 
+              ? "bg-emerald-50 border-emerald-200 text-emerald-950" 
+              : "bg-rose-50 border-rose-200 text-rose-950"
+          }`}>
+            <div className="flex items-center gap-3">
+              <span className="text-xl">{googleStatusMessage.type === "success" ? "✅" : "⚠️"}</span>
+              <p className="font-semibold text-sm">{googleStatusMessage.text}</p>
+            </div>
+            <button 
+              onClick={() => setGoogleStatusMessage(null)}
+              className="text-gray-400 hover:text-gray-700 font-bold focus:outline-none cursor-pointer text-sm"
+            >
+              ✕
+            </button>
+          </div>
+        )}
         {/* Header */}
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
           <div className="flex flex-col md:flex-row gap-8 items-center justify-between">
@@ -115,6 +197,45 @@ export default function ProfileView({ profile = {}, onEdit }) {
             <p className="text-[#334155] font-medium text-sm leading-relaxed whitespace-pre-wrap">
               {profile.chambersAddress || (isClient ? "No residential address provided." : "No chambers address provided.")}
             </p>
+          </div>
+        </div>
+
+        {/* Google Calendar Connection Card */}
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
+          <h2 className="text-xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-3">
+            <span className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">📅</span>
+            Google Calendar Integration
+          </h2>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 bg-[#F8FAFC] rounded-2xl p-6 border border-[#E2E8F0]">
+            <div>
+              <p className="text-sm font-semibold text-[#0F172A]">
+                {googleConnected 
+                  ? `Connected to Google Calendar (${googleEmail || user?.email || ""})` 
+                  : "Google Calendar not connected"
+                }
+              </p>
+              <p className="text-[#64748B] text-xs mt-1 font-medium">
+                {googleConnected 
+                  ? "Your consultations will automatically schedule and create Google Meet links in your Google Calendar." 
+                  : "Connect your Google account to automatically generate Google Meet conference links when scheduling Video Call consultations."
+                }
+              </p>
+            </div>
+            {googleConnected ? (
+              <button
+                onClick={handleDisconnectGoogle}
+                className="px-6 py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-sm active:scale-95 whitespace-nowrap"
+              >
+                Disconnect
+              </button>
+            ) : (
+              <button
+                onClick={handleConnectGoogle}
+                className="px-6 py-3 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-lg active:scale-95 whitespace-nowrap"
+              >
+                Connect Calendar
+              </button>
+            )}
           </div>
         </div>
     </div>

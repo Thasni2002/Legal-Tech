@@ -66,7 +66,8 @@ def get_recent_activity(
 
     # ── 1. Case updates & new cases (from case_management_cases) ──
     try:
-        cases = db.query(Case).all()
+        # Optimize performance: limit query to recent cases instead of scanning all rows
+        cases = db.query(Case).order_by(Case.updated_at.desc(), Case.created_at.desc()).limit(limit * 3).all()
         for case in cases:
             actor = case.selected_advocate if case.selected_advocate else "Senior Advocate"
 
@@ -145,7 +146,8 @@ def get_recent_activity(
 
     # ── 2. Assigned cases (Junior Advocate assignments) ──
     try:
-        assigned = db.query(AssignedCase).all()
+        # Optimize performance: retrieve only recent assignments
+        assigned = db.query(AssignedCase).order_by(AssignedCase.id.desc()).limit(limit * 2).all()
         for ac in assigned:
             activities.append({
                 "id": f"assign_{ac.id}",
@@ -215,7 +217,8 @@ def get_recent_documents(
     documents = []
 
     try:
-        cases = db.query(Case).all()
+        # Optimize performance: only retrieve recent cases containing documents
+        cases = db.query(Case).filter(Case.documents != None, Case.documents != "[]", Case.documents != "").order_by(Case.updated_at.desc(), Case.created_at.desc()).limit(limit * 3).all()
         for case in cases:
             if not case.documents:
                 continue

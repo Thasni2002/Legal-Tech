@@ -32,7 +32,33 @@ export default function ConsultationsView() {
     const [dismissedNotifications, setDismissedNotifications] = useState([]);
     const [clients, setClients] = useState([]);
     const [meetingLink, setMeetingLink] = useState("");
+    const [generatingMeetLink, setGeneratingMeetLink] = useState(false);
     const [showScheduleSuccess, setShowScheduleSuccess] = useState(false);
+
+    const generateMeetingLink = async (currentClient, currentDate, currentTime) => {
+        setGeneratingMeetLink(true);
+        const token = localStorage.getItem("token");
+        try {
+            const client = currentClient || "Client";
+            const date = currentDate || new Date().toISOString().split('T')[0];
+            const time = currentTime || "12:00 PM";
+            const headers = {};
+            if (token) {
+                headers["Authorization"] = `Bearer ${token}`;
+            }
+            const res = await fetch(`${API_BASE_URL}/consultations/generate-meet-link?client_name=${encodeURIComponent(client)}&date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}`, {
+                headers: headers
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setMeetingLink(data.meeting_link);
+            }
+        } catch (err) {
+            console.error("Failed to generate meet link:", err);
+        } finally {
+            setGeneratingMeetLink(false);
+        }
+    };
     const [showRescheduleSuccess, setShowRescheduleSuccess] = useState(false);
     const fetchConsultations = async (currentUser) => {
         try {
@@ -172,7 +198,7 @@ export default function ConsultationsView() {
             return;
         }
 
-        if (!meetingLink.trim()) {
+        if (consultationType === "Video Call" && !meetingLink.trim()) {
             alert("Please enter Google Meet link.");
             return;
         }
@@ -186,7 +212,7 @@ export default function ConsultationsView() {
             type: consultationType,
             date: consultationDate,
             time: consultationTime,
-            meeting_link: meetingLink,
+            meeting_link: consultationType === "Video Call" ? meetingLink : "",
             status: "Pending Client"
         };
 
@@ -647,7 +673,7 @@ export default function ConsultationsView() {
                 <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">
                     Schedule Consultation
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                <div className={`grid grid-cols-1 md:grid-cols-2 ${consultationType === "Video Call" ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-6`}>
                     <div className="flex flex-col">
                         <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">Client Name</label>
                         <select
@@ -667,7 +693,17 @@ export default function ConsultationsView() {
                         <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">Type</label>
                         <select
                             value={consultationType}
-                            onChange={(e) => setConsultationType(e.target.value)}
+                            onChange={(e) => {
+                                const newType = e.target.value;
+                                setConsultationType(newType);
+                                if (newType === "Video Call") {
+                                    if (!meetingLink) {
+                                        generateMeetingLink(clientName, consultationDate, consultationTime);
+                                    }
+                                } else {
+                                    setMeetingLink("");
+                                }
+                            }}
                             className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium cursor-pointer"
                         >
                             <option>Consultation Type</option>
@@ -701,18 +737,21 @@ export default function ConsultationsView() {
                             />
                         </div>
                     </div>
-                    <div className="flex flex-col">
-                        <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">
-                            Google Meet Link
-                        </label>
-                        <input
-                            type="url"
-                            value={meetingLink}
-                            onChange={(e) => setMeetingLink(e.target.value)}
-                            placeholder="Paste Google Meet link"
-                            className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
-                        />
-                    </div>
+                    {consultationType === "Video Call" && (
+                        <div className="flex flex-col">
+                            <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">
+                                Google Meet Link
+                            </label>
+                            <input
+                                type="url"
+                                value={meetingLink}
+                                onChange={(e) => setMeetingLink(e.target.value)}
+                                placeholder={generatingMeetLink ? "Generating Meet link..." : "Paste Google Meet link"}
+                                disabled={generatingMeetLink}
+                                className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+                            />
+                        </div>
+                    )}
 
                 </div>
                 <div className="mt-8 flex justify-end">
