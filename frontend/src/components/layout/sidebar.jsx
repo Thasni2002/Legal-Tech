@@ -19,6 +19,7 @@ import {
   ChevronUp,
   Shield,
   ClipboardList,
+  FileText,
 } from "lucide-react";
 import Image from "next/image";
 import { API_BASE_URL } from "@/utils/api";
@@ -119,13 +120,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
       return !!rolePermissions[moduleKey].view;
     }
 
-    return true; // fallback — show item if no permission rule is found
-  };
-
-  const isItemAllowedForRole = (item, roleName) => {
-    // We now rely purely on the dynamic database permissions.
-    // If an admin grants view access to a module, it should render regardless of hardcoded role names.
-    return true;
+    return false; // fallback — hide item if no permission rule is found
   };
 
   // Define the menu structure (icon + label + moduleKey)
@@ -165,15 +160,28 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         { name: "Dashboard", path: "/client-dashboard", icon: Home, moduleKey: "Client Dashboard" },
         { name: "Case Discussion", path: "/client-consultation", icon: BookOpen, moduleKey: "Consultation" },
         { name: "Case Tracking", path: "/client-case-tracking", icon: Folder, moduleKey: "Case Tracking" },
+        { name: "Document Format Generate", path: "/client-document-format-generate", icon: FileText, moduleKey: "Client Document Generate" },
         { name: "Documents", path: "/client-documents", icon: Settings, moduleKey: "Documents" },
         { name: "Payments", path: "/client-payments", icon: CreditCard, moduleKey: "Payments" },
       ],
     },
   ];
 
-  let filteredMenuItems = [];
-  if (user) {
-    const baseMenu = [
+  // Returns the correct base menu for the logged-in user's role.
+  // Clients ONLY see clientMenu, junior advocates ONLY see juniorMenu.
+  // Senior advocates / admin get ALL sections — permissions then filter
+  // individual items based on what has been granted in the database.
+  const getBaseMenuForRole = (roleName) => {
+    const norm = (roleName || "").toLowerCase().replace(/\s+/g, "");
+    if (norm === "client") {
+      return clientMenu;
+    }
+    if (norm === "junioradvocate") {
+      return juniorMenu;
+    }
+    // Senior Advocate, admin, or any other role:
+    // Provide the full menu pool so permissions can selectively show each item.
+    return [
       ...seniorMenu,
       ...juniorMenu,
       ...clientMenu,
@@ -193,29 +201,34 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         ],
       },
     ];
+  };
 
-    // Filter menu items by view permissions and role relevance
-    filteredMenuItems = baseMenu.map((section) => {
-      const filteredItems = section.items
-        .map((item) => {
-          if (item.isDropdown) {
-            const filteredSubmenu = item.submenu.filter((sub) =>
-              hasViewPermission(sub.moduleKey) && isItemAllowedForRole(sub, user.role)
-            );
-            if (filteredSubmenu.length === 0) return null;
-            return { ...item, submenu: filteredSubmenu };
-          }
-          const hasItemViewPerm = hasViewPermission(item.moduleKey);
+  let filteredMenuItems = [];
+  if (user) {
+    // Step 1: pick only the sections that belong to this role
+    const baseMenu = getBaseMenuForRole(user.role);
 
-          if (!hasItemViewPerm || !isItemAllowedForRole(item, user.role)) return null;
-          return item;
-        })
-        .filter(Boolean);
+    // Step 2: within those sections, hide items the user has no view permission for
+    filteredMenuItems = baseMenu
+      .map((section) => {
+        const filteredItems = section.items
+          .map((item) => {
+            if (item.isDropdown) {
+              const filteredSubmenu = item.submenu.filter((sub) =>
+                hasViewPermission(sub.moduleKey)
+              );
+              if (filteredSubmenu.length === 0) return null;
+              return { ...item, submenu: filteredSubmenu };
+            }
+            if (!hasViewPermission(item.moduleKey)) return null;
+            return item;
+          })
+          .filter(Boolean);
 
-      return { ...section, items: filteredItems };
-    })
-    .filter(Boolean)
-    .filter((section) => section.items.length > 0);
+        return { ...section, items: filteredItems };
+      })
+      .filter(Boolean)
+      .filter((section) => section.items.length > 0);
   }
 
   if (loading) {

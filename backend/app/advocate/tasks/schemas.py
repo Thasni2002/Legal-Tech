@@ -13,6 +13,7 @@ class TaskCreate(BaseModel):
     case_id: Optional[int] = None
     case_title: Optional[str] = None
     case_no: Optional[str] = None
+    is_pinned: Optional[bool] = False
 
 
 class TaskUpdate(BaseModel):
@@ -24,6 +25,7 @@ class TaskUpdate(BaseModel):
     case_id: Optional[int] = None
     case_title: Optional[str] = None
     case_no: Optional[str] = None
+    is_pinned: Optional[bool] = None
 
 
 class TaskStatusUpdate(BaseModel):
@@ -58,6 +60,7 @@ class TaskOut(BaseModel):
     due_date: Optional[str]
     senior_advocate_id: int
     junior_advocate_id: int
+    is_pinned: bool
     case_id: Optional[int]
     case_title: Optional[str]
     case_no: Optional[str]

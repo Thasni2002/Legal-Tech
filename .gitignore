@@ -70,6 +70,7 @@ Thumbs.db
 # Database
 # =========================
 *.sqlite3
+database_seed.json
 
 # =========================
 # Uploads

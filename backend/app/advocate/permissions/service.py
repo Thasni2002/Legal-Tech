@@ -33,6 +33,7 @@ BASE_MODULES = [
     "Roles",
     "Users",
     "Permissions",
+    "Client Document Generate",
 ]
 
 # Default permission matrix for seeding core roles
@@ -60,6 +61,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Roles": {"view": True, "add": True, "edit": True, "delete": True},
         "Users": {"view": True, "add": True, "edit": True, "delete": True},
         "Permissions": {"view": True, "add": True, "edit": True, "delete": True},
+        "Client Document Generate": {"view": True, "add": True, "edit": True, "delete": True},
     },
     "junioradvocate": {
         "Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
@@ -75,7 +77,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Profile": {"view": True, "add": False, "edit": True, "delete": False},
         "Assigned Cases": {"view": True, "add": False, "edit": False, "delete": False},
         "Assigned Tasks": {"view": False, "add": False, "edit": False, "delete": False},
-        "Junior Assigned Tasks": {"view": True, "add": True, "edit": True, "delete": True},
+        "Junior Assigned Tasks": {"view": True, "add": False, "edit": True, "delete": False},
         "Consultation": {"view": True, "add": False, "edit": False, "delete": False},
         "Case Tracking": {"view": True, "add": False, "edit": False, "delete": False},
         "Documents": {"view": True, "add": False, "edit": False, "delete": False},
@@ -84,6 +86,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Roles": {"view": False, "add": False, "edit": False, "delete": False},
         "Users": {"view": False, "add": False, "edit": False, "delete": False},
         "Permissions": {"view": False, "add": False, "edit": False, "delete": False},
+        "Client Document Generate": {"view": False, "add": False, "edit": False, "delete": False},
     },
     "client": {
         "Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
@@ -108,6 +111,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Roles": {"view": False, "add": False, "edit": False, "delete": False},
         "Users": {"view": False, "add": False, "edit": False, "delete": False},
         "Permissions": {"view": False, "add": False, "edit": False, "delete": False},
+        "Client Document Generate": {"view": True, "add": False, "edit": False, "delete": False},
     },
 }
 
