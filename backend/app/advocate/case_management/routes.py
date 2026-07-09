@@ -148,4 +148,4 @@ def generate_format_document_endpoint(
     db: Session = Depends(get_db)
 ):
     from .service import generate_document_from_format
-    return generate_document_from_format(db, request.case_id, request.template_key, request.draft_text)
+    return generate_document_from_format(db, request.case_id, request.template_key, request.draft_text)
