@@ -19,11 +19,7 @@ export default function AssignAdv({ isOpen, onClose }) {
   const [formData, setFormData] = useState({
     caseName: "",
     caseNumber: "",
-    caseTitle: "",
     advocateName: "",
-    practiceArea: "",
-    priority: "",
-    dueDate: "",
     assignmentNotes: "",
     status: "Active",
     clientName: "",
@@ -43,11 +39,7 @@ export default function AssignAdv({ isOpen, onClose }) {
         setFormData({
           caseName: data.case_name || "",
           caseNumber: data.case_number || "",
-          caseTitle: data.case_title || "",
           advocateName: data.advocate_name || "",
-          practiceArea: data.practice_area || "",
-          priority: data.priority || "",
-          dueDate: data.due_date || "",
           assignmentNotes: data.assignment_notes || "",
           status: data.status || "Active",
           clientName: data.client_name || "",
@@ -103,17 +95,7 @@ export default function AssignAdv({ isOpen, onClose }) {
     fetchCases();
   }, []);
 
-  const practiceAreas = [
-    "Civil Law",
-    "Criminal Law",
-    "Corporate Law",
-    "Family Law",
-    "Property Law",
-    "Cyber Law",
-    "Tax Law",
-  ];
 
-  const priorities = ["High", "Medium", "Low"];
 
   const handleChange = (e) => {
     setFormData({
@@ -135,7 +117,6 @@ export default function AssignAdv({ isOpen, onClose }) {
         ...formData,
         caseName: selectedValue,
         caseNumber: selectedCase.caseNumber,
-        caseTitle: selectedCase.caseTitle,
         clientName: selectedCase.clientName,
       });
     } else {
@@ -144,7 +125,6 @@ export default function AssignAdv({ isOpen, onClose }) {
         ...formData,
         caseName: "",
         caseNumber: "",
-        caseTitle: "",
         clientName: "",
       });
     }
@@ -173,13 +153,9 @@ export default function AssignAdv({ isOpen, onClose }) {
     e.preventDefault();
 
     const payload = {
-       case_name: formData.caseName,
+      case_name: formData.caseName,
       case_number: formData.caseNumber,
-      case_title: formData.caseTitle,
       advocate_name: formData.advocateName,
-      practice_area: formData.practiceArea,
-      priority: formData.priority,
-      due_date: formData.dueDate,
       assignment_notes: formData.assignmentNotes,
       status: formData.status,
       client_name: formData.clientName,
@@ -210,11 +186,7 @@ export default function AssignAdv({ isOpen, onClose }) {
         setFormData({
           caseName: "",
           caseNumber: "",
-          caseTitle: "",
           advocateName: "",
-          practiceArea: "",
-          priority: "",
-          dueDate: "",
           assignmentNotes: "",
           status: "Active",
           clientName: "",
@@ -230,6 +202,7 @@ export default function AssignAdv({ isOpen, onClose }) {
   };
 
   if (!isOpen) return null;
+
 
   if (showSuccess) {
     return (
@@ -265,8 +238,8 @@ export default function AssignAdv({ isOpen, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/40 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl shadow-slate-900/20 max-h-[90vh] overflow-y-auto border border-[#E2E8F0] overflow-hidden">
+    <div className="w-full">
+      <div className="bg-white w-full max-w-4xl mx-auto rounded-3xl shadow-xl shadow-slate-200/60 border border-[#E2E8F0]">
 
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#F1F5F9] px-8 py-6 sticky top-0 bg-white/95 backdrop-blur z-10">
@@ -318,18 +291,6 @@ export default function AssignAdv({ isOpen, onClose }) {
       />
     </div>
 
-    {/* Case Title */}
-    <div>
-      <label className="block mb-2 text-sm font-bold text-[#0F172A]">
-        Case Title
-      </label>
-      <input
-        type="text"
-        value={formData.caseTitle}
-        readOnly
-        className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3.5 bg-slate-100 text-[#475569] text-sm outline-none cursor-not-allowed"
-      />
-    </div>
 
     {/* Advocate Name */}
     <div>
@@ -356,62 +317,6 @@ export default function AssignAdv({ isOpen, onClose }) {
       </select>
     </div>
 
-    {/* Practice Area */}
-    <div>
-      <label className="block mb-2 text-sm font-bold text-[#0F172A]">
-        Practice Area
-      </label>
-      <select
-        name="practiceArea"
-        value={formData.practiceArea}
-        onChange={handleChange}
-        className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-        required
-      >
-        <option value="">Select Practice Area</option>
-        {practiceAreas.map((area) => (
-          <option key={area} value={area}>
-            {area}
-          </option>
-        ))}
-      </select>
-    </div>
-
-    {/* Priority */}
-    <div>
-      <label className="block mb-2 text-sm font-bold text-[#0F172A]">
-        Priority
-      </label>
-      <select
-        name="priority"
-        value={formData.priority}
-        onChange={handleChange}
-        className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-        required
-      >
-        <option value="">Select Priority</option>
-        {priorities.map((priority) => (
-          <option key={priority} value={priority}>
-            {priority}
-          </option>
-        ))}
-      </select>
-    </div>
-
-    {/* Due Date */}
-    <div>
-      <label className="block mb-2 text-sm font-bold text-[#0F172A]">
-        Due Date
-      </label>
-      <input
-        type="date"
-        name="dueDate"
-        value={formData.dueDate}
-        onChange={handleChange}
-        className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-        required
-      />
-    </div>
   </div>
 
   {/* Notes */}
@@ -458,7 +363,7 @@ export default function AssignAdv({ isOpen, onClose }) {
 </form>
       </div>
 
-      {showDeleteConfirm && typeof document !== "undefined" && createPortal(
+    {showDeleteConfirm && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl border border-slate-200 p-8 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-center">
