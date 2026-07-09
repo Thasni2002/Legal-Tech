@@ -1,11 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Calendar,
   AlertCircle,
   Briefcase,
   Clock,
+  MoreVertical,
+  GripVertical,
+  ChevronRight,
   Pin,
 } from "lucide-react";
 
@@ -69,6 +72,7 @@ function formatDueDate(dateStr) {
 }
 
 function TaskCard({ task, onOpen, onStatusChange, currentUserId, isSenior, colKey, perms, onPinToggle }) {
+  const dragRef = useRef(null);
   const [hovered, setHovered] = useState(false);
   const due = formatDueDate(task.due_date);
   const priority = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.Medium;
@@ -80,11 +84,7 @@ function TaskCard({ task, onOpen, onStatusChange, currentUserId, isSenior, colKe
     }
     e.dataTransfer.setData("taskId", String(task.id));
     e.dataTransfer.setData("fromCol", colKey);
-    // Use setTimeout so the drag image doesn't capture the 0.5 opacity look
-    const target = e.currentTarget;
-    setTimeout(() => {
-      target.style.opacity = "0.5";
-    }, 0);
+    e.currentTarget.style.opacity = "0.5";
   };
   const handleDragEnd = (e) => {
     e.currentTarget.style.opacity = "1";
@@ -92,6 +92,7 @@ function TaskCard({ task, onOpen, onStatusChange, currentUserId, isSenior, colKe
 
   return (
     <div
+      ref={dragRef}
       draggable={!!perms?.edit}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
@@ -100,20 +101,33 @@ function TaskCard({ task, onOpen, onStatusChange, currentUserId, isSenior, colKe
       onMouseLeave={() => setHovered(false)}
       style={{
         background: "#fff",
-        border: task.is_pinned 
-          ? "1.5px solid #F59E0B" 
-          : (hovered ? "1.5px solid #BFDBFE" : "1.5px solid #E2E8F0"),
+        border: task.is_pinned ? "1.5px solid #F59E0B" : "1.5px solid #E2E8F0",
         borderRadius: "12px",
         padding: "14px 14px 12px",
         marginBottom: "10px",
         cursor: "pointer",
         boxShadow: task.is_pinned 
-          ? (hovered ? "0 6px 16px rgba(245,158,11,0.15), 0 2px 4px rgba(0,0,0,0.06)" : "0 4px 12px rgba(245,158,11,0.08), 0 1px 3px rgba(0,0,0,0.04)")
-          : (hovered ? "0 4px 16px rgba(37,99,235,0.10), 0 2px 4px rgba(0,0,0,0.06)" : "0 1px 3px rgba(0,0,0,0.04), 0 1px 8px rgba(0,0,0,0.04)"),
+          ? "0 4px 12px rgba(245,158,11,0.08), 0 1px 3px rgba(0,0,0,0.04)"
+          : "0 1px 3px rgba(0,0,0,0.04),0 1px 8px rgba(0,0,0,0.04)",
         transition: "all 0.2s ease",
         userSelect: "none",
         position: "relative",
         overflow: "hidden",
+      }}
+      // Overriding inline hover styles via JS
+      onMouseEnter={(e) => {
+        setHovered(true);
+        e.currentTarget.style.boxShadow = task.is_pinned
+          ? "0 6px 16px rgba(245,158,11,0.15), 0 2px 4px rgba(0,0,0,0.06)"
+          : "0 4px 16px rgba(37,99,235,0.10),0 2px 4px rgba(0,0,0,0.06)";
+        e.currentTarget.style.borderColor = task.is_pinned ? "#F59E0B" : "#BFDBFE";
+      }}
+      onMouseLeave={(e) => {
+        setHovered(false);
+        e.currentTarget.style.boxShadow = task.is_pinned
+          ? "0 4px 12px rgba(245,158,11,0.08), 0 1px 3px rgba(0,0,0,0.04)"
+          : "0 1px 3px rgba(0,0,0,0.04),0 1px 8px rgba(0,0,0,0.04)";
+        e.currentTarget.style.borderColor = task.is_pinned ? "#F59E0B" : "#E2E8F0";
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px", gap: "6px" }}>
@@ -229,7 +243,7 @@ function TaskCard({ task, onOpen, onStatusChange, currentUserId, isSenior, colKe
   );
 }
 
-export default function KanbanBoard({ tasks = [], onOpenTask, onStatusChange, currentUserId, isSenior, perms, onPinToggle }) {
+export default function KanbanBoard({ tasks, onOpenTask, onStatusChange, currentUserId, isSenior, perms, onPinToggle }) {
   const tasksByCol = {};
   COLUMNS.forEach((c) => { tasksByCol[c.key] = []; });
   tasks.forEach((t) => {

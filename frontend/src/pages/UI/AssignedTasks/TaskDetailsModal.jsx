@@ -58,13 +58,13 @@ export default function TaskDetailsModal({ task: initialTask, onClose, onStatusC
     setMounted(true);
   }, []);
 
-  const [task, setTask] = useState(initialTask || {});
+  const [task, setTask] = useState(initialTask);
 
   useEffect(() => {
-    setTask(initialTask || {});
+    setTask(initialTask);
   }, [initialTask]);
 
-  const [messages, setMessages] = useState(initialTask?.messages || []);
+  const [messages, setMessages] = useState(initialTask.messages || []);
   const [newMessage, setNewMessage] = useState("");
   const [messageType, setMessageType] = useState("general");
   const [sending, setSending] = useState(false);

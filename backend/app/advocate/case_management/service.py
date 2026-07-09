@@ -140,20 +140,6 @@ def delete_case(db: Session, case_id: int):
     if not case:
         return None
 
-    # Decouple associated tasks by setting case_id to None
-    try:
-        from app.advocate.tasks.models import Task
-        db.query(Task).filter(Task.case_id == case_id).update({Task.case_id: None})
-    except Exception as e:
-        print(f"Error updating associated tasks: {e}")
-
-    # Remove associated assigned cases to maintain database consistency
-    try:
-        from app.advocate.lawfirm_management.models import AssignedCase
-        db.query(AssignedCase).filter(AssignedCase.case_number == case.case_no).delete(synchronize_session=False)
-    except Exception as e:
-        print(f"Error deleting associated assigned cases: {e}")
-
     db.delete(case)
     db.commit()
 
