@@ -216,6 +216,7 @@ export default function ConsultationsView() {
                 setSelectedTimeDate(null);
                 fetchConsultations(user);
                 setShowScheduleSuccess(true);
+                
 
             } else {
                 alert("Failed to start/schedule consultation");
