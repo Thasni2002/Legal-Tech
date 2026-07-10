@@ -146,7 +146,6 @@ export default function ResetPasswordModal({ onClose }) {
     setMounted(true);
   }, []);
 
-  if (!mounted) return null;
   /* ── countdown for resend ── */
   useEffect(() => {
     if (timer <= 0) return;
@@ -163,6 +162,8 @@ export default function ResetPasswordModal({ onClose }) {
       }
     }, 0);
   }, []);
+
+  if (!mounted) return null;
 
   /* ── Email validation ── */
   const validateEmail = (v) => {
@@ -291,11 +292,13 @@ export default function ResetPasswordModal({ onClose }) {
         </button>
 
         {/* Header */}
-        <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-3 text-2xl">🔐</div>
-          <h2 className="text-2xl font-extrabold text-[#0F172A]">Reset Password</h2>
-          <p className="text-[#64748B] text-sm mt-1">Follow the steps to securely reset your password</p>
-        </div>
+        {!done && (
+          <div className="text-center mb-6">
+            <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-3 text-2xl">🔐</div>
+            <h2 className="text-2xl font-extrabold text-[#0F172A]">Reset Password</h2>
+            <p className="text-[#64748B] text-sm mt-1">Follow the steps to securely reset your password</p>
+          </div>
+        )}
 
         {!done ? (
           <>
