@@ -8,10 +8,7 @@ class DocumentSchema(BaseModel):
     advocate: str
     file: Optional[str] = None
     url: Optional[str] = None
-    view: Optional[bool] = False
-    upload: Optional[bool] = False
-    edit: Optional[bool] = False
-    delete: Optional[bool] = False
+    password: Optional[str] = None
 
 
 

@@ -26,6 +26,7 @@ import {
   Clock,
   ChevronRight,
   Send,
+  EyeOff,
 } from "lucide-react";
 import { usePermissions } from "@/utils/usePermissions";
 
@@ -95,6 +96,7 @@ export default function CaseView() {
 
   const [cases, setCases] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showPasswordIdx, setShowPasswordIdx] = useState(null);
   const [selectedCase, setSelectedCase] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview"); // "overview" | "documents"
@@ -258,7 +260,7 @@ export default function CaseView() {
     }
   };
 
-  const handleDocCheckboxToggle = async (docIndex, action) => {
+  const handleDocPasswordChange = async (docIndex, newPassword) => {
     if (!selectedCase) return;
 
     // Create deep copy of documents
@@ -266,7 +268,7 @@ export default function CaseView() {
       if (idx === docIndex) {
         return {
           ...doc,
-          [action]: !doc[action]
+          password: newPassword
         };
       }
       return doc;
@@ -308,17 +310,14 @@ export default function CaseView() {
             advocate: d.advocate || "",
             file: d.file,
             url: d.url || "",
-            view: d.view || false,
-            upload: d.upload || false,
-            edit: d.edit || false,
-            delete: d.delete || false,
+            password: d.password || ""
           })),
           nextHearingDate: selectedCase.next_hearing_date
         })
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update document clearance");
+        throw new Error("Failed to update document password");
       }
     } catch (e) {
       console.error(e);
@@ -430,7 +429,7 @@ export default function CaseView() {
           <table className="w-full">
             <thead>
               <tr className="bg-[#F8FAFC] border-b border-[#F1F5F9]">
-                {["Case Title", "Case No", "Client", "Court", "Type", "Status", "Actions"].map((h) => (
+                {["Case Title", "Case ID", "Client", "Court", "Type", "Status", "Actions"].map((h) => (
                   <th key={h} className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">
                     {h}
                   </th>
@@ -450,7 +449,7 @@ export default function CaseView() {
                     </td>
                     <td className="px-5 py-4">
                       <span className="text-xs font-mono font-bold text-[#2563EB] bg-blue-50 px-2.5 py-1 rounded-lg">
-                        {item.case_no}
+                        {item.case_id || item.case_no}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-sm text-[#475569] font-medium">{item.client_name}</td>
@@ -661,9 +660,7 @@ export default function CaseView() {
                       <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Case Details</h4>
                       <InfoRow icon={<Hash size={14} />} label="CNR Number" value={selectedCase.cnr_number} />
                       <InfoRow icon={<Hash size={14} />} label="Case ID" value={selectedCase.case_id} />
-                      <InfoRow icon={<FileText size={14} />} label="Case Number" value={selectedCase.case_no} />
                       <InfoRow icon={<Scale size={14} />} label="Case Type" value={selectedCase.case_type} />
-                      <InfoRow icon={<Gavel size={14} />} label="Next Hearing Date" value={selectedCase.next_hearing_date} />
                     </div>
                     <div className="bg-[#F8FAFC] rounded-2xl p-5 border border-[#F1F5F9] space-y-4">
                       <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Court & Jurisdiction</h4>
@@ -680,17 +677,46 @@ export default function CaseView() {
                     </div>
                   </div>
 
-                  {/* Case Description */}
-                  {selectedCase.case_description && (
-                    <div className="bg-[#FFFBEB] border border-amber-100 rounded-2xl p-5">
-                      <h4 className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                        <FileText size={13} /> Case Description
-                      </h4>
-                      <p className="text-sm text-[#475569] leading-relaxed">
-                        {selectedCase.case_description}
-                      </p>
-                    </div>
-                  )}
+                  {/* Facts & Issues Display */}
+                  {selectedCase.case_description && (() => {
+                    let facts = "";
+                    let issues = "";
+                    const desc = selectedCase.case_description;
+                    if (desc && desc.startsWith("Facts:\n")) {
+                      const parts = desc.split("\n\nIssues:\n");
+                      facts = parts[0].replace("Facts:\n", "");
+                      issues = parts[1] || "";
+                    } else {
+                      facts = desc || "";
+                    }
+                    return (
+                      <div className="space-y-4">
+                        {/* Facts */}
+                        {facts && (
+                          <div className="bg-[#FFFBEB] border border-amber-100 rounded-2xl p-5">
+                            <h4 className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                              <FileText size={13} /> Facts
+                            </h4>
+                            <p className="text-sm text-[#475569] leading-relaxed whitespace-pre-wrap">
+                              {facts}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Issues */}
+                        {issues && (
+                          <div className="bg-blue-50/50 border border-blue-100/50 rounded-2xl p-5">
+                            <h4 className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                              <FileText size={13} /> Issues
+                            </h4>
+                            <p className="text-sm text-[#475569] leading-relaxed whitespace-pre-wrap">
+                              {issues}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   
                  
@@ -707,8 +733,8 @@ export default function CaseView() {
                       <p className="text-sm font-bold text-[#0F172A] mt-0.5">{selectedCase.case_title}</p>
                     </div>
                     <div className="bg-purple-50 border border-purple-100 rounded-xl px-4 py-2">
-                      <p className="text-[10px] text-[#64748B] font-bold uppercase tracking-wide">Case No.</p>
-                      <p className="text-sm font-bold text-[#7C3AED] mt-0.5 font-mono">{selectedCase.case_no}</p>
+                      <p className="text-[10px] text-[#64748B] font-bold uppercase tracking-wide">Case ID</p>
+                      <p className="text-sm font-bold text-[#7C3AED] mt-0.5 font-mono">{selectedCase.case_id || selectedCase.case_no}</p>
                     </div>
                     <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2">
                       <p className="text-[10px] text-[#64748B] font-bold uppercase tracking-wide">Court</p>
@@ -818,11 +844,7 @@ export default function CaseView() {
                           <tr className="bg-slate-800 text-white text-xs font-bold uppercase tracking-wider">
                             <th className="py-3.5 px-5 text-left">Case Documents</th>
                             <th className="py-3.5 px-5 text-left">Doc Type</th>
-                            {["view", "upload", "edit", "delete"].map((act) => (
-                              <th key={act} className="py-3.5 px-5 text-center">
-                                {act}
-                              </th>
-                            ))}
+                            <th className="py-3.5 px-5 text-left">Document Password</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#F1F5F9] text-sm">
@@ -834,16 +856,44 @@ export default function CaseView() {
                                   {doc.documentType || "Other"}
                                 </span>
                               </td>
-                              {["view", "upload", "edit", "delete"].map((act) => (
-                                <td key={act} className="text-center py-4 px-5">
-                                  <input
-                                    type="checkbox"
-                                    checked={doc[act] || false}
-                                    onChange={() => handleDocCheckboxToggle(idx, act)}
-                                    className="w-4 h-4 text-[#2563EB] border-slate-300 rounded focus:ring-[#2563EB]/20 cursor-pointer"
-                                  />
-                                </td>
-                              ))}
+                              <td className="py-4 px-5">
+                                <div className="flex items-center gap-3">
+                                  <div className="relative flex-1 min-w-[200px]">
+                                    <input
+                                      type={showPasswordIdx === idx ? "text" : "password"}
+                                      placeholder="Enter 6-digit PIN (e.g. 123456)"
+                                      value={doc.password || ""}
+                                      maxLength={6}
+                                      onChange={(e) => {
+                                        const val = e.target.value.replace(/\D/g, ""); // Allow digits only
+                                        handleDocPasswordChange(idx, val);
+                                      }}
+                                      className="w-full rounded-xl border border-[#E2E8F0] px-4 py-2.5 pr-10 text-sm font-mono tracking-[0.4em] text-[#0F172A] placeholder:font-sans placeholder:tracking-normal placeholder:text-xs focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowPasswordIdx(showPasswordIdx === idx ? null : idx)}
+                                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                                      title={showPasswordIdx === idx ? "Hide PIN" : "Show PIN"}
+                                    >
+                                      {showPasswordIdx === idx ? <EyeOff size={15} /> : <Eye size={15} />}
+                                    </button>
+                                  </div>
+                                  {doc.password && doc.password.length === 6 ? (
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <span className="text-[10px] font-bold text-green-600 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
+                                        Set
+                                      </span>
+                                      <button
+                                        onClick={() => handleDocPasswordChange(idx, "")}
+                                        className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-200 hover:bg-red-100 px-2.5 py-1 rounded-full transition cursor-pointer"
+                                      >
+                                        Reset
+                                      </button>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              </td>
                             </tr>
                           ))}
                         </tbody>

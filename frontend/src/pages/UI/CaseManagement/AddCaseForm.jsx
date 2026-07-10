@@ -122,7 +122,8 @@ export default function AddCaseForm() {
     caseTitle: "",
     caseNo: "",
     caseType: "",
-    caseDes: "",
+    facts: "",
+    issues: "",
     clientName: "",
     contactNumber: "",
     emailId: "",
@@ -162,7 +163,22 @@ export default function AddCaseForm() {
         caseNo: data.case_no || "",
         caseType: data.case_type || "",
         caseCat: "",
-        caseDes: data.case_description || "",
+        facts: (() => {
+          const rawDes = data.case_description || "";
+          if (rawDes.startsWith("Facts:\n")) {
+            const parts = rawDes.split("\n\nIssues:\n");
+            return parts[0].replace("Facts:\n", "");
+          }
+          return rawDes;
+        })(),
+        issues: (() => {
+          const rawDes = data.case_description || "";
+          if (rawDes.startsWith("Facts:\n")) {
+            const parts = rawDes.split("\n\nIssues:\n");
+            return parts[1] || "";
+          }
+          return "";
+        })(),
         clientName: data.client_name || "",
         contactNumber: data.contact_number || "",
         emailId: data.email_id || "",
@@ -179,10 +195,7 @@ export default function AddCaseForm() {
           advocate: d.advocate || "",
           file: d.file ? { name: d.file } : null,
           url: d.url || null,
-          view: d.view !== undefined ? d.view : true,
-          upload: d.upload !== undefined ? d.upload : true,
-          edit: d.edit !== undefined ? d.edit : true,
-          delete: d.delete !== undefined ? d.delete : true,
+          password: d.password || "",
         })));
       }
       setClientMode("new"); // Force show fields in edit mode
@@ -278,9 +291,11 @@ export default function AddCaseForm() {
       case "caseType":
         if (!value) return "Please select a Case Type";
         return "";
-      case "caseDes":
-        if (!value.trim()) return "Case Description is required";
-        if (value.trim().length < 10) return "Description must be at least 10 characters";
+      case "facts":
+        if (!value.trim()) return "Facts are required";
+        if (value.trim().length < 10) return "Facts must be at least 10 characters";
+        return "";
+      case "issues":
         return "";
       case "clientName":
         if (!value.trim()) return "Client Name is required";
@@ -361,7 +376,7 @@ export default function AddCaseForm() {
   };
 
   function validateAll() {
-    const fields = ["cnrNumber", "caseTitle", "caseType", "caseDes", "clientName", "contactNumber", "emailId", "courtName", "courtType", "nextHearingDate"];
+    const fields = ["cnrNumber", "caseTitle", "caseType", "facts", "issues", "clientName", "contactNumber", "emailId", "courtName", "courtType"];
     if (!isEditMode && clientMode === "new") {
       fields.push("tempPassword");
     }
@@ -491,15 +506,12 @@ export default function AddCaseForm() {
             }
 
             const uploadData = await uploadRes.json();
-            return {
+             return {
               documentType: doc.documentType || "",
               advocate: selectedAdvocate || "",
               file: doc.file.name,
               url: uploadData.url,
-              view: doc.view !== undefined ? doc.view : true,
-              upload: doc.upload !== undefined ? doc.upload : true,
-              edit: doc.edit !== undefined ? doc.edit : true,
-              delete: doc.delete !== undefined ? doc.delete : true,
+              password: doc.password || "",
             };
           }
 
@@ -509,10 +521,7 @@ export default function AddCaseForm() {
             advocate: selectedAdvocate || "",
             file: doc.file ? doc.file.name : null,
             url: doc.url || null,
-            view: doc.view !== undefined ? doc.view : true,
-            upload: doc.upload !== undefined ? doc.upload : true,
-            edit: doc.edit !== undefined ? doc.edit : true,
-            delete: doc.delete !== undefined ? doc.delete : true,
+            password: doc.password || "",
           };
         })
       );
@@ -523,7 +532,7 @@ export default function AddCaseForm() {
         caseTitle: formData.caseTitle,
         caseNo: formData.caseNo,
         caseType: formData.caseType,
-        caseDes: formData.caseDes,
+        caseDes: `Facts:\n${formData.facts || ""}\n\nIssues:\n${formData.issues || ""}`,
 
         clientName: formData.clientName,
         contactNumber: formData.contactNumber,
@@ -940,18 +949,35 @@ export default function AddCaseForm() {
               </div> */}
             </div>
 
-            {/* Case Description */}
-            <div>
-              <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Case Description</label>
-              <textarea
-                name="caseDes"
-                placeholder="Provide a detailed summary of the legal matter..."
-                value={formData.caseDes}
-                onChange={handleChange}
-                className={`${baseInputClass} ${getBorderClass("caseDes")} resize-y`}
-                rows="4"
-              />
-              {touched.caseDes && errors.caseDes && <ErrorMsg message={errors.caseDes} />}
+            {/* Facts and Issues (Side-by-Side) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Facts */}
+              <div>
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Facts *</label>
+                <textarea
+                  name="facts"
+                  placeholder="Provide facts of the case..."
+                  value={formData.facts || ""}
+                  onChange={handleChange}
+                  className={`${baseInputClass} ${getBorderClass("facts")} resize-y`}
+                  rows="5"
+                />
+                {touched.facts && errors.facts && <ErrorMsg message={errors.facts} />}
+              </div>
+
+              {/* Issues */}
+              <div>
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Issues</label>
+                <textarea
+                  name="issues"
+                  placeholder="Provide issues of the case..."
+                  value={formData.issues || ""}
+                  onChange={handleChange}
+                  className={`${baseInputClass} ${getBorderClass("issues")} resize-y`}
+                  rows="5"
+                />
+                {touched.issues && errors.issues && <ErrorMsg message={errors.issues} />}
+              </div>
             </div>
           </div>
 
