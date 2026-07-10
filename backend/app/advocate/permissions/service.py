@@ -482,12 +482,13 @@ def update_user(
             )
         db_user.email = data.email
 
-    if data.tempPassword is not None and data.tempPassword.strip() != "":
-        db_user.temp_password = data.tempPassword
-        db_user.password = hash_password(
-            data.tempPassword
-        )
+    if data.password:
+        if data.password != data.confirmPassword:
+            raise ValueError("Passwords do not match")
 
+        db_user.temp_password = data.password
+        db_user.password = hash_password(data.password)
+        
     if data.customPermissions is not None:
         db_user.custom_permissions = {
             mod: {

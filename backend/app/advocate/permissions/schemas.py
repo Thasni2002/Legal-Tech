@@ -57,6 +57,7 @@ class UserUpdate(BaseModel):
     phone: Optional[str] = None
     username: Optional[str] = None
     email: Optional[str] = None
-    tempPassword: Optional[str] = None
+    password: Optional[str] = None
+    confirmPassword: Optional[str] = None    
     customPermissions: Optional[Dict[str, PermissionSchema]] = None
     documentAccess: Optional[List[Dict[str, Any]]] = None
