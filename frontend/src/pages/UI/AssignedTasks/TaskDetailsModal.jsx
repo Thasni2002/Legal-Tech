@@ -64,7 +64,7 @@ export default function TaskDetailsModal({ task: initialTask, onClose, onStatusC
     setTask(initialTask);
   }, [initialTask]);
 
-  const [messages, setMessages] = useState(initialTask.messages || []);
+  const [messages, setMessages] = useState(initialTask?.messages || []);
   const [newMessage, setNewMessage] = useState("");
   const [messageType, setMessageType] = useState("general");
   const [sending, setSending] = useState(false);
@@ -94,9 +94,9 @@ export default function TaskDetailsModal({ task: initialTask, onClose, onStatusC
   const user = getLoggedInUser();
 
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || !task?.id) return;
     fetchMessages();
-  }, [task.id, mounted]);
+  }, [task?.id, mounted]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -169,14 +169,14 @@ export default function TaskDetailsModal({ task: initialTask, onClose, onStatusC
     }
   };
 
-  const status = STATUS_CONFIG[task.status] || STATUS_CONFIG.todo;
-  const priority = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.Medium;
+  const status = STATUS_CONFIG[task?.status] || STATUS_CONFIG.todo;
+  const priority = PRIORITY_CONFIG[task?.priority] || PRIORITY_CONFIG.Medium;
 
   const STATUSES = ["todo", "progress", "review", "completed"];
 
   const isOwnMessage = (msg) => msg.sender_id === user?.id;
 
-  if (!mounted || typeof window === "undefined") return null;
+  if (!mounted || typeof window === "undefined" || !task) return null;
 
   return (
     <>

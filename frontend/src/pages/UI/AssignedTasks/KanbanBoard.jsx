@@ -241,7 +241,7 @@ function TaskCard({ task, onOpen, onStatusChange, currentUserId, isSenior, colKe
   );
 }
 
-export default function KanbanBoard({ tasks, onOpenTask, onStatusChange, currentUserId, isSenior, perms, onPinToggle }) {
+export default function KanbanBoard({ tasks = [], onOpenTask, onStatusChange, currentUserId, isSenior, perms, onPinToggle }) {
   const tasksByCol = {};
   COLUMNS.forEach((c) => { tasksByCol[c.key] = []; });
   tasks.forEach((t) => {

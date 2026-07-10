@@ -52,11 +52,64 @@ def get_advocates(db: Session = Depends(get_db)):
     response_model=AdvocateOut,
     response_model_by_alias=True
 )
-def add_advocate(
+async def add_advocate(
     advocate: AdvocateCreate,
     db: Session = Depends(get_db)
 ):
-    return create_advocate(db, advocate)
+    new_adv = create_advocate(db, advocate)
+
+    if advocate.password:
+        # Auto-provision the advocate as a user in the `users` table so they can log in immediately
+        try:
+            from app.advocate.permissions.schemas import UserProvision
+            from app.advocate.permissions.service import provision_user
+            
+            # Extract first and last names
+            name_parts = (new_adv.advocate_name or "").strip().split(" ")
+            first_name = name_parts[0] if name_parts else "Junior"
+            last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else "Advocate"
+            
+            # Generate username
+            username = (new_adv.advocate_name or "").lower().replace(" ", "")
+            
+            prov_data = UserProvision(
+                firstName=first_name,
+                lastName=last_name,
+                phone=new_adv.phone_number or "",
+                username=username,
+                email=new_adv.email_address,
+                role="Junior Advocate",
+                tempPassword=advocate.password
+            )
+            provision_user(db, prov_data)
+        except Exception as prov_err:
+            print(f"Auto-provisioning failed for advocate {new_adv.email_address}: {prov_err}")
+
+        # Send onboarding credentials email
+        try:
+            from app.utils.email import send_email
+            subject = "Your Junior Advocate Credentials"
+            body = f"""
+            <html>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <h2>Welcome to Legal-Tech</h2>
+                    <p>Dear {new_adv.advocate_name},</p>
+                    <p>Your Junior Advocate account has been successfully created. Below are your login credentials:</p>
+                    <div style="background-color: #f5f5f5; padding: 15px; border-left: 4px solid #2563EB; margin: 15px 0;">
+                        <p style="margin: 5px 0;"><strong>Login URL:</strong> <a href="http://localhost:3000/login">http://localhost:3000/login</a></p>
+                        <p style="margin: 5px 0;"><strong>Username / Email:</strong> {new_adv.email_address}</p>
+                        <p style="margin: 5px 0;"><strong>Temporary Password:</strong> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px;">{advocate.password}</code></p>
+                    </div>
+                    <p>Please log in and update your password under your profile settings.</p>
+                    <p>Best regards,<br/>The Legal-Tech Team</p>
+                </body>
+            </html>
+            """
+            await send_email(new_adv.email_address, subject, body)
+        except Exception as email_err:
+            print(f"Failed to send email to advocate {new_adv.email_address}: {email_err}")
+
+    return new_adv
 
 
 # Assign case
