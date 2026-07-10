@@ -40,6 +40,7 @@ def create_advocate(
 
     if password:
         advocate_data["hashed_password"] = pwd_context.hash(password)
+        advocate_data["temp_password"] = password
 
     new_advocate = Advocate(**advocate_data)
 
@@ -74,6 +75,7 @@ def update_advocate(
 
     if password:
         advocate.hashed_password = pwd_context.hash(password)
+        advocate.temp_password = password
 
     for key, value in update_data.items():
         setattr(advocate, key, value)

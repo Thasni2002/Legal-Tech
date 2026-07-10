@@ -662,6 +662,7 @@ export default function UsersView() {
                       setPhoneNumber("");
                       setEmailAddress("");
                       setUsername("");
+                      setTempPassword("");
                       return;
                     }
                     const adv = advocates.find(a => a.id.toString() === advId);
@@ -673,6 +674,7 @@ export default function UsersView() {
                       setEmailAddress(adv.emailAddress || adv.email_address || "");
                       const baseUsername = (adv.advocateName || adv.advocate_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
                       setUsername(baseUsername);
+                      setTempPassword(adv.tempPassword || "");
                     }
                   }}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium cursor-pointer"

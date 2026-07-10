@@ -348,20 +348,22 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
         </div>
 
         {/* About Section */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
-          <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
-            <span className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">📝</span>
-            {isClient ? "About Me" : "About Advocate"}
-          </h2>
-          <textarea
-            rows="5"
-            placeholder="Write a short professional bio..."
-            className="w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-            name="about"
-            value={formData.about}
-            onChange={handleChange}
-          />
-        </div>
+        {isClient && (
+          <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
+            <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
+              <span className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">📝</span>
+              About Me
+            </h2>
+            <textarea
+              rows="5"
+              placeholder="Write a short professional bio..."
+              className="w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+              name="about"
+              value={formData.about}
+              onChange={handleChange}
+            />
+          </div>
+        )}
 
         {/* Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 pt-4 pb-8">

@@ -74,6 +74,7 @@ export default function ProfileView({ profile = {}, onEdit }) {
   };
 
   const isClient = user?.role?.toLowerCase() === "client";
+  const isJuniorAdvocate = user?.role?.toLowerCase()?.replace(" ", "") === "junioradvocate";
 
   // Compute role label dynamically
   const roleParts = [];
@@ -125,9 +126,11 @@ export default function ProfileView({ profile = {}, onEdit }) {
                   {roleLabel}
                 </p>
 
-                <p className="text-[#475569] mt-4 max-w-2xl text-sm leading-relaxed whitespace-pre-wrap">
-                  {profile.about || "No professional bio provided."}
-                </p>
+                {isClient && (
+                  <p className="text-[#475569] mt-4 max-w-2xl text-sm leading-relaxed whitespace-pre-wrap">
+                    {profile.about || "No professional bio provided."}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -201,43 +204,45 @@ export default function ProfileView({ profile = {}, onEdit }) {
         </div>
 
         {/* Google Calendar Connection Card */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
-          <h2 className="text-xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-3">
-            <span className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">📅</span>
-            Google Calendar Integration
-          </h2>
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 bg-[#F8FAFC] rounded-2xl p-6 border border-[#E2E8F0]">
-            <div>
-              <p className="text-sm font-semibold text-[#0F172A]">
-                {googleConnected 
-                  ? `Connected to Google Calendar (${googleEmail || user?.email || ""})` 
-                  : "Google Calendar not connected"
-                }
-              </p>
-              <p className="text-[#64748B] text-xs mt-1 font-medium">
-                {googleConnected 
-                  ? "Your consultations will automatically schedule and create Google Meet links in your Google Calendar." 
-                  : "Connect your Google account to automatically generate Google Meet conference links when scheduling Video Call consultations."
-                }
-              </p>
+        {!isJuniorAdvocate && (
+          <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
+            <h2 className="text-xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-3">
+              <span className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">📅</span>
+              Google Calendar Integration
+            </h2>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 bg-[#F8FAFC] rounded-2xl p-6 border border-[#E2E8F0]">
+              <div>
+                <p className="text-sm font-semibold text-[#0F172A]">
+                  {googleConnected 
+                    ? `Connected to Google Calendar (${googleEmail || user?.email || ""})` 
+                    : "Google Calendar not connected"
+                  }
+                </p>
+                <p className="text-[#64748B] text-xs mt-1 font-medium">
+                  {googleConnected 
+                    ? "Your consultations will automatically schedule and create Google Meet links in your Google Calendar." 
+                    : "Connect your Google account to automatically generate Google Meet conference links when scheduling Video Call consultations."
+                  }
+                </p>
+              </div>
+              {googleConnected ? (
+                <button
+                  onClick={handleDisconnectGoogle}
+                  className="px-6 py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-sm active:scale-95 whitespace-nowrap"
+                >
+                  Disconnect
+                </button>
+              ) : (
+                <button
+                  onClick={handleConnectGoogle}
+                  className="px-6 py-3 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-lg active:scale-95 whitespace-nowrap"
+                >
+                  Connect Calendar
+                </button>
+              )}
             </div>
-            {googleConnected ? (
-              <button
-                onClick={handleDisconnectGoogle}
-                className="px-6 py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-sm active:scale-95 whitespace-nowrap"
-              >
-                Disconnect
-              </button>
-            ) : (
-              <button
-                onClick={handleConnectGoogle}
-                className="px-6 py-3 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-lg active:scale-95 whitespace-nowrap"
-              >
-                Connect Calendar
-              </button>
-            )}
           </div>
-        </div>
+        )}
     </div>
   );
 }

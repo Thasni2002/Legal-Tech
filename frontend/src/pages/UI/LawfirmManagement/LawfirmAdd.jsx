@@ -69,8 +69,11 @@ export default function LawfirmAdd({ onCancel, initialData }) {
     about: "",
     profileImage: "",
     status: "Active",
+    tempPassword: "",
     ...sanitizedInitialData,
   });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
 
   function validateField(name, value) {
@@ -90,7 +93,8 @@ export default function LawfirmAdd({ onCancel, initialData }) {
         return "";
 
       case "phoneNumber":
-        if (value && !/^\d{10}$/.test(value))
+        if (!value.trim()) return "Phone Number is required";
+        if (!/^\d{10}$/.test(value))
           return "Phone Number must be 10 digits";
         return "";
 
@@ -100,13 +104,18 @@ export default function LawfirmAdd({ onCancel, initialData }) {
         return "";
 
       case "emailAddress":
-        if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
+        if (!value.trim()) return "Email Address is required";
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
           return "Invalid email address";
         return "";
 
       case "panNumber":
         if (value && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(value))
           return "Invalid PAN Number format (e.g. ABCDE1234F)";
+        return "";
+
+      case "tempPassword":
+        if (!formData.id && !value.trim()) return "Temporary password is required";
         return "";
 
       case "practiceArea":
@@ -216,6 +225,10 @@ export default function LawfirmAdd({ onCancel, initialData }) {
       "chambersAddress"
     ];
 
+    if (!formData.id) {
+      fields.push("tempPassword");
+    }
+
     const newErrors = {};
     const newTouched = {};
     let valid = true;
@@ -237,7 +250,10 @@ export default function LawfirmAdd({ onCancel, initialData }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!validateAll()) return;
+
+    setIsSubmitting(true);
 
     try {
       const payload = {
@@ -265,6 +281,8 @@ export default function LawfirmAdd({ onCancel, initialData }) {
         about: formData.about,
         profileImage: formData.profileImage,
         status: formData.status || "Active",
+        password: formData.tempPassword || null,
+        confirmPassword: formData.tempPassword || null,
       };
 
       let response;
@@ -308,6 +326,8 @@ export default function LawfirmAdd({ onCancel, initialData }) {
 
     } catch (error) {
       console.error("Save failed:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -424,7 +444,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
             {/* Phone Number */}
             <div>
               <InputField
-                label="Phone Number (Optional)"
+                label="Phone Number *"
                 placeholder="e.g. 9876543210"
                 name="phoneNumber"
                 value={formData.phoneNumber}
@@ -439,7 +459,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
             {/* Email */}
             <div>
               <InputField
-                label="Email Address (Optional)"
+                label="Email Address *"
                 type="email"
                 placeholder="e.g. example@email.com"
                 name="emailAddress"
@@ -497,6 +517,43 @@ export default function LawfirmAdd({ onCancel, initialData }) {
                 <p className="text-red-500 text-sm mt-1">{errors.panNumber}</p>
               )}
             </div>
+
+            {/* Temporary Password */}
+            {!formData.id && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-[#0F172A]">
+                    Temporary Password *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+                      let password = "temp_";
+                      for (let i = 0; i < 8; i++) {
+                        password += chars.charAt(Math.floor(Math.random() * chars.length));
+                      }
+                      setFormData((prev) => ({ ...prev, tempPassword: password }));
+                      setErrors((prev) => ({ ...prev, tempPassword: "" }));
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-700 font-bold hover:underline cursor-pointer"
+                  >
+                    Generate Password
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  name="tempPassword"
+                  placeholder="e.g. temp_1aT47b6w"
+                  value={formData.tempPassword || ""}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+                />
+                {touched.tempPassword && errors.tempPassword && (
+                  <p className="text-red-500 text-sm mt-1">{errors.tempPassword}</p>
+                )}
+              </div>
+            )}
 
           </div>
         </div>
@@ -672,38 +729,15 @@ export default function LawfirmAdd({ onCancel, initialData }) {
           </div>
         </div>
 
-        {/* About */}
-        <div className="bg-white rounded-3xl border border-[#E2E8F0] p-8 md:p-10 shadow-xl shadow-slate-200/40">
-          <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
-            <span className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">
-              📝
-            </span>
-            About Advocate (Optional)
-          </h2>
-
-          <textarea
-            rows="5"
-            placeholder="Write a short professional bio..."
-            className="w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-            name="about"
-            value={formData.about}
-            onChange={handleChange}
-          />
-
-          {touched.about && errors.about && (
-            <p className="text-red-500 text-sm mt-1">
-              {errors.about}
-            </p>
-          )}
-        </div>
 
         {/* Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 pt-4 pb-12">
           <button
             type="submit"
-            className="px-8 py-3.5 rounded-full bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] w-full sm:w-auto"
+            disabled={isSubmitting}
+            className={`px-8 py-3.5 rounded-full bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] w-full sm:w-auto ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
           >
-            {formData.id ? "Update Profile" : "Save Profile"}
+            {isSubmitting ? "Saving..." : (formData.id ? "Update Profile" : "Save Profile")}
           </button>
 
           <button

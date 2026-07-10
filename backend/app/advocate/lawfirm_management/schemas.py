@@ -25,6 +25,7 @@ class AdvocateBase(BaseModel):
     profile_image: Optional[str] = Field(None, alias="profileImage")
     date_of_birth: Optional[date] = Field(None, alias="dateOfBirth")
     years_of_experience: Optional[int] = Field(None, alias="yearsOfExperience")
+    temp_password: Optional[str] = Field(None, alias="tempPassword")
 
     
     class Config:

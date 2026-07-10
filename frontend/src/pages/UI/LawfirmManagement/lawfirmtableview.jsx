@@ -133,19 +133,6 @@ export default function LawfirmTableView({ advocate }) {
             </p>
           </div>
         )}
-
-        {/* About */}
-        {advocate.about && (
-          <div className="mt-8 border-t border-[#F1F5F9] pt-8">
-            <h3 className="text-lg font-extrabold text-[#0F172A] flex items-center gap-2 mb-4">
-              <span className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center text-sm">📝</span>
-              About Advocate
-            </h3>
-            <p className="text-[#475569] whitespace-pre-line leading-relaxed text-sm bg-[#F8FAFC] p-6 rounded-2xl border border-[#E2E8F0]">
-              {advocate.about}
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );
