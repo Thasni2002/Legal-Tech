@@ -79,6 +79,12 @@ export default function AssignedCasesView() {
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Document password/lock states
+  const [docPasswordModal, setDocPasswordModal] = useState(null); // { doc, callback }
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [unlockedDocFiles, setUnlockedDocFiles] = useState(new Set());
+
   // Edit (rename) state
   const [editingDocIdx, setEditingDocIdx] = useState(null);
   const [editingDocName, setEditingDocName] = useState("");
@@ -298,7 +304,6 @@ export default function AssignedCasesView() {
 
   // ── VIEW: check doc.view permission ──
   const handleViewDocument = (doc) => {
-    if (doc.view === false) return; // blocked
     setSelectedDocument(doc);
     let fileUrl = doc.url || doc.file_path || null;
     if (!fileUrl && doc.file) {
@@ -378,9 +383,9 @@ export default function AssignedCasesView() {
 //   );
 // };
 
-  // ── DOWNLOAD: check doc.view permission ──
+  // ── DOWNLOAD ──
   const handleDownloadDocument = (doc) => {
-    if (!doc || doc.view === false) return; // blocked
+    if (!doc) return;
     const url = doc.url || doc.file_path;
     if (url) {
       const a = document.createElement("a");
@@ -404,11 +409,10 @@ export default function AssignedCasesView() {
     }
   };
 
-  // ── UPLOAD: check doc.upload permission on the case (first doc or general) ──
-  // We allow upload if any document in the case has upload=true
+  // ── UPLOAD ──
+  // Anyone assigned to the case can upload documents.
   const caseAllowsUpload = (caseItem) => {
-    if (!caseItem?.documents?.length) return false;
-    return caseItem.documents.some((d) => d.upload === true);
+    return true;
   };
 
   // Helper to persist documents to MySQL table case_management_cases
@@ -432,10 +436,7 @@ export default function AssignedCasesView() {
           advocate: d.advocate || "",
           file: d.file,
           url: d.url || null,
-          view: d.view !== undefined ? d.view : true,
-          upload: d.upload !== undefined ? d.upload : true,
-          edit: d.edit !== undefined ? d.edit : true,
-          delete: d.delete !== undefined ? d.delete : true,
+          password: d.password || ""
         }))
       };
       
@@ -469,10 +470,7 @@ export default function AssignedCasesView() {
           file: file.name,
           documentType: "Uploaded",
           url: reader.result,
-          view: true,
-          upload: true,
-          edit: true,
-          delete: true,
+          password: "",
         };
         const updatedDocs = [...(selectedCase.documents || []), newDoc];
         const updatedCase = { ...selectedCase, documents: updatedDocs };
@@ -898,17 +896,14 @@ export default function AssignedCasesView() {
                     {selectedCase.documents?.length > 0 ? (
                       selectedCase.documents.map((doc, idx) => {
                         const isSelected = selectedDocument?.file === doc.file;
-                        const isLocked = doc.view === false;
-                        const canEdit = doc.edit === true;
-                        const canDelete = doc.delete === true;
-                        const isEditingThis = editingDocIdx === idx;
+                        const isLocked = doc.password && doc.password.trim().length === 6;
 
                         return (
                           <div
                             key={idx}
                             className={`rounded-2xl border transition-all ${
                               isLocked
-                                ? "bg-slate-50 border-slate-200 opacity-75"
+                                ? "bg-slate-50 border-slate-200"
                                 : isSelected
                                 ? "bg-blue-50/50 border-blue-200 shadow-sm"
                                 : "bg-white border-[#E2E8F0] hover:border-[#E2E8F0] hover:bg-[#F1F5F9]"
@@ -918,110 +913,49 @@ export default function AssignedCasesView() {
                               <div className="flex items-center gap-3 flex-1 min-w-0">
                                 {/* File Icon / Lock Icon */}
                                 {isLocked ? (
-                                  <Lock size={18} className="text-slate-400 shrink-0" />
+                                  <Lock size={18} className="text-[#3B82F6] shrink-0" />
                                 ) : (
                                   <FileText size={18} className={isSelected ? "text-[#2563EB]" : "text-[#64748B]"} />
                                 )}
 
                                 <div className="flex-1 min-w-0">
-                                  {/* Editable name / display name */}
-                                  {isEditingThis ? (
-                                    <div className="flex items-center gap-2">
-                                      <input
-                                        type="text"
-                                        value={editingDocName}
-                                        onChange={(e) => setEditingDocName(e.target.value)}
-                                        className="flex-1 text-xs border border-[#2563EB] rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#2563EB]/30"
-                                        autoFocus
-                                      />
-                                      <button
-                                        onClick={saveEdit}
-                                        className="text-[10px] font-bold px-2 py-1 bg-[#2563EB] text-white rounded-lg cursor-pointer hover:bg-[#1d4ed8]"
-                                      >
-                                        Save
-                                      </button>
-                                      <button
-                                        onClick={() => setEditingDocIdx(null)}
-                                        className="text-[10px] font-bold px-2 py-1 bg-slate-200 text-slate-600 rounded-lg cursor-pointer"
-                                      >
-                                        Cancel
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <>
-                                      <p className={`text-xs font-bold truncate max-w-[140px] sm:max-w-[220px] ${isLocked ? "text-slate-400 line-through" : ""}`}>
-                                        {doc.file}
-                                      </p>
-                                      <div className="flex items-center gap-1.5 mt-0.5">
-                                        <p className="text-[10px] text-[#64748B]">{doc.documentType}</p>
-                                      </div>
-                                    </>
-                                  )}
+                                  <p className="text-xs font-bold truncate max-w-[140px] sm:max-w-[220px]">
+                                    {doc.file}
+                                  </p>
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    <p className="text-[10px] text-[#64748B]">{doc.documentType}</p>
+                                  </div>
                                 </div>
                               </div>
 
                               {/* Action buttons */}
-                              {!isEditingThis && (
-                                <div className="flex items-center gap-1.5 ml-2 shrink-0">
-                                  {/* VIEW button */}
-                                  {!isLocked && (
-                                    <button
-                                      onClick={() => handleViewDocument(doc)}
-                                      className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                                        isSelected
-                                          ? "bg-[#2563EB] text-white shadow-sm"
-                                          : "bg-[#F8FAFC] text-[#64748B] hover:bg-slate-200"
-                                      }`}
-                                    >
-                                      View
-                                    </button>
-                                  )}
-
-                                  {/* EDIT button */}
-                                  {canEdit && !isLocked && (
-                                    <button
-                                      onClick={() => startEditing(idx, doc.file)}
-                                      className="p-1.5 rounded-lg text-[#64748B] hover:bg-blue-50 hover:text-[#2563EB] transition-colors cursor-pointer"
-                                      title="Rename document"
-                                    >
-                                      <Pencil size={13} />
-                                    </button>
-                                  )}
-
-                                  {/* DELETE button */}
-                                  {canDelete && (
-                                    <button
-                                      onClick={() => setDocDeleteIdx(idx)}
-                                      className="p-1.5 rounded-lg text-[#64748B] hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
-                                      title="Delete document"
-                                    >
-                                      <Trash2 size={13} />
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Document delete confirmation (inline) */}
-                            {docDeleteIdx === idx && (
-                              <div className="border-t border-red-100 bg-red-50 px-4 py-3 flex items-center justify-between rounded-b-2xl">
-                                <p className="text-xs font-semibold text-red-700">Delete this document?</p>
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => setDocDeleteIdx(null)}
-                                    className="text-[10px] px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 font-bold cursor-pointer"
-                                  >
-                                    Cancel
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteDocument(idx)}
-                                    className="text-[10px] px-3 py-1.5 rounded-lg bg-red-600 text-white font-bold cursor-pointer hover:bg-red-700"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
+                              <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                                {/* VIEW button */}
+                                <button
+                                  onClick={() => {
+                                    if (isLocked) {
+                                      setDocPasswordModal({
+                                        doc: doc,
+                                        callback: () => handleViewDocument(doc)
+                                      });
+                                      setPasswordInput("");
+                                      setPasswordError("");
+                                    } else {
+                                      handleViewDocument(doc);
+                                    }
+                                  }}
+                                  className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                                    isLocked
+                                      ? "bg-[#EFF6FF] text-[#2563EB] border border-[#BFDBFE] hover:bg-[#DBEAFE]"
+                                      : isSelected
+                                      ? "bg-[#2563EB] text-white shadow-sm"
+                                      : "bg-[#F8FAFC] text-[#64748B] hover:bg-slate-200"
+                                  }`}
+                                >
+                                  {isLocked ? "Unlock & View" : "View"}
+                                </button>
                               </div>
-                            )}
+                            </div>
                           </div>
                         );
                       })
@@ -1094,6 +1028,69 @@ export default function AssignedCasesView() {
           onClose={() => setSelectedDoc(null)}
         />
       )}
+
+      {/* ══════════════════════════════════════════════
+          DOCUMENT PASSWORD PROMPT DIALOG
+      ══════════════════════════════════════════════ */}
+      {docPasswordModal && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setDocPasswordModal(null)} />
+          <div className="relative bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl z-10 text-center space-y-4">
+            <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mx-auto shadow-sm">
+              <Lock size={24} className="text-[#2563EB]" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-[#0F172A]">Enter Document PIN</h3>
+              <p className="text-xs text-[#64748B] mt-1">
+                Please enter the 6-digit PIN set by the senior advocate to view this file.
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <input
+                type="text"
+                pattern="\d{6}"
+                maxLength={6}
+                placeholder="••••••"
+                value={passwordInput}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, "");
+                  setPasswordInput(val);
+                  setPasswordError("");
+                }}
+                className="w-32 mx-auto rounded-xl border border-[#E2E8F0] px-4 py-3 text-center text-lg font-mono tracking-[0.75em] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition"
+                autoFocus
+              />
+              {passwordError && (
+                <p className="text-xs text-red-500 font-semibold">{passwordError}</p>
+              )}
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setDocPasswordModal(null)}
+                className="flex-1 py-2 rounded-xl border border-[#E2E8F0] text-[#64748B] font-semibold text-xs hover:bg-[#F8FAFC] transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (passwordInput === docPasswordModal.doc.password) {
+                    docPasswordModal.callback();
+                    setDocPasswordModal(null);
+                  } else {
+                    setPasswordError("Incorrect 6-digit PIN");
+                  }
+                }}
+                disabled={passwordInput.length !== 6}
+                className="flex-1 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-semibold text-xs transition disabled:opacity-50"
+              >
+                Unlock
+              </button>
+            </div>
+          </div>
+        </div>
+      , document.body)}
     </div>
   );
 }
@@ -1123,7 +1120,6 @@ function DocumentViewerModal({ fileUrl, title, badge, onClose }) {
   useEffect(() => {
     if (!effectiveUrl) return;
 
-    // Detect file type
     if (effectiveUrl.startsWith("data:")) {
       const mime = effectiveUrl.split(";")[0].split(":")[1] || "";
       setIsImage(mime.startsWith("image/"));
@@ -1214,20 +1210,6 @@ function DocumentViewerModal({ fileUrl, title, badge, onClose }) {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={handleDownload}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
-            >
-              <Download size={13} /> Download
-            </button>
-            <a
-              href={normalizedUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-lg transition"
-            >
-              <ExternalLink size={13} /> Open in Tab
-            </a>
-            <button
               onClick={onClose}
               className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer"
             >
@@ -1285,12 +1267,6 @@ function DocumentViewerModal({ fileUrl, title, badge, onClose }) {
                 <p className="font-bold text-slate-700 text-sm">Preview not available</p>
                 <p className="text-xs text-slate-500 mt-1">This file type cannot be previewed in the browser.</p>
               </div>
-              <button
-                onClick={handleDownload}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition cursor-pointer"
-              >
-                <Download size={14} /> Download File
-              </button>
             </div>
           )}
         </div>
