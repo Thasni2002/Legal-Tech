@@ -105,10 +105,7 @@ export default function CaseView() {
   const [deleteConfirm, setDeleteConfirm] = useState(null); // holds case id to delete
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  useEffect(() => {
-    fetchCases();
-    fetchAdvocates();
-  }, []);
+
 
   const fetchCases = async () => {
     try {
@@ -162,6 +159,14 @@ export default function CaseView() {
       console.error(e);
     }
   };
+
+  useEffect(() => {
+    const loadData = async () => {
+      await fetchCases();
+      await fetchAdvocates();
+    };
+    loadData();
+  }, []);
 
   const handleDelete = async (id) => {
     setDeleteLoading(true);
@@ -626,7 +631,7 @@ export default function CaseView() {
                 <button
                   onClick={() => {
                     setIsModalOpen(false);
-                    router.push("/lawfirm-management/assign-advocate");
+                    router.push(`/lawfirm-management/assign-advocate?directCaseId=${selectedCase.id}`);
                   }}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
                 >
@@ -722,7 +727,7 @@ export default function CaseView() {
                       </div>
                       <div>
                         <h4 className="font-bold text-[#1E40AF] text-sm">Assign to Junior Advocate</h4>
-                        <p className="text-xs text-[#3B82F6]">This case will appear on the junior advocate's assigned cases page</p>
+                        <p className="text-xs text-[#3B82F6]">This case will appear on the junior advocate&apos;s assigned cases page</p>
                       </div>
                     </div>
 
