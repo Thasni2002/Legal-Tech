@@ -876,7 +876,7 @@ export default function AddCaseForm() {
 
               {/* Case Title */}
               <div>
-                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Case Title</label>
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Case Name</label>
                 <input
                   type="text"
                   name="caseTitle"
@@ -912,8 +912,22 @@ export default function AddCaseForm() {
                 {touched.caseType && errors.caseType && <ErrorMsg message={errors.caseType} />}
               </div>
 
+              {/* Current Date */}
+<div>
+  <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">
+    Date
+  </label>
+
+  <input
+    type="text"
+    value={new Date().toLocaleDateString("en-GB")}
+    readOnly
+    className={`${baseInputClass} bg-slate-50 text-[#475569] cursor-not-allowed border-[#E2E8F0]`}
+  />
+</div>
+
               {/* Date */}
-              <div>
+              {/* <div>
                 <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Date</label>
                 <input
                   type="date"
@@ -923,7 +937,7 @@ export default function AddCaseForm() {
                   className={`${baseInputClass} ${getBorderClass("nextHearingDate")}`}
                 />
                 {touched.nextHearingDate && errors.nextHearingDate && <ErrorMsg message={errors.nextHearingDate} />}
-              </div>
+              </div> */}
             </div>
 
             {/* Case Description */}
