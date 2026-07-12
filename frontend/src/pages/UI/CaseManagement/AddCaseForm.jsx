@@ -233,6 +233,26 @@ export default function AddCaseForm() {
         }
       });
       setExistingClients(uniqueClients);
+
+      // Generate sequential Case ID based on continuous database count
+      if (!isEditMode) {
+        const currentYear = new Date().getFullYear();
+        let maxSeq = 0;
+        casesArray.forEach(c => {
+          if (c.case_id && c.case_id.startsWith(`case-${currentYear}-`)) {
+            const parts = c.case_id.split("-");
+            if (parts.length === 3) {
+              const seqNum = parseInt(parts[2], 10);
+              if (!isNaN(seqNum) && seqNum > maxSeq) {
+                maxSeq = seqNum;
+              }
+            }
+          }
+        });
+        const nextSeq = String(maxSeq + 1).padStart(3, "0");
+        const generated = `case-${currentYear}-${nextSeq}`;
+        setFormData(prev => ({ ...prev, caseId: generated }));
+      }
     } catch (err) {
       console.error("Failed to fetch clients:", err);
     }
@@ -253,9 +273,9 @@ export default function AddCaseForm() {
 
   // ─── Auto-generate Case ID for new cases ───
   useEffect(() => {
-    if (!isEditMode) {
+    if (!isEditMode && !formData.caseId) {
       const year = new Date().getFullYear();
-      const seq = String(Date.now()).slice(-3).padStart(3, "0");
+      const seq = "001";
       const generated = `case-${year}-${seq}`;
       setFormData(prev => ({ ...prev, caseId: generated }));
     }

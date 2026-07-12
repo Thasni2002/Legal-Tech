@@ -129,7 +129,7 @@ export default function AdvDashboardView() {
                 .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
                 .slice(0, 5)
                 .map(c => ({
-                    case_no: c.case_no,
+                    case_id: c.case_id,
                     client_name: c.client_name,
                     type: c.case_type,
                     court: c.court_name,
@@ -333,7 +333,7 @@ export default function AdvDashboardView() {
                         <table className="min-w-full divide-y divide-[#E2E8F0]">
                             <thead className="bg-[#F8FAFC]">
                                 <tr>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case No</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case ID</th>
                                     <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client</th>
                                     <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
                                     <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Court</th>
@@ -348,7 +348,7 @@ export default function AdvDashboardView() {
                                             key={index}
                                             className="hover:bg-[#F8FAFC] transition-colors duration-150"
                                         >
-                                            <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">{c.case_no}</td>
+                                            <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">{c.case_id}</td>
                                             <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">{c.client_name}</td>
                                             <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{c.type}</td>
                                             <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{c.court}</td>

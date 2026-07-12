@@ -118,6 +118,14 @@ const DEFAULT_DOCUMENTS = [
   { docId: "doc_4", name: "Divorce Decree - Final.pdf", type: "Court Order", view: false, upload: false, edit: false, delete: false }
 ];
 
+const findRolePermissions = (allPerms, roleName) => {
+  if (!allPerms || !roleName) return {};
+  const roleKey = Object.keys(allPerms).find(
+    (k) => k.toLowerCase().replace(/\s+/g, "") === roleName.toLowerCase().replace(/\s+/g, "")
+  );
+  return roleKey ? allPerms[roleKey] : {};
+};
+
 export default function UsersView() {
   const router = useRouter();
   const [roles, setRoles] = useState([]);
@@ -436,9 +444,9 @@ export default function UsersView() {
       if (res.ok) {
         const freshPerms = await res.json();
         setRolePermissions(freshPerms); // also update cached state
-        basePerms = freshPerms[user.role] || {};
+        basePerms = findRolePermissions(freshPerms, user.role);
       } else {
-        basePerms = rolePermissions[user.role] || {};
+        basePerms = findRolePermissions(rolePermissions, user.role);
       }
 
       const hasCustom = user.customPermissions && Object.keys(user.customPermissions).length > 0;
@@ -453,7 +461,7 @@ export default function UsersView() {
         setEditCustomPerms(basePerms);
       }
     } catch (_) {
-      const fallbackBase = rolePermissions[user.role] || {};
+      const fallbackBase = findRolePermissions(rolePermissions, user.role);
       const hasCustom = user.customPermissions && Object.keys(user.customPermissions).length > 0;
       if (hasCustom) {
         const merged = JSON.parse(JSON.stringify(fallbackBase));
@@ -487,10 +495,10 @@ export default function UsersView() {
         const resRole = await fetch(`${API_BASE_URL}/permissions`);
         if (resRole.ok) {
           const allPerms = await resRole.json();
-          currentRolePerms = allPerms[activeUser.role] || {};
+          currentRolePerms = findRolePermissions(allPerms, activeUser.role);
         }
       } catch (_) {
-        currentRolePerms = rolePermissions[activeUser.role] || {};
+        currentRolePerms = findRolePermissions(rolePermissions, activeUser.role);
       }
 
       // Compute diff: Only save what differs from the global role defaults
@@ -1103,7 +1111,7 @@ export default function UsersView() {
                   </div>
 
                   {/* Content */}
-                  <div className="max-h-[60vh] overflow-y-auto bg-slate-50">
+                  <div className={`max-h-[60vh] bg-slate-50 ${modalTab === "permissions" ? "overflow-hidden" : "overflow-y-auto"}`}>
 
                     {/* Profile */}
                     {modalTab === "profile" && (
@@ -1167,13 +1175,13 @@ export default function UsersView() {
                     {/* Permissions */}
                     {modalTab === "permissions" && (
                       <div className="p-8">
-                        <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 overflow-x-auto">
+                        <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 overflow-auto max-h-[50vh]">
                           <table className="w-full border-collapse text-left">
                             <thead>
                               <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-                                <th className="py-4 px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest">Module</th>
+                                <th className="sticky top-0 z-20 bg-[#F8FAFC] py-4 px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest">Module</th>
                                 {ACTIONS.map((act) => (
-                                  <th key={act} className="py-4 px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest text-center w-28">
+                                  <th key={act} className="sticky top-0 z-20 bg-[#F8FAFC] py-4 px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest text-center w-28">
                                     {act}
                                   </th>
                                 ))}
