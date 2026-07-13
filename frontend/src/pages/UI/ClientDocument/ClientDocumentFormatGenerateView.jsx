@@ -8,7 +8,7 @@ import { getLoggedInUser } from "@/utils/auth";
 import { jsPDF } from "jspdf";
 import ReactMarkdown from "react-markdown";
 
-const BASE_URL = API_BASE_URL || "http://localhost:8000";
+const BASE_URL = API_BASE_URL || "http://127.0.0.1:8000";
 
 const TEMPLATE_METADATA = {
   name_change_affidavit: {

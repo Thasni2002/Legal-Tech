@@ -118,7 +118,7 @@ export default function AssignedCasesView() {
     if (!fileUrl && selectedDocument.file) {
       const title = selectedDocument.file;
       if (title.includes(".") || title.toLowerCase().endsWith(".pdf") || title.toLowerCase().endsWith(".jpg") || title.toLowerCase().endsWith(".png") || title.toLowerCase().endsWith(".jpeg")) {
-        fileUrl = `http://localhost:8000/uploads/${title}`;
+        fileUrl = `${API_BASE_URL}/uploads/${title}`;
       }
     }
 
@@ -310,7 +310,7 @@ export default function AssignedCasesView() {
     if (!fileUrl && doc.file) {
       const title = doc.file;
       if (title.includes(".") || title.toLowerCase().endsWith(".pdf") || title.toLowerCase().endsWith(".jpg") || title.toLowerCase().endsWith(".png") || title.toLowerCase().endsWith(".jpeg")) {
-        fileUrl = `http://localhost:8000/uploads/${title}`;
+        fileUrl = `${API_BASE_URL}/uploads/${title}`;
       }
     }
     if (!fileUrl) {

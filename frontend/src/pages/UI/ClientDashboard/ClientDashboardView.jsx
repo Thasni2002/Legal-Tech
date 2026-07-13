@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { Calendar, Briefcase, User } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
+import { API_BASE_URL } from "@/utils/api";
 
-const BASE_URL = "http://localhost:8000";
+const BASE_URL = API_BASE_URL;
 
 export default function ClientDashboard() {
   const [userName, setUserName] = useState("");
