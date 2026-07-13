@@ -196,19 +196,7 @@ def get_notifications(
             (user.last_name and user.last_name.lower() in adv_lower)
         )
 
-    def is_junior_consult(consult_obj):
-        if not user:
-            return False
-        if consult_obj.advocate_id == user.id:
-            return True
-        if not consult_obj.advocate_name:
-            return False
-        adv_lower = consult_obj.advocate_name.lower()
-        return (
-            user.username.lower() in adv_lower or
-            (user.first_name and user.first_name.lower() in adv_lower) or
-            (user.last_name and user.last_name.lower() in adv_lower)
-        )
+
 
     # Helper comparisons for Clients
     def is_client_owner(case_obj):
@@ -426,27 +414,8 @@ def get_notifications(
                         "created_at": doc.created_at.isoformat()
                     })
 
-        # 4. Consultation Updates & Cancellations
-        junior_consults = db.query(Consultation).filter(
-            Consultation.status.in_(["Rescheduled", "Cancelled"]),
-            Consultation.updated_at >= cutoff
-        ).all()
-        for c in junior_consults:
-            if is_junior_consult(c):
-                status_text = "rescheduled" if c.status == "Rescheduled" else "cancelled"
-                time_detail = f" to {c.date} at {c.time}" if c.status == "Rescheduled" else ""
-                icon = "♻️" if c.status == "Rescheduled" else "❌"
-                color = "text-amber-600" if c.status == "Rescheduled" else "text-rose-600"
-                bg = "bg-amber-50" if c.status == "Rescheduled" else "bg-rose-50"
-                notifications.append({
-                    "id": f"junior_consult_update_{c.id}_{c.status}",
-                    "icon": icon,
-                    "title": f"Your consultation with Client {c.client_name} has been {status_text}{time_detail}.",
-                    "time": _time_ago(c.updated_at or c.created_at),
-                    "color": color,
-                    "bg": bg,
-                    "created_at": (c.updated_at or c.created_at).isoformat()
-                })
+  
+
 
         # Helper comparisons for Junior Advocates in lawfirm management
         def is_junior_assigned_firm_case(ac):
@@ -499,11 +468,10 @@ def get_notifications(
         ).all()
         for c in client_rescheduled:
             if is_client_consult(c):
-                adv_name = c.advocate_name or "Advocate"
                 notifications.append({
                     "id": f"client_resched_{c.id}",
                     "icon": "♻️",
-                    "title": f"Your consultation with {adv_name} rescheduled to {c.date} at {c.time}.",
+                    "title": f"Your consultation has been rescheduled to {c.date} at {c.time}.",
                     "time": _time_ago(c.updated_at or c.created_at),
                     "color": "text-amber-600",
                     "bg": "bg-amber-50",
@@ -516,11 +484,10 @@ def get_notifications(
         ).all()
         for c in client_new_consults:
             if is_client_consult(c):
-                adv_name = c.advocate_name or "Advocate"
                 notifications.append({
                     "id": f"client_consult_sched_{c.id}",
                     "icon": "📅",
-                    "title": f"New consultation scheduled with {adv_name} on {c.date} at {c.time}.",
+                    "title": f"New consultation scheduled on {c.date} at {c.time}.",
                     "time": _time_ago(c.created_at),
                     "color": "text-indigo-600",
                     "bg": "bg-indigo-50",
@@ -535,11 +502,10 @@ def get_notifications(
         ).all()
         for c in upcoming_consults:
             if is_client_consult(c):
-                adv_name = c.advocate_name or "Advocate"
                 notifications.append({
                     "id": f"client_consult_remind_{c.id}",
                     "icon": "🔔",
-                    "title": f"Reminder: Consultation with {adv_name} is scheduled tomorrow at {c.time}.",
+                    "title": f"Reminder: Consultation scheduled tomorrow at {c.time}.",
                     "time": "Tomorrow",
                     "color": "text-blue-600",
                     "bg": "bg-blue-50",
