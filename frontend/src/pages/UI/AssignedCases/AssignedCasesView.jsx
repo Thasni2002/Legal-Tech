@@ -656,8 +656,7 @@ export default function AssignedCasesView() {
             <table className="w-full">
               <thead>
                 <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-                  <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Case Title</th>
-                  <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Case No</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Case ID</th>
                   <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Client</th>
                   <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Court</th>
                   <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Next Hearing</th>
@@ -673,14 +672,8 @@ export default function AssignedCasesView() {
                       key={index}
                       className="hover:bg-[#F8FAFC] transition-colors duration-150 group"
                     >
-                      <td className="px-5 py-4 text-sm font-semibold text-[#0F172A] max-w-[200px] truncate">
-                        {item.title}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <span className="text-xs font-mono font-bold text-[#2563EB] bg-blue-50 px-2.5 py-1 rounded-lg">
-                          {item.caseNo}
-                        </span>
+                      <td className="px-5 py-4 text-sm font-semibold text-[#0F172A]">
+                        #{item.id}
                       </td>
 
                       <td className="px-5 py-4 text-sm text-[#475569] font-medium">

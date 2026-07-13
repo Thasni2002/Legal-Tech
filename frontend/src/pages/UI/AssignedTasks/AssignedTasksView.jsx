@@ -296,7 +296,7 @@ export default function AssignedTasksView({ isJuniorView = false }) {
               Refresh
             </button>
 
-            {perms.add && (
+            {!isJuniorView && perms.add && (
               <button
                 onClick={() => { setEditingTask(null); setShowForm(true); }}
                 style={{

@@ -333,31 +333,20 @@ export default function LawfirmAdd({ onCancel, initialData }) {
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex items-center gap-6">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="flex items-center justify-center w-12 h-12 rounded-full border border-[#E2E8F0] hover:bg-[#F1F5F9] transition-colors shrink-0"
-        >
-          <ArrowLeft size={20} className="text-[#0F172A]" />
-        </button>
-
-        <div>
-          <h1 className="text-3xl font-extrabold text-[#0F172A] tracking-tight">
-            Law Firm Management
-          </h1>
-
-        </div>
-      </div>
-
       <form
         id="profile-form"
         className="space-y-8"
         onSubmit={handleSubmit}
       >
         {/* Profile Card */}
-        <div className="bg-white rounded-3xl border border-[#E2E8F0] p-10 shadow-xl shadow-slate-200/40">
+        <div className="bg-white rounded-3xl border border-[#E2E8F0] p-10 shadow-xl shadow-slate-200/40 relative">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="absolute left-6 top-6 flex items-center justify-center w-12 h-12 rounded-full border border-[#E2E8F0] hover:bg-[#F1F5F9] transition-colors shrink-0 cursor-pointer"
+          >
+            <ArrowLeft size={20} className="text-[#0F172A]" />
+          </button>
           <div className="flex flex-col items-center">
             <div className="relative group">
               <img
