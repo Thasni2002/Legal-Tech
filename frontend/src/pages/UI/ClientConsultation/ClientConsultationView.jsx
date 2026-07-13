@@ -39,11 +39,9 @@ export default function ClientConsultationView() {
 
   // Permission state for Consultation module
   const [canAddConsultation, setCanAddConsultation] = useState(true); // default allow until loaded
-  const [advocates, setAdvocates] = useState([]);
 
   const [formData, setFormData] = useState({
     name: "",
-    advocate: "",
     date: "",
     time: "",
     type: "",
@@ -74,12 +72,7 @@ export default function ClientConsultationView() {
       if (currentUser) {
         if (currentUser.role === "Client") {
           url += `?client_id=${currentUser.id}`;
-        } else if (
-          currentUser.role === "Senior Advocate" ||
-          currentUser.role === "Junior Advocate"
-        ) {
-          url += `?advocate_id=${currentUser.id}`;
-        }
+        } 
       }
       const res = await fetch(url);
       if (res.ok) {
@@ -213,23 +206,8 @@ export default function ClientConsultationView() {
     const dismissed = JSON.parse(localStorage.getItem("client_dismissed_consultation_notifications") || "[]");
     setDismissedNotifications(dismissed);
 
-    const loadAdvocates = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/lawfirm-management/`);
-        if (res.ok) {
-          const advList = await res.json();
-          setAdvocates(advList);
-          fetchHearings(loggedIn, advList);
-        } else {
-          fetchHearings(loggedIn, []);
-        }
-      } catch (err) {
-        console.error("Failed to fetch advocates:", err);
-        fetchHearings(loggedIn, []);
-      }
-    };
-    loadAdvocates();
-  }, []);
+fetchHearings(loggedIn, []);
+}, []);
 
 
   const triggerSuccess = (message) => {
@@ -246,7 +224,6 @@ export default function ClientConsultationView() {
     }
     if (
       !formData.name ||
-      !formData.advocate ||
       !formData.date ||
       !formData.time ||
       !formData.type
@@ -258,7 +235,6 @@ export default function ClientConsultationView() {
     const bookData = {
       client_name: formData.name,
       client_id: user ? user.id : null,
-      advocate_name: formData.advocate,
       date: formData.date,
       time: formData.time,
       type: formData.type,
@@ -279,7 +255,6 @@ export default function ClientConsultationView() {
         fetchConsultations(user);
         setFormData({
           name: user ? user.username : "",
-          advocate: "",
           date: "",
           time: "",
           type: "",
@@ -324,7 +299,6 @@ export default function ClientConsultationView() {
         fetchConsultations(user);
         setFormData({
           name: user ? user.username : "",
-          advocate: "",
           date: "",
           time: "",
           type: "",
@@ -458,7 +432,6 @@ export default function ClientConsultationView() {
                 setRescheduleId(null);
                 setFormData({
                   name: user ? user.username : "",
-                  advocate: "",
                   date: "",
                   time: "",
                   type: "",
@@ -503,7 +476,6 @@ export default function ClientConsultationView() {
             <thead className="bg-[#F8FAFC]">
               <tr>
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client Name</th>
-                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Advocate</th>
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
@@ -517,7 +489,7 @@ export default function ClientConsultationView() {
                   item.status === "Pending Client" ||
                   item.status === "Rescheduled"
               ).length === 0 ? (<tr>
-                <td colSpan="8" className="p-8 text-center text-[#64748B] font-medium">
+                <td colSpan="6" className="p-8 text-center text-[#64748B] font-medium">
                   No pending consultation requests.
                 </td>
               </tr>
@@ -528,7 +500,6 @@ appointments.filter(
     item.status === "Rescheduled"
 ).map((item) => (                  <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors duration-150">
                     <td className="p-4 font-bold text-[#0F172A] capitalize whitespace-nowrap">{item.client_name || item.client}</td>
-                    <td className="p-4 text-sm text-[#475569] capitalize whitespace-nowrap font-medium">{item.advocate_name || item.advocate}</td>
                     <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.date}</td>
                     <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">{item.time}</td>
                     <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.type}</td>
@@ -550,7 +521,6 @@ appointments.filter(
                             setRescheduleId(item.id);
                             setFormData({
                               name: item.client_name,
-                              advocate: item.advocate_name || item.advocate,
                               date: item.date,
                               time: item.time,
                               type: item.type,
@@ -651,29 +621,7 @@ appointments.filter(
                     />
                   </div>
 
-                  <div>
-                    <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2 block">Advocate Name</label>
-                    <select
-                      value={formData.advocate}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          advocate: e.target.value,
-                        })
-                      }
-                      className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
-                    >
-                      <option value="">Select Advocate</option>
-                      {advocates.map((adv) => {
-                        const advName = adv.advocateName || adv.advocate_name || "Unknown Advocate";
-                        return (
-                          <option key={adv.id} value={advName}>
-                            {advName}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
+               
                 </>
               )}
 

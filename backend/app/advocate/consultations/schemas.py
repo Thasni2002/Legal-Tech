@@ -4,7 +4,6 @@ from typing import Optional
 
 class ConsultationBase(BaseModel):
     client_name: str
-    advocate_name: Optional[str] = None
     date: date_type
     time: str
     type: str
@@ -13,7 +12,6 @@ class ConsultationBase(BaseModel):
 
 class ConsultationCreate(ConsultationBase):
     client_id: Optional[int] = None
-    advocate_id: Optional[int] = None
 
 class ConsultationStart(BaseModel):
     client_name: str
@@ -37,8 +35,7 @@ class ConsultationOut(BaseModel):
     id: int
     client_id: Optional[int]
     client_name: str
-    advocate_id: Optional[int]
-    advocate_name: Optional[str]
+    
     date: date_type
     time: str
     type: str

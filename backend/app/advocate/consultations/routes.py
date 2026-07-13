@@ -18,11 +18,10 @@ def get_db():
 @router.get("", response_model=List[ConsultationOut])
 def get_consultations(
     client_id: Optional[int] = Query(None),
-    advocate_id: Optional[int] = Query(None),
     status: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
-    return service.get_consultations(db, client_id=client_id, advocate_id=advocate_id, status=status)
+    return service.get_consultations(db, client_id=client_id, status=status)
 
 @router.post("/book", response_model=ConsultationOut)
 def book_consultation(data: ConsultationCreate, db: Session = Depends(get_db)):
@@ -32,11 +31,9 @@ def book_consultation(data: ConsultationCreate, db: Session = Depends(get_db)):
 def start_consultation(
     data: ConsultationStart,
     background_tasks: BackgroundTasks,
-    advocate_id: Optional[int] = Query(None),
-    advocate_name: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
-    return service.start_instant_consultation(db, data, background_tasks, advocate_id=advocate_id, advocate_name=advocate_name)
+    return service.start_instant_consultation(db, data, background_tasks)
 
 @router.put("/{consultation_id}/status", response_model=ConsultationOut)
 def update_status(consultation_id: int, data: ConsultationUpdateStatus, db: Session = Depends(get_db)):
@@ -75,11 +72,10 @@ def generate_meet_link(
 
 @router.get("/stats", response_model=ConsultationStats)
 def get_stats(
-    advocate_id: Optional[int] = Query(None),
     client_id: Optional[int] = Query(None),
     db: Session = Depends(get_db)
 ):
-    return service.get_consultation_stats(db, advocate_id=advocate_id, client_id=client_id)
+    return service.get_consultation_stats(db, client_id=client_id)
 
 @router.delete("/{consultation_id}", status_code=204)
 def delete_consultation(consultation_id: int, db: Session = Depends(get_db)):

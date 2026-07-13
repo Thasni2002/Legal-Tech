@@ -47,12 +47,7 @@ export default function ClientConsultationHistoryView() {
       if (currentUser) {
         if (currentUser.role === "Client") {
           url += `?client_id=${currentUser.id}`;
-        } else if (
-          currentUser.role === "Senior Advocate" ||
-          currentUser.role === "Junior Advocate"
-        ) {
-          url += `?advocate_id=${currentUser.id}`;
-        }
+        } 
       }
       const res = await fetch(url);
       if (res.ok) {
@@ -179,7 +174,6 @@ export default function ClientConsultationHistoryView() {
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client</th>
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
-                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Advocate</th>
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Duration</th>
                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
@@ -190,7 +184,7 @@ export default function ClientConsultationHistoryView() {
             <tbody className="divide-y divide-[#E2E8F0] bg-white">
               {loading ? (
                 <tr>
-                  <td colSpan="10" className="p-8 text-center text-[#64748B] font-medium">
+                  <td colSpan="8" className="p-8 text-center text-[#64748B] font-medium">
                     Loading history...
                   </td>
                 </tr>
@@ -206,7 +200,6 @@ export default function ClientConsultationHistoryView() {
                     <td className="p-4 text-sm text-[#0F172A] font-bold capitalize whitespace-nowrap">{item.client_name || item.client}</td>
                     <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.date}</td>
                     <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">{item.time || "N/A"}</td>
-                    <td className="p-4 text-sm text-[#0F172A] font-bold capitalize whitespace-nowrap">{item.advocate_name || item.advocate}</td>
                     <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.type}</td>
                     <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.duration || "30 mins"}</td>
                     <td className="p-4 text-sm whitespace-nowrap">
