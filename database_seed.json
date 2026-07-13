@@ -1303,6 +1303,25 @@
       "created_at": "2026-07-10T06:34:32",
       "updated_at": "2026-07-10T06:34:32",
       "meeting_link": "https://meet.google.com/qpz-nkqc-twz"
+    },
+    {
+      "id": 35,
+      "client_id": null,
+      "client_name": "liyaaa",
+      "advocate_id": 104,
+      "advocate_name": "admin",
+      "date": "2026-07-13",
+      "time": "4:45 PM",
+      "type": "Video Call",
+      "issue": null,
+      "fee": "\u20b9500",
+      "status": "Pending Client",
+      "duration": null,
+      "summary": null,
+      "reschedule_reason": null,
+      "created_at": "2026-07-13T10:53:28",
+      "updated_at": "2026-07-13T10:53:28",
+      "meeting_link": "https://meet.google.com/blh-xfuh-qfl"
     }
   ],
   "documents": [],

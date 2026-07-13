@@ -30,7 +30,7 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
     return url;
   };
 
-  const effectiveUrl = fileUrl || (title && (title.includes(".") || title.toLowerCase().endsWith(".pdf") || title.toLowerCase().endsWith(".jpg") || title.toLowerCase().endsWith(".png") || title.toLowerCase().endsWith(".jpeg")) ? `http://localhost:8000/uploads/${title}` : "");
+  const effectiveUrl = fileUrl || (title && (title.includes(".") || title.toLowerCase().endsWith(".pdf") || title.toLowerCase().endsWith(".jpg") || title.toLowerCase().endsWith(".png") || title.toLowerCase().endsWith(".jpeg")) ? `${API_BASE_URL}/uploads/${title}` : "");
   const normalizedUrl = normalizeUrl(effectiveUrl);
 
   useEffect(() => {

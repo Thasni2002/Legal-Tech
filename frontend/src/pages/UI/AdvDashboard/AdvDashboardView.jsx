@@ -312,11 +312,9 @@ export default function AdvDashboardView() {
     ];
 
     return (
-        <div className="w-full space-y-8 max-w-7xl mx-auto animate-in fade-in zoom-in-95 duration-500">
-
+<div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-6 lg:space-y-8 animate-in fade-in zoom-in-95 duration-500">
             {/* Page Header */}
-            <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
+<div className="bg-white rounded-3xl shadow-xl border border-[#E2E8F0] p-5 sm:p-6 lg:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6">                <div>
                     <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
                         {greeting}, {displayName}
                     </h1>
@@ -324,8 +322,7 @@ export default function AdvDashboardView() {
                         {displayRole}
                     </p>
                 </div>
-                <div className="flex flex-col items-end gap-3">
-                    <div className="text-left md:text-right bg-[#F8FAFC] px-6 py-4 rounded-2xl border border-[#E2E8F0]">
+                <div className="flex flex-col items-start lg:items-end gap-3 w-full lg:w-auto">                  <div className="text-left md:text-right bg-[#F8FAFC] px-6 py-4 rounded-2xl border border-[#E2E8F0]">
                         <p className="text-[#475569] font-bold text-sm uppercase tracking-wider">Today's Date</p>
                         <p className="text-[#0F172A] font-extrabold text-lg mt-1">{currentDate}</p>
                     </div>
@@ -333,7 +330,7 @@ export default function AdvDashboardView() {
                         {/* View Calendar button */}
                         <button
                             onClick={() => router.push("/calendar")}
-                            className="flex items-center gap-2 text-xs font-bold text-white bg-[#2563EB] hover:bg-[#1D4ED8] border border-transparent px-4 py-2.5 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer uppercase tracking-wider"
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 text-xs font-bold text-white bg-[#2563EB] hover:bg-[#1D4ED8] px-4 py-2.5 rounded-xl transition-all"
                         >
                             View Calendar
                         </button>
@@ -342,7 +339,7 @@ export default function AdvDashboardView() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
                 {stats.map((item, index) => {
                     const Icon = item.icon;
                     const colors = [
@@ -356,7 +353,7 @@ export default function AdvDashboardView() {
                     return (
                         <div
                             key={index}
-                            className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-6 md:p-8 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 cursor-pointer group"
+                            className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-5 sm:p-6 lg:p-8 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 cursor-pointer group"
                         >
                             <div className={`w-14 h-14 md:w-16 md:h-16 ${color.bg} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-sm border ${color.border}`}>
                                 <Icon className={`w-7 h-7 md:w-8 md:h-8 ${color.text}`} />
@@ -375,7 +372,7 @@ export default function AdvDashboardView() {
             </div>
 
             {/* Case Overview */}
-            <div className="grid grid-cols-12 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
 
                 <div className="col-span-12 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
                     <div className="flex justify-between items-center mb-8">
@@ -442,14 +439,14 @@ export default function AdvDashboardView() {
                             <button
                                 onClick={() => setCasesPage(p => Math.max(0, p - 1))}
                                 disabled={casesPage === 0}
-                                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+                                className="flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
                             >
                                 &lt;
                             </button>
                             <button
                                 onClick={() => setCasesPage(p => Math.min(Math.ceil(data.cases.length / 5) - 1, p + 1))}
                                 disabled={(casesPage + 1) * 5 >= data.cases.length}
-                                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+                                className="flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
                             >
                                 &gt;
                             </button>
@@ -519,14 +516,14 @@ export default function AdvDashboardView() {
                             <button
                                 onClick={() => setHearingsPage(p => Math.max(0, p - 1))}
                                 disabled={hearingsPage === 0}
-                                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+                                className="flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
                             >
                                 &lt;
                             </button>
                             <button
                                 onClick={() => setHearingsPage(p => Math.min(Math.ceil(data.hearings.length / 5) - 1, p + 1))}
                                 disabled={(hearingsPage + 1) * 5 >= data.hearings.length}
-                                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+                                className="flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
                             >
                                 &gt;
                             </button>
@@ -545,7 +542,7 @@ export default function AdvDashboardView() {
                         )}
                     </div>
 
-                    <div className="space-y-3 flex-1 overflow-y-auto max-h-[480px]">
+                    <div className="space-y-3 flex-1 overflow-y-auto max-h-[350px] lg:max-h-[480px]">
                         {data && data.documents.length > 0 ? (
                             data.documents.map((doc, index) => {
                                 const roleBadgeClass = ROLE_BADGE[doc.uploaded_by_role] || "bg-slate-100 text-slate-600";
@@ -586,7 +583,7 @@ export default function AdvDashboardView() {
 
                                                     router.push("/client-management/view-history");
                                                 }}
-                                                className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-[#2563EB] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full hover:bg-blue-100 transition-colors opacity-0 group-hover:opacity-100"
+                                                className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-[#2563EB] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full hover:bg-blue-100 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
                                             >
                                                 View Case
                                             </button>
@@ -633,7 +630,7 @@ export default function AdvDashboardView() {
                             })
                         ) : (
                             <div className="text-center p-8 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">
-                                <FileText className="w-8 h-8 text-[#CBD5E1] mx-auto mb-2" />
+                                <FileText className="w-10 h-10 text-[#CBD5E1] mx-auto mb-2" />
                                 <p className="text-sm font-medium text-[#64748B]">No documents uploaded yet.</p>
                                 <p className="text-xs text-[#94A3B8] mt-1">Documents uploaded via cases will appear here.</p>
                             </div>
@@ -752,14 +749,14 @@ export default function AdvDashboardView() {
                             <button
                                 onClick={() => setDiscussionsPage(p => Math.max(0, p - 1))}
                                 disabled={discussionsPage === 0}
-                                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+                                className="flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
                             >
                                 &lt;
                             </button>
                             <button
                                 onClick={() => setDiscussionsPage(p => Math.min(Math.ceil(data.discussions.length / 5) - 1, p + 1))}
                                 disabled={(discussionsPage + 1) * 5 >= data.discussions.length}
-                                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+                                className="flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
                             >
                                 &gt;
                             </button>

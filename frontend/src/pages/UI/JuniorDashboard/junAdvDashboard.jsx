@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { getLoggedInUser } from "@/utils/auth";
+import { API_BASE_URL } from "@/utils/api";
 import {
   Briefcase,
   Calendar,
@@ -32,7 +33,7 @@ export default function JunAdvDashView() {
 
     const fetchAssignedCases = async () => {
       try {
-        const res = await fetch("http://localhost:8000/lawfirm-management/assigned-cases");
+        const res = await fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases`);
         const data = await res.json();
 
         let casesToShow = data;
@@ -72,7 +73,7 @@ export default function JunAdvDashView() {
           href: doc.url
             ? doc.url
             : doc.file
-              ? `http://localhost:8000/uploads/${doc.file}`
+              ? `${API_BASE_URL}/uploads/${doc.file}`
               : null,
         }));
         setRecentDocuments(formattedDocs);
