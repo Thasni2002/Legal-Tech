@@ -96,6 +96,7 @@ export default function CaseView() {
 
   const [cases, setCases] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [casesPage, setCasesPage] = useState(0);
   const [showPasswordIdx, setShowPasswordIdx] = useState(null);
   const [selectedCase, setSelectedCase] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -408,7 +409,10 @@ export default function CaseView() {
                 type="text"
                 placeholder="Search cases..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCasesPage(0);
+                }}
                 className="rounded-xl border border-[#E2E8F0] pl-9 pr-4 py-2.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition"
               />
             </div>
@@ -438,7 +442,7 @@ export default function CaseView() {
             </thead>
             <tbody className="divide-y divide-[#F8FAFC]">
               {filteredCases.length > 0 ? (
-                filteredCases.map((item) => (
+                filteredCases.slice(casesPage * 5, (casesPage + 1) * 5).map((item) => (
                   <tr
                     key={item.id}
                     className="hover:bg-[#F8FAFC] transition-colors duration-150 group"
@@ -506,6 +510,29 @@ export default function CaseView() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {filteredCases.length > 5 && (
+          <div className="flex items-center justify-center gap-2 py-4 border-t border-[#F1F5F9] bg-[#F8FAFC]/50">
+            <span className="text-xs text-[#64748B] font-semibold">
+              Page {casesPage + 1} of {Math.ceil(filteredCases.length / 5)}
+            </span>
+            <button
+              onClick={() => setCasesPage(p => Math.max(0, p - 1))}
+              disabled={casesPage === 0}
+              className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+            >
+              &lt;
+            </button>
+            <button
+              onClick={() => setCasesPage(p => Math.min(Math.ceil(filteredCases.length / 5) - 1, p + 1))}
+              disabled={(casesPage + 1) * 5 >= filteredCases.length}
+              className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+            >
+              &gt;
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ══════════════════════════════════════════════

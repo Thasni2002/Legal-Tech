@@ -36,6 +36,9 @@ export default function AdvDashboardView() {
     const [user, setUser] = useState(null);
     const [lastRefreshed, setLastRefreshed] = useState(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [casesPage, setCasesPage] = useState(0);
+    const [hearingsPage, setHearingsPage] = useState(0);
+    const [discussionsPage, setDiscussionsPage] = useState(0);
 
     const hour = new Date().getHours();
     let greeting = "";
@@ -66,9 +69,11 @@ export default function AdvDashboardView() {
 
             const advParam = loggedIn && loggedIn.id ? `?advocate_id=${loggedIn.id}` : "";
 
-            const [resUsers, resCases] = await Promise.all([
+            const [resUsers, resCases, resAssigned, resConsultations] = await Promise.all([
                 fetch(`${API_BASE_URL}/permissions/users`),
                 fetch(`${API_BASE_URL}/case-management/`),
+                fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases`),
+                fetch(`${API_BASE_URL}/consultations`),
             ]);
 
             if (!resUsers.ok || !resCases.ok) {
@@ -79,6 +84,24 @@ export default function AdvDashboardView() {
                 resUsers.json(),
                 resCases.json(),
             ]);
+
+            let assignedCases = [];
+            if (resAssigned && resAssigned.ok) {
+                try {
+                    assignedCases = await resAssigned.json();
+                } catch (e) {
+                    console.warn("Failed to parse assigned cases:", e);
+                }
+            }
+
+            let consultations = [];
+            if (resConsultations && resConsultations.ok) {
+                try {
+                    consultations = await resConsultations.json();
+                } catch (e) {
+                    console.warn("Failed to parse consultations:", e);
+                }
+            }
 
 
             // Documents — fetched separately so backend restart isn't required
@@ -112,11 +135,19 @@ export default function AdvDashboardView() {
                     const datePart = isIso ? c.next_hearing_date.split('T')[0] : c.next_hearing_date.split(' ')[0];
 
                     if (datePart >= todayStr) {
+                        // Find assigned advocate from lawfirm assignments
+                        const match = Array.isArray(assignedCases) ? assignedCases.find(ac => 
+                            (ac.case_number && ac.case_number === c.case_no) ||
+                            (ac.case_title && ac.case_title.trim().toLowerCase() === c.case_title.trim().toLowerCase())
+                        ) : null;
+
+                        const advocateName = match ? match.advocate_name : (c.selected_advocate || "");
+
                         extractedHearings.push({
                             date: datePart,
                             case_title: c.case_title,
                             court: c.court_name,
-                            advocate_name: c.selected_advocate || ""
+                            advocate_name: advocateName
                         });
                     }
                 }
@@ -127,7 +158,6 @@ export default function AdvDashboardView() {
             // 4. Case Overview list
             const casesList = [...cases]
                 .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
-                .slice(0, 5)
                 .map(c => ({
                     case_id: c.case_id,
                     client_name: c.client_name,
@@ -152,12 +182,39 @@ export default function AdvDashboardView() {
                     if (a.date !== b.date) return a.date.localeCompare(b.date);
                     return (a.time || "").localeCompare(b.time || "");
                 })
-                .slice(0, 5)
                 .map(h => ({
                     date: formatHearingDate(h.date),
                     case_title: h.case_title,
                     court: h.court,
                     advocate_name: h.advocate_name || "",
+                }));
+
+            // 6. Discussions list
+            const extractedDiscussions = [];
+            if (Array.isArray(consultations)) {
+                consultations.forEach(c => {
+                    const datePart = c.date ? c.date.split("T")[0] : "";
+                    if (datePart && datePart >= todayStr) {
+                        extractedDiscussions.push({
+                            id: c.id,
+                            client_name: c.client_name || "Unknown",
+                            issue: c.issue || "N/A",
+                            advocate_name: c.advocate_name || "N/A",
+                            date: datePart,
+                            time: c.time || "12:00 PM",
+                            status: c.status || "Scheduled",
+                            type: c.type || "Video Call",
+                            meeting_link: c.meeting_link || ""
+                        });
+                    }
+                });
+            }
+
+            const discussionsList = [...extractedDiscussions]
+                .sort((a, b) => a.date.localeCompare(b.date))
+                .map(d => ({
+                    ...d,
+                    date_formatted: formatHearingDate(d.date)
                 }));
 
             setData({
@@ -170,6 +227,7 @@ export default function AdvDashboardView() {
                 },
                 cases: casesList,
                 hearings: hearingsList,
+                discussions: discussionsList,
                 documents,
             });
 
@@ -343,7 +401,7 @@ export default function AdvDashboardView() {
 
                             <tbody className="divide-y divide-[#E2E8F0] bg-white">
                                 {data && data.cases.length > 0 ? (
-                                    data.cases.map((c, index) => (
+                                    data.cases.slice(casesPage * 5, (casesPage + 1) * 5).map((c, index) => (
                                         <tr
                                             key={index}
                                             className="hover:bg-[#F8FAFC] transition-colors duration-150"
@@ -374,6 +432,29 @@ export default function AdvDashboardView() {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination Controls */}
+                    {data && data.cases.length > 5 && (
+                        <div className="flex items-center justify-center gap-2 mt-4">
+                            <span className="text-xs text-[#64748B] font-semibold">
+                                Page {casesPage + 1} of {Math.ceil(data.cases.length / 5)}
+                            </span>
+                            <button
+                                onClick={() => setCasesPage(p => Math.max(0, p - 1))}
+                                disabled={casesPage === 0}
+                                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+                            >
+                                &lt;
+                            </button>
+                            <button
+                                onClick={() => setCasesPage(p => Math.min(Math.ceil(data.cases.length / 5) - 1, p + 1))}
+                                disabled={(casesPage + 1) * 5 >= data.cases.length}
+                                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+                            >
+                                &gt;
+                            </button>
+                        </div>
+                    )}
                 </div>
 
 
@@ -402,7 +483,7 @@ export default function AdvDashboardView() {
 
                             <tbody className="divide-y divide-[#E2E8F0] bg-white">
                                 {data && data.hearings.length > 0 ? (
-                                    data.hearings.map((h, index) => (
+                                    data.hearings.slice(hearingsPage * 5, (hearingsPage + 1) * 5).map((h, index) => (
                                         <tr
                                             key={index}
                                             className="hover:bg-[#F8FAFC] transition-colors duration-150"
@@ -428,10 +509,33 @@ export default function AdvDashboardView() {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination Controls */}
+                    {data && data.hearings.length > 5 && (
+                        <div className="flex items-center justify-center gap-2 mt-4">
+                            <span className="text-xs text-[#64748B] font-semibold">
+                                Page {hearingsPage + 1} of {Math.ceil(data.hearings.length / 5)}
+                            </span>
+                            <button
+                                onClick={() => setHearingsPage(p => Math.max(0, p - 1))}
+                                disabled={hearingsPage === 0}
+                                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+                            >
+                                &lt;
+                            </button>
+                            <button
+                                onClick={() => setHearingsPage(p => Math.min(Math.ceil(data.hearings.length / 5) - 1, p + 1))}
+                                disabled={(hearingsPage + 1) * 5 >= data.hearings.length}
+                                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+                            >
+                                &gt;
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* ─── Recent Documents Panel ─── */}
-                <div className="col-span-12 lg:col-span-4 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
+                <div className="col-span-12 lg:col-span-4 lg:row-span-2 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
                     <div className="flex justify-between items-center mb-6">
                         <h2 className="text-2xl font-extrabold text-[#0F172A]">
                             Recent Documents
@@ -541,6 +645,126 @@ export default function AdvDashboardView() {
                         <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
                         <p className="text-[10px] font-medium text-[#94A3B8]">Auto-refreshes every 30 seconds</p>
                     </div>
+                </div>
+
+                {/* ─── Upcoming Case Discussions ─── */}
+                <div className="col-span-12 lg:col-span-8 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
+                    <div className="flex justify-between items-center mb-8">
+                        <h2 className="text-2xl font-extrabold text-[#0F172A]">
+                            Upcoming Case Discussions
+                        </h2>
+                        <button
+                            onClick={() => router.push("/consultations")}
+                            className="flex items-center gap-1 text-sm font-bold text-[#2563EB] hover:text-[#1D4ED8] hover:underline bg-transparent border-0 p-0 cursor-pointer transition-colors"
+                        >
+                            <span>Go to</span>
+                            <span>→</span>
+                        </button>
+                    </div>
+
+                    <div className="w-full overflow-x-auto rounded-2xl border border-[#E2E8F0]">
+                        <table className="min-w-full divide-y divide-[#E2E8F0]">
+                            <thead className="bg-[#F8FAFC]">
+                                <tr>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type / Link</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                                </tr>
+                            </thead>
+
+                            <tbody className="divide-y divide-[#E2E8F0] bg-white">
+                                {data && data.discussions && data.discussions.length > 0 ? (
+                                    data.discussions.slice(discussionsPage * 5, (discussionsPage + 1) * 5).map((d, index) => (
+                                        <tr
+                                            key={d.id || index}
+                                            className="hover:bg-[#F8FAFC] transition-colors duration-150"
+                                        >
+                                            <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">
+                                                <div className="bg-[#F1F5F9] px-3 py-1.5 rounded-lg inline-block text-center border border-[#E2E8F0]">
+                                                    {d.date_formatted}
+                                                </div>
+                                            </td>
+                                            <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-semibold">{d.client_name}</td>
+                                            <td className="p-4 text-sm font-bold text-[#2563EB] whitespace-nowrap">
+                                                {d.time}
+                                            </td>
+                                            <td className="p-4 text-sm whitespace-nowrap">
+                                                {d.type.toLowerCase().includes("video") ? (
+                                                    d.meeting_link ? (
+                                                        <a 
+                                                            href={d.meeting_link.startsWith("http") ? d.meeting_link : `https://${d.meeting_link}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition"
+                                                        >
+                                                            🎥 Video (Join Meet)
+                                                        </a>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50/50 border border-emerald-100">
+                                                            🎥 Video Call
+                                                        </span>
+                                                    )
+                                                ) : d.type.toLowerCase().includes("chat") ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200">
+                                                        💬 Chat
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-purple-700 bg-purple-50 border border-purple-200">
+                                                        🤝 Person to Person
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="p-4 text-sm whitespace-nowrap">
+                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider ${
+                                                    d.status.toLowerCase() === "approved" || d.status.toLowerCase() === "completed" || d.status.toLowerCase() === "scheduled"
+                                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                                        : d.status.toLowerCase() === "rescheduled"
+                                                            ? "bg-amber-50 text-amber-700 border-amber-200"
+                                                            : d.status.toLowerCase() === "pending"
+                                                                ? "bg-slate-50 text-slate-700 border-slate-200"
+                                                                : "bg-blue-50 text-blue-700 border-blue-200"
+                                                }`}>
+                                                    {d.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="5" className="p-8 text-center text-sm font-medium text-[#64748B]">
+                                            No upcoming case discussions found.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Pagination Controls */}
+                    {data && data.discussions && data.discussions.length > 5 && (
+                        <div className="flex items-center justify-center gap-2 mt-4">
+                            <span className="text-xs text-[#64748B] font-semibold">
+                                Page {discussionsPage + 1} of {Math.ceil(data.discussions.length / 5)}
+                            </span>
+                            <button
+                                onClick={() => setDiscussionsPage(p => Math.max(0, p - 1))}
+                                disabled={discussionsPage === 0}
+                                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+                            >
+                                &lt;
+                            </button>
+                            <button
+                                onClick={() => setDiscussionsPage(p => Math.min(Math.ceil(data.discussions.length / 5) - 1, p + 1))}
+                                disabled={(discussionsPage + 1) * 5 >= data.discussions.length}
+                                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+                            >
+                                &gt;
+                            </button>
+                        </div>
+                    )}
                 </div>
 
             </div>
