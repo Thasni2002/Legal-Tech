@@ -70,6 +70,7 @@ class AIAssistantRequest(BaseModel):
     query: str
     role: Optional[str] = None
     advocateName: Optional[str] = None
+    clientName: Optional[str] = None
 
 
 # Format Document Generation Schema
