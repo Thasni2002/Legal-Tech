@@ -122,6 +122,21 @@ def update_consultation_status(db: Session, consultation_id: int, status: str):
     return consultation
 
 def start_instant_consultation(db: Session, data: ConsultationStart, background_tasks: BackgroundTasks):
+    # ── Duplicate time-slot check ──────────────────────────────
+    # Block booking if ANY client already has this date + time slot
+    existing = db.query(Consultation).filter(
+        Consultation.date == data.date,
+        Consultation.time == data.time,
+    ).first()
+
+    if existing:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=409,
+            detail=f"This time slot is already booked for \"{existing.client_name}\". Please choose a different time."
+        )
+    # ──────────────────────────────────────────────────────────
+
     # Lookup client ID by client_name
     client_id = None
     if data.client_name:
