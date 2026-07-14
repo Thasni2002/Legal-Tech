@@ -194,7 +194,7 @@ User Request:
         raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
 
 
-def ask_ai_assistant(db: Session, user_query: str, user_role: str = None, advocate_name: str = None):
+def ask_ai_assistant(db: Session, user_query: str, user_role: str = None, advocate_name: str = None, client_name: str = None):
     import os
     import json
     from datetime import datetime
@@ -215,6 +215,10 @@ def ask_ai_assistant(db: Session, user_query: str, user_role: str = None, advoca
     if user_role == "Junior Advocate" and advocate_name:
         cases = [c for c in cases if c.selected_advocate == advocate_name]
     
+    if client_name:
+        client_name_lower = client_name.strip().lower()
+        cases = [c for c in cases if c.client_name and (client_name_lower in c.client_name.strip().lower() or c.client_name.strip().lower() in client_name_lower)]
+    
     context_lines = []
     for case in cases:
         case_info = f"Case Title: {case.case_title} | Case No: {case.case_no} | Status: {case.status} | Client: {case.client_name} (Phone: {case.contact_number}, Email: {case.email_id}) | Court: {case.court_name} | Next Hearing: {case.next_hearing_date or 'Not scheduled'}"
@@ -232,7 +236,52 @@ def ask_ai_assistant(db: Session, user_query: str, user_role: str = None, advoca
         context_lines.append(f"- {case_info} | {doc_info}")
         
     context_block = "\n".join(context_lines)
+
+    # Fetch billing and consultation data if client context is active
+    invoices_context = ""
+    consultations_context = ""
     
+    if client_name:
+        try:
+            from app.advocate.finance_management.models import Invoice
+            # Query invoices matching client_name
+            invoices = db.query(Invoice).all()
+            matched_invoices = [inv for inv in invoices if inv.client_name and (client_name_lower in inv.client_name.strip().lower() or inv.client_name.strip().lower() in client_name_lower)]
+            if matched_invoices:
+                inv_lines = []
+                for inv in matched_invoices:
+                    inv_lines.append(f"- Invoice ID: {inv.id} | Amount: ₹{inv.grand_total} | Status: {inv.status} | Date: {inv.created_at.strftime('%Y-%m-%d') if inv.created_at else 'N/A'} | Method: {inv.payment_method or 'N/A'}")
+                invoices_context = "\n".join(inv_lines)
+            else:
+                invoices_context = "No invoices found."
+        except Exception as e:
+            invoices_context = f"Error fetching invoices: {str(e)}"
+            
+        try:
+            from app.advocate.consultations.models import Consultation
+            # Query consultations matching client_name
+            consultations = db.query(Consultation).all()
+            matched_consultations = [con for con in consultations if con.client_name and (client_name_lower in con.client_name.strip().lower() or con.client_name.strip().lower() in client_name_lower)]
+            if matched_consultations:
+                cons_lines = []
+                for con in matched_consultations:
+                    cons_lines.append(f"- Consultation ID: {con.id} | Issue: {con.issue or 'N/A'} | Status: {con.status} | Date: {con.date} {con.time} | Type: {con.type} | Summary: {con.summary or 'No summary'}")
+                consultations_context = "\n".join(cons_lines)
+            else:
+                consultations_context = "No consultations found."
+        except Exception as e:
+            consultations_context = f"Error fetching consultations: {str(e)}"
+
+    client_info_block = ""
+    if client_name:
+        client_info_block = f"""
+Context (Client Specific Invoices & Billing):
+{invoices_context}
+
+Context (Client Specific Consultations & Discussions):
+{consultations_context}
+"""
+
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     full_prompt = f"""
@@ -256,6 +305,7 @@ DO NOT return JSON unless an action is requested. If no action is requested, ans
 
 Context (Cases):
 {context_block}
+{client_info_block}
 
 User Question:
 {user_query}

@@ -249,7 +249,7 @@ export default function ClientView() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/70">
-                  <th className="py-4 px-4">Client ID</th>
+
                   <th className="py-4 px-3">Client Profile</th>
                   <th className="py-4 px-3">Contact Details</th>
                   <th className="py-4 px-3">Court Room</th>
@@ -271,9 +271,7 @@ export default function ClientView() {
                       key={client.clientId}
                       className="group hover:bg-slate-50/50 transition-colors"
                     >
-                      <td className="py-4 px-4 text-xs font-mono font-semibold text-slate-500">
-                        {client.clientId}
-                      </td>
+
                       <td className="py-4 px-3">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center font-bold text-sm select-none shadow-sm shadow-indigo-200">

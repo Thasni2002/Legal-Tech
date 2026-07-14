@@ -118,20 +118,8 @@ export default function ClientEdit({ onSave, onCancel }) {
 
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Client ID */}
-          <div>
-            <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">
-              Client ID *
-            </label>
 
-            <input
-              type="text"
-              name="clientId"
-              value={formData.clientId}
-              disabled
-              className="w-full rounded-lg border border-[#E2E8F0] bg-[#F1F5F9] px-4 py-3 text-sm text-[#64748B] cursor-not-allowed"
-            />
-          </div>
+
 
           {/* Full Name */}
           <div>
