@@ -34,6 +34,8 @@ export default function ConsultationsView() {
     const [meetingLink, setMeetingLink] = useState("");
     const [generatingMeetLink, setGeneratingMeetLink] = useState(false);
     const [showScheduleSuccess, setShowScheduleSuccess] = useState(false);
+    const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+    const [duplicateMessage, setDuplicateMessage] = useState("");
 
     const generateMeetingLink = async (currentClient, currentDate, currentTime) => {
         setGeneratingMeetLink(true);
@@ -233,6 +235,13 @@ export default function ConsultationsView() {
                 body: JSON.stringify(startData)
             });
 
+            if (res.status === 409) {
+                const errData = await res.json();
+                setDuplicateMessage(errData.detail || "This time slot is already booked. Please choose a different time.");
+                setShowDuplicateModal(true);
+                return;
+            }
+
             if (res.ok) {
                 setClientName("");
                 setConsultationType("Consultation Type");
@@ -281,6 +290,42 @@ export default function ConsultationsView() {
 
     return (
         <div className="w-full space-y-8 max-w-7xl mx-auto">
+
+            {/* ── Duplicate Booking Warning Modal ── */}
+            {showDuplicateModal && mounted && createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                        onClick={() => setShowDuplicateModal(false)}
+                    />
+                    {/* Modal */}
+                    <div className="relative bg-white rounded-2xl shadow-2xl border border-[#E2E8F0] w-full max-w-md mx-4 p-8 animate-in zoom-in-95 fade-in duration-200">
+                        {/* Icon */}
+                        <div className="w-14 h-14 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                            <svg className="w-7 h-7 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3m0 3h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                            </svg>
+                        </div>
+                        {/* Title */}
+                        <h3 className="text-xl font-extrabold text-[#0F172A] text-center tracking-tight mb-2">
+                            Time Slot Already Booked
+                        </h3>
+                        {/* Message */}
+                        <p className="text-[#475569] text-sm text-center leading-relaxed mb-6">
+                            {duplicateMessage}
+                        </p>
+                        {/* Action */}
+                        <button
+                            onClick={() => setShowDuplicateModal(false)}
+                            className="w-full bg-[#0F172A] hover:bg-[#1E293B] text-white font-bold text-sm py-3 rounded-xl transition-colors duration-200"
+                        >
+                            OK, Choose a Different Time
+                        </button>
+                    </div>
+                </div>,
+                document.body
+            )}
             {/* Page Header */}
             <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 mb-8">
                 <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">

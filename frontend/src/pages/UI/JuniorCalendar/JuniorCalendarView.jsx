@@ -30,6 +30,80 @@ const MONTHS_LONG = [
   "July", "August", "September", "October", "November", "December"
 ];
 
+const generateHolidaysForYear = (year) => {
+  const generated = [];
+  const publicHolidays = {
+    "01-26": "Republic Day",
+    "04-14": "Ambedkar Jayanti",
+    "05-01": "May Day / Labour Day",
+    "08-15": "Independence Day",
+    "10-02": "Gandhi Jayanti",
+    "12-25": "Christmas Day"
+  };
+
+  for (let m = 0; m < 12; m++) {
+    const daysInMonth = new Date(year, m + 1, 0).getDate();
+    let saturdayCount = 0;
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, m, d);
+      const dayOfWeek = date.getDay();
+      const dateStr = `${year}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+      if (dayOfWeek === 0) {
+        generated.push({
+          id: `holiday-sun-${dateStr}`,
+          title: "Sunday",
+          date: dateStr,
+          time: "00:00",
+          type: "Holiday",
+          isHoliday: true,
+          caseNo: "N/A",
+          court: "All Courts",
+          status: "Completed",
+          notes: "Weekly court holiday."
+        });
+      }
+
+      if (dayOfWeek === 6) {
+        saturdayCount++;
+        if (saturdayCount === 2) {
+          generated.push({
+            id: `holiday-sat2-${dateStr}`,
+            title: "2nd Saturday",
+            date: dateStr,
+            time: "00:00",
+            type: "Holiday",
+            isHoliday: true,
+            caseNo: "N/A",
+            court: "All Courts",
+            status: "Completed",
+            notes: "Second Saturday court leave."
+          });
+        }
+      }
+
+      const mmdd = `${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      if (publicHolidays[mmdd]) {
+        generated.push({
+          id: `holiday-pub-${dateStr}`,
+          title: publicHolidays[mmdd],
+          date: dateStr,
+          time: "00:00",
+          type: "Holiday",
+          isHoliday: true,
+          caseNo: "N/A",
+          court: "All Courts",
+          status: "Completed",
+          notes: `${publicHolidays[mmdd]} public holiday.`
+        });
+      }
+    }
+  }
+
+  return generated;
+};
+
 const parseLocalDate = (dateStr) => {
   if (!dateStr) return new Date();
   if (dateStr instanceof Date) return dateStr;
@@ -150,6 +224,8 @@ const getTypeColor = (type) => {
       return "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100";
     case "Consumer":
       return "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100";
+    case "Holiday":
+      return "bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100 font-semibold";
     default:
       return "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100";
   }
@@ -258,6 +334,19 @@ export default function JuniorCalendarView() {
     };
   }, [hearings]);
 
+  const holidayEvents = useMemo(() => {
+    const currentYear = selectedDate.getFullYear();
+    return [
+      ...generateHolidaysForYear(currentYear - 1),
+      ...generateHolidaysForYear(currentYear),
+      ...generateHolidaysForYear(currentYear + 1),
+    ];
+  }, [selectedDate]);
+
+  const allEvents = useMemo(() => {
+    return [...hearings, ...holidayEvents];
+  }, [hearings, holidayEvents]);
+
   // --- Navigation Controls ---
   const handlePrev = () => {
     if (viewMode === "month") {
@@ -348,7 +437,7 @@ export default function JuniorCalendarView() {
 
   // --- Filtering Hearings ---
   const activeEvents = useMemo(() => {
-    return hearings.filter((e) => {
+    return allEvents.filter((e) => {
       if (viewMode === "day") {
         return e.date === getDateString(selectedDate);
       } else if (viewMode === "week") {
@@ -372,11 +461,11 @@ export default function JuniorCalendarView() {
       }
       return true;
     });
-  }, [hearings, selectedDate, viewMode]);
+  }, [allEvents, selectedDate, viewMode]);
 
   // Agenda list (includes search & filter type filtering)
   const filteredAgendaEvents = useMemo(() => {
-    return hearings
+    return allEvents
       .filter((e) => {
         const matchesSearch =
           e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -389,7 +478,7 @@ export default function JuniorCalendarView() {
         return matchesSearch && matchesType;
       })
       .sort((a, b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
-  }, [hearings, searchQuery, filterType]);
+  }, [allEvents, searchQuery, filterType]);
 
   // Upcoming Hearings (sorted chronologically, today or future)
   const upcomingHearings = useMemo(() => {
@@ -403,10 +492,10 @@ export default function JuniorCalendarView() {
   // Selected case details logic
   const selectedEventDetails = useMemo(() => {
     if (selectedEventId) {
-      return hearings.find((e) => e.id === selectedEventId);
+      return allEvents.find((e) => e.id === selectedEventId);
     }
-    return upcomingHearings[0] || hearings[0] || null;
-  }, [hearings, selectedEventId, upcomingHearings]);
+    return upcomingHearings[0] || allEvents[0] || null;
+  }, [allEvents, selectedEventId, upcomingHearings]);
 
   // No view access
   if (!loading && !perms.view) {
@@ -548,7 +637,8 @@ export default function JuniorCalendarView() {
                     const dateStr = getDateString(date);
                     const isToday = dateStr === getDateString(new Date());
                     const isSelected = dateStr === getDateString(selectedDate);
-                    const dayEvents = hearings.filter((e) => e.date === dateStr);
+                    const dayEvents = allEvents.filter((e) => e.date === dateStr);
+                    const holidayEvent = dayEvents.find((e) => e.isHoliday);
 
                     return (
                       <div
@@ -558,9 +648,13 @@ export default function JuniorCalendarView() {
                           setSelectedEventId(dayEvents[0]?.id || null);
                           if (dayEvents[0]?.id) setShowViewModal(true);
                         }}
-                        className={`min-h-[110px] p-2 hover:bg-[#F8FAFC]/50 transition cursor-pointer flex flex-col justify-between group ${
-                          isCurrentMonth ? "bg-white" : "bg-[#F8FAFC]/30 text-[#64748B]"
-                        } ${isSelected ? "ring-2 ring-blue-500 ring-inset" : ""}`}
+                        className={`min-h-[110px] p-2 transition cursor-pointer flex flex-col justify-between group ${
+                          holidayEvent
+                            ? "bg-red-50/70 hover:bg-red-100/60 border border-red-100"
+                            : isCurrentMonth
+                            ? "bg-white hover:bg-[#F8FAFC]/50"
+                            : "bg-[#F8FAFC]/30 text-[#64748B] hover:bg-[#F8FAFC]/50"
+                        } ${isSelected ? (holidayEvent ? "ring-2 ring-red-400 ring-inset" : "ring-2 ring-blue-500 ring-inset") : ""}`}
                       >
                         {/* Day indicator */}
                         <div className="flex justify-between items-center">
@@ -568,6 +662,8 @@ export default function JuniorCalendarView() {
                             className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${
                               isToday
                                 ? "bg-[#2563EB] text-white shadow-md shadow-[#2563EB]/20"
+                                : holidayEvent
+                                ? "text-red-600 font-extrabold"
                                 : isCurrentMonth
                                 ? "text-[#0F172A]"
                                 : "text-[#64748B]"
@@ -577,26 +673,36 @@ export default function JuniorCalendarView() {
                           </span>
                         </div>
 
+                        {holidayEvent && (
+                          <div className="flex flex-col items-center justify-center flex-1 py-2 text-center">
+                            <span className="text-[10px] md:text-xs font-extrabold text-red-600 leading-tight">
+                              {holidayEvent.title}
+                            </span>
+                          </div>
+                        )}
+
                         {/* Events list within cell */}
                         <div className="space-y-1 mt-2 overflow-y-auto max-h-[70px] custom-scrollbar">
-                          {dayEvents.map((evt) => (
-                            <div
-                              key={evt.id}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedEventId(evt.id);
-                                setShowViewModal(true);
-                              }}
-                              className={`px-2 py-1 text-[10px] md:text-xs rounded-lg border flex items-center justify-between font-medium cursor-pointer transition ${getTypeColor(
-                                evt.type
-                              )}`}
-                            >
-                              <span className="truncate pr-1">{evt.title}</span>
-                              <span className="text-[8px] opacity-75 shrink-0">
-                                {formatTime(evt.time)}
-                              </span>
-                            </div>
-                          ))}
+                          {dayEvents
+                            .filter((evt) => !evt.isHoliday)
+                            .map((evt) => (
+                              <div
+                                key={evt.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedEventId(evt.id);
+                                  setShowViewModal(true);
+                                }}
+                                className={`px-2 py-1 text-[10px] md:text-xs rounded-lg border flex items-center justify-between font-medium cursor-pointer transition ${getTypeColor(
+                                  evt.type
+                                )}`}
+                              >
+                                <span className="truncate pr-1">{evt.title}</span>
+                                <span className="text-[8px] opacity-75 shrink-0">
+                                  {formatTime(evt.time)}
+                                </span>
+                              </div>
+                            ))}
                         </div>
                       </div>
                     );
@@ -610,7 +716,8 @@ export default function JuniorCalendarView() {
                       const dateStr = getDateString(date);
                       const isToday = dateStr === getDateString(new Date());
                       const isSelected = dateStr === getDateString(selectedDate);
-                      const dayEvents = hearings.filter((e) => e.date === dateStr);
+                      const dayEvents = allEvents.filter((e) => e.date === dateStr);
+                      const holidayEvent = dayEvents.find((e) => e.isHoliday);
 
                       return (
                         <div
@@ -619,14 +726,20 @@ export default function JuniorCalendarView() {
                             setSelectedDate(date);
                             setSelectedEventId(dayEvents[0]?.id || null);
                           }}
-                          className={`h-14 flex flex-col items-center justify-center relative cursor-pointer ${
-                            isCurrentMonth ? "bg-white" : "bg-[#F8FAFC]/30"
-                          } ${isSelected ? "bg-blue-50/50 font-bold" : ""}`}
+                          className={`h-14 flex flex-col items-center justify-center relative cursor-pointer text-center ${
+                            holidayEvent
+                              ? "bg-red-50/70 border border-red-100 text-red-600"
+                              : isCurrentMonth
+                              ? "bg-white"
+                              : "bg-[#F8FAFC]/30"
+                          } ${isSelected ? "bg-blue-50/50 font-bold ring-1 ring-blue-500 ring-inset" : ""}`}
                         >
                           <span
-                            className={`w-7 h-7 flex items-center justify-center rounded-full text-xs ${
+                            className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold ${
                               isToday
                                 ? "bg-[#2563EB] text-white shadow-sm"
+                                : holidayEvent
+                                ? "text-red-600 font-extrabold"
                                 : isSelected
                                 ? "text-[#2563EB] border border-blue-600/50"
                                 : isCurrentMonth
@@ -638,24 +751,27 @@ export default function JuniorCalendarView() {
                           </span>
 
                           {/* Dots */}
-                          {dayEvents.length > 0 && (
+                          {dayEvents.filter((evt) => !evt.isHoliday).length > 0 && (
                             <div className="flex gap-0.5 mt-1">
-                              {dayEvents.slice(0, 3).map((evt) => (
-                                <span
-                                  key={evt.id}
-                                  className={`w-1 h-1 rounded-full ${
-                                    evt.type === "Civil"
-                                      ? "bg-blue-500"
-                                      : evt.type === "Criminal"
-                                      ? "bg-red-500"
-                                      : evt.type === "Corporate"
-                                      ? "bg-purple-500"
-                                      : evt.type === "Family"
-                                      ? "bg-emerald-500"
-                                      : "bg-amber-500"
-                                  }`}
-                                ></span>
-                              ))}
+                              {dayEvents
+                                .filter((evt) => !evt.isHoliday)
+                                .slice(0, 3)
+                                .map((evt) => (
+                                  <span
+                                    key={evt.id}
+                                    className={`w-1 h-1 rounded-full ${
+                                      evt.type === "Civil"
+                                        ? "bg-blue-500"
+                                        : evt.type === "Criminal"
+                                        ? "bg-red-500"
+                                        : evt.type === "Corporate"
+                                        ? "bg-purple-500"
+                                        : evt.type === "Family"
+                                        ? "bg-emerald-500"
+                                        : "bg-amber-500"
+                                    }`}
+                                  ></span>
+                                ))}
                             </div>
                           )}
                         </div>
@@ -669,13 +785,13 @@ export default function JuniorCalendarView() {
                       Agenda for {formatMonthDay(selectedDate)}
                     </h4>
 
-                    {hearings.filter((e) => e.date === getDateString(selectedDate)).length === 0 ? (
+                    {allEvents.filter((e) => e.date === getDateString(selectedDate)).length === 0 ? (
                       <p className="text-xs text-[#64748B] py-3 text-center bg-white rounded-2xl border border-[#E2E8F0]">
                         No events scheduled for this day.
                       </p>
                     ) : (
                       <div className="space-y-2">
-                        {hearings
+                        {allEvents
                           .filter((e) => e.date === getDateString(selectedDate))
                           .map((evt) => (
                             <div
@@ -693,6 +809,8 @@ export default function JuniorCalendarView() {
                                     ? "bg-purple-500"
                                     : evt.type === "Family"
                                     ? "bg-emerald-500"
+                                    : evt.type === "Holiday"
+                                    ? "bg-rose-500"
                                     : "bg-amber-500"
                                 }`}></span>
                                 <div className="min-w-0">
@@ -859,7 +977,7 @@ export default function JuniorCalendarView() {
                   const dateStr = getDateString(day);
                   const isToday = dateStr === getDateString(new Date());
                   const isSelected = dateStr === getDateString(selectedDate);
-                  const dayEvents = hearings.filter((e) => e.date === dateStr);
+                  const dayEvents = allEvents.filter((e) => e.date === dateStr);
 
                   return (
                     <div
@@ -938,7 +1056,7 @@ export default function JuniorCalendarView() {
                   const dateStr = getDateString(day);
                   const isToday = dateStr === getDateString(new Date());
                   const isSelected = dateStr === getDateString(selectedDate);
-                  const dayEvents = hearings.filter((e) => e.date === dateStr);
+                  const dayEvents = allEvents.filter((e) => e.date === dateStr);
 
                   return (
                     <div
