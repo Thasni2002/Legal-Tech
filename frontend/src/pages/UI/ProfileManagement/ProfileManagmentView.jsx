@@ -182,28 +182,30 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
   /* ── Render ── */
   return (
     <div className="w-full space-y-8 max-w-6xl mx-auto">
-      {/* Page Header */}
-      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-[#0F172A] font-extrabold text-3xl tracking-tight">
-            Edit Profile
-          </h1>
-          <p className="text-[#64748B] mt-2 font-medium">
-            Manage your personal and professional profile details
-          </p>
-        </div>
-        <button
-          type="submit"
-          form="profile-form"
-          className="px-8 py-3.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] shrink-0"
-        >
-          Save Profile
-        </button>
-      </div>
-
       <form id="profile-form" className="space-y-8" onSubmit={handleSubmit}>
         {/* Profile Photo Card */}
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-10 flex flex-col items-center">
+          {/* Header Action Row inside Card */}
+          <div className="w-full flex justify-between items-center mb-8 pb-6 border-b border-slate-100">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#E2E8F0] hover:bg-slate-50 text-[#64748B] hover:text-[#0F172A] text-sm font-semibold transition-all active:scale-[0.98] cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+              Back
+            </button>
+            <button
+              type="submit"
+              className="px-8 py-3.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] shrink-0 cursor-pointer"
+            >
+              Save Profile
+            </button>
+          </div>
+
           <div className="relative group">
             <img
               src={formData.profileImage || (user ? `https://ui-avatars.com/api/?name=${user.firstName || user.username}&background=2563EB&color=fff&rounded=true&bold=true&size=150` : "https://ui-avatars.com/api/?name=?&background=E2E8F0&color=64748B&rounded=true&bold=true&size=150")}

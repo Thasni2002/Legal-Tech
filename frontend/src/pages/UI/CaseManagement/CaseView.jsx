@@ -85,7 +85,7 @@ function StatCard({ label, value, color, bg }) {
   return (
     <div className={`${bg} rounded-2xl p-5 border`}>
       <p className="text-xs font-bold text-[#64748B] uppercase tracking-wide">{label}</p>
-      <p className={`text-3xl font-extrabold mt-2 ${color}`}>{value}</p>
+      <p className={`text-2xl sm:text-3xl lg:text-4xl font-extrabold mt-2 ${color}`}>{value}</p>
     </div>
   );
 }
@@ -96,6 +96,7 @@ export default function CaseView() {
 
   const [cases, setCases] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [casesPage, setCasesPage] = useState(0);
   const [showPasswordIdx, setShowPasswordIdx] = useState(null);
   const [selectedCase, setSelectedCase] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -117,11 +118,11 @@ export default function CaseView() {
       const rawCases = Array.isArray(data)
         ? data
         : Array.isArray(data.results)
-        ? data.results
-        : Array.isArray(data.data)
-        ? data.data
-        : [];
-      
+          ? data.results
+          : Array.isArray(data.data)
+            ? data.data
+            : [];
+
       // 2. Fetch assigned cases to get the live status from AssignedCasesView.jsx
       let assignedCases = [];
       try {
@@ -347,25 +348,25 @@ export default function CaseView() {
   }).length;
 
   return (
-    <div className="p-6 bg-[#F8FAFC] min-h-screen">
+    <div className="min-h-screen bg-[#F8FAFC] px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
 
       {/* ──── HEADER ──── */}
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-1">
+        <div className="flex items-center gap-3 flex-wrap mb-2">
           <div className="w-10 h-10 rounded-xl bg-[#2563EB] flex items-center justify-center">
             <Scale size={20} className="text-white" />
           </div>
-          <h1 className="text-[#0F172A] font-extrabold text-4xl leading-tight">
+          <h1 className="text-[#0F172A] font-extrabold text-2xl sm:text-3xl lg:text-4xl leading-tight break-words">
             Case Management
           </h1>
         </div>
-        <p className="text-[#64748B] text-lg ml-[52px]">
+        <p className="text-sm sm:text-base lg:text-lg text-[#64748B] ml-0 sm:ml-[52px]">
           Track legal cases, hearings and case progress
         </p>
       </div>
 
       {/* ──── STATS ──── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
         <StatCard label="Total Cases" value={totalCases} color="text-[#0F172A]" bg="bg-white border-[#E2E8F0]" />
         <StatCard label="Active" value={activeCases} color="text-emerald-600" bg="bg-emerald-50 border-emerald-100" />
         <StatCard label="Pending" value={pendingCases} color="text-amber-600" bg="bg-amber-50 border-amber-100" />
@@ -381,7 +382,7 @@ export default function CaseView() {
           <button
             key={card.title}
             onClick={() => router.push(card.path)}
-            className={`bg-gradient-to-br ${card.color} text-white rounded-2xl p-5 text-left hover:scale-[1.02] hover:shadow-lg transition-all duration-200 group`}
+            className={`bg-gradient-to-br ${card.color} text-white rounded-2xl p-4 sm:p-5 lg:p-6 text-left hover:scale-[1.02] hover:shadow-lg transition-all duration-200 group`}
           >
             <h3 className="font-bold text-sm mb-1">{card.title}</h3>
             <p className="text-white/75 text-xs">{card.desc}</p>
@@ -395,12 +396,12 @@ export default function CaseView() {
       {/* ──── CASES TABLE ──── */}
       <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden">
         {/* Table Header */}
-        <div className="p-6 border-b border-[#F1F5F9] flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div className="p-6 border-b border-[#F1F5F9] flex flex-col lg:flex-row justify-between lg:items-center gap-4">
           <div>
             <h2 className="font-bold text-xl text-[#0F172A]">My Cases</h2>
             <p className="text-sm text-[#64748B] mt-0.5">{filteredCases.length} case{filteredCases.length !== 1 ? "s" : ""} found</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
             {/* Search */}
             <div className="relative">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
@@ -408,14 +409,17 @@ export default function CaseView() {
                 type="text"
                 placeholder="Search cases..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="rounded-xl border border-[#E2E8F0] pl-9 pr-4 py-2.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition"
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCasesPage(0);
+                }}
+                className="rounded-xl border border-[#E2E8F0] pl-9 pr-4 py-2.5 text-sm w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition"
               />
             </div>
             {hasPermission("Case Management", "add") && (
               <button
                 onClick={() => router.push("/case-management/case-add")}
-                className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-sm transition"
+                className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-sm transition"
               >
                 <Plus size={16} />
                 Add Case
@@ -426,7 +430,7 @@ export default function CaseView() {
 
         {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="min-w-[900px] w-full">
             <thead>
               <tr className="bg-[#F8FAFC] border-b border-[#F1F5F9]">
                 {["Case Title", "Case ID", "Client", "Court", "Type", "Status", "Actions"].map((h) => (
@@ -438,7 +442,7 @@ export default function CaseView() {
             </thead>
             <tbody className="divide-y divide-[#F8FAFC]">
               {filteredCases.length > 0 ? (
-                filteredCases.map((item) => (
+                filteredCases.slice(casesPage * 5, (casesPage + 1) * 5).map((item) => (
                   <tr
                     key={item.id}
                     className="hover:bg-[#F8FAFC] transition-colors duration-150 group"
@@ -473,8 +477,8 @@ export default function CaseView() {
                           <Eye size={15} />
                         </button>
 
-                       
-                        
+
+
 
                         {/* Delete */}
                         {hasPermission("Case Management", "delete") && (
@@ -506,6 +510,29 @@ export default function CaseView() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {filteredCases.length > 5 && (
+          <div className="flex items-center justify-center gap-2 py-4 border-t border-[#F1F5F9] bg-[#F8FAFC]/50">
+            <span className="text-xs text-[#64748B] font-semibold">
+              Page {casesPage + 1} of {Math.ceil(filteredCases.length / 5)}
+            </span>
+            <button
+              onClick={() => setCasesPage(p => Math.max(0, p - 1))}
+              disabled={casesPage === 0}
+              className="flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+            >
+              &lt;
+            </button>
+            <button
+              onClick={() => setCasesPage(p => Math.min(Math.ceil(filteredCases.length / 5) - 1, p + 1))}
+              disabled={(casesPage + 1) * 5 >= filteredCases.length}
+              className="flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+            >
+              &gt;
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ══════════════════════════════════════════════
@@ -554,10 +581,9 @@ export default function CaseView() {
           />
 
           {/* Modal */}
-          <div className="relative bg-white rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10">
-
+          <div className="relative bg-white rounded-3xl w-full max-w-4xl mx-2 sm:mx-4 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10">
             {/* ── Modal Header ── */}
-            <div className="flex items-center justify-between p-6 border-b border-[#F1F5F9] bg-gradient-to-r from-[#2563EB] to-[#1d4ed8]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 border-b border-[#F1F5F9] bg-gradient-to-r from-[#2563EB] to-[#1d4ed8]">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
                   <Gavel size={20} className="text-white" />
@@ -571,7 +597,7 @@ export default function CaseView() {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap justify-end gap-2">
                 {/* Edit btn */}
                 {hasPermission("Case Management", "edit") && (
                   <button
@@ -606,34 +632,32 @@ export default function CaseView() {
             </div>
 
             {/* ── Tabs ── */}
-            <div className="flex items-center border-b border-[#F1F5F9] bg-[#F8FAFC]">
-              <div className="flex">
-                {["overview", "documents"].map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`px-6 py-3.5 text-sm font-bold capitalize transition-colors relative ${
-                      activeTab === tab
-                        ? "text-[#2563EB]"
-                        : "text-[#64748B] hover:text-[#0F172A]"
+            <div className="flex flex-col lg:flex-row lg:items-center gap-3 border-b border-[#F1F5F9] bg-[#F8FAFC] p-3">           
+                 <div className="flex overflow-x-auto no-scrollbar">
+              {["overview", "documents"].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-6 py-3.5 text-sm font-bold capitalize transition-colors relative ${activeTab === tab
+                    ? "text-[#2563EB]"
+                    : "text-[#64748B] hover:text-[#0F172A]"
                     }`}
-                  >
-                    {tab === "overview" ? "Case Overview" : "Case Documents"}
-                    {activeTab === tab && (
-                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2563EB] rounded-t-full" />
-                    )}
-                  </button>
-                ))}
-              </div>
+                >
+                  {tab === "overview" ? "Case Overview" : "Case Documents"}
+                  {activeTab === tab && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2563EB] rounded-t-full" />
+                  )}
+                </button>
+              ))}
+            </div>
               {/* Direct Assign Advocate button */}
-              <div className="ml-auto px-4">
+              <div className="lg:ml-auto w-full lg:w-auto">
                 <button
                   onClick={() => {
                     setIsModalOpen(false);
                     router.push(`/lawfirm-management/assign-advocate?directCaseId=${selectedCase.id}`);
                   }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
-                >
+className="w-full lg:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold"                >
                   <UserCheck size={14} />
                   Direct Assign Advocate
                 </button>
@@ -647,7 +671,7 @@ export default function CaseView() {
               {activeTab === "overview" && (
                 <div className="space-y-6">
                   {/* Status badge */}
-                  <div className="flex items-center gap-3">
+                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                     <StatusBadge status={selectedCase.status} />
                     <span className="text-xs text-[#94A3B8] font-medium">
                       {selectedCase.case_type} · {selectedCase.court_type}
@@ -669,7 +693,7 @@ export default function CaseView() {
                     </div>
                     <div className="bg-[#F8FAFC] rounded-2xl p-5 border border-[#F1F5F9] space-y-4 sm:col-span-2">
                       <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Client Information</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <InfoRow icon={<User size={14} />} label="Client Name" value={selectedCase.client_name} />
                         <InfoRow icon={<Phone size={14} />} label="Contact Number" value={selectedCase.contact_number} />
                         <InfoRow icon={<Mail size={14} />} label="Email Address" value={selectedCase.email_id} />
@@ -718,8 +742,8 @@ export default function CaseView() {
                     );
                   })()}
 
-                  
-                 
+
+
                 </div>
               )}
 
@@ -727,7 +751,7 @@ export default function CaseView() {
               {activeTab === "documents" && (
                 <div className="space-y-5">
                   {/* Case summary strip */}
-                  <div className="flex flex-wrap gap-3 pb-4 border-b border-[#F1F5F9]">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 pb-4 border-b border-[#F1F5F9]">
                     <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-2">
                       <p className="text-[10px] text-[#64748B] font-bold uppercase tracking-wide">Case Title</p>
                       <p className="text-sm font-bold text-[#0F172A] mt-0.5">{selectedCase.case_title}</p>
@@ -757,9 +781,9 @@ export default function CaseView() {
                       </div>
                     </div>
 
-                         {selectedCase.selected_advocate ? (
+                    {selectedCase.selected_advocate ? (
                       <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-xl p-3.5 flex items-center justify-between shadow-xs">
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-[#3B82F6] text-white flex items-center justify-center font-bold text-sm shadow-xs">
                             {selectedCase.selected_advocate.charAt(0).toUpperCase()}
                           </div>
@@ -900,28 +924,28 @@ export default function CaseView() {
                       </table>
                     </div>
                   ) : (
-                 
-                 <div className="rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-8 text-center">
-  <div className="w-14 h-14 rounded-2xl bg-white border border-[#E2E8F0] flex items-center justify-center mx-auto mb-4 shadow-sm">
-    <FileText size={24} className="text-[#94A3B8]" />
-  </div>
 
-  <h4 className="font-bold text-[#0F172A] text-sm mb-1">
-    No Documents Found
-  </h4>
+                    <div className="rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-8 text-center">
+                      <div className="w-14 h-14 rounded-2xl bg-white border border-[#E2E8F0] flex items-center justify-center mx-auto mb-4 shadow-sm">
+                        <FileText size={24} className="text-[#94A3B8]" />
+                      </div>
 
-  <p className="text-[#64748B] text-xs max-w-xs mx-auto">
-    This case has no uploaded documents.
-  </p>
-</div>
-                   
+                      <h4 className="font-bold text-[#0F172A] text-sm mb-1">
+                        No Documents Found
+                      </h4>
+
+                      <p className="text-[#64748B] text-xs max-w-xs mx-auto">
+                        This case has no uploaded documents.
+                      </p>
+                    </div>
+
                   )}
                 </div>
               )}
             </div>
 
             {/* ── Modal Footer ── */}
-            <div className="p-5 border-t border-[#F1F5F9] bg-[#F8FAFC] flex justify-between items-center">
+            <div className="p-5 border-t border-[#F1F5F9] bg-[#F8FAFC] flex flex-col sm:flex-row justify-between items-center gap-4">
               <div className="text-xs text-[#94A3B8] font-medium">
                 Case ID: <span className="font-mono text-[#64748B]">{selectedCase.case_id}</span>
               </div>

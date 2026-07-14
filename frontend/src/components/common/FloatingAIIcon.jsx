@@ -9,6 +9,7 @@ import { getLoggedInUser } from "@/utils/auth";
 export default function FloatingAIIcon() {
   const [isOpen, setIsOpen] = useState(false);
   const [isClientUser, setIsClientUser] = useState(false);
+  const [aiAssistantHref, setAiAssistantHref] = useState("/ai-assistant");
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -17,6 +18,25 @@ export default function FloatingAIIcon() {
       setIsClientUser(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      let href = "/ai-assistant";
+      try {
+        const data = localStorage.getItem("clientData");
+        if (data && typeof window !== "undefined" && window.location.pathname.includes("/client-management")) {
+          const client = JSON.parse(data);
+          const name = client.fullName || client.clientName;
+          if (name) {
+            href = `/ai-assistant?clientName=${encodeURIComponent(name.trim())}`;
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+      setAiAssistantHref(href);
+    }
+  }, [isOpen]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -55,7 +75,7 @@ export default function FloatingAIIcon() {
         </Link>
         
         <Link 
-          href="/ai-assistant" 
+          href={aiAssistantHref} 
           onClick={() => setIsOpen(false)}
           className="flex items-center gap-3 bg-white px-4 py-3 rounded-xl shadow-lg border border-[#E2E8F0] hover:bg-[#F8FAFC] hover:border-[#8B5CF6] transition-colors whitespace-nowrap group"
         >

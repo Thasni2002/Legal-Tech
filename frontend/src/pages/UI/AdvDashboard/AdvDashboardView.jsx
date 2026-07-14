@@ -36,6 +36,9 @@ export default function AdvDashboardView() {
     const [user, setUser] = useState(null);
     const [lastRefreshed, setLastRefreshed] = useState(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [casesPage, setCasesPage] = useState(0);
+    const [hearingsPage, setHearingsPage] = useState(0);
+    const [discussionsPage, setDiscussionsPage] = useState(0);
 
     const hour = new Date().getHours();
     let greeting = "";
@@ -66,9 +69,11 @@ export default function AdvDashboardView() {
 
             const advParam = loggedIn && loggedIn.id ? `?advocate_id=${loggedIn.id}` : "";
 
-            const [resUsers, resCases] = await Promise.all([
+            const [resUsers, resCases, resAssigned, resConsultations] = await Promise.all([
                 fetch(`${API_BASE_URL}/permissions/users`),
                 fetch(`${API_BASE_URL}/case-management/`),
+                fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases`),
+                fetch(`${API_BASE_URL}/consultations`),
             ]);
 
             if (!resUsers.ok || !resCases.ok) {
@@ -79,6 +84,24 @@ export default function AdvDashboardView() {
                 resUsers.json(),
                 resCases.json(),
             ]);
+
+            let assignedCases = [];
+            if (resAssigned && resAssigned.ok) {
+                try {
+                    assignedCases = await resAssigned.json();
+                } catch (e) {
+                    console.warn("Failed to parse assigned cases:", e);
+                }
+            }
+
+            let consultations = [];
+            if (resConsultations && resConsultations.ok) {
+                try {
+                    consultations = await resConsultations.json();
+                } catch (e) {
+                    console.warn("Failed to parse consultations:", e);
+                }
+            }
 
 
             // Documents — fetched separately so backend restart isn't required
@@ -112,11 +135,19 @@ export default function AdvDashboardView() {
                     const datePart = isIso ? c.next_hearing_date.split('T')[0] : c.next_hearing_date.split(' ')[0];
 
                     if (datePart >= todayStr) {
+                        // Find assigned advocate from lawfirm assignments
+                        const match = Array.isArray(assignedCases) ? assignedCases.find(ac => 
+                            (ac.case_number && ac.case_number === c.case_no) ||
+                            (ac.case_title && ac.case_title.trim().toLowerCase() === c.case_title.trim().toLowerCase())
+                        ) : null;
+
+                        const advocateName = match ? match.advocate_name : (c.selected_advocate || "");
+
                         extractedHearings.push({
                             date: datePart,
                             case_title: c.case_title,
                             court: c.court_name,
-                            advocate_name: c.selected_advocate || ""
+                            advocate_name: advocateName
                         });
                     }
                 }
@@ -127,7 +158,6 @@ export default function AdvDashboardView() {
             // 4. Case Overview list
             const casesList = [...cases]
                 .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
-                .slice(0, 5)
                 .map(c => ({
                     case_id: c.case_id,
                     client_name: c.client_name,
@@ -152,12 +182,39 @@ export default function AdvDashboardView() {
                     if (a.date !== b.date) return a.date.localeCompare(b.date);
                     return (a.time || "").localeCompare(b.time || "");
                 })
-                .slice(0, 5)
                 .map(h => ({
                     date: formatHearingDate(h.date),
                     case_title: h.case_title,
                     court: h.court,
                     advocate_name: h.advocate_name || "",
+                }));
+
+            // 6. Discussions list
+            const extractedDiscussions = [];
+            if (Array.isArray(consultations)) {
+                consultations.forEach(c => {
+                    const datePart = c.date ? c.date.split("T")[0] : "";
+                    if (datePart && datePart >= todayStr) {
+                        extractedDiscussions.push({
+                            id: c.id,
+                            client_name: c.client_name || "Unknown",
+                            issue: c.issue || "N/A",
+                            advocate_name: c.advocate_name || "N/A",
+                            date: datePart,
+                            time: c.time || "12:00 PM",
+                            status: c.status || "Scheduled",
+                            type: c.type || "Video Call",
+                            meeting_link: c.meeting_link || ""
+                        });
+                    }
+                });
+            }
+
+            const discussionsList = [...extractedDiscussions]
+                .sort((a, b) => a.date.localeCompare(b.date))
+                .map(d => ({
+                    ...d,
+                    date_formatted: formatHearingDate(d.date)
                 }));
 
             setData({
@@ -170,6 +227,7 @@ export default function AdvDashboardView() {
                 },
                 cases: casesList,
                 hearings: hearingsList,
+                discussions: discussionsList,
                 documents,
             });
 
@@ -254,11 +312,9 @@ export default function AdvDashboardView() {
     ];
 
     return (
-        <div className="w-full space-y-8 max-w-7xl mx-auto animate-in fade-in zoom-in-95 duration-500">
-
+<div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-6 lg:space-y-8 animate-in fade-in zoom-in-95 duration-500">
             {/* Page Header */}
-            <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
+<div className="bg-white rounded-3xl shadow-xl border border-[#E2E8F0] p-5 sm:p-6 lg:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6">                <div>
                     <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
                         {greeting}, {displayName}
                     </h1>
@@ -266,8 +322,7 @@ export default function AdvDashboardView() {
                         {displayRole}
                     </p>
                 </div>
-                <div className="flex flex-col items-end gap-3">
-                    <div className="text-left md:text-right bg-[#F8FAFC] px-6 py-4 rounded-2xl border border-[#E2E8F0]">
+                <div className="flex flex-col items-start lg:items-end gap-3 w-full lg:w-auto">                  <div className="text-left md:text-right bg-[#F8FAFC] px-6 py-4 rounded-2xl border border-[#E2E8F0]">
                         <p className="text-[#475569] font-bold text-sm uppercase tracking-wider">Today's Date</p>
                         <p className="text-[#0F172A] font-extrabold text-lg mt-1">{currentDate}</p>
                     </div>
@@ -275,7 +330,7 @@ export default function AdvDashboardView() {
                         {/* View Calendar button */}
                         <button
                             onClick={() => router.push("/calendar")}
-                            className="flex items-center gap-2 text-xs font-bold text-white bg-[#2563EB] hover:bg-[#1D4ED8] border border-transparent px-4 py-2.5 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer uppercase tracking-wider"
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 text-xs font-bold text-white bg-[#2563EB] hover:bg-[#1D4ED8] px-4 py-2.5 rounded-xl transition-all"
                         >
                             View Calendar
                         </button>
@@ -284,7 +339,7 @@ export default function AdvDashboardView() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
                 {stats.map((item, index) => {
                     const Icon = item.icon;
                     const colors = [
@@ -298,7 +353,7 @@ export default function AdvDashboardView() {
                     return (
                         <div
                             key={index}
-                            className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-6 md:p-8 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 cursor-pointer group"
+                            className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-5 sm:p-6 lg:p-8 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 cursor-pointer group"
                         >
                             <div className={`w-14 h-14 md:w-16 md:h-16 ${color.bg} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-sm border ${color.border}`}>
                                 <Icon className={`w-7 h-7 md:w-8 md:h-8 ${color.text}`} />
@@ -317,7 +372,7 @@ export default function AdvDashboardView() {
             </div>
 
             {/* Case Overview */}
-            <div className="grid grid-cols-12 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
 
                 <div className="col-span-12 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
                     <div className="flex justify-between items-center mb-8">
@@ -343,7 +398,7 @@ export default function AdvDashboardView() {
 
                             <tbody className="divide-y divide-[#E2E8F0] bg-white">
                                 {data && data.cases.length > 0 ? (
-                                    data.cases.map((c, index) => (
+                                    data.cases.slice(casesPage * 5, (casesPage + 1) * 5).map((c, index) => (
                                         <tr
                                             key={index}
                                             className="hover:bg-[#F8FAFC] transition-colors duration-150"
@@ -374,6 +429,29 @@ export default function AdvDashboardView() {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination Controls */}
+                    {data && data.cases.length > 5 && (
+                        <div className="flex items-center justify-center gap-2 mt-4">
+                            <span className="text-xs text-[#64748B] font-semibold">
+                                Page {casesPage + 1} of {Math.ceil(data.cases.length / 5)}
+                            </span>
+                            <button
+                                onClick={() => setCasesPage(p => Math.max(0, p - 1))}
+                                disabled={casesPage === 0}
+                                className="flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+                            >
+                                &lt;
+                            </button>
+                            <button
+                                onClick={() => setCasesPage(p => Math.min(Math.ceil(data.cases.length / 5) - 1, p + 1))}
+                                disabled={(casesPage + 1) * 5 >= data.cases.length}
+                                className="flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+                            >
+                                &gt;
+                            </button>
+                        </div>
+                    )}
                 </div>
 
 
@@ -402,7 +480,7 @@ export default function AdvDashboardView() {
 
                             <tbody className="divide-y divide-[#E2E8F0] bg-white">
                                 {data && data.hearings.length > 0 ? (
-                                    data.hearings.map((h, index) => (
+                                    data.hearings.slice(hearingsPage * 5, (hearingsPage + 1) * 5).map((h, index) => (
                                         <tr
                                             key={index}
                                             className="hover:bg-[#F8FAFC] transition-colors duration-150"
@@ -428,10 +506,33 @@ export default function AdvDashboardView() {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination Controls */}
+                    {data && data.hearings.length > 5 && (
+                        <div className="flex items-center justify-center gap-2 mt-4">
+                            <span className="text-xs text-[#64748B] font-semibold">
+                                Page {hearingsPage + 1} of {Math.ceil(data.hearings.length / 5)}
+                            </span>
+                            <button
+                                onClick={() => setHearingsPage(p => Math.max(0, p - 1))}
+                                disabled={hearingsPage === 0}
+                                className="flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+                            >
+                                &lt;
+                            </button>
+                            <button
+                                onClick={() => setHearingsPage(p => Math.min(Math.ceil(data.hearings.length / 5) - 1, p + 1))}
+                                disabled={(hearingsPage + 1) * 5 >= data.hearings.length}
+                                className="flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+                            >
+                                &gt;
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* ─── Recent Documents Panel ─── */}
-                <div className="col-span-12 lg:col-span-4 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
+                <div className="col-span-12 lg:col-span-4 lg:row-span-2 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
                     <div className="flex justify-between items-center mb-6">
                         <h2 className="text-2xl font-extrabold text-[#0F172A]">
                             Recent Documents
@@ -441,7 +542,7 @@ export default function AdvDashboardView() {
                         )}
                     </div>
 
-                    <div className="space-y-3 flex-1 overflow-y-auto max-h-[480px]">
+                    <div className="space-y-3 flex-1 overflow-y-auto max-h-[350px] lg:max-h-[480px]">
                         {data && data.documents.length > 0 ? (
                             data.documents.map((doc, index) => {
                                 const roleBadgeClass = ROLE_BADGE[doc.uploaded_by_role] || "bg-slate-100 text-slate-600";
@@ -482,7 +583,7 @@ export default function AdvDashboardView() {
 
                                                     router.push("/client-management/view-history");
                                                 }}
-                                                className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-[#2563EB] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full hover:bg-blue-100 transition-colors opacity-0 group-hover:opacity-100"
+                                                className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-[#2563EB] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full hover:bg-blue-100 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
                                             >
                                                 View Case
                                             </button>
@@ -529,7 +630,7 @@ export default function AdvDashboardView() {
                             })
                         ) : (
                             <div className="text-center p-8 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">
-                                <FileText className="w-8 h-8 text-[#CBD5E1] mx-auto mb-2" />
+                                <FileText className="w-10 h-10 text-[#CBD5E1] mx-auto mb-2" />
                                 <p className="text-sm font-medium text-[#64748B]">No documents uploaded yet.</p>
                                 <p className="text-xs text-[#94A3B8] mt-1">Documents uploaded via cases will appear here.</p>
                             </div>
@@ -541,6 +642,126 @@ export default function AdvDashboardView() {
                         <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
                         <p className="text-[10px] font-medium text-[#94A3B8]">Auto-refreshes every 30 seconds</p>
                     </div>
+                </div>
+
+                {/* ─── Upcoming Case Discussions ─── */}
+                <div className="col-span-12 lg:col-span-8 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
+                    <div className="flex justify-between items-center mb-8">
+                        <h2 className="text-2xl font-extrabold text-[#0F172A]">
+                            Upcoming Case Discussions
+                        </h2>
+                        <button
+                            onClick={() => router.push("/consultations")}
+                            className="flex items-center gap-1 text-sm font-bold text-[#2563EB] hover:text-[#1D4ED8] hover:underline bg-transparent border-0 p-0 cursor-pointer transition-colors"
+                        >
+                            <span>Go to</span>
+                            <span>→</span>
+                        </button>
+                    </div>
+
+                    <div className="w-full overflow-x-auto rounded-2xl border border-[#E2E8F0]">
+                        <table className="min-w-full divide-y divide-[#E2E8F0]">
+                            <thead className="bg-[#F8FAFC]">
+                                <tr>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type / Link</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                                </tr>
+                            </thead>
+
+                            <tbody className="divide-y divide-[#E2E8F0] bg-white">
+                                {data && data.discussions && data.discussions.length > 0 ? (
+                                    data.discussions.slice(discussionsPage * 5, (discussionsPage + 1) * 5).map((d, index) => (
+                                        <tr
+                                            key={d.id || index}
+                                            className="hover:bg-[#F8FAFC] transition-colors duration-150"
+                                        >
+                                            <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">
+                                                <div className="bg-[#F1F5F9] px-3 py-1.5 rounded-lg inline-block text-center border border-[#E2E8F0]">
+                                                    {d.date_formatted}
+                                                </div>
+                                            </td>
+                                            <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-semibold">{d.client_name}</td>
+                                            <td className="p-4 text-sm font-bold text-[#2563EB] whitespace-nowrap">
+                                                {d.time}
+                                            </td>
+                                            <td className="p-4 text-sm whitespace-nowrap">
+                                                {d.type.toLowerCase().includes("video") ? (
+                                                    d.meeting_link ? (
+                                                        <a 
+                                                            href={d.meeting_link.startsWith("http") ? d.meeting_link : `https://${d.meeting_link}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition"
+                                                        >
+                                                            🎥 Video (Join Meet)
+                                                        </a>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50/50 border border-emerald-100">
+                                                            🎥 Video Call
+                                                        </span>
+                                                    )
+                                                ) : d.type.toLowerCase().includes("chat") ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200">
+                                                        💬 Chat
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-purple-700 bg-purple-50 border border-purple-200">
+                                                        🤝 Person to Person
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="p-4 text-sm whitespace-nowrap">
+                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider ${
+                                                    d.status.toLowerCase() === "approved" || d.status.toLowerCase() === "completed" || d.status.toLowerCase() === "scheduled"
+                                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                                        : d.status.toLowerCase() === "rescheduled"
+                                                            ? "bg-amber-50 text-amber-700 border-amber-200"
+                                                            : d.status.toLowerCase() === "pending"
+                                                                ? "bg-slate-50 text-slate-700 border-slate-200"
+                                                                : "bg-blue-50 text-blue-700 border-blue-200"
+                                                }`}>
+                                                    {d.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="5" className="p-8 text-center text-sm font-medium text-[#64748B]">
+                                            No upcoming case discussions found.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Pagination Controls */}
+                    {data && data.discussions && data.discussions.length > 5 && (
+                        <div className="flex items-center justify-center gap-2 mt-4">
+                            <span className="text-xs text-[#64748B] font-semibold">
+                                Page {discussionsPage + 1} of {Math.ceil(data.discussions.length / 5)}
+                            </span>
+                            <button
+                                onClick={() => setDiscussionsPage(p => Math.max(0, p - 1))}
+                                disabled={discussionsPage === 0}
+                                className="flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+                            >
+                                &lt;
+                            </button>
+                            <button
+                                onClick={() => setDiscussionsPage(p => Math.min(Math.ceil(data.discussions.length / 5) - 1, p + 1))}
+                                disabled={(discussionsPage + 1) * 5 >= data.discussions.length}
+                                className="flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+                            >
+                                &gt;
+                            </button>
+                        </div>
+                    )}
                 </div>
 
             </div>

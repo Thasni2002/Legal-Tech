@@ -5,7 +5,7 @@ import { API_BASE_URL } from "@/utils/api";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Trash2 } from "lucide-react";
+import { Trash2, ArrowLeft } from "lucide-react";
 
 export default function AssignAdv({ isOpen, onClose }) {
 
@@ -257,13 +257,20 @@ export default function AssignAdv({ isOpen, onClose }) {
       <div className="bg-white w-full max-w-4xl mx-auto rounded-3xl shadow-xl shadow-slate-200/60 border border-[#E2E8F0]">
 
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#F1F5F9] px-8 py-6 sticky top-0 bg-white/95 backdrop-blur z-10">
-          <h2 className="text-2xl font-extrabold text-[#0F172A]">
+        <div className="flex items-center gap-4 border-b border-[#F1F5F9] px-8 py-6 sticky top-0 bg-white/95 backdrop-blur z-10">
+          <button
+            type="button"
+            onClick={onClose || (() => router.back())}
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-[#F8FAFC] text-[#64748B] hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <h2 className="text-2xl font-extrabold text-[#0F172A] flex-1">
             {caseId ? "Update Assigned Case" : "Assign Case to Advocate"}
           </h2>
           <button
             onClick={onClose || (() => router.back())}
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-[#F8FAFC] text-[#64748B] hover:bg-rose-100 hover:text-rose-600 transition-colors"
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-[#F8FAFC] text-[#64748B] hover:bg-rose-100 hover:text-rose-600 transition-colors cursor-pointer"
           >
             <span className="text-xl font-bold">✕</span>
           </button>

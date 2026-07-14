@@ -26,7 +26,8 @@ export default function LawfirmView() {
   const [assignedCases, setAssignedCases] = useState([]);
   const [caseSearch, setCaseSearch] = useState("");
   const [caseFilter, setCaseFilter] = useState("All");
-  const [selectedCaseId, setSelectedCaseId] = useState(null);
+  const [advocatesPage, setAdvocatesPage] = useState(0);
+  const [casesPage, setCasesPage] = useState(0);
 
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -160,6 +161,21 @@ export default function LawfirmView() {
     return matchesSearch && matchesFilter;
   });
 
+  const filteredAssignedCases = assignedCases.filter((item) => {
+    const matchesSearch =
+      item.case_title
+        ?.toLowerCase()
+        .includes(caseSearch.toLowerCase()) ||
+      item.case_number
+        ?.toLowerCase()
+        .includes(caseSearch.toLowerCase());
+
+    const matchesFilter =
+      caseFilter === "All" || item.priority === caseFilter;
+
+    return matchesSearch && matchesFilter;
+  });
+
   return (
     <div className="w-full space-y-8 max-w-7xl mx-auto">
       {/* Header */}
@@ -266,14 +282,20 @@ export default function LawfirmView() {
                 placeholder="Search advocate..."
                 className="w-full ml-3 bg-transparent outline-none text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setAdvocatesPage(0);
+                }}
               />
             </div>
 
             <select
               className="border border-[#E2E8F0] rounded-full px-6 py-3 text-sm bg-[#F8FAFC] text-[#0F172A] font-medium outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
               value={filter}
-              onChange={(e) => setFilter(e.target.value)}
+              onChange={(e) => {
+                setFilter(e.target.value);
+                setAdvocatesPage(0);
+              }}
             >
               <option value="All">All Statuses</option>
               <option value="Active">Active</option>
@@ -283,119 +305,144 @@ export default function LawfirmView() {
 
           {/* Table */}
           {filteredAdvocates.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-                  <tr>
-                    <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                      Profile
-                    </th>
-                    <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                      Name
-                    </th>
-                    <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                      Specialization
-                    </th>
-                    <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                      Phone
-                    </th>
-                    <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                      City
-                    </th>
-                    <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                      Status
-                    </th>
-                    <th className="px-8 py-5 text-center text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-[#F1F5F9]">
-                  {filteredAdvocates.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-slate-50/50 transition duration-200 group"
-                    >
-                      {/* Profile */}
-                      <td className="px-8 py-5">
-                        <img
-                          src={
-                            item.profileImage?.trim()
-                              ? item.profileImage
-                              : `https://ui-avatars.com/api/?name=${item.advocateName || 'Advocate'}&background=E2E8F0&color=64748B&rounded=true&bold=true`
-                          }
-                          alt={item.advocateName || "Advocate"}
-                          className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm ring-1 ring-[#E2E8F0] group-hover:ring-[#CBD5E1] transition-all"
-                        />
-                      </td>
-
-                      {/* Name */}
-                      <td className="px-8 py-5">
-                        <div>
-                          <p className="font-bold text-[#0F172A] text-sm">
-                            {item.advocateName}
-                          </p>
-                          <p className="text-xs text-[#64748B] mt-1 font-medium">
-                            {item.emailAddress || item.email || "No Email"}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5 text-sm font-medium text-[#475569]">
-                        {item.specialization || "-"}
-                      </td>
-
-                      <td className="px-8 py-5 text-sm font-medium text-[#475569]">
-                        {item.phoneNumber || "-"}
-                      </td>
-
-                      <td className="px-8 py-5 text-sm font-medium text-[#475569]">
-                        {item.city || "-"}
-                      </td>
-
-                      {/* Status */}
-                      {/* Status */}
-                      <td className="px-8 py-5">
-                        <span
-                          className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${item.status === "Active" || !item.status
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
-                            }`}
-                        >
-                          {item.status || "Active"}
-                        </span>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-8 py-5">
-                        <div className="flex justify-center gap-2">
-                          <button
-                            onClick={() =>
-                              router.push(`/lawfirm-management/view?id=${item.id}`)
-                            }
-                            className="w-9 h-9 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-blue-100 hover:text-blue-600 flex items-center justify-center transition-colors"
-                          >
-                            <Eye size={16} />
-                          </button>
-
-                          {hasPermission("Law Firm Management", "delete") && (
-                            <button
-                              onClick={() => {
-                                setDeleteType("advocate");
-                                setDeleteId(item.id);
-                                setShowDeleteModal(true);
-                              }} className="w-9 h-9 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
+                    <tr>
+                      <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                        Profile
+                      </th>
+                      <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                        Name
+                      </th>
+                      <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                        Specialization
+                      </th>
+                      <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                        Phone
+                      </th>
+                      <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                        City
+                      </th>
+                      <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                        Status
+                      </th>
+                      <th className="px-8 py-5 text-center text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                        Actions
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+
+                  <tbody className="divide-y divide-[#F1F5F9]">
+                    {filteredAdvocates.slice(advocatesPage * 5, (advocatesPage + 1) * 5).map((item) => (
+                      <tr
+                        key={item.id}
+                        className="hover:bg-slate-50/50 transition duration-200 group"
+                      >
+                        {/* Profile */}
+                        <td className="px-8 py-5">
+                          <img
+                            src={
+                              item.profileImage?.trim()
+                                ? item.profileImage
+                                : `https://ui-avatars.com/api/?name=${item.advocateName || 'Advocate'}&background=E2E8F0&color=64748B&rounded=true&bold=true`
+                            }
+                            alt={item.advocateName || "Advocate"}
+                            className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm ring-1 ring-[#E2E8F0] group-hover:ring-[#CBD5E1] transition-all"
+                          />
+                        </td>
+
+                        {/* Name */}
+                        <td className="px-8 py-5">
+                          <div>
+                            <p className="font-bold text-[#0F172A] text-sm">
+                              {item.advocateName}
+                            </p>
+                            <p className="text-xs text-[#64748B] mt-1 font-medium">
+                              {item.emailAddress || item.email || "No Email"}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="px-8 py-5 text-sm font-medium text-[#475569]">
+                          {item.specialization || "-"}
+                        </td>
+
+                        <td className="px-8 py-5 text-sm font-medium text-[#475569]">
+                          {item.phoneNumber || "-"}
+                        </td>
+
+                        <td className="px-8 py-5 text-sm font-medium text-[#475569]">
+                          {item.city || "-"}
+                        </td>
+
+                        {/* Status */}
+                        {/* Status */}
+                        <td className="px-8 py-5">
+                          <span
+                            className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${item.status === "Active" || !item.status
+                              ? "bg-green-100 text-green-700"
+                              : "bg-red-100 text-red-700"
+                              }`}
+                          >
+                            {item.status || "Active"}
+                          </span>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-8 py-5">
+                          <div className="flex justify-center gap-2">
+                            <button
+                              onClick={() =>
+                                router.push(`/lawfirm-management/view?id=${item.id}`)
+                              }
+                              className="w-9 h-9 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-blue-100 hover:text-blue-600 flex items-center justify-center transition-colors"
+                            >
+                              <Eye size={16} />
+                            </button>
+
+                            {hasPermission("Law Firm Management", "delete") && (
+                              <button
+                                onClick={() => {
+                                  setDeleteType("advocate");
+                                  setDeleteId(item.id);
+                                  setShowDeleteModal(true);
+                                }} className="w-9 h-9 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination Controls */}
+              {filteredAdvocates.length > 5 && (
+                <div className="flex items-center justify-center gap-2 py-4 border-t border-[#E2E8F0] bg-[#F8FAFC]/50">
+                  <span className="text-xs text-[#64748B] font-semibold">
+                    Page {advocatesPage + 1} of {Math.ceil(filteredAdvocates.length / 5)}
+                  </span>
+                  <button
+                    onClick={() => setAdvocatesPage(p => Math.max(0, p - 1))}
+                    disabled={advocatesPage === 0}
+                    className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+                  >
+                    &lt;
+                  </button>
+                  <button
+                    onClick={() => setAdvocatesPage(p => Math.min(Math.ceil(filteredAdvocates.length / 5) - 1, p + 1))}
+                    disabled={(advocatesPage + 1) * 5 >= filteredAdvocates.length}
+                    className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+                  >
+                    &gt;
+                  </button>
+                </div>
+              )}
+            </>
           ) : (
             <div className="p-12 text-center flex flex-col items-center">
               <div className="w-16 h-16 bg-[#F8FAFC] rounded-full flex items-center justify-center mb-4 border border-[#E2E8F0]">
@@ -425,7 +472,10 @@ export default function LawfirmView() {
                 placeholder="Search case..."
                 className="w-full ml-3 bg-transparent outline-none text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
                 value={caseSearch}
-                onChange={(e) => setCaseSearch(e.target.value)}
+                onChange={(e) => {
+                  setCaseSearch(e.target.value);
+                  setCasesPage(0);
+                }}
               />
             </div>
 
@@ -433,7 +483,10 @@ export default function LawfirmView() {
             <select
               className="border border-[#E2E8F0] rounded-full px-6 py-3 text-sm bg-[#F8FAFC] text-[#0F172A] font-medium outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
               value={caseFilter}
-              onChange={(e) => setCaseFilter(e.target.value)}
+              onChange={(e) => {
+                setCaseFilter(e.target.value);
+                setCasesPage(0);
+              }}
             >
               <option value="All">All Priority</option>
               <option value="High">High</option>
@@ -472,21 +525,8 @@ export default function LawfirmView() {
               </thead>
 
               <tbody className="divide-y divide-[#F1F5F9]">
-                {assignedCases
-                  .filter((item) => {
-                    const matchesSearch =
-                      item.case_title
-                        ?.toLowerCase()
-                        .includes(caseSearch.toLowerCase()) ||
-                      item.case_number
-                        ?.toLowerCase()
-                        .includes(caseSearch.toLowerCase());
-
-                    const matchesFilter =
-                      caseFilter === "All" || item.priority === caseFilter;
-
-                    return matchesSearch && matchesFilter;
-                  })
+                {filteredAssignedCases
+                  .slice(casesPage * 5, (casesPage + 1) * 5)
                   .map((item) => (
                     <tr
                       key={item.id}
@@ -551,6 +591,29 @@ export default function LawfirmView() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {filteredAssignedCases.length > 5 && (
+            <div className="flex items-center justify-center gap-2 py-4 border-t border-[#E2E8F0] bg-[#F8FAFC]/50">
+              <span className="text-xs text-[#64748B] font-semibold">
+                Page {casesPage + 1} of {Math.ceil(filteredAssignedCases.length / 5)}
+              </span>
+              <button
+                onClick={() => setCasesPage(p => Math.max(0, p - 1))}
+                disabled={casesPage === 0}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+              >
+                &lt;
+              </button>
+              <button
+                onClick={() => setCasesPage(p => Math.min(Math.ceil(filteredAssignedCases.length / 5) - 1, p + 1))}
+                disabled={(casesPage + 1) * 5 >= filteredAssignedCases.length}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+              >
+                &gt;
+              </button>
+            </div>
+          )}
         </div>
       )}
       {showDeleteModal &&  createPortal(

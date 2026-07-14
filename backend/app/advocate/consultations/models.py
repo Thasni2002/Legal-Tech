@@ -12,9 +12,7 @@ class Consultation(Base):
     client_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     client_name = Column(String(150), nullable=False)
 
-    # Advocate info (linked to User model representing advocate)
-    advocate_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    advocate_name = Column(String(150), nullable=True)
+  
 
     # Schedule details
     date = Column(Date, nullable=False)
@@ -41,4 +39,3 @@ class Consultation(Base):
 
     # Relationships
     client = relationship("User", foreign_keys=[client_id])
-    advocate = relationship("User", foreign_keys=[advocate_id])

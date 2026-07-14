@@ -77,6 +77,7 @@ const SENIOR_JUNIOR_MODULES = [
       { key: "Client Dashboard", label: "Dashboard (Client)" },
       { key: "Consultation", label: "Case Discussion (Client)" },
       { key: "Case Tracking", label: "Case Tracking" },
+      { key: "Client Document Generate", label: "Document Format Generate" },
       { key: "Documents", label: "Documents" },
       { key: "Payments", label: "Payments" }
     ]
@@ -99,6 +100,7 @@ const CLIENT_MODULES = [
       { key: "Client Dashboard", label: "Dashboard (Client)" },
       { key: "Consultation", label: "Case Discussion (Client)" },
       { key: "Case Tracking", label: "Case Tracking" },
+      { key: "Client Document Generate", label: "Document Format Generate" },
       { key: "Documents", label: "Documents" },
       { key: "Payments", label: "Payments" }
     ]

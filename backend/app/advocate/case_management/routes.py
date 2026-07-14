@@ -133,7 +133,7 @@ def ai_assistant_endpoint(
     db: Session = Depends(get_db)
 ):
     from .service import ask_ai_assistant
-    return ask_ai_assistant(db, request.query, request.role, request.advocateName)
+    return ask_ai_assistant(db, request.query, request.role, request.advocateName, request.clientName)
 
 
 @router.get("/document-formats")

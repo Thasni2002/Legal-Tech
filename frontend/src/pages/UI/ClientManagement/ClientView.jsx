@@ -45,6 +45,7 @@ export default function ClientView() {
   const router = useRouter();
   const { hasPermission } = usePermissions();
   const [clients, setClients] = useState([]);
+  const [clientsPage, setClientsPage] = useState(0);
   const [showEditModal, setShowEditModal] = useState(false);
   const [metrics, setMetrics] = useState({
     totalClients: 0,
@@ -52,10 +53,7 @@ export default function ClientView() {
     totalCases: 0,
     pendingClients: 0,
   });
-  const [selectedClientHistory, setSelectedClientHistory] = useState(null);
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [historyItems, setHistoryItems] = useState([]);
-  const [activeTab, setActiveTab] = useState("all");
+  // History modal state removed, redirected to history page
   const [deleteModal, setDeleteModal] = useState({
     show: false,
     type: "", // "warning", "confirm", "success", "error"
@@ -65,173 +63,7 @@ export default function ClientView() {
     clientName: ""
   });
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "";
-    try {
-      const options = { year: "numeric", month: "short", day: "numeric" };
-      return new Date(dateString).toLocaleDateString("en-IN", options);
-    } catch (e) {
-      return dateString;
-    }
-  };
-
-  const formatTime = (timeString) => {
-    if (!timeString) return "";
-    try {
-      const [hour, minute] = timeString.split(":");
-      const h = parseInt(hour, 10);
-      const ampm = h >= 12 ? "PM" : "AM";
-      const displayHour = h % 12 || 12;
-      return `${displayHour}:${minute} ${ampm}`;
-    } catch (e) {
-      return timeString;
-    }
-  };
-
-  const getTypeConfig = (type) => {
-    switch (type) {
-      case "case":
-        return {
-          bg: "bg-blue-50 border-blue-100",
-          iconBg: "bg-blue-600 text-white",
-          badgeBg: "bg-blue-100 text-blue-700",
-          icon: <Briefcase size={14} />,
-          label: "Case Update",
-        };
-      case "document":
-        return {
-          bg: "bg-amber-50 border-amber-100",
-          iconBg: "bg-amber-500 text-white",
-          badgeBg: "bg-amber-100 text-amber-700",
-          icon: <FileText size={14} />,
-          label: "Document Upload",
-        };
-      case "payment":
-        return {
-          bg: "bg-emerald-50 border-emerald-100",
-          iconBg: "bg-emerald-600 text-white",
-          badgeBg: "bg-emerald-100 text-emerald-700",
-          icon: <span className="font-bold text-xs">₹</span>,
-          label: "Payment Received",
-        };
-      default:
-        return {
-          bg: "bg-slate-50 border-slate-100",
-          iconBg: "bg-slate-500 text-white",
-          badgeBg: "bg-slate-100 text-slate-700",
-          icon: <Clock size={14} />,
-          label: "Activity",
-        };
-    }
-  };
-
-  useEffect(() => {
-    if (!selectedClientHistory) {
-      setHistoryItems([]);
-      return;
-    }
-
-    const targetName = selectedClientHistory.clientName.trim().toLowerCase();
-
-    const fetchCases = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/case-management/`);
-        if (res.ok) {
-          const data = await res.json();
-          const matched = data.filter(item => {
-            const itemClientName = (item.client_name || "").trim().toLowerCase();
-            return itemClientName === targetName || targetName.includes(itemClientName) || itemClientName.includes(targetName);
-          });
-          const mapped = matched.map(item => ({
-            id: `db-case-${item.id}`,
-            type: "case",
-            title: "Case Created / Updated",
-            desc: `Case '${item.case_title || item.case_no}' under court '${item.court_name}' is currently '${item.status}'.`,
-            documents: item.documents || [],
-            date: item.created_at ? item.created_at.replace(" ", "T").split("T")[0] : new Date().toISOString().split("T")[0],
-            time: item.created_at ? (item.created_at.replace(" ", "T").split("T")[1] || "10:00").substring(0, 5) : "10:00",
-            badge: item.status || "Active",
-          }));
-          setHistoryItems(prev => {
-            const nonDb = prev.filter(i => !i.id.startsWith("db-case-"));
-            return [...mapped, ...nonDb];
-          });
-
-          // Extract documents from matched cases and map as document history items
-          const docItems = [];
-          matched.forEach(item => {
-            const docs = Array.isArray(item.documents) ? item.documents : [];
-            docs.forEach((doc, idx) => {
-              if (!doc.file && !doc.url) return; // skip empty entries
-              docItems.push({
-                id: `db-doc-${item.id}-${idx}`,
-                type: "document",
-                title: doc.documentType || "Document Uploaded",
-                fileName: doc.file || "File",
-                caseName: item.case_title || item.case_no,
-                courtName: item.court_name,
-                desc: `Document '${doc.file || doc.url || "File"}' uploaded for case '${item.case_title || item.case_no}' (${item.court_name}).`,
-                date: item.created_at ? item.created_at.replace(" ", "T").split("T")[0] : new Date().toISOString().split("T")[0],
-                time: item.created_at ? (item.created_at.replace(" ", "T").split("T")[1] || "10:00").substring(0, 5) : "10:00",
-                badge: doc.documentType || "Document",
-                fileUrl: doc.url || null,
-              });
-            });
-          });
-          setHistoryItems(prev => {
-            const nonDoc = prev.filter(i => !i.id.startsWith("db-doc-"));
-            return [...docItems, ...nonDoc];
-          });
-        }
-      } catch (err) {
-        console.error("Failed to fetch cases in modal:", err);
-      }
-    };
-
-    const fetchInvoices = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/finance/invoices`);
-        if (res.ok) {
-          const data = await res.json();
-          const matched = data.filter(item => {
-            const itemClientName = (item.client_name || "").trim().toLowerCase();
-            return itemClientName === targetName || targetName.includes(itemClientName) || itemClientName.includes(targetName);
-          });
-          const mapped = matched.map(item => ({
-            id: `db-payment-${item.id}`,
-            type: "payment",
-            title: `₹${(item.grand_total || item.subtotal || 0).toLocaleString("en-IN")} — ${item.status === 'Paid' ? 'Received' : item.status || 'Pending'}`,
-            desc: `Invoice for ${item.client_name || "Client"} | Case: ${item.case_number || "N/A"} | Method: ${item.payment_method || "N/A"}.`,
-            date: item.created_at ? item.created_at.replace(" ", "T").split("T")[0] : new Date().toISOString().split("T")[0],
-            time: item.created_at ? (item.created_at.replace(" ", "T").split("T")[1] || "12:00").substring(0, 5) : "12:00",
-            badge: item.status || "Pending",
-            invoiceData: item,
-          }));
-          setHistoryItems(prev => {
-            const nonDb = prev.filter(i => !i.id.startsWith("db-payment-"));
-            return [...mapped, ...nonDb];
-          });
-        }
-      } catch (err) {
-        console.error("Failed to fetch invoices in modal:", err);
-      }
-    };
-
-    let manualLogs = [];
-    const historyKey = `clientHistory_${selectedClientHistory.clientId}`;
-    const savedHistory = localStorage.getItem(historyKey);
-    if (savedHistory) {
-      try {
-        manualLogs = JSON.parse(savedHistory).filter(item => item.id.length > 5 && !item.id.startsWith("db-"));
-      } catch (err) {
-        console.error("Failed to parse manual logs in modal:", err);
-      }
-    }
-
-    setHistoryItems(manualLogs);
-    fetchCases();
-    fetchInvoices();
-  }, [selectedClientHistory]);
+  // History loader logic removed as it is now loaded on the view-history page
   const fetchClients = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/case-management/`);
@@ -412,11 +244,12 @@ export default function ClientView() {
         </div>
 
         {clients.length > 0 ? (
-          <div className="overflow-x-auto rounded-xl">
+          <>
+            <div className="overflow-x-auto rounded-xl">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/70">
-                  <th className="py-4 px-4">Client ID</th>
+
                   <th className="py-4 px-3">Client Profile</th>
                   <th className="py-4 px-3">Contact Details</th>
                   <th className="py-4 px-3">Court Room</th>
@@ -426,7 +259,7 @@ export default function ClientView() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {clients.map((client) => {
+                {clients.slice(clientsPage * 5, (clientsPage + 1) * 5).map((client) => {
                   const initials = client.clientName ? client.clientName.charAt(0).toUpperCase() : "?";
                   const statusLower = (client.status || "").toLowerCase();
                   const isActive = statusLower === "active" || statusLower === "progress";
@@ -438,9 +271,7 @@ export default function ClientView() {
                       key={client.clientId}
                       className="group hover:bg-slate-50/50 transition-colors"
                     >
-                      <td className="py-4 px-4 text-xs font-mono font-semibold text-slate-500">
-                        {client.clientId}
-                      </td>
+
                       <td className="py-4 px-3">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center font-bold text-sm select-none shadow-sm shadow-indigo-200">
@@ -515,8 +346,18 @@ export default function ClientView() {
                         <div className="flex gap-2 justify-end">
                           <button
                             onClick={() => {
-                              setSelectedClientHistory(client);
-                              setShowHistoryModal(true);
+                              localStorage.setItem("clientData", JSON.stringify({
+                                clientId: client.clientId,
+                                fullName: client.clientName,
+                                clientName: client.clientName,
+                                email: client.emailId,
+                                emailId: client.emailId,
+                                phone: client.contactNumber,
+                                contactNumber: client.contactNumber,
+                                caseStatus: client.status,
+                                status: client.status,
+                              }));
+                              router.push("/client-management/view-history");
                             }}
                             title="View History"
                             className="p-1.5 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-lg cursor-pointer transition shadow-xs border border-slate-200/30 flex items-center gap-1 text-[11px] font-bold"
@@ -560,6 +401,30 @@ export default function ClientView() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {clients.length > 5 && (
+            <div className="flex items-center justify-center gap-2 py-4 border-t border-slate-100 bg-slate-50/30">
+              <span className="text-xs text-[#64748B] font-semibold">
+                Page {clientsPage + 1} of {Math.ceil(clients.length / 5)}
+              </span>
+              <button
+                onClick={() => setClientsPage(p => Math.max(0, p - 1))}
+                disabled={clientsPage === 0}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+              >
+                &lt;
+              </button>
+              <button
+                onClick={() => setClientsPage(p => Math.min(Math.ceil(clients.length / 5) - 1, p + 1))}
+                disabled={(clientsPage + 1) * 5 >= clients.length}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
+              >
+                &gt;
+              </button>
+            </div>
+          )}
+        </>
         ) : (
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-[#F1F5F9] text-[#64748B] rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-150 shadow-inner">
@@ -575,22 +440,7 @@ export default function ClientView() {
         )}
       </div>
 
-      {/* History Modal */}
-      {showHistoryModal && selectedClientHistory && (
-        <HistoryModal
-          client={selectedClientHistory}
-          onClose={() => {
-            setShowHistoryModal(false);
-            setSelectedClientHistory(null);
-          }}
-          historyItems={historyItems}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          formatDate={formatDate}
-          formatTime={formatTime}
-          getTypeConfig={getTypeConfig}
-        />
-      )}
+      {/* History modal is now rendered on its dedicated page */}
 
       {/* Edit Modal */}
       {showEditModal && createPortal(
@@ -767,386 +617,4 @@ function RedesignedCard({ title, desc, btnText, bgClass, textClass, btnClass, li
     </Link>
   );
 }
-
-function HistoryModal({
-  client,
-  onClose,
-  historyItems,
-  activeTab,
-  setActiveTab,
-  formatDate,
-  formatTime,
-  getTypeConfig,
-}) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [mounted, setMounted] = useState(false);
-  const [selectedDoc, setSelectedDoc] = useState(null);     // { fileUrl, title }
-  const [selectedPayment, setSelectedPayment] = useState(null); // full item
-
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
-
-  const filteredItems = historyItems.filter((item) => {
-    // Tab filtering
-    if (activeTab !== "all" && item.type !== activeTab) {
-      return false;
-    }
-
-    // Search filtering
-    const search = searchQuery.trim().toLowerCase();
-    if (!search) return true;
-
-    return (
-      item.title?.toLowerCase().includes(search) ||
-      item.desc?.toLowerCase().includes(search) ||
-      item.badge?.toLowerCase().includes(search) ||
-      item.type?.toLowerCase().includes(search) ||
-      formatDate(item.date)?.toLowerCase().includes(search) ||
-      formatTime(item.time)?.toLowerCase().includes(search)
-    );
-  });
-
-  if (!mounted) return null;
-
-  return createPortal(
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-[9999] p-4 animate-fade-in">
-      <div className="bg-white rounded-xl shadow-xl border border-[#E2E8F0] w-full max-w-2xl overflow-hidden relative flex flex-col max-h-[85vh]">
-        {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-[#F1F5F9] bg-slate-50">
-          <div>
-            <h3 className="font-bold text-[#0F172A] text-lg">
-              Activity History - {client.clientName}
-            </h3>
-            <p className="text-xs text-[#64748B] mt-0.5">
-              Client ID: {client.clientId} &bull; {client.emailId} &bull; {client.contactNumber}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-[#94A3B8] hover:text-[#0F172A] p-1.5 hover:bg-[#F1F5F9] rounded-lg transition-colors cursor-pointer"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Filters and Search */}
-        <div className="p-4 border-b border-[#F1F5F9] flex flex-col md:flex-row md:items-center justify-between gap-3">
-          {/* Tabs */}
-          <div className="flex flex-wrap gap-1 bg-[#F1F5F9] p-1 rounded-lg">
-            {["all", "case", "document", "payment"].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer capitalize ${
-                  activeTab === tab
-                    ? "bg-white text-[#0F172A] shadow-sm"
-                    : "text-[#64748B] hover:text-[#0F172A]"
-                }`}
-              >
-                {tab === "all" ? "All Activities" : tab === "case" ? "Case Updates" : tab === "document" ? "Documents" : "Payments"}
-              </button>
-            ))}
-          </div>
-
-          {/* Search Input */}
-          <div className="relative w-full md:w-56">
-            <Search size={14} className="absolute left-3 top-2.5 text-[#94A3B8]" />
-            <input
-              type="text"
-              placeholder="Search history..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-lg border border-[#E2E8F0] bg-white text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-            />
-          </div>
-        </div>
-
-        {/* Scrollable Timeline */}
-        <div className="p-6 overflow-y-auto flex-1 bg-slate-50/50">
-          {filteredItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-10 h-10 bg-[#F1F5F9] text-[#64748B] rounded-full flex items-center justify-center mb-3">
-                <Search size={16} />
-              </div>
-              <h4 className="font-bold text-[#0F172A] text-sm mb-1">No activities found</h4>
-              <p className="text-xs text-[#64748B] max-w-xs">
-                No logs match your filters or search query for this client.
-              </p>
-            </div>
-          ) : (
-            <div className="relative border-l border-[#E2E8F0] ml-3 pl-5 space-y-5">
-              {filteredItems.map((item) => {
-                const config = getTypeConfig(item.type);
-                return (
-                  <div key={item.id} className="relative group">
-                    {/* Timeline Node Icon */}
-                    <span className={`absolute -left-[33px] top-0.5 flex items-center justify-center w-6 h-6 rounded-full border-4 border-white ${config.iconBg} shadow-xs transition-transform group-hover:scale-105 select-none`}>
-                      {config.icon}
-                    </span>
-
-                    {/* Content Card */}
-                    <div 
-                      onClick={() => {
-                        if (item.type === "document") {
-                          setSelectedDoc({ fileUrl: item.fileUrl || null, title: item.fileName || item.title, badge: item.badge });
-                        }
-                      }}
-                      className={`p-4 rounded-lg border border-[#E2E8F0] shadow-xs hover:shadow-sm bg-white transition-all duration-200 ${
-                        item.type === "document" ? "cursor-pointer hover:border-amber-300 hover:bg-amber-50/5" : ""
-                      }`}
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-1.5">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <h4 className="font-bold text-[#0F172A] text-xs leading-tight">
-                            {item.title}
-                          </h4>
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider border ${config.badgeBg}`}>
-                            {item.badge || config.label}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-1 text-[10px] text-[#64748B] font-medium">
-                          <Calendar size={11} className="shrink-0 text-[#94A3B8]" />
-                          <span>{formatDate(item.date)}</span>
-                          <span className="text-[#E2E8F0]">&bull;</span>
-                          <Clock size={11} className="shrink-0 text-[#94A3B8]" />
-                          <span>{formatTime(item.time)}</span>
-                        </div>
-                      </div>
-
-                      {item.type === "document" ? (
-                        <p className="text-[11px] text-[#64748B] leading-relaxed font-medium">
-                          Document{" "}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedDoc({ fileUrl: item.fileUrl || null, title: item.fileName, badge: item.badge });
-                            }}
-                            className="font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer bg-transparent border-0 p-0 inline-block align-baseline"
-                          >
-                            '{item.fileName || "File"}'
-                          </button>{" "}
-                          uploaded for case '{item.caseName || "N/A"}' ({item.courtName || "N/A"}).
-                        </p>
-                      ) : (
-                        <p className="text-[11px] text-[#64748B] leading-relaxed font-medium">
-                          {item.desc}
-                        </p>
-                      )}
-
-                      {item.type === "case" && item.documents && item.documents.length > 0 && (
-                        <div className="mt-3.5 border-t border-slate-100 pt-3 space-y-2">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Attached Documents:</p>
-                          <div className="grid gap-2">
-                            {item.documents.map((doc, idx) => (
-                              <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200/50">
-                                <div className="flex items-center gap-2 truncate pr-2">
-                                  <FileText size={13} className="text-slate-400 shrink-0" />
-                                  <span className="text-xs text-slate-700 font-semibold truncate">{doc.file || "Document"}</span>
-                                  <span className="text-[9px] font-bold text-slate-500 bg-slate-200/60 px-1.5 py-0.5 rounded-full uppercase shrink-0">{doc.documentType}</span>
-                                </div>
-                                <button
-                                  onClick={() => setSelectedDoc({ fileUrl: doc.url || null, title: doc.file, badge: doc.documentType })}
-                                  className="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1.5 rounded-lg transition cursor-pointer shrink-0"
-                                >
-                                  <Eye size={11} /> View
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex gap-2 mt-2 flex-wrap">
-                        {item.type === "document" && (
-                          <button
-                            onClick={() => setSelectedDoc({ fileUrl: item.fileUrl || null, title: item.fileName || item.title, badge: item.badge })}
-                            className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2 py-1 rounded-md transition cursor-pointer"
-                          >
-                            <Eye size={11} /> View Document
-                          </button>
-                        )}
-                        {item.type === "payment" && (
-                          <button
-                            onClick={() => setSelectedPayment(item)}
-                            className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-1 rounded-md transition cursor-pointer"
-                          >
-                            <Receipt size={11} /> View Payment Details
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-[#F1F5F9] bg-white flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-[#E2E8F0] text-[#0F172A] font-semibold text-xs rounded-lg hover:bg-[#F1F5F9] transition-colors cursor-pointer text-center"
-          >
-            Close
-          </button>
-        </div>
-        {/* Document Viewer Sub-Modal */}
-        {selectedDoc && (
-          <DocumentViewerModal
-            fileUrl={selectedDoc.fileUrl}
-            title={selectedDoc.title}
-            badge={selectedDoc.badge}
-            onClose={() => setSelectedDoc(null)}
-          />
-        )}
-
-        {/* Payment Detail Sub-Modal */}
-        {selectedPayment && (
-          <PaymentDetailModal
-            item={selectedPayment}
-            formatDate={formatDate}
-            onClose={() => setSelectedPayment(null)}
-          />
-        )}
-      </div>
-    </div>,
-    document.body
-  );
-}
-
-
-
-// ─── Payment Detail Modal ────────────────────────────────────────
-function PaymentDetailModal({ item, formatDate, onClose }) {
-  const inv = item.invoiceData || {};
-
-  const rows = [
-    { label: "Court Fee", type: inv.court_fee_case_type, amount: inv.court_fee_amount, note: inv.court_fee_jurisdiction },
-    { label: "Stamp Duty", type: inv.stamp_duty_doc_type, amount: inv.stamp_duty_amount, note: inv.stamp_duty_state },
-    { label: "Advocate Fee", type: inv.advocate_fee_case_type, amount: inv.advocate_fee_amount, note: inv.advocate_fee_remarks },
-    { label: "Filing Cost", type: inv.filing_cost_pages ? `${inv.filing_cost_pages} pages` : null, amount: inv.filing_cost_amount, note: inv.filing_cost_notes },
-  ].filter(r => r.amount > 0);
-
-  const statusColor = {
-    Paid: "bg-emerald-100 text-emerald-700 border-emerald-200",
-    Pending: "bg-amber-100 text-amber-700 border-amber-200",
-    Overdue: "bg-red-100 text-red-700 border-red-200",
-    Sent: "bg-blue-100 text-blue-700 border-blue-200",
-  }[inv.status] || "bg-slate-100 text-slate-700 border-slate-200";
-
-  return createPortal(
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[99999] p-4">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-white shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
-              <Receipt size={18} />
-            </div>
-            <div>
-              <h3 className="font-bold text-slate-800 text-sm">Payment Details</h3>
-              <p className="text-[10px] text-slate-500 mt-0.5">{item.title}</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="overflow-y-auto flex-1 p-5 space-y-4">
-          {/* Client + Status */}
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Client</p>
-              <p className="font-bold text-slate-800 text-sm">{inv.client_name || item.desc?.split(" - ")[0] || "—"}</p>
-              {inv.case_number && <p className="text-[10px] text-slate-500">Case: {inv.case_number}</p>}
-            </div>
-            {inv.status && (
-              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider ${statusColor}`}>
-                {inv.status}
-              </span>
-            )}
-          </div>
-
-          {/* Date + Payment Method */}
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Invoice Date</p>
-              <p className="font-semibold text-slate-700">{formatDate(item.date)}</p>
-            </div>
-            <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Payment Method</p>
-              <p className="font-semibold text-slate-700 capitalize">{inv.payment_method || "—"}</p>
-              {inv.gpay_number && <p className="text-[10px] text-slate-500 mt-0.5">GPay: {inv.gpay_number}</p>}
-              {inv.upi_id && <p className="text-[10px] text-slate-500 mt-0.5">UPI: {inv.upi_id}</p>}
-            </div>
-          </div>
-
-          {/* Fee Breakdown */}
-          {rows.length > 0 ? (
-            <div className="border border-slate-100 rounded-xl overflow-hidden">
-              <div className="bg-slate-50 px-4 py-2 border-b border-slate-100">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fee Breakdown</p>
-              </div>
-              <div className="divide-y divide-slate-100">
-                {rows.map((r, i) => (
-                  <div key={i} className="flex items-center justify-between px-4 py-3">
-                    <div>
-                      <p className="text-xs font-semibold text-slate-700">{r.label}</p>
-                      {r.type && <p className="text-[10px] text-slate-400">{r.type}</p>}
-                      {r.note && <p className="text-[10px] text-slate-400">{r.note}</p>}
-                    </div>
-                    <p className="text-sm font-bold text-slate-800">₹{(r.amount || 0).toLocaleString("en-IN")}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <p className="text-xs text-slate-400 italic text-center py-2">No fee breakdown available.</p>
-          )}
-
-          {/* Totals */}
-          {(inv.subtotal > 0 || inv.grand_total > 0) && (
-            <div className="bg-gradient-to-br from-emerald-50 to-white border border-emerald-100 rounded-xl p-4 space-y-2">
-              {inv.subtotal > 0 && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-500 font-medium">Subtotal</span>
-                  <span className="font-semibold text-slate-700">₹{inv.subtotal.toLocaleString("en-IN")}</span>
-                </div>
-              )}
-              {inv.gst > 0 && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-500 font-medium">GST</span>
-                  <span className="font-semibold text-slate-700">₹{inv.gst.toLocaleString("en-IN")}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-sm border-t border-emerald-100 pt-2 mt-1">
-                <span className="font-bold text-slate-800">Grand Total</span>
-                <span className="font-extrabold text-emerald-700 text-base">₹{(inv.grand_total || 0).toLocaleString("en-IN")}</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="px-5 py-3 border-t border-slate-100 bg-white flex justify-end shrink-0">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-slate-200 text-slate-700 font-semibold text-xs rounded-lg hover:bg-slate-50 transition cursor-pointer"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
-}
+

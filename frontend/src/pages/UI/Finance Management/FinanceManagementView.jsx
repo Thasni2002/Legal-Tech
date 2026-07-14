@@ -737,18 +737,7 @@ export default function CourtFeeCalView() {
                   onChange={(e) => setCourtFee(e.target.value)}
                   className="w-full border border-blue-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
                 />
-                <select
-                  value={courtFeeJurisdiction}
-                  onChange={(e) => setCourtFeeJurisdiction(e.target.value)}
-                  className="w-full border border-blue-200 rounded-xl p-3 text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-                >
-                  <option value="">Select Jurisdiction</option>
-                  <option value="District Court">District Court</option>
-                  <option value="High Court">High Court</option>
-                  <option value="Supreme Court">Supreme Court</option>
-                  <option value="Family Court">Family Court</option>
-                  <option value="Tribunal">Tribunal</option>
-                </select>
+
                 <div className="pt-2 font-bold text-blue-700 text-lg">
                   ₹{courtFee || 0}
                 </div>
@@ -824,13 +813,7 @@ export default function CourtFeeCalView() {
                   onChange={(e) => setAdvocateFee(e.target.value)}
                   className="w-full border border-amber-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
                 />
-                <input
-                  type="text"
-                  placeholder="Remarks"
-                  value={advocateFeeRemarks}
-                  onChange={(e) => setAdvocateFeeRemarks(e.target.value)}
-                  className="w-full border border-amber-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
-                />
+
                 <div className="pt-2 font-bold text-amber-700 text-lg">
                   ₹{advocateFee || 0}
                 </div>
