@@ -166,7 +166,10 @@ export default function LawfirmView() {
       item.case_title
         ?.toLowerCase()
         .includes(caseSearch.toLowerCase()) ||
-      item.case_number
+      item.id
+        ?.toString()
+        .includes(caseSearch.toLowerCase()) ||
+      item.case_name
         ?.toLowerCase()
         .includes(caseSearch.toLowerCase());
 
@@ -177,9 +180,9 @@ export default function LawfirmView() {
   });
 
   return (
-    <div className="w-full space-y-8 max-w-7xl mx-auto">
+    <div className="w-full space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-6 sm:p-8 md:p-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-[#0F172A] font-extrabold text-3xl tracking-tight">
             Law Firm Management
@@ -199,7 +202,7 @@ export default function LawfirmView() {
             return (
               <div
                 key={index}
-                className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-8 hover:-translate-y-1 transition-transform duration-300 flex flex-col justify-between"
+                className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-6 sm:p-8 hover:-translate-y-1 transition-transform duration-300 flex flex-col justify-between"
               >
                 <div>
                   <div className="w-14 h-14 bg-blue-50 text-[#2563EB] rounded-2xl flex items-center justify-center mb-6 border border-blue-100 shadow-sm">
@@ -225,7 +228,7 @@ export default function LawfirmView() {
 
       {/* Stats Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-8 hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
+        <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-6 sm:p-8 hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-full blur-3xl opacity-60 -mr-10 -mt-10"></div>
           <div className="relative z-10">
             <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center mb-6 border border-purple-200">
@@ -238,7 +241,7 @@ export default function LawfirmView() {
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-8 hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
+        <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-6 sm:p-8 hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-full blur-3xl opacity-60 -mr-10 -mt-10"></div>
           <div className="relative z-10">
             <div className="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center mb-6 border border-green-200">
@@ -251,7 +254,7 @@ export default function LawfirmView() {
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-8 hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
+        <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-6 sm:p-8 hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl opacity-60 -mr-10 -mt-10"></div>
           <div className="relative z-10">
             <div className="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center mb-6 border border-red-200">
@@ -270,7 +273,7 @@ export default function LawfirmView() {
         <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 overflow-hidden">
 
           {/* Header with Search + Filter */}
-          <div className="p-8 border-b border-[#F1F5F9] flex flex-col md:flex-row gap-6 justify-between items-center bg-white">
+          <div className="p-6 sm:p-8 border-b border-[#F1F5F9] flex flex-col md:flex-row gap-6 justify-between items-stretch md:items-center bg-white">
 
             <h2 className="text-xl font-extrabold text-[#0F172A]">
               Advocate Profile
@@ -290,7 +293,7 @@ export default function LawfirmView() {
             </div>
 
             <select
-              className="border border-[#E2E8F0] rounded-full px-6 py-3 text-sm bg-[#F8FAFC] text-[#0F172A] font-medium outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
+              className="border border-[#E2E8F0] rounded-full px-6 py-3 text-sm bg-[#F8FAFC] text-[#0F172A] font-medium outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all w-full md:w-auto"
               value={filter}
               onChange={(e) => {
                 setFilter(e.target.value);
@@ -310,25 +313,22 @@ export default function LawfirmView() {
                 <table className="w-full">
                   <thead className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
                     <tr>
-                      <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                      <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                         Profile
                       </th>
-                      <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                      <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                         Name
                       </th>
-                      <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                        Specialization
-                      </th>
-                      <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                      <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                         Phone
                       </th>
-                      <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                      <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                         City
                       </th>
-                      <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                      <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                         Status
                       </th>
-                      <th className="px-8 py-5 text-center text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                      <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-center text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                         Actions
                       </th>
                     </tr>
@@ -341,7 +341,7 @@ export default function LawfirmView() {
                         className="hover:bg-slate-50/50 transition duration-200 group"
                       >
                         {/* Profile */}
-                        <td className="px-8 py-5">
+                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5">
                           <img
                             src={
                               item.profileImage?.trim()
@@ -354,7 +354,7 @@ export default function LawfirmView() {
                         </td>
 
                         {/* Name */}
-                        <td className="px-8 py-5">
+                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5">
                           <div>
                             <p className="font-bold text-[#0F172A] text-sm">
                               {item.advocateName}
@@ -364,21 +364,18 @@ export default function LawfirmView() {
                             </p>
                           </div>
                         </td>
-                        <td className="px-8 py-5 text-sm font-medium text-[#475569]">
-                          {item.specialization || "-"}
-                        </td>
 
-                        <td className="px-8 py-5 text-sm font-medium text-[#475569]">
+                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">
                           {item.phoneNumber || "-"}
                         </td>
 
-                        <td className="px-8 py-5 text-sm font-medium text-[#475569]">
+                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">
                           {item.city || "-"}
                         </td>
 
                         {/* Status */}
                         {/* Status */}
-                        <td className="px-8 py-5">
+                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5">
                           <span
                             className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${item.status === "Active" || !item.status
                               ? "bg-green-100 text-green-700"
@@ -390,7 +387,7 @@ export default function LawfirmView() {
                         </td>
 
                         {/* Actions */}
-                        <td className="px-8 py-5">
+                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5">
                           <div className="flex justify-center gap-2">
                             <button
                               onClick={() =>
@@ -459,7 +456,7 @@ export default function LawfirmView() {
         <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 overflow-hidden mt-8">
 
           {/* Header */}
-          <div className="p-8 border-b border-[#F1F5F9] flex flex-col md:flex-row gap-6 justify-between items-center bg-white">
+          <div className="p-6 sm:p-8 border-b border-[#F1F5F9] flex flex-col md:flex-row gap-6 justify-between items-stretch md:items-center bg-white">
             <h2 className="text-xl font-extrabold text-[#0F172A]">
               Junior Assigned Cases
             </h2>
@@ -478,21 +475,6 @@ export default function LawfirmView() {
                 }}
               />
             </div>
-
-            {/* Filter */}
-            <select
-              className="border border-[#E2E8F0] rounded-full px-6 py-3 text-sm bg-[#F8FAFC] text-[#0F172A] font-medium outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
-              value={caseFilter}
-              onChange={(e) => {
-                setCaseFilter(e.target.value);
-                setCasesPage(0);
-              }}
-            >
-              <option value="All">All Priority</option>
-              <option value="High">High</option>
-              <option value="Medium">Medium</option>
-              <option value="Low">Low</option>
-            </select>
           </div>
 
           {/* Table */}
@@ -500,25 +482,16 @@ export default function LawfirmView() {
             <table className="w-full">
               <thead className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
                 <tr>
-                  <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                  <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                     Case Name
                   </th>
-                  <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                    Case Number
+                  <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                    Case ID
                   </th>
-                  <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                    Case Title
-                  </th>
-                  <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                  <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                     Advocate Name
                   </th>
-                  <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                    Priority
-                  </th>
-                  <th className="px-8 py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                    Due Date
-                  </th>
-                  <th className="px-8 py-5 text-center text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                  <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-center text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                     Actions
                   </th>
                 </tr>
@@ -532,33 +505,17 @@ export default function LawfirmView() {
                       key={item.id}
                       className="hover:bg-slate-50/50 transition duration-200 group"
                     >
-                      <td className="px-8 py-5 text-sm font-bold text-[#0F172A]">{item.case_name}</td>
-                      <td className="px-8 py-5 text-sm font-medium text-[#475569]">{item.case_number}</td>
-                      <td className="px-8 py-5 text-sm font-medium text-[#475569]">{item.case_title}</td>
-                      <td className="px-8 py-5 text-sm font-medium text-[#475569]">
+                      <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-bold text-[#0F172A]">{item.case_name}</td>
+                      <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">{item.id}</td>
+                      <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">
                         <div className="flex items-center gap-2">
                           <img src={`https://ui-avatars.com/api/?name=${item.advocate_name || 'Advocate'}&background=E2E8F0&color=64748B&rounded=true&bold=true`} className="w-6 h-6 rounded-full" />
                           {item.advocate_name}
                         </div>
                       </td>
 
-                      <td className="px-8 py-5">
-                        <span
-                          className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${item.priority === "High"
-                            ? "bg-red-100 text-red-700"
-                            : item.priority === "Medium"
-                              ? "bg-yellow-100 text-yellow-700"
-                              : "bg-green-100 text-green-700"
-                            }`}
-                        >
-                          {item.priority}
-                        </span>
-                      </td>
-
-                      <td className="px-8 py-5 text-sm font-medium text-[#475569]">{item.due_date}</td>
-
                       {/* Actions */}
-                      <td className="px-8 py-5">
+                      <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5">
                         <div className="flex justify-center gap-2">
                           {hasPermission("Law Firm Management", "edit") && (
                             <button

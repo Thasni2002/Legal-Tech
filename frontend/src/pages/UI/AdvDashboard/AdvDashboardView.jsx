@@ -36,6 +36,7 @@ export default function AdvDashboardView() {
     const [user, setUser] = useState(null);
     const [lastRefreshed, setLastRefreshed] = useState(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [selectedCard, setSelectedCard] = useState(null);
     const [casesPage, setCasesPage] = useState(0);
     const [hearingsPage, setHearingsPage] = useState(0);
     const [discussionsPage, setDiscussionsPage] = useState(0);
@@ -114,10 +115,12 @@ export default function AdvDashboardView() {
             }
 
             // 1. Total advocates count
-            const total_advocates = users.filter(u => u.role && u.role.toLowerCase().includes("advocate")).length;
+            const advocatesList = users.filter(u => u.role && u.role.toLowerCase().includes("advocate"));
+            const total_advocates = advocatesList.length;
 
             // 2. Cases stats
-            const active_cases = cases.filter(c => c.status === "Active" || c.status === "Hearing").length;
+            const activeCasesList = cases.filter(c => c.status === "Active" || c.status === "Hearing");
+            const active_cases = activeCasesList.length;
             const pending_cases = cases.filter(c => c.status === "Pending").length;
             const closed_cases = cases.filter(c => c.status === "Closed").length;
 
@@ -229,6 +232,8 @@ export default function AdvDashboardView() {
                 hearings: hearingsList,
                 discussions: discussionsList,
                 documents,
+                advocates: advocatesList,
+                activeCases: activeCasesList,
             });
 
             setLastRefreshed(new Date());
@@ -290,21 +295,19 @@ export default function AdvDashboardView() {
 
     const stats = [
         {
+            key: "advocates",
             title: "Total Advocates",
             value: data ? String(data.stats.total_advocates) : "0",
             icon: Users,
         },
         {
+            key: "activeCases",
             title: "Active Cases",
             value: data ? String(data.stats.active_cases) : "0",
             icon: Briefcase,
         },
         {
-            title: "Pending Cases",
-            value: data ? String(data.stats.pending_cases) : "0",
-            icon: FolderOpen,
-        },
-        {
+            key: "hearings",
             title: "Upcoming Hearings",
             value: data ? String(data.stats.upcoming_hearings_count) : "0",
             icon: Gavel,
@@ -312,9 +315,9 @@ export default function AdvDashboardView() {
     ];
 
     return (
-<div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-6 lg:space-y-8 animate-in fade-in zoom-in-95 duration-500">
+<div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5 space-y-4 lg:space-y-5 animate-in fade-in zoom-in-95 duration-500">
             {/* Page Header */}
-<div className="bg-white rounded-3xl shadow-xl border border-[#E2E8F0] p-5 sm:p-6 lg:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6">                <div>
+<div className="bg-white rounded-2xl shadow-md border border-[#E2E8F0] p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">                <div>
                     <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
                         {greeting}, {displayName}
                     </h1>
@@ -339,37 +342,157 @@ export default function AdvDashboardView() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
                 {stats.map((item, index) => {
                     const Icon = item.icon;
                     const colors = [
-                        { bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-200" },
-                        { bg: "bg-emerald-50", text: "text-emerald-600", border: "border-emerald-200" },
-                        { bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-200" },
-                        { bg: "bg-amber-50", text: "text-amber-600", border: "border-amber-200" },
+                        { bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-200", active: "border-blue-400 ring-2 ring-blue-200" },
+                        { bg: "bg-emerald-50", text: "text-emerald-600", border: "border-emerald-200", active: "border-emerald-400 ring-2 ring-emerald-200" },
+                        { bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-200", active: "border-purple-400 ring-2 ring-purple-200" },
                     ];
                     const color = colors[index % colors.length];
+                    const isActive = selectedCard === item.key;
 
                     return (
                         <div
                             key={index}
-                            className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-5 sm:p-6 lg:p-8 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 cursor-pointer group"
+                            onClick={() => setSelectedCard(isActive ? null : item.key)}
+                            className={`bg-white rounded-2xl shadow-md shadow-slate-200/40 border p-4 sm:p-5 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 cursor-pointer group ${
+                                isActive ? color.active : "border-[#E2E8F0] hover:shadow-slate-200/60"
+                            }`}
                         >
-                            <div className={`w-14 h-14 md:w-16 md:h-16 ${color.bg} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-sm border ${color.border}`}>
-                                <Icon className={`w-7 h-7 md:w-8 md:h-8 ${color.text}`} />
+                            <div className={`w-10 h-10 ${color.bg} rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-sm border ${color.border}`}>
+                                <Icon className={`w-5 h-5 ${color.text}`} />
                             </div>
 
-                            <p className="text-[#475569] text-xs font-bold uppercase tracking-wider mb-2">
+                            <p className="text-[#475569] text-[10px] font-bold uppercase tracking-wider mb-1">
                                 {item.title}
                             </p>
 
-                            <h2 className="text-4xl md:text-5xl font-black text-[#0F172A] tracking-tight">
+                            <h2 className="text-2xl font-black text-[#0F172A] tracking-tight">
                                 {item.value}
                             </h2>
                         </div>
                     );
                 })}
             </div>
+
+            {/* Dynamic Detail Panel */}
+            {selectedCard && (
+                <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-md overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+                    {/* Total Advocates */}
+                    {selectedCard === "advocates" && (
+                        <>
+                            <div className="px-6 py-4 border-b border-[#F1F5F9] bg-slate-50 flex items-center justify-between">
+                                <h3 className="text-sm font-bold text-[#0F172A] uppercase tracking-wider">All Advocates</h3>
+                                <span className="text-xs text-[#64748B] font-medium">{data?.advocates?.length || 0} total</span>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-[#E2E8F0]">
+                                    <thead className="bg-[#F8FAFC]">
+                                        <tr>
+                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">#</th>
+                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Name</th>
+                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Role</th>
+                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Email</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[#F1F5F9] bg-white">
+                                        {data?.advocates?.length > 0 ? data.advocates.map((adv, i) => (
+                                            <tr key={`adv-panel-${i}`} className="hover:bg-slate-50 transition-colors">
+                                                <td className="px-5 py-3 text-xs text-[#64748B]">{i + 1}</td>
+                                                <td className="px-5 py-3 text-sm font-semibold text-[#0F172A] capitalize">{adv.username || adv.name || "—"}</td>
+                                                <td className="px-5 py-3">
+                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${ROLE_BADGE[adv.role] || "bg-slate-100 text-slate-600"}`}>{adv.role}</span>
+                                                </td>
+                                                <td className="px-5 py-3 text-xs text-[#64748B]">{adv.email || "—"}</td>
+                                            </tr>
+                                        )) : (
+                                            <tr><td colSpan={4} className="px-5 py-6 text-center text-sm text-[#94A3B8]">No advocates found.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    )}
+
+                    {/* Active Cases */}
+                    {selectedCard === "activeCases" && (
+                        <>
+                            <div className="px-6 py-4 border-b border-[#F1F5F9] bg-slate-50 flex items-center justify-between">
+                                <h3 className="text-sm font-bold text-[#0F172A] uppercase tracking-wider">Active Cases</h3>
+                                <span className="text-xs text-[#64748B] font-medium">{data?.activeCases?.length || 0} cases</span>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-[#E2E8F0]">
+                                    <thead className="bg-[#F8FAFC]">
+                                        <tr>
+                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Case ID</th>
+                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Client</th>
+                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Type</th>
+                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Court</th>
+                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[#F1F5F9] bg-white">
+                                        {data?.activeCases?.length > 0 ? data.activeCases.map((c, i) => (
+                                            <tr key={`active-panel-${i}`} className="hover:bg-slate-50 transition-colors">
+                                                <td className="px-5 py-3 text-xs font-mono text-[#64748B]">{c.case_id || c.case_no || "—"}</td>
+                                                <td className="px-5 py-3 text-sm font-semibold text-[#0F172A]">{c.client_name || "—"}</td>
+                                                <td className="px-5 py-3 text-xs text-[#475569]">{c.case_type || "—"}</td>
+                                                <td className="px-5 py-3 text-xs text-[#475569]">{c.court_name || "—"}</td>
+                                                <td className="px-5 py-3">
+                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                                        c.status === "Active" ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
+                                                    }`}>{c.status}</span>
+                                                </td>
+                                            </tr>
+                                        )) : (
+                                            <tr><td colSpan={5} className="px-5 py-6 text-center text-sm text-[#94A3B8]">No active cases found.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    )}
+
+                    {/* Upcoming Hearings */}
+                    {selectedCard === "hearings" && (
+                        <>
+                            <div className="px-6 py-4 border-b border-[#F1F5F9] bg-slate-50 flex items-center justify-between">
+                                <h3 className="text-sm font-bold text-[#0F172A] uppercase tracking-wider">Upcoming Hearings</h3>
+                                <span className="text-xs text-[#64748B] font-medium">{data?.hearings?.length || 0} scheduled</span>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-[#E2E8F0]">
+                                    <thead className="bg-[#F8FAFC]">
+                                        <tr>
+                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Date</th>
+                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Case Title</th>
+                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Court</th>
+                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Advocate</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[#F1F5F9] bg-white">
+                                        {data?.hearings?.length > 0 ? data.hearings.map((h, i) => (
+                                            <tr key={`hearing-panel-${i}`} className="hover:bg-slate-50 transition-colors">
+                                                <td className="px-5 py-3">
+                                                    <span className="text-xs font-bold bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full">{h.date}</span>
+                                                </td>
+                                                <td className="px-5 py-3 text-sm font-semibold text-[#0F172A]">{h.case_title || "—"}</td>
+                                                <td className="px-5 py-3 text-xs text-[#475569]">{h.court || "—"}</td>
+                                                <td className="px-5 py-3 text-xs text-[#475569]">{h.advocate_name || "—"}</td>
+                                            </tr>
+                                        )) : (
+                                            <tr><td colSpan={4} className="px-5 py-6 text-center text-sm text-[#94A3B8]">No upcoming hearings found.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    )}
+                </div>
+            )}
 
             {/* Case Overview */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
@@ -400,7 +523,7 @@ export default function AdvDashboardView() {
                                 {data && data.cases.length > 0 ? (
                                     data.cases.slice(casesPage * 5, (casesPage + 1) * 5).map((c, index) => (
                                         <tr
-                                            key={index}
+                                            key={`case-overview-${index}`}
                                             className="hover:bg-[#F8FAFC] transition-colors duration-150"
                                         >
                                             <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">{c.case_id}</td>
@@ -678,10 +801,8 @@ export default function AdvDashboardView() {
                                             key={d.id || index}
                                             className="hover:bg-[#F8FAFC] transition-colors duration-150"
                                         >
-                                            <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">
-                                                <div className="bg-[#F1F5F9] px-3 py-1.5 rounded-lg inline-block text-center border border-[#E2E8F0]">
-                                                    {d.date_formatted}
-                                                </div>
+                                            <td className="p-4 text-xs font-medium text-[#475569] whitespace-nowrap">
+                                                {d.date_formatted}
                                             </td>
                                             <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-semibold">{d.client_name}</td>
                                             <td className="p-4 text-sm font-bold text-[#2563EB] whitespace-nowrap">
