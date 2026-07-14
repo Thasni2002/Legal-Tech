@@ -402,6 +402,7 @@ def generate_document_from_format(db: Session, case_id: int, template_key: str, 
     import google.generativeai as genai
     from fastapi import HTTPException
     from .models import UploadedFile
+    from sqlalchemy import text as sql_text
 
     template_info = DOCUMENT_TEMPLATES.get(template_key)
     if not template_info:
@@ -411,34 +412,46 @@ def generate_document_from_format(db: Session, case_id: int, template_key: str, 
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
 
-    # Call Gemini to polish the user's draft_text
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured in backend")
+    # Read case metadata before expunging
+    case_no = case.case_no
+    court_name = case.court_name
+    case_title = case.case_title
+    selected_advocate = case.selected_advocate
+    filename_base = case_no
 
-    genai.configure(api_key=api_key)
-    
-    prompt = f"""
+    # Expunge the case from the session immediately to prevent SQLAlchemy from
+    # trying to flush the `documents` field (which may be a Python list/dict
+    # that pymysql cannot serialize) when we later call db.commit().
+    db.expunge(case)
+
+    # Call Gemini to polish the user's draft_text
+    # Falls back to raw draft_text if Gemini is unavailable or misconfigured
+    polished_text = draft_text  # default fallback
+    try:
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if api_key:
+            genai.configure(api_key=api_key)
+            prompt = f"""
 You are an expert legal assistant. Use the following context about a case and the user's raw draft text to generate a highly polished, professional, legally-sound document in clean Markdown. Preserve all factual names, addresses, dates, and terms specified in the raw draft. Do not add any conversational text before or after the document text.
 
 Case Context:
-Case Number: {case.case_no}
-Court Name: {case.court_name}
-Case Title: {case.case_title}
+Case Number: {case_no}
+Court Name: {court_name}
+Case Title: {case_title}
 
 User Raw Draft Text:
 {draft_text}
 """
-    try:
-        model = genai.GenerativeModel('gemini-flash-latest')
-        response = model.generate_content(prompt)
-        polished_text = response.text.strip()
-    except Exception as e:
-        # Fallback to raw text if AI fails
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            response = model.generate_content(prompt)
+            if response and response.text:
+                polished_text = response.text.strip()
+    except Exception:
+        # Fallback to raw text if AI fails — do not raise HTTP error
         polished_text = draft_text
 
     # Create UploadedFile record
-    filename = f"{template_info['name'].replace(' ', '_')}_{case.case_no}.md"
+    filename = f"{template_info['name'].replace(' ', '_')}_{filename_base}.md"
     db_file = UploadedFile(
         filename=filename,
         content_type="text/markdown",
@@ -448,41 +461,45 @@ User Raw Draft Text:
     db.commit()
     db.refresh(db_file)
 
-    # Attach to case
     file_url = f"http://localhost:8000/case-management/documents/{db_file.id}"
-    
+
+    # Read the current documents directly via raw SQL to avoid ORM deserialization issues
+    row = db.execute(
+        sql_text("SELECT documents FROM case_management_cases WHERE id = :cid"),
+        {"cid": case_id}
+    ).fetchone()
+
     current_docs = []
-    if case.documents:
+    if row and row[0]:
         try:
-            current_docs = json.loads(case.documents) if isinstance(case.documents, str) else list(case.documents)
+            raw = row[0]
+            current_docs = json.loads(raw) if isinstance(raw, str) else list(raw)
         except Exception:
             current_docs = []
-            
+
     new_doc_obj = {
         "documentType": template_info["name"],
-        "advocate": case.selected_advocate or "System",
+        "advocate": selected_advocate or "System",
         "file": filename,
         "url": file_url,
         "view": True,
         "upload": True,
         "edit": False,
-        "delete": False
+        "delete": False,
     }
     current_docs.append(new_doc_obj)
-    
-    # Save back to database
-    case.documents = json.dumps(current_docs)
-    db.commit()
-    db.refresh(case)
+    docs_json = json.dumps(current_docs)
 
-    # Return structure
-    if isinstance(case.documents, str):
-        case.documents = json.loads(case.documents or "[]")
-        
+    # Update documents via raw SQL to avoid pymysql dict serialization issue
+    db.execute(
+        sql_text("UPDATE case_management_cases SET documents = :docs WHERE id = :cid"),
+        {"docs": docs_json, "cid": case_id}
+    )
+    db.commit()
+
     return {
         "success": True,
         "document": polished_text,
         "file_url": file_url,
         "filename": filename,
-        "case": case
     }
