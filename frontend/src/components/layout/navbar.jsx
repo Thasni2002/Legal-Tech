@@ -140,9 +140,9 @@ export default function Navbar() {
         <div className="relative" ref={notificationRef}>
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className="relative p-2.5 rounded-lg hover:bg-[#F1F5F9] transition-colors duration-200"
+            className="relative p-2.5 rounded-lg hover:bg-slate-50 transition-colors duration-200"
           >
-            <Bell size={20} className={unreadCount > 0 ? "text-[#2563EB]" : "text-[#64748B]"} />
+            <Bell size={20} className={unreadCount > 0 ? "text-[#0F172A]" : "text-[#64748B]"} />
             {unreadCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 bg-[#DC2626] text-white text-[10px] font-semibold h-[18px] w-[18px] rounded-full flex items-center justify-center animate-pulse">
                 {unreadCount > 9 ? "9+" : unreadCount}
@@ -153,7 +153,7 @@ export default function Navbar() {
           {/* Notification Dropdown */}
           {showNotifications && (
             <div className="absolute right-0 mt-3 w-80 md:w-96 bg-white border border-[#E2E8F0] rounded-3xl shadow-xl shadow-slate-200/50 z-50 overflow-hidden transform origin-top-right transition-all animate-in fade-in zoom-in-95 duration-200">
-              <div className="px-6 py-4 border-b border-[#F1F5F9] flex justify-between items-center bg-[#F8FAFC]">
+              <div className="px-6 py-4 border-b border-[#F1F5F9] flex justify-between items-center bg-slate-50">
                 <div className="flex items-center gap-2">
                   <h3 className="font-extrabold text-[16px] text-[#0F172A] tracking-tight">
                     Notifications
@@ -167,7 +167,7 @@ export default function Navbar() {
                 {unreadCount > 0 && (
                   <button
                     onClick={markAllAsRead}
-                    className="flex items-center gap-1 text-xs text-[#2563EB] font-semibold hover:text-blue-800 transition-colors"
+                    className="flex items-center gap-1 text-xs text-[#0F172A] font-semibold hover:text-[#64748B] transition-colors"
                     title="Mark all as read"
                   >
                     <CheckCheck size={14} />
@@ -196,8 +196,8 @@ export default function Navbar() {
                         onClick={() => !isRead && markAsRead(item.id)}
                         className={`flex items-start gap-4 p-3 rounded-2xl transition-colors duration-200 group ${
                           isRead
-                            ? "bg-[#F8FAFC] opacity-60"
-                            : "hover:bg-[#EFF6FF] cursor-pointer"
+                            ? "bg-slate-50 opacity-60"
+                            : "hover:bg-slate-100/80 cursor-pointer"
                         }`}
                       >
                         <div
@@ -212,7 +212,7 @@ export default function Navbar() {
                             className={`text-sm leading-tight transition-colors ${
                               isRead
                                 ? "font-normal text-[#64748B]"
-                                : "font-bold text-[#1E293B] group-hover:text-[#2563EB]"
+                                : "font-bold text-[#1E293B] group-hover:text-[#0F172A]"
                             }`}
                           >
                             {item.title}
@@ -233,7 +233,7 @@ export default function Navbar() {
 
               {/* Footer: all read */}
               {notifications.length > 0 && unreadCount === 0 && (
-                <div className="px-6 py-3 border-t border-[#F1F5F9] text-center bg-[#F8FAFC]">
+                <div className="px-6 py-3 border-t border-[#F1F5F9] text-center bg-slate-50">
                   <p className="text-xs text-slate-400 font-medium flex items-center justify-center gap-1">
                     <CheckCheck size={13} className="text-emerald-500" />
                     All caught up!
@@ -248,7 +248,7 @@ export default function Navbar() {
         <div className="relative" ref={profileRef}>
           <button
             onClick={() => setShowProfile(!showProfile)}
-            className="flex items-center gap-3 hover:bg-[#F1F5F9] px-3 py-2 rounded-lg transition-colors duration-200"
+            className="flex items-center gap-3 hover:bg-slate-50 px-3 py-2 rounded-lg transition-colors duration-200"
           >
             {user ? (
               <img
@@ -279,7 +279,7 @@ export default function Navbar() {
             <div className="absolute right-0 mt-2 w-48 bg-white border border-[#E2E8F0] rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.1)] z-50 overflow-hidden">
               <button
                 onClick={() => router.push("/profile-management")}
-                className="w-full text-left px-4 py-3 text-sm text-[#1E293B] hover:bg-[#F1F5F9] transition-colors duration-150"
+                className="w-full text-left px-4 py-3 text-sm text-[#0F172A] hover:bg-slate-50 transition-colors duration-150"
               >
                 My Profile
               </button>

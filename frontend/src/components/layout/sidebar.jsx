@@ -300,10 +300,10 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
                         <li key={item.name}>
                           <button
                             onClick={() => setUserRolesOpen(!userRolesOpen)}
-                            className="flex w-full items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-[#1E293B] hover:bg-[#F8FAFC] transition-colors duration-200"
+                            className="flex w-full items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-[#64748B] hover:bg-slate-50 transition-colors duration-200"
                           >
                             <div className="flex items-center gap-2.5">
-                              <item.icon size={17} className="text-[#64748B]" />
+                              <item.icon size={17} className="text-[#64748B] group-hover:text-[#0F172A]" />
                               {!isCollapsed && <span>{item.name}</span>}
                             </div>
                             {userRolesOpen ? (
@@ -313,14 +313,14 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
                             )}
                           </button>
                           {userRolesOpen && (
-                            <ul className="pl-4 mt-1 ml-4 border-l-2 border-[#2563EB]/20 space-y-0.5">
+                            <ul className="pl-4 mt-1 ml-4 border-l-2 border-slate-200 space-y-0.5">
                               {item.submenu.map((sub) => (
                                 <li key={sub.path}>
                                   <Link
                                     href={sub.path}
                                     className={`block px-3 py-2 rounded-lg text-sm transition-colors duration-200 ${pathname === sub.path
-                                        ? "text-[#2563EB] bg-[#2563EB]/5 font-medium"
-                                        : "text-[#64748B] hover:text-[#1E293B] hover:bg-[#F1F5F9]"
+                                        ? "text-[#0F172A] bg-slate-100/80 font-semibold border-l-4 border-slate-900"
+                                        : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-50"
                                       }`}
                                   >
                                     {sub.name}
@@ -341,8 +341,8 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
                           href={item.path}
                           title={isCollapsed ? item.name : undefined}
                           className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 ${active
-                              ? "bg-[rgba(37,99,235,0.12)] border-l-4 border-[#2563EB] text-[#2563EB] font-semibold"
-                              : "text-[#1E293B] hover:bg-[#F8FAFC]"
+                              ? "bg-slate-100/80 border-l-4 border-slate-900 text-[#0F172A] font-semibold"
+                              : "text-[#64748B] hover:bg-slate-50 hover:text-[#0F172A]"
                             }`}
                         >
                           <IconComponent size={17} className="flex-shrink-0" />
@@ -363,7 +363,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
           {/* User Profile */}
           <Link
             href="/profile-management"
-            className="px-6 py-5 border-t border-[#E2E8F0] flex items-center hover:bg-[#F8FAFC] transition"
+            className="px-6 py-5 border-t border-[#E2E8F0] flex items-center hover:bg-slate-50 transition"
           >
             {user ? (
               <img
