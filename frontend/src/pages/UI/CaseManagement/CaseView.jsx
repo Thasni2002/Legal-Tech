@@ -433,7 +433,7 @@ export default function CaseView() {
           <table className="min-w-[900px] w-full">
             <thead>
               <tr className="bg-[#F8FAFC] border-b border-[#F1F5F9]">
-                {["Case Title", "Case ID", "Client", "Court", "Type", "Status", "Actions"].map((h) => (
+                {["Case Name", "Case ID", "Client", "Court", "Status", "Actions"].map((h) => (
                   <th key={h} className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">
                     {h}
                   </th>
@@ -458,11 +458,6 @@ export default function CaseView() {
                     </td>
                     <td className="px-5 py-4 text-sm text-[#475569] font-medium">{item.client_name}</td>
                     <td className="px-5 py-4 text-sm text-[#475569]">{item.court_name}</td>
-                    <td className="px-5 py-4">
-                      <span className="text-xs font-semibold text-[#64748B] bg-[#F1F5F9] px-2.5 py-1 rounded-lg">
-                        {item.case_type}
-                      </span>
-                    </td>
                     <td className="px-5 py-4">
                       <StatusBadge status={item.status} />
                     </td>
@@ -632,24 +627,24 @@ export default function CaseView() {
             </div>
 
             {/* ── Tabs ── */}
-            <div className="flex flex-col lg:flex-row lg:items-center gap-3 border-b border-[#F1F5F9] bg-[#F8FAFC] p-3">           
-                 <div className="flex overflow-x-auto no-scrollbar">
-              {["overview", "documents"].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-6 py-3.5 text-sm font-bold capitalize transition-colors relative ${activeTab === tab
-                    ? "text-[#2563EB]"
-                    : "text-[#64748B] hover:text-[#0F172A]"
-                    }`}
-                >
-                  {tab === "overview" ? "Case Overview" : "Case Documents"}
-                  {activeTab === tab && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2563EB] rounded-t-full" />
-                  )}
-                </button>
-              ))}
-            </div>
+            <div className="flex flex-col lg:flex-row lg:items-center gap-3 border-b border-[#F1F5F9] bg-[#F8FAFC] p-3">
+              <div className="flex overflow-x-auto no-scrollbar">
+                {["overview", "documents"].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-6 py-3.5 text-sm font-bold capitalize transition-colors relative ${activeTab === tab
+                      ? "text-[#2563EB]"
+                      : "text-[#64748B] hover:text-[#0F172A]"
+                      }`}
+                  >
+                    {tab === "overview" ? "Case Overview" : "Case Documents"}
+                    {activeTab === tab && (
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2563EB] rounded-t-full" />
+                    )}
+                  </button>
+                ))}
+              </div>
               {/* Direct Assign Advocate button */}
               <div className="lg:ml-auto w-full lg:w-auto">
                 <button
@@ -657,7 +652,7 @@ export default function CaseView() {
                     setIsModalOpen(false);
                     router.push(`/lawfirm-management/assign-advocate?directCaseId=${selectedCase.id}`);
                   }}
-className="w-full lg:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold"                >
+                  className="w-full lg:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold"                >
                   <UserCheck size={14} />
                   Direct Assign Advocate
                 </button>
@@ -671,7 +666,7 @@ className="w-full lg:w-auto flex items-center justify-center gap-2 px-4 py-2 rou
               {activeTab === "overview" && (
                 <div className="space-y-6">
                   {/* Status badge */}
-                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                     <StatusBadge status={selectedCase.status} />
                     <span className="text-xs text-[#94A3B8] font-medium">
                       {selectedCase.case_type} · {selectedCase.court_type}
