@@ -193,6 +193,10 @@ def startup():
                 with engine.begin() as conn:
                     conn.execute(text("ALTER TABLE advocates ADD COLUMN hashed_password VARCHAR(255) NULL;"))
                 print("Successfully added hashed_password column to advocates table.")
+            if 'temp_password' not in columns:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE advocates ADD COLUMN temp_password VARCHAR(255) NULL;"))
+                print("Successfully added temp_password column to advocates table.")
     except Exception as e:
         print(f"Error checking/adding migration columns: {e}")
 
