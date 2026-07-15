@@ -6,6 +6,7 @@ import { API_BASE_URL } from "@/utils/api";
 import { getLoggedInUser } from "@/utils/auth";
 import { jsPDF } from "jspdf";
 import ReactMarkdown from "react-markdown";
+import DocumentViewerModal from "@/components/common/DocumentViewerModal";
 import {
   FileText,
   Download,
@@ -19,6 +20,7 @@ import {
   ChevronRight,
   LayoutList,
   Wand2,
+  Eye,
 } from "lucide-react";
 
 const BASE_URL = API_BASE_URL || "http://127.0.0.1:8000";
@@ -193,6 +195,13 @@ export default function DocumentFormatGenerateView() {
   const [cases, setCases] = useState([]);
   const [selectedCase, setSelectedCase] = useState("");
 
+  // ── Admin/Advocate view state ───────────────────────────────────────────────
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [allCases, setAllCases] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [selectedClient, setSelectedClient] = useState("");
+  const [viewerDoc, setViewerDoc] = useState(null);
+
   // ── Generate tab state ──────────────────────────────────────────────────────
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [draftText, setDraftText] = useState("");
@@ -206,6 +215,9 @@ export default function DocumentFormatGenerateView() {
   // ── Fetch cases on mount ────────────────────────────────────────────────────
   useEffect(() => {
     const user = getLoggedInUser();
+    const role = (user?.role || "").toLowerCase();
+    const isUserAdmin = role.includes("admin") || role.includes("advocate") || role.includes("senior") || role.includes("junior");
+    setIsAdmin(isUserAdmin);
     const name = user?.username || user?.name || "";
 
     const fetchCases = async () => {
@@ -213,23 +225,42 @@ export default function DocumentFormatGenerateView() {
         const response = await fetch(`${BASE_URL}/case-management/`);
         if (response.ok) {
           const casesData = await response.json();
-          const clientCases = Array.isArray(casesData)
-            ? user
-              ? casesData.filter((c) => {
-                  const caseEmail = (c.email_id || "").toLowerCase().trim();
-                  const userEmail = (user.email || "").toLowerCase().trim();
-                  if (caseEmail && userEmail && caseEmail === userEmail) return true;
-                  if (c.client_name) {
-                    const normalizedName = c.client_name.toLowerCase().replace(/[^a-z0-9]/g, "");
-                    const normalizedUsername = name.toLowerCase().replace(/[^a-z0-9]/g, "");
-                    if (normalizedName === normalizedUsername) return true;
-                  }
-                  return false;
-                })
-              : casesData
-            : [];
-          setCases(clientCases);
-          if (clientCases.length > 0) setSelectedCase(clientCases[0].id.toString());
+          const casesList = Array.isArray(casesData) ? casesData : [];
+          setAllCases(casesList);
+
+          if (isUserAdmin) {
+            // Extract unique clients
+            const clientMap = {};
+            casesList.forEach((c) => {
+              const clientName = c.client_name;
+              if (!clientName) return;
+              if (!clientMap[clientName]) {
+                clientMap[clientName] = {
+                  name: clientName,
+                  email: c.email_id || "",
+                };
+              }
+            });
+            const clientList = Object.values(clientMap);
+            setClients(clientList);
+            if (clientList.length > 0) {
+              setSelectedClient(clientList[0].name);
+            }
+          } else {
+            const clientCases = casesList.filter((c) => {
+              const caseEmail = (c.email_id || "").toLowerCase().trim();
+              const userEmail = (user?.email || "").toLowerCase().trim();
+              if (caseEmail && userEmail && caseEmail === userEmail) return true;
+              if (c.client_name) {
+                const normalizedName = c.client_name.toLowerCase().replace(/[^a-z0-9]/g, "");
+                const normalizedUsername = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+                if (normalizedName === normalizedUsername) return true;
+              }
+              return false;
+            });
+            setCases(clientCases);
+            if (clientCases.length > 0) setSelectedCase(clientCases[0].id.toString());
+          }
         }
       } catch (err) {
         console.error("Error fetching cases", err);
@@ -237,6 +268,35 @@ export default function DocumentFormatGenerateView() {
     };
     fetchCases();
   }, []);
+
+  // Filter cases for admin/advocate depending on selected client
+  useEffect(() => {
+    if (isAdmin) {
+      if (selectedClient) {
+        const filtered = allCases.filter(
+          (c) => (c.client_name || "").toLowerCase() === selectedClient.toLowerCase()
+        );
+        setCases(filtered);
+        if (filtered.length > 0) {
+          setSelectedCase(filtered[0].id.toString());
+        } else {
+          setSelectedCase("");
+        }
+      } else {
+        setCases([]);
+        setSelectedCase("");
+      }
+    }
+  }, [selectedClient, isAdmin, allCases]);
+
+  const getUploadedDocObj = (docName, caseDocs = []) => {
+    if (!Array.isArray(caseDocs) || caseDocs.length === 0) return null;
+    const needle = docName.toLowerCase().replace(/[^a-z0-9]/g, "");
+    return caseDocs.find((d) => {
+      const haystack = ((d.documentType || d.file || "")).toLowerCase().replace(/[^a-z0-9]/g, "");
+      return haystack.includes(needle.slice(0, 6)) || needle.includes(haystack.slice(0, 6));
+    }) || null;
+  };
 
   // ── Derived: selected case object ───────────────────────────────────────────
   const selectedCaseObj = cases.find((c) => c.id.toString() === selectedCase) || null;
@@ -343,30 +403,32 @@ export default function DocumentFormatGenerateView() {
         </div>
 
         {/* ── Tab Switcher ────────────────────────────────────────────────────── */}
-        <div className="mt-6 flex gap-2 bg-slate-100 p-1 rounded-2xl w-fit">
-          <button
-            onClick={() => setActiveTab("checklist")}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer ${
-              activeTab === "checklist"
-                ? "bg-white text-blue-700 shadow-sm border border-slate-200"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <ClipboardList className="w-4 h-4" />
-            Document Checklist
-          </button>
-          <button
-            onClick={() => setActiveTab("generate")}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer ${
-              activeTab === "generate"
-                ? "bg-white text-blue-700 shadow-sm border border-slate-200"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <Wand2 className="w-4 h-4" />
-            Generate Document Format
-          </button>
-        </div>
+        {!isAdmin && (
+          <div className="mt-6 flex gap-2 bg-slate-100 p-1 rounded-2xl w-fit">
+            <button
+              onClick={() => setActiveTab("checklist")}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer ${
+                activeTab === "checklist"
+                  ? "bg-white text-blue-700 shadow-sm border border-slate-200"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <ClipboardList className="w-4 h-4" />
+              Document Checklist
+            </button>
+            <button
+              onClick={() => setActiveTab("generate")}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer ${
+                activeTab === "generate"
+                  ? "bg-white text-blue-700 shadow-sm border border-slate-200"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <Wand2 className="w-4 h-4" />
+              Generate Document Format
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ════════════════════════════════════════════════════════════════════════
@@ -375,30 +437,56 @@ export default function DocumentFormatGenerateView() {
       {activeTab === "checklist" && (
         <div className="space-y-6">
 
-          {/* Case Selector */}
-          <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
-              Select Your Case
-            </label>
-            {cases.length === 0 ? (
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-amber-700 text-sm font-semibold">
-                <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                No cases found linked to your account. Please contact your advocate.
+          {/* Client & Case Selector */}
+          <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 space-y-4">
+            {isAdmin && (
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+                  Filter by Client
+                </label>
+                {clients.length === 0 ? (
+                  <div className="text-slate-400 text-sm">No clients found.</div>
+                ) : (
+                  <select
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-3 font-medium outline-none transition-all"
+                    value={selectedClient}
+                    onChange={(e) => setSelectedClient(e.target.value)}
+                  >
+                    <option value="">-- Choose a Client --</option>
+                    {clients.map((cli, idx) => (
+                      <option key={idx} value={cli.name}>
+                        {cli.name} ({cli.email})
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
-            ) : (
-              <select
-                className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-3 font-medium outline-none transition-all"
-                value={selectedCase}
-                onChange={(e) => setSelectedCase(e.target.value)}
-              >
-                <option value="">-- Choose a case --</option>
-                {cases.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.case_no} — {c.case_title} ({c.case_type || "Unknown Type"})
-                  </option>
-                ))}
-              </select>
             )}
+
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+                {isAdmin ? "Select Case" : "Select Your Case"}
+              </label>
+              {cases.length === 0 ? (
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-amber-700 text-sm font-semibold">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                  {isAdmin ? "No cases found for the selected client." : "No cases found linked to your account. Please contact your advocate."}
+                </div>
+              ) : (
+                <select
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-3 font-medium outline-none transition-all"
+                  value={selectedCase}
+                  onChange={(e) => setSelectedCase(e.target.value)}
+                >
+                  <option value="">-- Choose a case --</option>
+                  {cases.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.case_no} — {c.case_title} ({c.case_type || "Unknown Type"})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
           </div>
 
           {/* Checklist Body */}
@@ -448,91 +536,115 @@ export default function DocumentFormatGenerateView() {
               </div>
 
               {/* Document Cards Grid */}
-              <div className="grid md:grid-cols-2 gap-4">
-                {requiredDocs.map((doc, idx) => {
-                  const uploaded = isDocUploaded(doc.name, uploadedDocs);
-                  return (
-                    <div
-                      key={idx}
-                      className={`bg-white rounded-2xl border shadow-sm p-5 flex gap-4 transition-all duration-200 hover:shadow-md ${
-                        uploaded ? "border-emerald-200" : "border-slate-200 hover:border-blue-200"
-                      }`}
-                    >
-                      {/* Icon */}
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl flex-shrink-0 ${
-                        uploaded ? "bg-emerald-50" : "bg-slate-50"
-                      }`}>
-                        {doc.icon}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="text-sm font-bold text-slate-900">{doc.name}</h3>
-                          {uploaded ? (
-                            <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
-                              <CheckCircle2 className="w-3 h-3" /> Uploaded
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
-                              <AlertCircle className="w-3 h-3" /> Missing
-                            </span>
-                          )}
+              {isAdmin && requiredDocs.filter((doc) => isDocUploaded(doc.name, uploadedDocs)).length === 0 ? (
+                <div className="p-8 bg-slate-50 border border-slate-200 rounded-3xl text-center text-slate-500 font-semibold">
+                  No documents uploaded by the client yet.
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-2 gap-4">
+                  {(isAdmin ? requiredDocs.filter((doc) => isDocUploaded(doc.name, uploadedDocs)) : requiredDocs).map((doc, idx) => {
+                    const uploaded = isDocUploaded(doc.name, uploadedDocs);
+                    return (
+                      <div
+                        key={idx}
+                        className={`bg-white rounded-2xl border shadow-sm p-5 flex gap-4 transition-all duration-200 hover:shadow-md ${
+                          uploaded ? "border-emerald-200" : "border-slate-200 hover:border-blue-200"
+                        }`}
+                      >
+                        {/* Icon */}
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl flex-shrink-0 ${
+                          uploaded ? "bg-emerald-50" : "bg-slate-50"
+                        }`}>
+                          {doc.icon}
                         </div>
-                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">{doc.description}</p>
 
-                        {/* Action Buttons */}
-                        {!uploaded && (
-                          <div className="flex gap-2 mt-3 flex-wrap">
-                            <button
-                              onClick={() => router.push("/client-documents")}
-                              className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-all cursor-pointer"
-                            >
-                              <Upload className="w-3 h-3" />
-                              Upload Now
-                            </button>
-                            {doc.canGenerate && (
-                              <button
-                                onClick={() => handleSelectTemplate(doc.templateKey, selectedCase)}
-                                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all cursor-pointer border border-slate-200"
-                              >
-                                <Wand2 className="w-3 h-3" />
-                                Generate Format
-                              </button>
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-sm font-bold text-slate-900">{doc.name}</h3>
+                            {uploaded ? (
+                              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                <CheckCircle2 className="w-3 h-3" /> Uploaded
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                                <AlertCircle className="w-3 h-3" /> Missing
+                              </span>
                             )}
                           </div>
-                        )}
-                        {uploaded && doc.canGenerate && (
-                          <button
-                            onClick={() => handleSelectTemplate(doc.templateKey, selectedCase)}
-                            className="mt-3 flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all cursor-pointer border border-slate-200"
-                          >
-                            <Wand2 className="w-3 h-3" />
-                            Re-generate Format
-                          </button>
-                        )}
+                          <p className="text-xs text-slate-500 mt-1 leading-relaxed">{doc.description}</p>
+
+                          {/* Action Buttons */}
+                          {!isAdmin && !uploaded && (
+                            <div className="flex gap-2 mt-3 flex-wrap">
+                              <button
+                                onClick={() => router.push("/client-documents")}
+                                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-all cursor-pointer"
+                              >
+                                <Upload className="w-3 h-3" />
+                                Upload Now
+                              </button>
+                              {doc.canGenerate && (
+                                <button
+                                  onClick={() => handleSelectTemplate(doc.templateKey, selectedCase)}
+                                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all cursor-pointer border border-slate-200"
+                                >
+                                  <Wand2 className="w-3 h-3" />
+                                  Generate Format
+                                </button>
+                              )}
+                            </div>
+                          )}
+                          {uploaded && (
+                            <div className="flex gap-2 mt-3 flex-wrap">
+                              {(() => {
+                                const uploadedDoc = getUploadedDocObj(doc.name, uploadedDocs);
+                                return uploadedDoc && (
+                                  <button
+                                    onClick={() => setViewerDoc({ fileUrl: uploadedDoc.url, title: uploadedDoc.file || uploadedDoc.documentType, badge: uploadedDoc.documentType })}
+                                    className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-all cursor-pointer border border-emerald-600"
+                                  >
+                                    <Eye className="w-3 h-3" />
+                                    View Document
+                                  </button>
+                                );
+                              })()}
+                              {!isAdmin && doc.canGenerate && (
+                                <button
+                                  onClick={() => handleSelectTemplate(doc.templateKey, selectedCase)}
+                                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all cursor-pointer border border-slate-200"
+                                >
+                                  <Wand2 className="w-3 h-3" />
+                                  Re-generate Format
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Bottom CTA */}
-              <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-3xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-white font-extrabold text-lg">Need to upload documents?</h3>
-                  <p className="text-blue-100 text-sm mt-0.5 font-medium">
-                    Go to the Documents page to upload any missing files to your advocate.
-                  </p>
+              {!isAdmin && (
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-3xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-white font-extrabold text-lg">Need to upload documents?</h3>
+                    <p className="text-blue-100 text-sm mt-0.5 font-medium">
+                      Go to the Documents page to upload any missing files to your advocate.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => router.push("/client-documents")}
+                    className="flex items-center gap-2 px-5 py-3 bg-white hover:bg-blue-50 text-blue-700 font-bold rounded-xl text-sm transition-all shadow-md cursor-pointer flex-shrink-0"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Go to Documents
+                  </button>
                 </div>
-                <button
-                  onClick={() => router.push("/client-documents")}
-                  className="flex items-center gap-2 px-5 py-3 bg-white hover:bg-blue-50 text-blue-700 font-bold rounded-xl text-sm transition-all shadow-md cursor-pointer flex-shrink-0"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Go to Documents
-                </button>
-              </div>
+              )}
             </>
           )}
         </div>
@@ -541,7 +653,7 @@ export default function DocumentFormatGenerateView() {
       {/* ════════════════════════════════════════════════════════════════════════
           TAB 2 — GENERATE DOCUMENT FORMAT
       ════════════════════════════════════════════════════════════════════════ */}
-      {activeTab === "generate" && (
+      {!isAdmin && activeTab === "generate" && (
         <div className="space-y-6">
 
           {/* Error Banner */}
@@ -683,6 +795,14 @@ export default function DocumentFormatGenerateView() {
             </div>
           )}
         </div>
+      )}
+      {viewerDoc && (
+        <DocumentViewerModal
+          fileUrl={viewerDoc.fileUrl}
+          title={viewerDoc.title}
+          badge={viewerDoc.badge}
+          onClose={() => setViewerDoc(null)}
+        />
       )}
     </div>
   );

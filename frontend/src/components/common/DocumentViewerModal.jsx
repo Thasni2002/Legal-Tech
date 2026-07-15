@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { FileText, Download, ExternalLink, X, Lock } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
 import { API_BASE_URL } from "@/utils/api";
+import ReactMarkdown from "react-markdown";
 
 export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) {
   const [viewerUrl, setViewerUrl] = useState("");
@@ -13,6 +14,9 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
   const [isAudio, setIsAudio] = useState(false);
   const [isVideo, setIsVideo] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
+  const [isMarkdown, setIsMarkdown] = useState(false);
+  const [markdownContent, setMarkdownContent] = useState("");
+  const [loadingContent, setLoadingContent] = useState(false);
 
   // Fetch logged-in user and detect if Junior Advocate
   const loggedInUser = typeof window !== "undefined" ? getLoggedInUser() : null;
@@ -72,9 +76,28 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
       setIsPdf(ext === "pdf");
       setIsAudio(["mp3", "wav", "ogg", "aac", "m4a", "wma", "flac"].includes(ext));
       setIsVideo(["mp4", "webm", "ogg", "mov", "avi", "mkv", "3gp"].includes(ext));
+      
+      const isMd = ext === "md" || ext === "txt";
+      setIsMarkdown(isMd);
       setViewerUrl(normalizedUrl);
+
+      if (isMd && normalizedUrl) {
+        setLoadingContent(true);
+        fetch(normalizedUrl)
+          .then((res) => res.text())
+          .then((text) => {
+            setMarkdownContent(text);
+          })
+          .catch((err) => {
+            console.error("Failed to load markdown/text file:", err);
+            setMarkdownContent("Failed to load document content.");
+          })
+          .finally(() => {
+            setLoadingContent(false);
+          });
+      }
     }
-  }, [effectiveUrl]);
+  }, [effectiveUrl, normalizedUrl]);
 
   // Synchronous DOM manipulation to black out content BEFORE OS capture can process
   const forceBlackout = () => {
@@ -323,6 +346,18 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
               </div>
             ) : isPdf ? (
               <iframe src={viewerUrl} className="w-full h-full min-h-[600px] border-0" title={title || "Document"} />
+            ) : isMarkdown ? (
+              <div className="w-full h-full p-8 overflow-auto bg-white flex flex-col justify-start items-start select-text">
+                {loadingContent ? (
+                  <div className="flex items-center justify-center w-full h-full py-8 text-slate-400 font-semibold">
+                    Loading content...
+                  </div>
+                ) : (
+                  <div className="prose prose-slate max-w-none text-slate-800 leading-relaxed text-sm w-full">
+                    <ReactMarkdown>{markdownContent}</ReactMarkdown>
+                  </div>
+                )}
+              </div>
             ) : isImage ? (
               <div className="p-6">
                 <img src={viewerUrl} alt={title || "Document"} className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-lg" />
