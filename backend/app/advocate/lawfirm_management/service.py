@@ -7,6 +7,9 @@ from .schemas import (
     AssignedCaseCreate
 )
 from passlib.context import CryptContext
+from app.authapp.models import User
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -91,22 +94,33 @@ def delete_advocate(
     db: Session,
     advocate_id: int
 ):
-    advocate = get_advocate_by_id(
-        db,
-        advocate_id
-    )
+    advocate = get_advocate_by_id(db, advocate_id)
 
     if not advocate:
         return None
 
-    db.delete(advocate)
-    db.commit()
+    try:
+        # Find linked provisioned user
+        user = db.query(User).filter(
+            func.lower(User.email) == func.lower(advocate.email_address)
+        ).first()
 
-    return {
-        "message": "Advocate deleted successfully"
-    }
+        # Delete user first
+        if user and user.id != 1:
+            db.delete(user)
 
+        # Delete advocate
+        db.delete(advocate)
 
+        db.commit()
+
+        return {
+            "message": "Advocate and linked user deleted successfully"
+        }
+
+    except IntegrityError:
+        db.rollback()
+        raise ValueError("Unable to delete advocate because related records exist.")
 # Create assigned case
 def create_assigned_case(
     db: Session,
