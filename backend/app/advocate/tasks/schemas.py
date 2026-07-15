@@ -14,6 +14,7 @@ class TaskCreate(BaseModel):
     case_title: Optional[str] = None
     case_no: Optional[str] = None
     is_pinned: Optional[bool] = False
+    workflow_document_id: Optional[int] = None
 
 
 class TaskUpdate(BaseModel):
@@ -26,6 +27,8 @@ class TaskUpdate(BaseModel):
     case_title: Optional[str] = None
     case_no: Optional[str] = None
     is_pinned: Optional[bool] = None
+    workflow_document_id: Optional[int] = None
+
 
 
 class TaskStatusUpdate(BaseModel):
@@ -66,9 +69,11 @@ class TaskOut(BaseModel):
     case_no: Optional[str]
     senior_name: Optional[str]
     junior_name: Optional[str]
+    workflow_document_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
     messages: List[TaskMessageOut] = []
+
 
     class Config:
         from_attributes = True

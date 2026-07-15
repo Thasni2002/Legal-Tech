@@ -1,8 +1,10 @@
 
-from sqlalchemy import Column, Integer, String, Text, DateTime
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.mysql import LONGTEXT, LONGBLOB
 from app.database import Base
 from datetime import datetime
+
 
 class Case(Base):
     __tablename__ = "case_management_cases"
@@ -39,3 +41,30 @@ class UploadedFile(Base):
     content_type = Column(String(100), nullable=True)
     data = Column(LONGBLOB, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class CaseDocumentWorkflow(Base):
+    __tablename__ = "case_document_workflows"
+
+    id = Column(Integer, primary_key=True, index=True)
+    case_id = Column(Integer, nullable=False)  # References case_management_cases.id
+    case_no = Column(String(100), nullable=False)
+    case_title = Column(String(255), nullable=False)
+
+    title = Column(String(255), nullable=False)
+    document_type = Column(String(100), nullable=False)  # e.g., 'Petition', 'Affidavit', 'Other'
+    content = Column(Text, nullable=True)  # Inline draft text
+    file_url = Column(String(500), nullable=True)  # If uploaded
+
+    junior_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    senior_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    # Status: 'Draft', 'Pending Review', 'Approved', 'Needs Correction'
+    status = Column(String(50), default="Draft", nullable=False)
+    senior_feedback = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    junior = relationship("User", foreign_keys=[junior_id])
+    senior = relationship("User", foreign_keys=[senior_id])

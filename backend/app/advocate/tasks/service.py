@@ -31,6 +31,7 @@ def create_task(db: Session, data: TaskCreate, senior_id: int, senior_name: str)
         case_title=data.case_title,
         case_no=data.case_no,
         is_pinned=getattr(data, "is_pinned", False),
+        workflow_document_id=data.workflow_document_id,
         senior_name=senior_name,
         junior_name=junior_name,
     )

@@ -34,6 +34,8 @@ BASE_MODULES = [
     "Users",
     "Permissions",
     "Client Document Generate",
+    "Junior Document Approval",
+    "Senior Document Approval",
 ]
 
 # Default permission matrix for seeding core roles
@@ -62,6 +64,8 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Users": {"view": True, "add": True, "edit": True, "delete": True},
         "Permissions": {"view": True, "add": True, "edit": True, "delete": True},
         "Client Document Generate": {"view": True, "add": True, "edit": True, "delete": True},
+        "Junior Document Approval": {"view": True, "add": True, "edit": True, "delete": True},
+        "Senior Document Approval": {"view": True, "add": True, "edit": True, "delete": True},
     },
     "junioradvocate": {
         "Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
@@ -87,6 +91,8 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Users": {"view": False, "add": False, "edit": False, "delete": False},
         "Permissions": {"view": False, "add": False, "edit": False, "delete": False},
         "Client Document Generate": {"view": False, "add": False, "edit": False, "delete": False},
+        "Junior Document Approval": {"view": True, "add": True, "edit": True, "delete": False},
+        "Senior Document Approval": {"view": False, "add": False, "edit": False, "delete": False},
     },
     "client": {
         "Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
@@ -110,10 +116,12 @@ DEFAULT_ROLE_PERMISSIONS = {
         "User Roles": {"view": False, "add": False, "edit": False, "delete": False},
         "Roles": {"view": False, "add": False, "edit": False, "delete": False},
         "Users": {"view": False, "add": False, "edit": False, "delete": False},
-        "Permissions": {"view": False, "add": False, "edit": False, "delete": False},
         "Client Document Generate": {"view": True, "add": False, "edit": False, "delete": False},
+        "Junior Document Approval": {"view": False, "add": False, "edit": False, "delete": False},
+        "Senior Document Approval": {"view": False, "add": False, "edit": False, "delete": False},
     },
 }
+
 
 
 # -------------------------------

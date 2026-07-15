@@ -173,7 +173,7 @@ def get_notifications(
     """
     from app.advocate.finance_management.models import Invoice
     from app.advocate.consultations.models import Consultation
-    from app.advocate.case_management.models import Case
+    from app.advocate.case_management.models import Case, CaseDocumentWorkflow
     from app.advocate.client_management.models import Document
     from app.advocate.lawfirm_management.models import AssignedCase
 
@@ -361,7 +361,26 @@ def get_notifications(
                 "created_at": (c.updated_at or c.created_at).isoformat()
             })
 
+        # 9. Case Document Approval pending review notifications for Seniors
+        pending_review_docs = db.query(CaseDocumentWorkflow).filter(
+            CaseDocumentWorkflow.status == "Pending Review",
+            CaseDocumentWorkflow.updated_at >= cutoff
+        ).all()
+        for doc in pending_review_docs:
+            jr_user = db.query(User).filter(User.id == doc.junior_id).first()
+            jr_name = (jr_user.username or "Junior Advocate") if jr_user else "Junior Advocate"
+            notifications.append({
+                "id": f"workflow_pending_{doc.id}",
+                "icon": "⚖️",
+                "title": f"Junior Advocate {jr_name} submitted document '{doc.title}' for review.",
+                "time": _time_ago(doc.updated_at),
+                "color": "text-blue-600",
+                "bg": "bg-blue-50",
+                "created_at": doc.updated_at.isoformat()
+            })
+
     # ─── B. JUNIOR ADVOCATE NOTIFICATIONS ──────────────────────────────────────────
+
     elif is_junior and user:
         # 1. Assigned to a new case
         new_cases = db.query(Case).filter(
@@ -444,7 +463,36 @@ def get_notifications(
                     "created_at": now.isoformat()
                 })
 
+        # 6. Case Document Approval updates for Juniors
+        my_review_docs = db.query(CaseDocumentWorkflow).filter(
+            CaseDocumentWorkflow.junior_id == user.id,
+            CaseDocumentWorkflow.status.in_(["Approved", "Needs Correction"]),
+            CaseDocumentWorkflow.updated_at >= cutoff
+        ).all()
+        for doc in my_review_docs:
+            if doc.status == "Approved":
+                notifications.append({
+                    "id": f"workflow_approved_{doc.id}",
+                    "icon": "✅",
+                    "title": f"Senior Advocate approved your document: '{doc.title}'.",
+                    "time": _time_ago(doc.updated_at),
+                    "color": "text-emerald-600",
+                    "bg": "bg-emerald-50",
+                    "created_at": doc.updated_at.isoformat()
+                })
+            elif doc.status == "Needs Correction":
+                notifications.append({
+                    "id": f"workflow_correction_{doc.id}",
+                    "icon": "⚠️",
+                    "title": f"Correction requested for '{doc.title}': {doc.senior_feedback or ''}",
+                    "time": _time_ago(doc.updated_at),
+                    "color": "text-amber-600",
+                    "bg": "bg-amber-50",
+                    "created_at": doc.updated_at.isoformat()
+                })
+
     # ─── C. CLIENT NOTIFICATIONS ──────────────────────────────────────────────────
+
     elif is_client and user:
         # 1. Case status updated
         client_cases = db.query(Case).all()

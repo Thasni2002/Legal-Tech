@@ -309,3 +309,25 @@ def remove_advocate(
         )
 
     return deleted
+
+
+from app.authapp.models import User
+import re
+
+@router.get("/assigned-cases/by-junior/{junior_id}", response_model=list[AssignedCaseOut])
+def get_assigned_cases_by_junior(junior_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == junior_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Junior advocate user not found")
+        
+    all_assigned = get_assigned_cases(db)
+    username_norm = (user.username or "").lower().strip()
+    
+    def matches_junior(assigned_case):
+        if not assigned_case.advocate_name:
+            return False
+        norm_name = re.sub(r'[^a-z0-9]', '', assigned_case.advocate_name.lower())
+        return norm_name == username_norm
+        
+    filtered = [c for c in all_assigned if matches_junior(c)]
+    return filtered

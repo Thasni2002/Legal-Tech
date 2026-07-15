@@ -78,3 +78,44 @@ class FormatDocumentRequest(BaseModel):
     case_id: int
     template_key: str
     draft_text: str
+
+
+from datetime import datetime
+
+class CaseDocumentWorkflowCreate(BaseModel):
+    case_id: int
+    case_no: str
+    case_title: str
+    title: str
+    document_type: str
+    content: Optional[str] = None
+    file_url: Optional[str] = None
+
+class CaseDocumentWorkflowUpdate(BaseModel):
+    title: Optional[str] = None
+    document_type: Optional[str] = None
+    content: Optional[str] = None
+    file_url: Optional[str] = None
+
+class CaseDocumentWorkflowReview(BaseModel):
+    status: str  # 'Approved' or 'Needs Correction'
+    senior_feedback: Optional[str] = None
+
+class CaseDocumentWorkflowResponse(BaseModel):
+    id: int
+    case_id: int
+    case_no: str
+    case_title: str
+    title: str
+    document_type: str
+    content: Optional[str] = None
+    file_url: Optional[str] = None
+    junior_id: int
+    senior_id: Optional[int] = None
+    status: str
+    senior_feedback: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True

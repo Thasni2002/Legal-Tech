@@ -149,3 +149,165 @@ def generate_format_document_endpoint(
 ):
     from .service import generate_document_from_format
     return generate_document_from_format(db, request.case_id, request.template_key, request.draft_text)
+
+
+from typing import List
+from app.advocate.tasks.routes import get_current_user
+from app.authapp.models import User
+from .models import CaseDocumentWorkflow
+from .schemas import (
+    CaseDocumentWorkflowCreate,
+    CaseDocumentWorkflowUpdate,
+    CaseDocumentWorkflowReview,
+    CaseDocumentWorkflowResponse
+)
+from app.utils.email import send_email
+
+@router.get("/workflow/documents", response_model=List[CaseDocumentWorkflowResponse])
+def get_workflow_documents(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    role = (current_user.role or "").lower()
+    if "senior" in role or "admin" in role:
+        return db.query(CaseDocumentWorkflow).all()
+    else:
+        return db.query(CaseDocumentWorkflow).filter(CaseDocumentWorkflow.junior_id == current_user.id).all()
+
+@router.post("/workflow/documents", response_model=CaseDocumentWorkflowResponse)
+def create_workflow_document(
+    data: CaseDocumentWorkflowCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    new_doc = CaseDocumentWorkflow(
+        case_id=data.case_id,
+        case_no=data.case_no,
+        case_title=data.case_title,
+        title=data.title,
+        document_type=data.document_type,
+        content=data.content,
+        file_url=data.file_url,
+        junior_id=current_user.id,
+        status="Draft"
+    )
+    db.add(new_doc)
+    db.commit()
+    db.refresh(new_doc)
+    return new_doc
+
+@router.get("/workflow/documents/{doc_id}", response_model=CaseDocumentWorkflowResponse)
+def get_workflow_document(
+    doc_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    doc = db.query(CaseDocumentWorkflow).filter(CaseDocumentWorkflow.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    role = (current_user.role or "").lower()
+    if "senior" not in role and "admin" not in role and doc.junior_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to view this document")
+    
+    return doc
+
+@router.put("/workflow/documents/{doc_id}", response_model=CaseDocumentWorkflowResponse)
+def update_workflow_document(
+    doc_id: int,
+    data: CaseDocumentWorkflowUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    doc = db.query(CaseDocumentWorkflow).filter(CaseDocumentWorkflow.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    if doc.junior_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to update this document")
+    
+    if doc.status not in ["Draft", "Needs Correction"]:
+        raise HTTPException(status_code=400, detail="Cannot edit document when under review or approved")
+    
+    if data.title is not None:
+        doc.title = data.title
+    if data.document_type is not None:
+        doc.document_type = data.document_type
+    if data.content is not None:
+        doc.content = data.content
+    if data.file_url is not None:
+        doc.file_url = data.file_url
+        
+    db.commit()
+    db.refresh(doc)
+    return doc
+
+@router.post("/workflow/documents/{doc_id}/submit", response_model=CaseDocumentWorkflowResponse)
+def submit_workflow_document(
+    doc_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    doc = db.query(CaseDocumentWorkflow).filter(CaseDocumentWorkflow.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    if doc.junior_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to submit this document")
+        
+    doc.status = "Pending Review"
+    db.commit()
+    db.refresh(doc)
+    return doc
+
+@router.post("/workflow/documents/{doc_id}/review", response_model=CaseDocumentWorkflowResponse)
+async def review_workflow_document(
+    doc_id: int,
+    data: CaseDocumentWorkflowReview,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    role = (current_user.role or "").lower()
+    if "senior" not in role and "admin" not in role:
+        raise HTTPException(status_code=403, detail="Only seniors/admins can review documents")
+        
+    doc = db.query(CaseDocumentWorkflow).filter(CaseDocumentWorkflow.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    if data.status not in ["Approved", "Needs Correction"]:
+        raise HTTPException(status_code=400, detail="Invalid status for review")
+        
+    doc.status = data.status
+    doc.senior_feedback = data.senior_feedback
+    doc.senior_id = current_user.id
+    db.commit()
+    db.refresh(doc)
+    
+    # Notify Junior Advocate
+    junior = db.query(User).filter(User.id == doc.junior_id).first()
+    if junior and junior.email:
+        try:
+            subject = f"Document '{doc.title}' Review Updated: {doc.status}"
+            feedback_section = f"<p><strong>Feedback from Senior Advocate:</strong> {doc.senior_feedback}</p>" if doc.senior_feedback else ""
+            body = f"""
+            <html>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <h3>Document Review Update</h3>
+                    <p>Dear {junior.first_name or junior.username},</p>
+                    <p>Your document draft <strong>"{doc.title}"</strong> for Case <strong>"{doc.case_title}"</strong> has been reviewed.</p>
+                    <div style="background-color: #f5f5f5; padding: 15px; border-left: 4px solid #2563EB; margin: 15px 0;">
+                        <p style="margin: 5px 0;"><strong>Status:</strong> {doc.status}</p>
+                        {feedback_section}
+                    </div>
+                    <p>Please log in to your dashboard to view the details.</p>
+                    <p>Best regards,<br/>Legal Tech Team</p>
+                </body>
+            </html>
+            """
+            await send_email(junior.email, subject, body)
+        except Exception as e:
+            print(f"Failed to send review email to junior: {e}")
+            
+    return doc
+

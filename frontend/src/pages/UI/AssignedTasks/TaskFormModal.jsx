@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, Save, AlertCircle, Loader2, Briefcase, User, Calendar } from "lucide-react";
+import { X, Save, AlertCircle, Loader2, Briefcase, User, Calendar, FileText } from "lucide-react";
 import { API_BASE_URL } from "@/utils/api";
 
 const PRIORITY_OPTIONS = ["Low", "Medium", "High", "Urgent"];
@@ -39,6 +39,7 @@ export default function TaskFormModal({ onClose, onSaved, editTask = null }) {
 
   const [juniors, setJuniors] = useState([]);
   const [cases, setCases] = useState([]);
+  const [workflowDocuments, setWorkflowDocuments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
@@ -50,11 +51,17 @@ export default function TaskFormModal({ onClose, onSaved, editTask = null }) {
     case_id: editTask?.case_id || "",
     case_title: editTask?.case_title || "",
     case_no: editTask?.case_no || "",
+    workflow_document_id: editTask?.workflow_document_id || "",
   });
 
   useEffect(() => {
     fetchJuniors();
-    fetchCases();
+    if (editTask?.junior_advocate_id) {
+      fetchCasesForJunior(editTask.junior_advocate_id);
+      fetchWorkflowDocumentsForJunior(editTask.junior_advocate_id);
+    } else {
+      fetchCases();
+    }
   }, []);
 
   const fetchJuniors = async () => {
@@ -87,6 +94,48 @@ export default function TaskFormModal({ onClose, onSaved, editTask = null }) {
     }
   };
 
+  const fetchCasesForJunior = async (juniorId) => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases/by-junior/${juniorId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const firmCases = await res.json();
+        
+        // Fetch all case_management cases to map IDs
+        const caseMgmtRes = await fetch(`${API_BASE_URL}/case-management/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (caseMgmtRes.ok) {
+          const casesData = await caseMgmtRes.json();
+          const matched = casesData.filter(c => 
+            firmCases.some(f => f.case_number === c.case_no)
+          );
+          setCases(matched);
+        }
+      }
+    } catch (e) {
+      console.error("Error fetching junior cases:", e);
+    }
+  };
+
+  const fetchWorkflowDocumentsForJunior = async (juniorId) => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`${API_BASE_URL}/case-management/workflow/documents`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const filtered = data.filter(d => String(d.junior_id) === String(juniorId));
+        setWorkflowDocuments(filtered);
+      }
+    } catch (e) {
+      console.error("Error fetching workflow docs:", e);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === "case_id") {
@@ -101,10 +150,27 @@ export default function TaskFormModal({ onClose, onSaved, editTask = null }) {
           case_no: found ? found.case_no : "",
         }));
       }
+    } else if (name === "junior_advocate_id") {
+      setForm((f) => ({ 
+        ...f, 
+        junior_advocate_id: value, 
+        case_id: "", 
+        case_title: "", 
+        case_no: "", 
+        workflow_document_id: "" 
+      }));
+      if (value) {
+        fetchCasesForJunior(value);
+        fetchWorkflowDocumentsForJunior(value);
+      } else {
+        fetchCases();
+        setWorkflowDocuments([]);
+      }
     } else {
       setForm((f) => ({ ...f, [name]: value }));
     }
   };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -124,6 +190,7 @@ export default function TaskFormModal({ onClose, onSaved, editTask = null }) {
         case_id: form.case_id ? parseInt(form.case_id, 10) : null,
         case_title: form.case_title || null,
         case_no: form.case_no || null,
+        workflow_document_id: form.workflow_document_id ? parseInt(form.workflow_document_id, 10) : null,
       };
 
       const url = editTask
@@ -360,6 +427,32 @@ export default function TaskFormModal({ onClose, onSaved, editTask = null }) {
               ))}
             </select>
           </div>
+
+          {/* Document workflow linkage (optional) */}
+          {form.junior_advocate_id && (
+            <div>
+              <label style={labelStyle}>
+                <FileText size={10} style={{ marginRight: "4px", display: "inline" }} />
+                Link Workflow Document (Optional)
+              </label>
+              <select
+                name="workflow_document_id"
+                value={form.workflow_document_id}
+                onChange={handleChange}
+                style={{ ...inputStyle, cursor: "pointer" }}
+                onFocus={(e) => (e.target.style.borderColor = "#2563EB")}
+                onBlur={(e) => (e.target.style.borderColor = "#E2E8F0")}
+              >
+                <option value="">— No Document Link —</option>
+                {workflowDocuments.map((doc) => (
+                  <option key={doc.id} value={doc.id}>
+                    {doc.title} ({doc.status})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
 
           {/* Footer buttons */}
           <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", paddingTop: "4px" }}>

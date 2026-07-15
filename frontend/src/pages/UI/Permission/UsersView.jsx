@@ -45,6 +45,8 @@ const ALL_MODULES = [
   "Roles",
   "Users",
   "Permissions",
+  "Junior Document Approval",
+  "Senior Document Approval",
 ];
 
 const SENIOR_JUNIOR_MODULES = [
@@ -59,7 +61,8 @@ const SENIOR_JUNIOR_MODULES = [
       { key: "Finance Management", label: "Finance Management" },
       { key: "Calendar", label: "Calendar" },
       { key: "Assigned Tasks", label: "Assigned Tasks" },
-      { key: "Profile", label: "Profile" }
+      { key: "Profile", label: "Profile" },
+      { key: "Senior Document Approval", label: "Document Approval (Senior)" }
     ]
   },
   {
@@ -68,7 +71,8 @@ const SENIOR_JUNIOR_MODULES = [
       { key: "Junior Dashboard", label: "Dashboard (Junior)" },
       { key: "Assigned Cases", label: "Assigned Cases" },
       { key: "Junior Assigned Tasks", label: "Assigned Tasks (Junior)" },
-      { key: "Junior Calendar", label: "Calendar (Junior)" }
+      { key: "Junior Calendar", label: "Calendar (Junior)" },
+      { key: "Junior Document Approval", label: "Document Approval (Junior)" }
     ]
   },
   {
@@ -92,6 +96,7 @@ const SENIOR_JUNIOR_MODULES = [
     ]
   }
 ];
+
 
 const CLIENT_MODULES = [
   {

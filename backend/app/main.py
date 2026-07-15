@@ -19,6 +19,8 @@ from app.utils.scheduler import start_scheduler
 from app.advocate.dashboard import router as dashboard_router
 from app.advocate.tasks import router as tasks_router
 from app.advocate.tasks.models import Task, TaskMessage
+from app.advocate.case_management.models import CaseDocumentWorkflow
+
 
 app = FastAPI()
 
@@ -211,19 +213,20 @@ def startup():
         if inspector.has_table('advocate_tasks'):
             existing_cols = {col['name'] for col in inspector.get_columns('advocate_tasks')}
             needed_cols = {
-                'description':       "ALTER TABLE advocate_tasks ADD COLUMN description TEXT NULL",
-                'priority':          "ALTER TABLE advocate_tasks ADD COLUMN priority VARCHAR(50) NULL DEFAULT 'Medium'",
-                'due_date':          "ALTER TABLE advocate_tasks ADD COLUMN due_date VARCHAR(100) NULL",
-                'senior_advocate_id':"ALTER TABLE advocate_tasks ADD COLUMN senior_advocate_id INT NOT NULL DEFAULT 0",
-                'junior_advocate_id':"ALTER TABLE advocate_tasks ADD COLUMN junior_advocate_id INT NOT NULL DEFAULT 0",
-                'case_id':           "ALTER TABLE advocate_tasks ADD COLUMN case_id INT NULL",
-                'case_title':        "ALTER TABLE advocate_tasks ADD COLUMN case_title VARCHAR(255) NULL",
-                'case_no':           "ALTER TABLE advocate_tasks ADD COLUMN case_no VARCHAR(100) NULL",
-                'senior_name':       "ALTER TABLE advocate_tasks ADD COLUMN senior_name VARCHAR(255) NULL",
-                'junior_name':       "ALTER TABLE advocate_tasks ADD COLUMN junior_name VARCHAR(255) NULL",
-                'status':            "ALTER TABLE advocate_tasks ADD COLUMN status VARCHAR(50) NULL DEFAULT 'todo'",
-                'created_at':        "ALTER TABLE advocate_tasks ADD COLUMN created_at DATETIME NULL",
-                'updated_at':        "ALTER TABLE advocate_tasks ADD COLUMN updated_at DATETIME NULL",
+                'description':          "ALTER TABLE advocate_tasks ADD COLUMN description TEXT NULL",
+                'priority':             "ALTER TABLE advocate_tasks ADD COLUMN priority VARCHAR(50) NULL DEFAULT 'Medium'",
+                'due_date':             "ALTER TABLE advocate_tasks ADD COLUMN due_date VARCHAR(100) NULL",
+                'senior_advocate_id':   "ALTER TABLE advocate_tasks ADD COLUMN senior_advocate_id INT NOT NULL DEFAULT 0",
+                'junior_advocate_id':   "ALTER TABLE advocate_tasks ADD COLUMN junior_advocate_id INT NOT NULL DEFAULT 0",
+                'case_id':              "ALTER TABLE advocate_tasks ADD COLUMN case_id INT NULL",
+                'case_title':           "ALTER TABLE advocate_tasks ADD COLUMN case_title VARCHAR(255) NULL",
+                'case_no':              "ALTER TABLE advocate_tasks ADD COLUMN case_no VARCHAR(100) NULL",
+                'senior_name':          "ALTER TABLE advocate_tasks ADD COLUMN senior_name VARCHAR(255) NULL",
+                'junior_name':          "ALTER TABLE advocate_tasks ADD COLUMN junior_name VARCHAR(255) NULL",
+                'status':               "ALTER TABLE advocate_tasks ADD COLUMN status VARCHAR(50) NULL DEFAULT 'todo'",
+                'created_at':           "ALTER TABLE advocate_tasks ADD COLUMN created_at DATETIME NULL",
+                'updated_at':           "ALTER TABLE advocate_tasks ADD COLUMN updated_at DATETIME NULL",
+                'workflow_document_id': "ALTER TABLE advocate_tasks ADD COLUMN workflow_document_id INT NULL",
             }
             with engine.begin() as conn:
                 for col_name, alter_sql in needed_cols.items():
