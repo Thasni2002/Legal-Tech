@@ -30,6 +30,8 @@ class Task(Base):
     case_id = Column(Integer, nullable=True)           # FK to case_management_cases.id (nullable for standalone)
     case_title = Column(String(255), nullable=True)    # Denormalised for quick display
     case_no = Column(String(100), nullable=True)
+    workflow_document_id = Column(Integer, nullable=True) # Optional link to case_document_workflows.id
+
 
     # Snapshot names for display (avoids extra joins on every load)
     senior_name = Column(String(255), nullable=True)

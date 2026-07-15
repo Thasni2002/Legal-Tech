@@ -66,6 +66,7 @@ const ALL_GROUPS = [
       { key: "Calendar", label: "Calendar" },
       { key: "Assigned Tasks", label: "Assigned Tasks" },
       { key: "Profile", label: "Profile" },
+      { key: "Senior Document Approval", label: "Document Approval (Senior)" },
     ],
   },
   {
@@ -75,6 +76,7 @@ const ALL_GROUPS = [
       { key: "Assigned Cases", label: "Assigned Cases" },
       { key: "Junior Assigned Tasks", label: "Assigned Tasks (Junior)" },
       { key: "Junior Calendar", label: "Calendar (Junior)" },
+      { key: "Junior Document Approval", label: "Document Approval (Junior)" },
     ],
   },
   {
@@ -146,7 +148,9 @@ const DEFAULT_PERMISSIONS = {
     "User Roles": { view: true, add: true, edit: true, delete: true },
     "Roles": { view: true, add: true, edit: true, delete: true },
     "Users": { view: true, add: true, edit: true, delete: true },
-    "Permissions": { view: true, add: true, edit: true, delete: true }
+    "Permissions": { view: true, add: true, edit: true, delete: true },
+    "Junior Document Approval": { view: true, add: true, edit: true, delete: true },
+    "Senior Document Approval": { view: true, add: true, edit: true, delete: true }
   },
   "Junior Advocate": {
     "Dashboard": { view: true, add: false, edit: false, delete: false },
@@ -171,7 +175,9 @@ const DEFAULT_PERMISSIONS = {
     "User Roles": { view: false, add: false, edit: false, delete: false },
     "Roles": { view: false, add: false, edit: false, delete: false },
     "Users": { view: false, add: false, edit: false, delete: false },
-    "Permissions": { view: false, add: false, edit: false, delete: false }
+    "Permissions": { view: false, add: false, edit: false, delete: false },
+    "Junior Document Approval": { view: true, add: true, edit: true, delete: false },
+    "Senior Document Approval": { view: false, add: false, edit: false, delete: false }
   },
   "Client": {
     "Dashboard": { view: false, add: false, edit: false, delete: false },
@@ -196,9 +202,12 @@ const DEFAULT_PERMISSIONS = {
     "User Roles": { view: false, add: false, edit: false, delete: false },
     "Roles": { view: false, add: false, edit: false, delete: false },
     "Users": { view: false, add: false, edit: false, delete: false },
-    "Permissions": { view: false, add: false, edit: false, delete: false }
+    "Permissions": { view: false, add: false, edit: false, delete: false },
+    "Junior Document Approval": { view: false, add: false, edit: false, delete: false },
+    "Senior Document Approval": { view: false, add: false, edit: false, delete: false }
   }
 };
+;
 
 export default function PermissionView() {
   const [roles, setRoles] = useState([]);

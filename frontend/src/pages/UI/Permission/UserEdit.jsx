@@ -31,6 +31,8 @@ const ALL_MODULES = [
   "Roles",
   "Users",
   "Permissions",
+  "Junior Document Approval",
+  "Senior Document Approval",
 ];
 
 export default function UserEdit() {

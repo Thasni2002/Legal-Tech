@@ -54,6 +54,7 @@ export default function useModulePermission(moduleKey) {
           const data = await resUser.json();
           const custom = data.customPermissions || {};
           customOverrides = custom[moduleKey] || {};
+          setUser({ ...loggedIn, ...data });
         }
       } catch (_) {}
 
