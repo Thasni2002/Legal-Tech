@@ -139,7 +139,7 @@ export default function AdvDashboardView() {
 
                     if (datePart >= todayStr) {
                         // Find assigned advocate from lawfirm assignments
-                        const match = Array.isArray(assignedCases) ? assignedCases.find(ac => 
+                        const match = Array.isArray(assignedCases) ? assignedCases.find(ac =>
                             (ac.case_number && ac.case_number === c.case_no) ||
                             (ac.case_title && ac.case_title.trim().toLowerCase() === c.case_title.trim().toLowerCase())
                         ) : null;
@@ -315,20 +315,20 @@ export default function AdvDashboardView() {
     ];
 
     return (
-<div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5 space-y-4 lg:space-y-5 animate-in fade-in zoom-in-95 duration-500">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5 space-y-4 lg:space-y-5 animate-in fade-in zoom-in-95 duration-500">
             {/* Page Header */}
-<div className="bg-white rounded-2xl shadow-md border border-[#E2E8F0] p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">                <div>
-                    <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
-                        {greeting}, {displayName}
-                    </h1>
-                    <p className="text-[#64748B] mt-2 text-lg font-medium">
-                        {displayRole}
-                    </p>
-                </div>
+            <div className="bg-white rounded-2xl shadow-md border border-[#E2E8F0] p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">                <div>
+                <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
+                    {greeting}, {displayName}
+                </h1>
+                <p className="text-[#64748B] mt-2 text-lg font-medium">
+                    {displayRole}
+                </p>
+            </div>
                 <div className="flex flex-col items-start lg:items-end gap-3 w-full lg:w-auto">                  <div className="text-left md:text-right bg-[#F8FAFC] px-6 py-4 rounded-2xl border border-[#E2E8F0]">
-                        <p className="text-[#475569] font-bold text-sm uppercase tracking-wider">Today's Date</p>
-                        <p className="text-[#0F172A] font-extrabold text-lg mt-1">{currentDate}</p>
-                    </div>
+                    <p className="text-[#475569] font-bold text-sm uppercase tracking-wider">Today's Date</p>
+                    <p className="text-[#0F172A] font-extrabold text-lg mt-1">{currentDate}</p>
+                </div>
                     <div className="flex items-center gap-2 flex-wrap justify-end">
                         {/* View Calendar button */}
                         <button
@@ -357,9 +357,8 @@ export default function AdvDashboardView() {
                         <div
                             key={index}
                             onClick={() => setSelectedCard(isActive ? null : item.key)}
-                            className={`bg-white rounded-2xl shadow-md shadow-slate-200/40 border p-4 sm:p-5 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 cursor-pointer group ${
-                                isActive ? color.active : "border-[#E2E8F0] hover:shadow-slate-200/60"
-                            }`}
+                            className={`bg-white rounded-2xl shadow-md shadow-slate-200/40 border p-4 sm:p-5 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 cursor-pointer group ${isActive ? color.active : "border-[#E2E8F0] hover:shadow-slate-200/60"
+                                }`}
                         >
                             <div className={`w-10 h-10 ${color.bg} rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-sm border ${color.border}`}>
                                 <Icon className={`w-5 h-5 ${color.text}`} />
@@ -442,9 +441,8 @@ export default function AdvDashboardView() {
                                                 <td className="px-5 py-3 text-xs text-[#475569]">{c.case_type || "—"}</td>
                                                 <td className="px-5 py-3 text-xs text-[#475569]">{c.court_name || "—"}</td>
                                                 <td className="px-5 py-3">
-                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                                        c.status === "Active" ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
-                                                    }`}>{c.status}</span>
+                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${c.status === "Active" ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
+                                                        }`}>{c.status}</span>
                                                 </td>
                                             </tr>
                                         )) : (
@@ -507,8 +505,8 @@ export default function AdvDashboardView() {
                         </button>
                     </div>
 
-                    <div className="w-full overflow-x-auto rounded-2xl border border-[#E2E8F0]">
-                        <table className="min-w-full divide-y divide-[#E2E8F0]">
+                    <div className="w-full overflow-hidden rounded-2xl border border-[#E2E8F0]">
+                        <table className="w-full table-auto divide-y divide-[#E2E8F0]">
                             <thead className="bg-[#F8FAFC]">
                                 <tr>
                                     <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case ID</th>
@@ -527,9 +525,9 @@ export default function AdvDashboardView() {
                                             className="hover:bg-[#F8FAFC] transition-colors duration-150"
                                         >
                                             <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">{c.case_id}</td>
-                                            <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">{c.client_name}</td>
-                                            <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{c.type}</td>
-                                            <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{c.court}</td>
+                                            <td className="p-4 text-sm text-[#475569] break-words">{c.client_name}</td>
+                                            <td className="p-4 text-sm text-[#475569] break-words">{c.type}</td>
+                                            <td className="p-4 text-sm text-[#475569] break-words">{c.court}</td>
                                             <td className="p-4 whitespace-nowrap">
                                                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${c.status === "Hearing"
                                                     ? "bg-blue-50 text-blue-700 border-blue-200"
@@ -590,14 +588,14 @@ export default function AdvDashboardView() {
                         </h2>
                     </div>
 
-                    <div className="w-full overflow-x-auto rounded-2xl border border-[#E2E8F0]">
-                        <table className="min-w-full divide-y divide-[#E2E8F0]">
+                    <div className="w-full overflow-hidden rounded-2xl border border-[#E2E8F0]">
+                        <table className="w-full table-fixed divide-y divide-[#E2E8F0]">
                             <thead className="bg-[#F8FAFC]">
                                 <tr>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Court</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Advocate</th>
+                                    <th className="w-28 p-4 text-left text-xs font-bold text-[#475569] uppercase">Date</th>
+                                    <th className="w-[45%] p-4 text-left text-xs font-bold text-[#475569] uppercase">Case</th>
+                                    <th className="w-[25%] p-4 text-left text-xs font-bold text-[#475569] uppercase">Court</th>
+                                    <th className="w-[20%] p-4 text-left text-xs font-bold text-[#475569] uppercase">Advocate</th>
                                 </tr>
                             </thead>
 
@@ -613,10 +611,14 @@ export default function AdvDashboardView() {
                                                     {h.date}
                                                 </div>
                                             </td>
-                                            <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">{h.case_title}</td>
-                                            <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{h.court}</td>
-                                            <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{h.advocate_name}</td>
-                                            <td className="p-4 text-sm font-bold text-[#2563EB] whitespace-nowrap">{h.time}</td>
+                                            <td className="p-4 text-sm text-[#475569] font-medium break-words">
+                                                {h.case_title}
+                                            </td>
+                                            <td className="p-4 text-sm text-[#475569] break-words">
+                                                {h.court}</td>
+                                            <td className="p-4 text-sm text-[#475569] break-words">
+                                                {h.advocate_name}
+                                            </td>
                                         </tr>
                                     ))
                                 ) : (
@@ -655,15 +657,14 @@ export default function AdvDashboardView() {
                 </div>
 
                 {/* ─── Recent Documents Panel ─── */}
-                <div className="col-span-12 lg:col-span-4 lg:row-span-2 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-extrabold text-[#0F172A]">
-                            Recent Documents
-                        </h2>
-                        {isRefreshing && (
-                            <RefreshCw className="w-4 h-4 text-[#2563EB] animate-spin" />
-                        )}
-                    </div>
+                <div className="col-span-12 lg:col-span-4 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">                    <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-extrabold text-[#0F172A]">
+                        Recent Documents
+                    </h2>
+                    {isRefreshing && (
+                        <RefreshCw className="w-4 h-4 text-[#2563EB] animate-spin" />
+                    )}
+                </div>
 
                     <div className="space-y-3 flex-1 overflow-y-auto max-h-[350px] lg:max-h-[480px]">
                         {data && data.documents.length > 0 ? (
@@ -679,37 +680,42 @@ export default function AdvDashboardView() {
                                             <div className="w-9 h-9 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                                                 <FileText className="w-4 h-4" />
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-bold text-[#1E293B] group-hover:text-[#2563EB] transition-colors truncate leading-tight">
+                                            <div className="flex-1 min-w-0 pr-3">
+                                                <p className="text-sm font-semibold text-[#1E293B] group-hover:text-[#2563EB] transition-colors leading-tight">
                                                     {doc.filename}
                                                 </p>
 
                                                 {/* Doc type badge */}
+                                                <div className="flex items-center justify-between mt-2">
+
                                                 {doc.document_type && doc.document_type !== "File" && (
-                                                    <span className="inline-block mt-0.5 text-[10px] font-semibold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                                                    <span className="inline-flex mt-0.5 text-[10px] font-semibold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
                                                         {doc.document_type}
                                                     </span>
-                                                )}
+                                                            )}
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+
+                                                            localStorage.setItem(
+                                                                "clientData",
+                                                                JSON.stringify({
+                                                                    clientId: doc.client_name,
+                                                                    fullName: doc.client_name,
+                                                                })
+                                                            );
+
+                                                            router.push("/client-management/view-history");
+                                                        }}
+                                                        className="ml-2 text-[10px] font-bold uppercase tracking-wider text-[#2563EB] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full hover:bg-blue-100"
+                                                    >
+                                                        View Case
+                                                    </button>
+                                                    </div>
+                                               
                                             </div>
 
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
 
-                                                    localStorage.setItem(
-                                                        "clientData",
-                                                        JSON.stringify({
-                                                            clientId: doc.client_name,
-                                                            fullName: doc.client_name,
-                                                        })
-                                                    );
-
-                                                    router.push("/client-management/view-history");
-                                                }}
-                                                className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-[#2563EB] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full hover:bg-blue-100 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                                            >
-                                                View Case
-                                            </button>
                                         </div>
 
                                         {/* Case name */}
@@ -760,15 +766,11 @@ export default function AdvDashboardView() {
                         )}
                     </div>
 
-                    {/* Auto-refresh indicator */}
-                    <div className="mt-4 pt-4 border-t border-[#F1F5F9] flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                        <p className="text-[10px] font-medium text-[#94A3B8]">Auto-refreshes every 30 seconds</p>
-                    </div>
+                    
                 </div>
 
                 {/* ─── Upcoming Case Discussions ─── */}
-                <div className="col-span-12 lg:col-span-8 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
+                <div className="col-span-12 lg:col-span-12 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
                     <div className="flex justify-between items-center mb-8">
                         <h2 className="text-2xl font-extrabold text-[#0F172A]">
                             Upcoming Case Discussions
@@ -783,16 +785,15 @@ export default function AdvDashboardView() {
                     </div>
 
                     <div className="w-full overflow-x-auto rounded-2xl border border-[#E2E8F0]">
-                        <table className="min-w-full divide-y divide-[#E2E8F0]">
-                            <thead className="bg-[#F8FAFC]">
-                                <tr>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type / Link</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
-                                </tr>
-                            </thead>
+                        <table className="w-full table-fixed divide-y divide-[#E2E8F0]">                            <thead className="bg-[#F8FAFC]">
+                            <tr>
+                                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
+                                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client</th>
+                                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
+                                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type / Link</th>
+                                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                            </tr>
+                        </thead>
 
                             <tbody className="divide-y divide-[#E2E8F0] bg-white">
                                 {data && data.discussions && data.discussions.length > 0 ? (
@@ -811,7 +812,7 @@ export default function AdvDashboardView() {
                                             <td className="p-4 text-sm whitespace-nowrap">
                                                 {d.type.toLowerCase().includes("video") ? (
                                                     d.meeting_link ? (
-                                                        <a 
+                                                        <a
                                                             href={d.meeting_link.startsWith("http") ? d.meeting_link : `https://${d.meeting_link}`}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
@@ -836,15 +837,14 @@ export default function AdvDashboardView() {
                                                 )}
                                             </td>
                                             <td className="p-4 text-sm whitespace-nowrap">
-                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider ${
-                                                    d.status.toLowerCase() === "approved" || d.status.toLowerCase() === "completed" || d.status.toLowerCase() === "scheduled"
-                                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                                        : d.status.toLowerCase() === "rescheduled"
-                                                            ? "bg-amber-50 text-amber-700 border-amber-200"
-                                                            : d.status.toLowerCase() === "pending"
-                                                                ? "bg-slate-50 text-slate-700 border-slate-200"
-                                                                : "bg-blue-50 text-blue-700 border-blue-200"
-                                                }`}>
+                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider ${d.status.toLowerCase() === "approved" || d.status.toLowerCase() === "completed" || d.status.toLowerCase() === "scheduled"
+                                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                                    : d.status.toLowerCase() === "rescheduled"
+                                                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                                                        : d.status.toLowerCase() === "pending"
+                                                            ? "bg-slate-50 text-slate-700 border-slate-200"
+                                                            : "bg-blue-50 text-blue-700 border-blue-200"
+                                                    }`}>
                                                     {d.status}
                                                 </span>
                                             </td>
