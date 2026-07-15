@@ -109,8 +109,8 @@ export default function ClientDocuments() {
       alert("You do not have permission to upload documents.");
       return;
     }
-    if (!documentName || !documentType || !file || !selectedCaseId) {
-      alert("Please fill all fields and select a case");
+    if (!documentType || !file || !selectedCaseId) {
+      alert("Please select a case, document type and choose a file");
       return;
     }
 
@@ -191,7 +191,6 @@ export default function ClientDocuments() {
 
       if (response.ok) {
         setUploadSuccess(true);
-        setDocumentName("");
         setDocumentType("");
         setFile(null);
         fetchClientDocs();
@@ -315,7 +314,7 @@ export default function ClientDocuments() {
 
         {perms.add ? (
           <>
-            <div className="grid md:grid-cols-4 gap-4">
+            <div className="grid md:grid-cols-3 gap-4">
               <select
                 value={selectedCaseId}
                 onChange={(e) => setSelectedCaseId(e.target.value)}
@@ -328,13 +327,6 @@ export default function ClientDocuments() {
                   </option>
                 ))}
               </select>
-              <input
-                type="text"
-                placeholder="Document Title"
-                value={documentName}
-                onChange={(e) => setDocumentName(e.target.value)}
-                className="border border-[#E2E8F0] rounded-lg p-3"
-              />
               <select
                 value={documentType}
                 onChange={(e) => setDocumentType(e.target.value)}
@@ -413,7 +405,6 @@ export default function ClientDocuments() {
             <thead>
               <tr className="border-b border-[#E2E8F0] bg-[#F1F5F9]">
                 <th className="text-left p-3">Case Title</th>
-                <th className="text-left p-3">Title</th>
                 <th className="text-left p-3">File Name</th>
                 <th className="text-left p-3">Uploaded Date</th>
                 <th className="text-left p-3">Status</th>
@@ -427,7 +418,6 @@ export default function ClientDocuments() {
                 .map((doc) => (
                 <tr key={doc.id} className="border-b border-[#E2E8F0]">
                   <td className="p-3 font-semibold text-slate-800">{doc.caseTitle}</td>
-                  <td className="p-3 text-slate-600">{doc.name}</td>
                   <td className="p-3 text-slate-600 font-mono text-xs">{doc.fileName}</td>
                   <td className="p-3 text-slate-500">{doc.date}</td>
 
