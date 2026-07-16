@@ -76,12 +76,9 @@ export default function ProfileView({ profile = {}, onEdit }) {
   const isClient = user?.role?.toLowerCase() === "client";
   const isJuniorAdvocate = user?.role?.toLowerCase()?.replace(" ", "") === "junioradvocate";
 
-  // Compute role label dynamically
-  const roleParts = [];
-  if (profile.courtType) roleParts.push(profile.courtType);
-  if (profile.specialization) roleParts.push(profile.specialization);
-  const roleLabel = isClient ? "Client" : (roleParts.length > 0 ? `${roleParts.join(" (")} Advocate${roleParts.length > 1 ? ")" : ""}` : "Advocate");
-
+  const roleLabel = isClient
+    ? "Client"
+    : profile.practiceCourt || "Advocate";
   return (
     <div className="w-full space-y-8 max-w-6xl mx-auto">
         {/* Google Status Alert Banners */}
@@ -159,10 +156,7 @@ export default function ProfileView({ profile = {}, onEdit }) {
             <div className="space-y-5">
               <InfoRow label="Phone" value={profile.phoneNumber} />
               <InfoRow label="Email" value={profile.emailAddress} />
-              <InfoRow label="Date of Birth" value={profile.dateOfBirth} />
               <InfoRow label="Gender" value={profile.gender} />
-              <InfoRow label="Aadhaar Number" value={profile.aadhaarNumber} />
-              {!isClient && <InfoRow label="PAN Number" value={profile.panNumber} />}
               <InfoRow label="City" value={profile.city} />
               <InfoRow label="State" value={profile.state} />
               <InfoRow label="Pincode" value={profile.pincode} />
@@ -179,11 +173,8 @@ export default function ProfileView({ profile = {}, onEdit }) {
 
               <div className="space-y-5">
                 <InfoRow label="Bar Council ID" value={profile.barCouncilId} />
-                <InfoRow label="Enrollment No" value={profile.enrollmentNumber} />
-                <InfoRow label="Experience" value={profile.yearsOfExperience ? `${profile.yearsOfExperience} Years` : ""} />
-                <InfoRow label="Practice Area" value={profile.practiceArea} />
-                <InfoRow label="Court Type" value={profile.courtType} />
-                <InfoRow label="Specialization" value={profile.specialization} />
+                <InfoRow label="Years of Experience" value={ profile.yearsOfExperience  ? `${profile.yearsOfExperience} Years`  : "-"  }/>
+                <InfoRow label="Practice Court" value={profile.practiceCourt} />
               </div>
             </div>
           )}

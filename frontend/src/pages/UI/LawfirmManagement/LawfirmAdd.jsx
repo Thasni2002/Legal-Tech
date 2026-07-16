@@ -6,7 +6,6 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Button from "@/components/Button/Button";
 import InputField from "@/components/InputField/InputField";
 import SelectField from "@/components/SelectField/SelectField";
 
@@ -31,89 +30,19 @@ export default function LawfirmAdd({ onCancel, initialData }) {
     });
   }
 
-const specializationOptionsMap = {
-  "District Court": [
-    "Civil Suits",
-    "Criminal Cases",
-    "Property Disputes",
-    "Motor Accident Claims (MACT)",
-    "Execution Petitions"
-  ],
 
-  "Sessions Court": [
-    "Sessions Trials",
-    "Bail Applications",
-    "Appeals",
-    "NDPS Cases",
-    "POCSO Cases"
-  ],
 
-  "Family Court": [
-    "Divorce",
-    "Child Custody",
-    "Maintenance",
-    "Domestic Violence",
-    "Guardianship"
-  ],
 
-  "High Court": [
-    "Writ Petitions",
-    "Civil Appeals",
-    "Criminal Appeals",
-    "Bail Matters",
-    "Public Interest Litigation (PIL)"
-  ],
-
-  "Supreme Court": [
-    "Special Leave Petitions (SLP)",
-    "Constitutional Matters",
-    "Civil Appeals",
-    "Criminal Appeals",
-    "Review Petitions"
-  ],
-
-  "Consumer Commission": [
-    "Consumer Complaints",
-    "Medical Negligence",
-    "Insurance Claims",
-    "Defective Products",
-    "Service Deficiency"
-  ],
-
-  "Labour Court": [
-    "Industrial Disputes",
-    "Wrongful Termination",
-    "Employee Benefits",
-    "Wage Claims",
-    "Labour Appeals"
-  ],
-
-  "Commercial Court": [
-    "Commercial Suits",
-    "Contract Disputes",
-    "Banking & Finance",
-    "Arbitration",
-    "Company Disputes"
-  ]
-};
-
-  const getSpecializationOptions = () => {
-    return formData?.practiceCourt && specializationOptionsMap[formData.practiceCourt]
-      ? specializationOptionsMap[formData.practiceCourt]
-      : ["Select Practice Court first"];
-  };
 
   const [formData, setFormData] = useState({
     id: null,
     advocateName: "",
     barCouncilId: "",
-    enrollmentNumber: "",
     phoneNumber: "",
     emailAddress: "",
     gender: "",
     practiceCourt: "",
     yearsOfExperience: "",
-    specialization: "",
     city: "",
     state: "",
     pincode: "",
@@ -135,11 +64,6 @@ const specializationOptionsMap = {
 
       case "barCouncilId":
         if (!value.trim()) return "Bar Council ID is required";
-        if (!/^K\/\d{1,5}\/\d{4}$/i.test(value.trim())) return "Must be Kerala format (e.g., K/1234/2023)";
-        return "";
-
-      case "enrollmentNumber":
-        if (!value.trim()) return "Enrollment Number is required";
         if (!/^K\/\d{1,5}\/\d{4}$/i.test(value.trim())) return "Must be Kerala format (e.g., K/1234/2023)";
         return "";
 
@@ -167,25 +91,6 @@ const specializationOptionsMap = {
         if (!value.trim()) return "Practice Court is required";
         return "";
 
-     
-
-      case "city":
-        if (!value.trim()) return "City is required";
-        return "";
-
-      case "state":
-        if (!value.trim()) return "State is required";
-        return "";
-
-      case "pincode":
-        if (value && !/^\d{6}$/.test(value))
-          return "Pincode must be 6 digits";
-        return "";
-
-      case "chambersAddress":
-        if (!value.trim()) return "Chambers Address is required";
-        return "";
-
       case "yearsOfExperience":
         if (value && (isNaN(value) || Number(value) < 0))
           return "Years of Experience must be a positive number";
@@ -208,14 +113,10 @@ const specializationOptionsMap = {
     if (numberFields.includes(name)) {
       if (!/^\d*$/.test(value)) return;
     }
-
-
-
     setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-      ...(name === "practiceCourt" ? { specialization: "" } : {})
-    }));
+    ...prev,
+    [name]: value,
+  }));
 
     const error = validateField(name, value);
 
@@ -251,15 +152,10 @@ const specializationOptionsMap = {
     const fields = [
       "advocateName",
       "barCouncilId",
-      "enrollmentNumber",
       "phoneNumber",
       "emailAddress",
       "practiceCourt",
       "yearsOfExperience",
-      "city",
-      "state",
-      "pincode",
-      "chambersAddress"
     ];
 
     if (!formData.id) {
@@ -296,7 +192,6 @@ const specializationOptionsMap = {
       const payload = {
         advocateName: formData.advocateName,
         barCouncilId: formData.barCouncilId,
-        enrollmentNumber: formData.enrollmentNumber,
         phoneNumber: formData.phoneNumber,
         emailAddress: formData.emailAddress,
         gender: formData.gender,
@@ -304,7 +199,6 @@ const specializationOptionsMap = {
         yearsOfExperience: formData.yearsOfExperience
           ? Number(formData.yearsOfExperience)
           : null,
-        specialization: formData.specialization,
         city: formData.city,
         state: formData.state,
         pincode: formData.pincode,
@@ -424,6 +318,7 @@ const specializationOptionsMap = {
               <InputField
                 label="Advocate Name"
                 name="advocateName"
+                placeholder="e.g. Adv. John"
                 value={formData.advocateName}
                 onChange={handleChange}
               />
@@ -446,27 +341,13 @@ const specializationOptionsMap = {
               )}
             </div>
 
-            {/* Enrollment Number */}
-            <div>
-              <InputField
-                label="Enrollment Number"
-                name="enrollmentNumber"
-                placeholder="e.g. K/1234/2023"
-                value={formData.enrollmentNumber}
-                onChange={handleChange}
-              />
-              {touched.enrollmentNumber && errors.enrollmentNumber && (
-                <p className="text-red-500 text-sm mt-1">{errors.enrollmentNumber}</p>
-              )}
-            </div>
-
-
             {/* Years of Experience */}
             <div>
               <InputField
                 label="Years of Experience (Optional)"
                 type="number"
                 name="yearsOfExperience"
+                placeholder="Enter Experience"
                 value={formData.yearsOfExperience}
                 onChange={handleChange}
               />
@@ -593,22 +474,6 @@ const specializationOptionsMap = {
               )}
             </div>
 
-            {/* Specialization */}
-            <div>
-              <SelectField
-                label="Specialization (Optional)"
-                options={getSpecializationOptions()}
-                name="specialization"
-                value={formData.specialization}
-                onChange={handleChange}
-                disabled={!formData.practiceCourt}
-              />
-            </div>
-
-      
-
-
-
             {/* Status */}
             <div>
               <SelectField
@@ -637,8 +502,9 @@ const specializationOptionsMap = {
             {/* City */}
             <div>
               <InputField
-                label="City"
+                label="City (Optional)"
                 name="city"
+                placeholder="Enter City"
                 value={formData.city}
                 onChange={handleChange}
               />
@@ -650,8 +516,9 @@ const specializationOptionsMap = {
             {/* State */}
             <div>
               <InputField
-                label="State"
+                label="State (Optional)"
                 name="state"
+                placeholder="Enter State"
                 value={formData.state}
                 onChange={handleChange}
               />
@@ -663,8 +530,9 @@ const specializationOptionsMap = {
             {/* Pincode */}
             <div>
               <InputField
-                label="Pincode"
+                label="Pincode (Optional)"
                 name="pincode"
+                placeholder="Enter Pincode"
                 value={formData.pincode}
                 onChange={handleChange}
                 maxLength={6}
@@ -679,7 +547,7 @@ const specializationOptionsMap = {
           {/* Chambers Address */}
           <div className="mt-8">
             <label className="block mb-2 text-sm font-medium text-[#0F172A]">
-              Chambers Address
+              Chambers Address (Optional)
             </label>
 
             <textarea
