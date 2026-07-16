@@ -165,20 +165,29 @@ def create_assigned_case(
 
 
 # Get all assigned cases
-def get_assigned_cases(
-    db: Session
-):
-    assigned_cases = db.query(
-        AssignedCase
-    ).all()
+def get_assigned_cases(db: Session):
+    results = (
+        db.query(AssignedCase, Advocate.profile_image)
+        .outerjoin(
+            Advocate,
+            AssignedCase.advocate_name == Advocate.advocate_name
+        )
+        .all()
+    )
 
-    for case in assigned_cases:
+    assigned_cases = []
+
+    for case, profile_image in results:
         case.assigned_documents = json.loads(
             case.assigned_documents or "[]"
         )
 
-    return assigned_cases
+        # Add profile image dynamically
+        case.profile_image = profile_image
 
+        assigned_cases.append(case)
+
+    return assigned_cases
 
 # Get single assigned case
 def get_assigned_case_by_id(

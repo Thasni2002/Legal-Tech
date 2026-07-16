@@ -43,6 +43,7 @@ export default function AssignAdv({ isOpen, onClose }) {
           caseName: data.case_name || "",
           caseNumber: data.case_number || "",
           advocateName: data.advocate_name || "",
+           courtName: data.court_name || "",
           assignmentNotes: data.assignment_notes || "",
           status: data.status || "Active",
           clientName: data.client_name || "",
