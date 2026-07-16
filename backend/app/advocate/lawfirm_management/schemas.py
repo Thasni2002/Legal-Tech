@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
-from datetime import date
+
 
 class AdvocateBase(BaseModel):
     advocate_name: Optional[str] = Field(None, alias="advocateName")
@@ -14,16 +14,11 @@ class AdvocateBase(BaseModel):
 
     # Extended fields
     gender: Optional[str] = Field(None, alias="gender")
-    aadhaar_number: Optional[str] = Field(None, alias="aadhaarNumber")
-    pan_number: Optional[str] = Field(None, alias="panNumber")
-    practice_area: Optional[str] = Field(None, alias="practiceArea")
-    court_type: Optional[str] = Field(None, alias="courtType")
+    practice_court: Optional[str] = Field(None, alias="practiceCourt")    
     state: Optional[str] = Field(None, alias="state")
     pincode: Optional[str] = Field(None, alias="pincode")
     chambers_address: Optional[str] = Field(None, alias="chambersAddress")
-    about: Optional[str] = Field(None, alias="about")
     profile_image: Optional[str] = Field(None, alias="profileImage")
-    date_of_birth: Optional[date] = Field(None, alias="dateOfBirth")
     years_of_experience: Optional[int] = Field(None, alias="yearsOfExperience")
     temp_password: Optional[str] = Field(None, alias="tempPassword")
 
@@ -56,7 +51,7 @@ class AssignedCaseCreate(BaseModel):
     case_number: Optional[str] = None
     case_title: Optional[str] = None
     advocate_name: Optional[str] = None
-    practice_area: Optional[str] = None
+    practice_court: Optional[str] = None    
     priority: Optional[str] = None
     due_date: Optional[str] = None
     assignment_notes: Optional[str] = None

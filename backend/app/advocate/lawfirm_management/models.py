@@ -18,17 +18,13 @@ class Advocate(Base):
     status = Column(String(20), default="Active")
 
     # New fields
-    date_of_birth = Column(Date, nullable=True)
+  
     gender = Column(String(20), nullable=True)
-    aadhaar_number = Column(String(20), nullable=True)
-    pan_number = Column(String(20), nullable=True)
-    practice_area = Column(String(100), nullable=True)
-    court_type = Column(String(100), nullable=True)
+    practice_court = Column(String(100), nullable=True)   
     years_of_experience = Column(Integer, nullable=True)
     state = Column(String(100), nullable=True)
     pincode = Column(String(20), nullable=True)
     chambers_address = Column(String(500), nullable=True)
-    about = Column(String(1000), nullable=True)
     profile_image = Column(LONGTEXT, nullable=True)
     temp_password = Column(String(255), nullable=True)
 
@@ -45,7 +41,7 @@ class AssignedCase(Base):
     case_number = Column(String(100))
     case_title = Column(String(255))
     advocate_name = Column(String(255))
-    practice_area = Column(String(100))
+    practice_court = Column(String(100))
     priority = Column(String(50))
     due_date = Column(String(50))
     assignment_notes = Column(String(500))   

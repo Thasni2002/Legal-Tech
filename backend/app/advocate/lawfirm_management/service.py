@@ -137,7 +137,7 @@ def create_assigned_case(
         existing.case_title = case_dict.get("case_title")
         existing.case_number = case_dict.get("case_number", existing.case_number)
         existing.advocate_name = case_dict.get("advocate_name", existing.advocate_name)
-        existing.practice_area = case_dict.get("practice_area")
+        existing.practice_court = case_dict.get("practice_court")
         existing.priority = case_dict.get("priority")
         existing.due_date = case_dict.get("due_date")
         existing.assignment_notes = case_dict.get("assignment_notes")

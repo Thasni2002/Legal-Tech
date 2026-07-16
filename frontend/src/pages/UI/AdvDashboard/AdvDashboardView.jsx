@@ -785,7 +785,8 @@ export default function AdvDashboardView() {
                     </div>
 
                     <div className="w-full overflow-x-auto rounded-2xl border border-[#E2E8F0]">
-                        <table className="w-full table-fixed divide-y divide-[#E2E8F0]">                            <thead className="bg-[#F8FAFC]">
+                        <table className="w-full table-fixed divide-y divide-[#E2E8F0]">                            
+                            <thead className="bg-[#F8FAFC]">
                             <tr>
                                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
                                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client</th>
