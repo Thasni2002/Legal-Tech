@@ -31,18 +31,76 @@ export default function LawfirmAdd({ onCancel, initialData }) {
     });
   }
 
-  const specializationOptionsMap = {
-    "Civil Law": ["Property Disputes", "Contracts", "Torts", "Consumer Protection"],
-    "Criminal Law": ["Bail Matters", "Cyber Crime", "White Collar Crime", "Narcotics"],
-    "Corporate Law": ["Mergers & Acquisitions", "Intellectual Property", "Taxation", "Compliance"],
-    "Family Law": ["Divorce", "Child Custody", "Alimony", "Domestic Violence"],
-    "Property Law": ["Real Estate", "Land Disputes", "Tenant Rights", "Wills & Estates"]
-  };
+const specializationOptionsMap = {
+  "District Court": [
+    "Civil Suits",
+    "Criminal Cases",
+    "Property Disputes",
+    "Motor Accident Claims (MACT)",
+    "Execution Petitions"
+  ],
+
+  "Sessions Court": [
+    "Sessions Trials",
+    "Bail Applications",
+    "Appeals",
+    "NDPS Cases",
+    "POCSO Cases"
+  ],
+
+  "Family Court": [
+    "Divorce",
+    "Child Custody",
+    "Maintenance",
+    "Domestic Violence",
+    "Guardianship"
+  ],
+
+  "High Court": [
+    "Writ Petitions",
+    "Civil Appeals",
+    "Criminal Appeals",
+    "Bail Matters",
+    "Public Interest Litigation (PIL)"
+  ],
+
+  "Supreme Court": [
+    "Special Leave Petitions (SLP)",
+    "Constitutional Matters",
+    "Civil Appeals",
+    "Criminal Appeals",
+    "Review Petitions"
+  ],
+
+  "Consumer Commission": [
+    "Consumer Complaints",
+    "Medical Negligence",
+    "Insurance Claims",
+    "Defective Products",
+    "Service Deficiency"
+  ],
+
+  "Labour Court": [
+    "Industrial Disputes",
+    "Wrongful Termination",
+    "Employee Benefits",
+    "Wage Claims",
+    "Labour Appeals"
+  ],
+
+  "Commercial Court": [
+    "Commercial Suits",
+    "Contract Disputes",
+    "Banking & Finance",
+    "Arbitration",
+    "Company Disputes"
+  ]
+};
 
   const getSpecializationOptions = () => {
-    return formData?.practiceArea && specializationOptionsMap[formData.practiceArea] 
-      ? specializationOptionsMap[formData.practiceArea] 
-      : ["Select Practice Area first"];
+    return formData?.practiceCourt && specializationOptionsMap[formData.practiceCourt]
+      ? specializationOptionsMap[formData.practiceCourt]
+      : ["Select Practice Court first"];
   };
 
   const [formData, setFormData] = useState({
@@ -52,21 +110,14 @@ export default function LawfirmAdd({ onCancel, initialData }) {
     enrollmentNumber: "",
     phoneNumber: "",
     emailAddress: "",
-    dateOfBirth: "",
     gender: "",
-    aadhaarNumber: "",
-    panNumber: "",
-    practiceArea: "",
-    courtType: "",
+    practiceCourt: "",
     yearsOfExperience: "",
-    languagesKnown: "",
-    lawFirmName: "",
     specialization: "",
     city: "",
     state: "",
     pincode: "",
     chambersAddress: "",
-    about: "",
     profileImage: "",
     status: "Active",
     tempPassword: "",
@@ -98,10 +149,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
           return "Phone Number must be 10 digits";
         return "";
 
-      case "aadhaarNumber":
-        if (value && !/^\d{12}$/.test(value))
-          return "Aadhaar Number must be 12 digits";
-        return "";
+
 
       case "emailAddress":
         if (!value.trim()) return "Email Address is required";
@@ -109,22 +157,17 @@ export default function LawfirmAdd({ onCancel, initialData }) {
           return "Invalid email address";
         return "";
 
-      case "panNumber":
-        if (value && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(value))
-          return "Invalid PAN Number format (e.g. ABCDE1234F)";
-        return "";
+
 
       case "tempPassword":
         if (!formData.id && !value.trim()) return "Temporary password is required";
         return "";
 
-      case "practiceArea":
-        if (!value.trim()) return "Practice Area is required";
+      case "practiceCourt":
+        if (!value.trim()) return "Practice Court is required";
         return "";
 
-      case "courtType":
-        if (!value.trim()) return "Court Type is required";
-        return "";
+     
 
       case "city":
         if (!value.trim()) return "City is required";
@@ -158,7 +201,6 @@ export default function LawfirmAdd({ onCancel, initialData }) {
 
     const numberFields = [
       "phoneNumber",
-      "aadhaarNumber",
       "pincode",
       "yearsOfExperience",
     ];
@@ -167,15 +209,12 @@ export default function LawfirmAdd({ onCancel, initialData }) {
       if (!/^\d*$/.test(value)) return;
     }
 
-    let finalValue = value;
-    if (name === "panNumber") {
-      finalValue = value.toUpperCase();
-    }
+
 
     setFormData((prev) => ({
       ...prev,
-      [name]: finalValue,
-      ...(name === "practiceArea" ? { specialization: "" } : {})
+      [name]: value,
+      ...(name === "practiceCourt" ? { specialization: "" } : {})
     }));
 
     const error = validateField(name, value);
@@ -215,9 +254,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
       "enrollmentNumber",
       "phoneNumber",
       "emailAddress",
-      "aadhaarNumber",
-      "practiceArea",
-      "courtType",
+      "practiceCourt",
       "yearsOfExperience",
       "city",
       "state",
@@ -262,23 +299,16 @@ export default function LawfirmAdd({ onCancel, initialData }) {
         enrollmentNumber: formData.enrollmentNumber,
         phoneNumber: formData.phoneNumber,
         emailAddress: formData.emailAddress,
-        dateOfBirth: formData.dateOfBirth || null,
         gender: formData.gender,
-        aadhaarNumber: formData.aadhaarNumber,
-        panNumber: formData.panNumber,
-        practiceArea: formData.practiceArea,
-        courtType: formData.courtType,
+        practiceCourt: formData.practiceCourt,
         yearsOfExperience: formData.yearsOfExperience
           ? Number(formData.yearsOfExperience)
           : null,
-        languagesKnown: formData.languagesKnown,
-        lawFirmName: formData.lawFirmName,
         specialization: formData.specialization,
         city: formData.city,
         state: formData.state,
         pincode: formData.pincode,
         chambersAddress: formData.chambersAddress,
-        about: formData.about,
         profileImage: formData.profileImage,
         status: formData.status || "Active",
         password: formData.tempPassword || null,
@@ -430,6 +460,23 @@ export default function LawfirmAdd({ onCancel, initialData }) {
               )}
             </div>
 
+
+            {/* Years of Experience */}
+            <div>
+              <InputField
+                label="Years of Experience (Optional)"
+                type="number"
+                name="yearsOfExperience"
+                value={formData.yearsOfExperience}
+                onChange={handleChange}
+              />
+              {touched.yearsOfExperience && errors.yearsOfExperience && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.yearsOfExperience}
+                </p>
+              )}
+            </div>
+
             {/* Phone Number */}
             <div>
               <InputField
@@ -460,14 +507,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
               )}
             </div>
 
-            {/* Date of Birth */}
-            <InputField
-              label="Date of Birth"
-              type="date"
-              name="dateOfBirth"
-              value={formData.dateOfBirth}
-              onChange={handleChange}
-            />
+
 
             {/* Gender */}
             <SelectField
@@ -477,35 +517,6 @@ export default function LawfirmAdd({ onCancel, initialData }) {
               value={formData.gender}
               onChange={handleChange}
             />
-
-            {/* Aadhaar */}
-            <div>
-              <InputField
-                label="Aadhaar Number (Optional)"
-                name="aadhaarNumber"
-                placeholder="1234 5678 9012"
-                value={formData.aadhaarNumber}
-                onChange={handleChange}
-                maxLength={12}
-              />
-              {touched.aadhaarNumber && errors.aadhaarNumber && (
-                <p className="text-red-500 text-sm mt-1">{errors.aadhaarNumber}</p>
-              )}
-            </div>
-
-            {/* PAN */}
-            <div>
-              <InputField
-                label="PAN Number (Optional)"
-                placeholder="e.g. ABCDE1234F"
-                name="panNumber"
-                value={formData.panNumber}
-                onChange={handleChange}
-              />
-              {touched.panNumber && errors.panNumber && (
-                <p className="text-red-500 text-sm mt-1">{errors.panNumber}</p>
-              )}
-            </div>
 
             {/* Temporary Password */}
             {!formData.id && (
@@ -558,23 +569,27 @@ export default function LawfirmAdd({ onCancel, initialData }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 
-            {/* Practice Area */}
+            {/* Practice Court */}
             <div>
               <SelectField
-                label="Practice Area"
+                label="Practice Court"
                 options={[
-                  "Civil Law",
-                  "Criminal Law",
-                  "Corporate Law",
-                  "Family Law",
-                  "Property Law"
+                  "District Court",
+                  "Sessions Court",
+                  "Family Court",
+                  "High Court",
+                  "Supreme Court",
+                  "Consumer Commission",
+                  "Labour Court",
+                  "Commercial Court",
+                 
                 ]}
-                name="practiceArea"
-                value={formData.practiceArea}
+                name="practiceCourt"
+                value={formData.practiceCourt}
                 onChange={handleChange}
               />
-              {touched.practiceArea && errors.practiceArea && (
-                <p className="text-red-500 text-sm mt-1">{errors.practiceArea}</p>
+              {touched.practiceCourt && errors.practiceCourt && (
+                <p className="text-red-500 text-sm mt-1">{errors.practiceCourt}</p>
               )}
             </div>
 
@@ -586,43 +601,13 @@ export default function LawfirmAdd({ onCancel, initialData }) {
                 name="specialization"
                 value={formData.specialization}
                 onChange={handleChange}
-                disabled={!formData.practiceArea}
+                disabled={!formData.practiceCourt}
               />
             </div>
 
-            {/* Court Type */}
-            <div>
-              <SelectField
-                label="Court Type"
-                options={[
-                  "District Court",
-                  "High Court",
-                  "Supreme Court"
-                ]}
-                name="courtType"
-                value={formData.courtType}
-                onChange={handleChange}
-              />
-              {touched.courtType && errors.courtType && (
-                <p className="text-red-500 text-sm mt-1">{errors.courtType}</p>
-              )}
-            </div>
+      
 
-            {/* Years of Experience */}
-            <div>
-              <InputField
-                label="Years of Experience (Optional)"
-                type="number"
-                name="yearsOfExperience"
-                value={formData.yearsOfExperience}
-                onChange={handleChange}
-              />
-              {touched.yearsOfExperience && errors.yearsOfExperience && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.yearsOfExperience}
-                </p>
-              )}
-            </div>
+
 
             {/* Status */}
             <div>
@@ -700,11 +685,10 @@ export default function LawfirmAdd({ onCancel, initialData }) {
             <textarea
               rows="4"
               placeholder="Enter Chambers Address"
-              className={`w-full rounded-xl border bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 outline-none transition-all duration-200 ${
-                touched.chambersAddress && errors.chambersAddress
-                  ? "border-red-500 focus:ring-red-500/20 focus:border-red-500"
-                  : "border-[#E2E8F0] focus:ring-[#2563EB]/20 focus:border-[#2563EB]"
-              }`}
+              className={`w-full rounded-xl border bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 outline-none transition-all duration-200 ${touched.chambersAddress && errors.chambersAddress
+                ? "border-red-500 focus:ring-red-500/20 focus:border-red-500"
+                : "border-[#E2E8F0] focus:ring-[#2563EB]/20 focus:border-[#2563EB]"
+                }`}
               name="chambersAddress"
               value={formData.chambersAddress}
               onChange={handleChange}
