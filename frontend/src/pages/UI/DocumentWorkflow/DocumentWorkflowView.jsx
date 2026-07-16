@@ -457,7 +457,7 @@ export default function DocumentWorkflowView({ forceMode }) {
           
           {/* Tab Filters */}
           <div className="flex flex-wrap gap-1.5 p-1 bg-slate-100 rounded-2xl">
-            {["All", "Drafts", "Pending", "Approved", "Correction"].map((tab) => (
+            {["All", "Pending", "Approved", "Correction"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}

@@ -164,8 +164,13 @@ def update_user_details(user_id: int, data: UserUpdate, db: Session = Depends(ge
     return map_user_to_out(updated)
 
 
-# API deletes a user
+# API checks what active cases will be impacted if user is deleted
+@router.get("/users/{user_id}/delete-impact")
+def get_delete_impact(user_id: int, db: Session = Depends(get_db)):
+    return service.get_user_delete_impact(db, user_id)
 
+
+# API deletes a user
 @router.delete("/users/{user_id}")
 def delete_user_account(user_id: int, db: Session = Depends(get_db)):
     try:

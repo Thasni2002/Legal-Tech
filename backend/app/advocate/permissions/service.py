@@ -517,10 +517,86 @@ def update_user(
     return db_user
 
 
+
+def get_user_delete_impact(db: Session, user_id: int) -> dict:
+    """
+    Returns a summary of active/in-progress cases linked to a user
+    BEFORE deletion, so the frontend can warn the admin.
+    Does NOT modify any data.
+    """
+    from sqlalchemy import text
+
+    db_user = get_user_by_id(db, user_id)
+    if not db_user:
+        return {"has_impact": False, "assigned_cases": [], "cases": [], "total": 0}
+
+    completed_statuses = ("Completed", "Closed", "Resolved", "completed", "closed", "resolved")
+    not_completed = "AND LOWER(status) NOT IN ('completed', 'closed', 'resolved')"
+
+    # --- assigned_cases: match by advocate name OR client name ---
+    full_name = f"{db_user.first_name or ''} {db_user.last_name or ''}".strip()
+    username = db_user.username or ""
+
+    assigned_rows = db.execute(text(f"""
+        SELECT case_name, case_number, case_title, status, client_name, advocate_name
+        FROM assigned_cases
+        WHERE (
+            advocate_name LIKE :name
+            OR client_name LIKE :name
+            OR advocate_name LIKE :uname
+            OR client_name LIKE :uname
+        )
+        {not_completed}
+        LIMIT 20
+    """), {"name": f"%{full_name}%", "uname": f"%{username}%"}).fetchall()
+
+    assigned_cases = [
+        {
+            "case_name": r[0] or r[2] or "Unnamed Case",
+            "case_number": r[1] or "—",
+            "status": r[3] or "Active",
+            "client_name": r[4] or "",
+            "advocate_name": r[5] or "",
+        }
+        for r in assigned_rows
+    ]
+
+    # --- cases table: match by advocate_id FK ---
+    case_rows = db.execute(text(f"""
+        SELECT title, case_no, status, client_name
+        FROM cases
+        WHERE advocate_id = :uid
+        {not_completed}
+        LIMIT 20
+    """), {"uid": user_id}).fetchall()
+
+    cases = [
+        {
+            "title": r[0] or "Unnamed Case",
+            "case_no": r[1] or "—",
+            "status": r[2] or "Open",
+            "client_name": r[3] or "",
+        }
+        for r in case_rows
+    ]
+
+    total = len(assigned_cases) + len(cases)
+
+    return {
+        "has_impact": total > 0,
+        "assigned_cases": assigned_cases,
+        "cases": cases,
+        "total": total,
+        "user_name": full_name or username,
+        "user_role": db_user.role or "",
+    }
+
+
 def delete_user(
     db: Session,
     user_id: int
 ) -> bool:
+
     # Protect admin user
     if user_id == 1:
         return False
@@ -530,15 +606,33 @@ def delete_user(
     if not db_user:
         return False
 
+    from sqlalchemy import text
+
+    # Nullify / remove all FK references to this user before deletion
+    db.execute(text("DELETE FROM activities WHERE advocate_id = :uid"), {"uid": user_id})
+    db.execute(text("DELETE FROM advocate_task_messages WHERE user_id = :uid"), {"uid": user_id})
+    db.execute(text("UPDATE advocate_tasks SET senior_advocate_id = NULL WHERE senior_advocate_id = :uid"), {"uid": user_id})
+    db.execute(text("UPDATE advocate_tasks SET junior_advocate_id = NULL WHERE junior_advocate_id = :uid"), {"uid": user_id})
+    db.execute(text("UPDATE case_document_workflows SET junior_id = NULL WHERE junior_id = :uid"), {"uid": user_id})
+    db.execute(text("UPDATE case_document_workflows SET senior_id = NULL WHERE senior_id = :uid"), {"uid": user_id})
+    db.execute(text("UPDATE cases SET advocate_id = NULL WHERE advocate_id = :uid"), {"uid": user_id})
+    db.execute(text("UPDATE consultations SET client_id = NULL WHERE client_id = :uid"), {"uid": user_id})
+    db.execute(text("UPDATE consultations SET advocate_id = NULL WHERE advocate_id = :uid"), {"uid": user_id})
+    db.execute(text("UPDATE documents SET advocate_id = NULL WHERE advocate_id = :uid"), {"uid": user_id})
+    db.execute(text("UPDATE hearings SET advocate_id = NULL WHERE advocate_id = :uid"), {"uid": user_id})
+    db.execute(text("UPDATE invoices SET advocate_id = NULL WHERE advocate_id = :uid"), {"uid": user_id})
+    db.commit()
+
     from sqlalchemy.exc import IntegrityError
     try:
         db.delete(db_user)
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise ValueError("Cannot delete user because they have associated records (cases, clients, invoices, etc.). Please reassign or remove their records first.")
+        raise ValueError("Cannot delete user: unexpected foreign key constraint.")
 
     return True
+
 
 
 # -------------------------------
