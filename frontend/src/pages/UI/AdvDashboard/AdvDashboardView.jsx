@@ -597,9 +597,7 @@ export default function AdvDashboardView() {
                                     <th className="w-[25%] p-4 text-left text-xs font-bold text-[#475569] uppercase">Court</th>
                                     <th className="w-[20%] p-4 text-left text-xs font-bold text-[#475569] uppercase">Advocate</th>
                                 </tr>
-                            </thead>
-
-                            <tbody className="divide-y divide-[#E2E8F0] bg-white">
+                            </thead><tbody className="divide-y divide-[#E2E8F0] bg-white">
                                 {data && data.hearings.length > 0 ? (
                                     data.hearings.slice(hearingsPage * 5, (hearingsPage + 1) * 5).map((h, index) => (
                                         <tr
@@ -788,15 +786,13 @@ export default function AdvDashboardView() {
                         <table className="w-full table-fixed divide-y divide-[#E2E8F0]">                            
                             <thead className="bg-[#F8FAFC]">
                             <tr>
+
                                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
                                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client</th>
                                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
                                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type / Link</th>
                                 <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
-                            </tr>
-                        </thead>
-
-                            <tbody className="divide-y divide-[#E2E8F0] bg-white">
+                            </tr></thead><tbody className="divide-y divide-[#E2E8F0] bg-white">
                                 {data && data.discussions && data.discussions.length > 0 ? (
                                     data.discussions.slice(discussionsPage * 5, (discussionsPage + 1) * 5).map((d, index) => (
                                         <tr

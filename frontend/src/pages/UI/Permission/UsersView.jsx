@@ -188,6 +188,8 @@ export default function UsersView() {
   const [mounted, setMounted] = useState(false);
   const [provisionedUser, setProvisionedUser] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteImpact, setDeleteImpact] = useState(null);
+  const [impactLoading, setImpactLoading] = useState(false);
   const [deletedUsername, setDeletedUsername] = useState("");
   const [deletedUserRole, setDeletedUserRole] = useState("");
 
@@ -395,13 +397,28 @@ export default function UsersView() {
     showToast("Provisioning cancelled", "error");
   };
 
-  // Trigger Delete Confirmation Modal
-  const handleDeleteUserClick = (userId, uName, uRole) => {
+  // Trigger Delete Confirmation Modal — fetch impact first
+  const handleDeleteUserClick = async (userId, uName, uRole) => {
     if (userId === "user_1" || userId === 1 || uName === "admin") {
       showToast("Cannot delete system administration user", "error");
       return;
     }
+    setImpactLoading(true);
+    setDeleteImpact(null);
     setDeleteTarget({ id: userId, username: uName, role: uRole });
+    try {
+      const res = await fetch(`${API_BASE_URL}/permissions/users/${userId}/delete-impact`);
+      if (res.ok) {
+        const impact = await res.json();
+        setDeleteImpact(impact);
+      } else {
+        setDeleteImpact({ has_impact: false, assigned_cases: [], cases: [], total: 0 });
+      }
+    } catch (_) {
+      setDeleteImpact({ has_impact: false, assigned_cases: [], cases: [], total: 0 });
+    } finally {
+      setImpactLoading(false);
+    }
   };
 
   // Execute Deletion after confirmation
@@ -1403,14 +1420,14 @@ export default function UsersView() {
             {mounted && typeof window !== "undefined" && deleteTarget ? createPortal(
               <div
                 className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-md px-4 py-6 overflow-y-auto"
-                onClick={() => setDeleteTarget(null)}
+                onClick={() => { setDeleteTarget(null); setDeleteImpact(null); }}
               >
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-100 flex flex-col animate-in fade-in zoom-in-95 duration-200"
+                  className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100 flex flex-col animate-in fade-in zoom-in-95 duration-200"
                 >
                   {/* Header / Warning Icon */}
-                  <div className="bg-red-50 py-8 px-6 flex flex-col items-center border-b border-slate-100 text-center">
+                  <div className="bg-red-50 py-7 px-6 flex flex-col items-center border-b border-slate-100 text-center">
                     <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center text-white mb-4 shadow-lg shadow-red-200 animate-pulse">
                       <AlertTriangle size={32} />
                     </div>
@@ -1418,23 +1435,84 @@ export default function UsersView() {
                       Delete {getRoleDisplayName(deleteTarget.role)} Account?
                     </h3>
                     <p className="text-slate-500 text-xs mt-1.5 font-medium max-w-xs">
-                      Are you sure you want to remove {getRoleDisplayName(deleteTarget.role).toLowerCase()} <strong className="text-red-600">@{deleteTarget.username}</strong>? This action cannot be undone.
+                      Remove <strong className="text-red-600">@{deleteTarget.username}</strong>? This action cannot be undone.
                     </p>
                   </div>
+
+                  {/* Impact Warning Section */}
+                  {impactLoading ? (
+                    <div className="px-6 py-5 flex items-center justify-center gap-2 text-slate-500 text-sm">
+                      <svg className="animate-spin h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                      </svg>
+                      <span>Checking active cases...</span>
+                    </div>
+                  ) : deleteImpact && deleteImpact.has_impact ? (
+                    <div className="px-6 py-5 border-b border-slate-100">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                          <AlertTriangle size={13} className="text-amber-600" />
+                        </div>
+                        <p className="text-amber-700 font-bold text-sm">
+                          {deleteImpact.total} active {deleteImpact.total === 1 ? "case" : "cases"} still in progress
+                        </p>
+                      </div>
+                      <p className="text-slate-500 text-xs mb-3">
+                        These cases will remain but the advocate / client assignment will be cleared:
+                      </p>
+                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        {[...( deleteImpact.assigned_cases || []).map(c => ({
+                          name: c.case_name,
+                          number: c.case_number,
+                          status: c.status,
+                          sub: c.client_name || c.advocate_name
+                        })), ...(deleteImpact.cases || []).map(c => ({
+                          name: c.title,
+                          number: c.case_no,
+                          status: c.status,
+                          sub: c.client_name
+                        }))].map((item, idx) => (
+                          <div key={idx} className="flex items-center justify-between bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="w-7 h-7 rounded-lg bg-amber-200 flex items-center justify-center flex-shrink-0">
+                                <FileText size={13} className="text-amber-700" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-slate-800 truncate">{item.name}</p>
+                                <p className="text-[10px] text-slate-500 truncate">{item.number}{item.sub ? ` · ${item.sub}` : ""}</p>
+                              </div>
+                            </div>
+                            <span className="ml-2 flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-200">
+                              {item.status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : deleteImpact && !deleteImpact.has_impact ? (
+                    <div className="px-6 py-4 border-b border-slate-100">
+                      <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
+                        <Check size={15} className="text-emerald-600 flex-shrink-0" />
+                        <p className="text-xs font-semibold">No active cases linked to this user.</p>
+                      </div>
+                    </div>
+                  ) : null}
 
                   {/* Action Buttons */}
                   <div className="px-6 py-5 bg-slate-50 flex flex-col sm:flex-row gap-3 justify-end">
                     <button
-                      onClick={() => setDeleteTarget(null)}
+                      onClick={() => { setDeleteTarget(null); setDeleteImpact(null); }}
                       className="px-6 py-3 rounded-full bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleConfirmDelete}
-                      className="px-6 py-3 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer"
+                      disabled={impactLoading}
+                      className="px-6 py-3 rounded-full bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer"
                     >
-                      Delete {getRoleDisplayName(deleteTarget.role)}
+                      {deleteImpact && deleteImpact.has_impact ? "Confirm Delete" : `Delete ${getRoleDisplayName(deleteTarget.role)}`}
                     </button>
                   </div>
                 </div>
