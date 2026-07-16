@@ -59,6 +59,7 @@ class AssignedCaseCreate(BaseModel):
 
 class AssignedCaseOut(AssignedCaseCreate):
     id: int
+    profile_image: Optional[str] = None
 
     class Config:
         from_attributes = True
