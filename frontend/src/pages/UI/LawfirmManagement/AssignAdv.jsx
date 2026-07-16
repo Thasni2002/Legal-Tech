@@ -24,6 +24,7 @@ export default function AssignAdv({ isOpen, onClose }) {
     assignmentNotes: "",
     status: "Active",
     clientName: "",
+    caseIdVal: "",
   });
 
   useEffect(() => {
@@ -44,6 +45,7 @@ export default function AssignAdv({ isOpen, onClose }) {
           assignmentNotes: data.assignment_notes || "",
           status: data.status || "Active",
           clientName: data.client_name || "",
+          caseIdVal: data.case_id || "",
         });
       } catch (error) {
         console.error("Error fetching case:", error);
@@ -98,6 +100,7 @@ export default function AssignAdv({ isOpen, onClose }) {
                 caseName: selected.name,
                 caseNumber: selected.caseNumber,
                 clientName: selected.clientName,
+                caseIdVal: selected.id,
               }));
             }
           }
@@ -133,6 +136,7 @@ export default function AssignAdv({ isOpen, onClose }) {
         caseName: selectedValue,
         caseNumber: selectedCase.caseNumber,
         clientName: selectedCase.clientName,
+        caseIdVal: selectedCase.id,
       });
     } else {
       // Reset when "Select Case" chosen
@@ -141,6 +145,7 @@ export default function AssignAdv({ isOpen, onClose }) {
         caseName: "",
         caseNumber: "",
         clientName: "",
+        caseIdVal: "",
       });
     }
   };
@@ -168,6 +173,7 @@ export default function AssignAdv({ isOpen, onClose }) {
     e.preventDefault();
 
     const payload = {
+      case_id: formData.caseIdVal ? parseInt(formData.caseIdVal, 10) : null,
       case_name: formData.caseName,
       case_number: formData.caseNumber,
       advocate_name: formData.advocateName,
@@ -205,6 +211,7 @@ export default function AssignAdv({ isOpen, onClose }) {
           assignmentNotes: "",
           status: "Active",
           clientName: "",
+          caseIdVal: "",
         });
 
         setShowSuccess(true);

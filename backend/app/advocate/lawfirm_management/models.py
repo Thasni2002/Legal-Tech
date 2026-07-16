@@ -40,6 +40,7 @@ class AssignedCase(Base):
     __tablename__ = "assigned_cases"
 
     id = Column(Integer, primary_key=True, index=True)
+    case_id = Column(Integer, nullable=True)
     case_name = Column(String(255))
     case_number = Column(String(100))
     case_title = Column(String(255))

@@ -51,6 +51,7 @@ class AdvocateOut(AdvocateBase):
 
 
 class AssignedCaseCreate(BaseModel):
+    case_id: Optional[int] = None
     case_name: Optional[str] = None
     case_number: Optional[str] = None
     case_title: Optional[str] = None

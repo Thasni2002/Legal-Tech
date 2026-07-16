@@ -206,6 +206,7 @@ export default function CaseView() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          case_id: selectedCase.id,
           case_name: selectedCase.case_title,
           case_number: selectedCase.case_no,
           case_title: selectedCase.case_title,
