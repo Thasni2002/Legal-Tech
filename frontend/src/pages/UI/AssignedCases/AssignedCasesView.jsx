@@ -198,6 +198,7 @@ export default function AssignedCasesView() {
 
       const formattedCases = casesToShow.map((item) => ({
         id: item.id,
+        caseId: item.case_id,
         title: item.case_title,
         caseNo: item.case_number,
         client: item.client_name || "N/A",
@@ -227,6 +228,19 @@ export default function AssignedCasesView() {
     );
   }
 
+  // ── Determine if logged-in user is a junior advocate ──
+  const loggedInUser = getLoggedInUser();
+  const isJuniorAdvocate =
+    loggedInUser &&
+    loggedInUser.role &&
+    loggedInUser.role.toLowerCase().includes("junior");
+
+  // ── For junior advocates: only show documents that have a password set ──
+  const getVisibleDocs = (docs = []) => {
+    if (!isJuniorAdvocate) return docs; // seniors/admins see all docs
+    return docs.filter((d) => d.password && d.password.trim().length > 0);
+  };
+
   // ── Open modal & default to first VIEWABLE document ──
   const handleOpenDetails = (caseItem, viewMode = "full") => {
     setSelectedCase(caseItem);
@@ -235,10 +249,10 @@ export default function AssignedCasesView() {
     setEditingDocIdx(null);
     setDocDeleteIdx(null);
 
-    // default-select the first document that has view=true (or view is undefined/null = treat as allowed)
-    const firstViewable = caseItem.documents?.find(
-      (d) => d.view === true || d.view === undefined || d.view === null
-    ) || null;
+    // For juniors: default-select the first password-protected document
+    // For seniors: default-select the first document that has view permission
+    const visibleDocs = getVisibleDocs(caseItem.documents || []);
+    const firstViewable = visibleDocs[0] || null;
     setSelectedDocument(firstViewable);
   };
 
@@ -417,17 +431,21 @@ export default function AssignedCasesView() {
   };
 
   // Helper to persist documents to MySQL table case_management_cases
-  const saveDocumentsToBackend = async (caseNo, updatedDocs) => {
+  const saveDocumentsToBackend = async (caseId, caseNo, updatedDocs) => {
     try {
-      // 1. Fetch all case management cases to find the target case ID
-      const res = await fetch(`${API_BASE_URL}/case-management/`);
-      if (!res.ok) throw new Error("Failed to fetch cases list");
-      const casesList = await res.json();
-      
-      const targetCase = casesList.find(c => c.case_no === caseNo);
-      if (!targetCase) {
-        console.error("Target case not found in case management:", caseNo);
-        return;
+      let targetId = caseId;
+      if (!targetId) {
+        // 1. Fetch all case management cases to find the target case ID
+        const res = await fetch(`${API_BASE_URL}/case-management/`);
+        if (!res.ok) throw new Error("Failed to fetch cases list");
+        const casesList = await res.json();
+        
+        const targetCase = casesList.find(c => c.case_no === caseNo);
+        if (!targetCase) {
+          console.error("Target case not found in case management:", caseNo);
+          return;
+        }
+        targetId = targetCase.id;
       }
       
       // 2. Build the CaseUpdate payload
@@ -442,7 +460,7 @@ export default function AssignedCasesView() {
       };
       
       // 3. Make PUT request to update case documents
-      const updateRes = await fetch(`${API_BASE_URL}/case-management/${targetCase.id}`, {
+      const updateRes = await fetch(`${API_BASE_URL}/case-management/${targetId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -482,7 +500,7 @@ export default function AssignedCasesView() {
         );
         setSelectedDocument(newDoc);
 
-        await saveDocumentsToBackend(selectedCase.caseNo, updatedDocs);
+        await saveDocumentsToBackend(selectedCase.caseId, selectedCase.caseNo, updatedDocs);
         fetchAssignedCases();
 
         setUploadSuccess(true);
@@ -518,7 +536,7 @@ export default function AssignedCasesView() {
     setEditingDocIdx(null);
     setEditingDocName("");
 
-    await saveDocumentsToBackend(selectedCase.caseNo, updatedDocs);
+    await saveDocumentsToBackend(selectedCase.caseId, selectedCase.caseNo, updatedDocs);
     fetchAssignedCases();
   };
 
@@ -537,7 +555,7 @@ export default function AssignedCasesView() {
     }
     setDocDeleteIdx(null);
 
-    await saveDocumentsToBackend(selectedCase.caseNo, updatedDocs);
+    await saveDocumentsToBackend(selectedCase.caseId, selectedCase.caseNo, updatedDocs);
     fetchAssignedCases();
   };
 
@@ -887,10 +905,24 @@ export default function AssignedCasesView() {
                   )}
 
                   <div className="space-y-2 overflow-y-auto flex-1 pr-1 max-h-[320px] lg:max-h-[480px]">
-                    {selectedCase.documents?.length > 0 ? (
-                      selectedCase.documents.map((doc, idx) => {
+                    {(() => {
+                      // Junior advocates only see password-protected documents;
+                      // senior/admin users see all documents.
+                      const visibleDocs = getVisibleDocs(selectedCase.documents || []);
+
+                      if (visibleDocs.length === 0) {
+                        return (
+                          <div className="text-center py-8 text-[#94A3B8] text-xs">
+                            {isJuniorAdvocate
+                              ? "No documents have been shared with you yet."
+                              : "No documents attached to this case."}
+                          </div>
+                        );
+                      }
+
+                      return visibleDocs.map((doc, idx) => {
                         const isSelected = selectedDocument?.file === doc.file;
-                        const isLocked = doc.password && doc.password.trim().length === 6;
+                        const isLocked = doc.password && doc.password.trim().length > 0;
 
                         return (
                           <div
@@ -952,12 +984,8 @@ export default function AssignedCasesView() {
                             </div>
                           </div>
                         );
-                      })
-                    ) : (
-                      <div className="text-center py-8 text-[#94A3B8] text-xs">
-                        No documents attached to this case.
-                      </div>
-                    )}
+                      });
+                    })()}
                   </div>
                 </div>
 

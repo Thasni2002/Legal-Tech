@@ -92,8 +92,13 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
         case.status = data.status
         try:
             from app.advocate.lawfirm_management.models import AssignedCase
-            assigned_cases = db.query(AssignedCase).filter(AssignedCase.case_number == case.case_no).all()
+            assigned_cases = db.query(AssignedCase).filter(
+                (AssignedCase.case_id == case.id) |
+                ((AssignedCase.case_id == None) & (AssignedCase.case_number == case.case_no))
+            ).all()
             for ac in assigned_cases:
+                if ac.case_id is None:
+                    ac.case_id = case.id
                 if data.status == "Pending":
                     ac.status = "In Progress"
                 elif data.status == "Closed":
@@ -104,14 +109,37 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
             print(f"Error synchronizing case status to assignment: {e}")
     if data.selectedAdvocate is not None:
         case.selected_advocate = data.selectedAdvocate
+        try:
+            from app.advocate.lawfirm_management.models import AssignedCase
+            if not data.selectedAdvocate:
+                db.query(AssignedCase).filter(
+                    (AssignedCase.case_id == case.id) |
+                    ((AssignedCase.case_id == None) & (AssignedCase.case_number == case.case_no))
+                ).delete(synchronize_session=False)
+            else:
+                assigned_cases = db.query(AssignedCase).filter(
+                    (AssignedCase.case_id == case.id) |
+                    ((AssignedCase.case_id == None) & (AssignedCase.case_number == case.case_no))
+                ).all()
+                for ac in assigned_cases:
+                    ac.advocate_name = data.selectedAdvocate
+                    if ac.case_id is None:
+                        ac.case_id = case.id
+        except Exception as e:
+            print(f"Error synchronizing advocate on case update: {e}")
     if data.documents is not None:
         case.documents = json.dumps(
             [doc.dict() for doc in data.documents]
         )
         try:
             from app.advocate.lawfirm_management.models import AssignedCase
-            assigned_cases = db.query(AssignedCase).filter(AssignedCase.case_number == case.case_no).all()
+            assigned_cases = db.query(AssignedCase).filter(
+                (AssignedCase.case_id == case.id) |
+                ((AssignedCase.case_id == None) & (AssignedCase.case_number == case.case_no))
+            ).all()
             for ac in assigned_cases:
+                if ac.case_id is None:
+                    ac.case_id = case.id
                 ac.assigned_documents = case.documents
         except Exception as e:
             print(f"Error synchronizing document permissions: {e}")
