@@ -10,10 +10,8 @@ class Advocate(Base):
     id = Column(Integer, primary_key=True, index=True)
     advocate_name = Column(String(100))
     bar_council_id = Column(String(100))
-    enrollment_number = Column(String(100))
     phone_number = Column(String(20))
     email_address = Column(String(100))
-    specialization = Column(String(100))
     city = Column(String(100))
     status = Column(String(20), default="Active")
 

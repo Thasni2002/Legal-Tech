@@ -20,6 +20,7 @@ export default function AssignAdv({ isOpen, onClose }) {
   const [formData, setFormData] = useState({
     caseName: "",
     caseNumber: "",
+    courtName: "",
     advocateName: "",
     assignmentNotes: "",
     status: "Active",
@@ -88,6 +89,7 @@ export default function AssignAdv({ isOpen, onClose }) {
             caseNumber: c.case_no || `CASE-${c.id}`,
             caseTitle: c.case_title || `Case ${c.id}`,
             clientName: c.client_name || "",
+            courtName: c.court_name,
           }));
           setCases(mappedCases);
 
@@ -99,6 +101,7 @@ export default function AssignAdv({ isOpen, onClose }) {
                 ...prev,
                 caseName: selected.name,
                 caseNumber: selected.caseNumber,
+                courtName: selected.courtName, 
                 clientName: selected.clientName,
                 caseIdVal: selected.id,
               }));
@@ -137,6 +140,8 @@ export default function AssignAdv({ isOpen, onClose }) {
         caseNumber: selectedCase.caseNumber,
         clientName: selectedCase.clientName,
         caseIdVal: selectedCase.id,
+        courtName: selectedCase.courtName,
+        advocateName: "",
       });
     } else {
       // Reset when "Select Case" chosen
@@ -144,6 +149,7 @@ export default function AssignAdv({ isOpen, onClose }) {
         ...formData,
         caseName: "",
         caseNumber: "",
+        courtName: "", 
         clientName: "",
         caseIdVal: "",
       });
@@ -152,7 +158,7 @@ export default function AssignAdv({ isOpen, onClose }) {
 
   const handleUnassign = async () => {
     if (!caseId) return;
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases/${caseId}`, {
         method: "DELETE",
@@ -207,6 +213,7 @@ export default function AssignAdv({ isOpen, onClose }) {
         setFormData({
           caseName: "",
           caseNumber: "",
+          courtName: "", 
           advocateName: "",
           assignmentNotes: "",
           status: "Active",
@@ -284,124 +291,140 @@ export default function AssignAdv({ isOpen, onClose }) {
         </div>
 
         {/* Form */}
-<form onSubmit={handleSubmit} className="p-8">
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form onSubmit={handleSubmit} className="p-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-    {/* Case Name */}
-    <div>
-      <label className="block mb-2 text-sm font-bold text-[#0F172A]">
-        Case Name
-      </label>
-      {directCaseId || caseId ? (
-        <input
-          type="text"
-          value={formData.caseName}
-          readOnly
-          className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3.5 bg-slate-100 text-[#475569] text-sm outline-none cursor-not-allowed"
-        />
-      ) : (
-        <select
-          value={formData.caseName}
-          onChange={handleCaseSelect}
-          className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-          required
-        >
-          <option value="">Select Case</option>
-          {cases.map((item, index) => (
-            <option key={`${item.caseNumber}-${index}`} value={item.name}>
-              {item.name}
-            </option>
-          ))}
-        </select>
-      )}
-    </div>
+            {/* Case Name */}
+            <div>
+              <label className="block mb-2 text-sm font-bold text-[#0F172A]">
+                Case Name
+              </label>
+              {directCaseId || caseId ? (
+                <input
+                  type="text"
+                  value={formData.caseName}
+                  readOnly
+                  className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3.5 bg-slate-100 text-[#475569] text-sm outline-none cursor-not-allowed"
+                />
+              ) : (
+                <select
+                  value={formData.caseName}
+                  onChange={handleCaseSelect}
+                  className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+                  required
+                >
+                  <option value="">Select Case</option>
+                  {cases.map((item, index) => (
+                    <option key={`${item.caseNumber}-${index}`} value={item.name}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
 
-    {/* Case Number */}
-    <div>
-      <label className="block mb-2 text-sm font-bold text-[#0F172A]">
-        Case Number
-      </label>
-      <input
-        type="text"
-        value={formData.caseNumber}
-        readOnly
-        className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3.5 bg-slate-100 text-[#475569] text-sm outline-none cursor-not-allowed"
-      />
-    </div>
+            {/* Case Number */}
+            <div>
+              <label className="block mb-2 text-sm font-bold text-[#0F172A]">
+                Case Number
+              </label>
+              <input
+                type="text"
+                value={formData.caseNumber}
+                readOnly
+                className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3.5 bg-slate-100 text-[#475569] text-sm outline-none cursor-not-allowed"
+              />
+            </div>
+            <div>
+              <label className="block mb-2 text-sm font-bold text-[#0F172A]">
+                Court Name
+              </label>
 
+              <input
+                type="text"
+                value={formData.courtName}
+                readOnly
+                className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3.5 bg-slate-100 text-[#475569]"
+              />
+            </div>
 
-    {/* Advocate Name */}
-    <div>
-      <label className="block mb-2 text-sm font-bold text-[#0F172A]">
-        Advocate Name
-      </label>
-   <select
-  name="advocateName"
-  value={formData.advocateName}
-  onChange={handleChange}
-  className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-  required
->
-        <option value="">Select Advocate</option>
+            {/* Advocate Name */}
+            <div>
+              <label className="block mb-2 text-sm font-bold text-[#0F172A]">
+                Advocate Name
+              </label>
+              <select
+                name="advocateName"
+                value={formData.advocateName}
+                onChange={handleChange}
+                className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+                required
+              >
+                <option value="">Select Advocate</option>
 
-        {advocates.map((advocate) => (
-          <option
-            key={advocate.id}
-            value={advocate.advocateName}
-          >
-            {advocate.advocateName}
-          </option>
-        ))}
-      </select>
-    </div>
+                {advocates
+                  .filter(
+                    (advocate) =>
+                      advocate.practiceCourt === formData.courtName
+                  )
+                  .map((advocate) => (
+                    <option
+                      key={advocate.id}
+                      value={advocate.advocateName}
+                    >
+                      {advocate.advocateName}
+                    </option>
+                  ))}
+              </select>
+            </div>
 
-  </div>
+          </div>
 
-  {/* Notes */}
-  <div className="mt-8">
-    <label className="block mb-2 text-sm font-bold text-[#0F172A]">
-      Assignment Notes / Instructions
-    </label>
-    <textarea
-      name="assignmentNotes"
-      value={formData.assignmentNotes}
-      onChange={handleChange}
-      rows={4}
-      placeholder="Enter instructions for the advocate..."
-      className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-    />
-  </div>
+          {/* Notes */}
+          <div className="mt-8">
+            <label className="block mb-2 text-sm font-bold text-[#0F172A]">
+              Assignment Notes / Instructions
+            </label>
+            <textarea
+              name="assignmentNotes"
+              value={formData.assignmentNotes}
+              onChange={handleChange}
+              rows={4}
+              placeholder="Enter instructions for the advocate..."
+              className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+            />
+          </div>
 
-  {/* Footer */}
-  <div className="flex justify-end gap-3 mt-10 border-t border-[#F1F5F9] pt-8">
-    {caseId && (
-      <button
-        type="button"
-        onClick={() => setShowDeleteConfirm(true)}
-        className="px-8 py-3.5 rounded-full bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold uppercase tracking-wider transition-colors w-full sm:w-auto mr-auto"
-      >
-        Remove Assignment
-      </button>
-    )}
-    <button
-      type="button"
-      onClick={onClose || (() => router.back())}
-      className="px-8 py-3.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[#475569] text-xs font-bold uppercase tracking-wider transition-colors w-full sm:w-auto"
-    >
-      Cancel
-    </button>
+          {/* Footer */}
+          <div className="flex justify-end gap-3 mt-10 border-t border-[#F1F5F9] pt-8">
+            {caseId && (
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="px-8 py-3.5 rounded-full bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold uppercase tracking-wider transition-colors w-full sm:w-auto mr-auto"
+              >
+                Remove Assignment
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose || (() => router.back())}
+              className="px-8 py-3.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[#475569] text-xs font-bold uppercase tracking-wider transition-colors w-full sm:w-auto"
+            >
+              Cancel
+            </button>
 
-    <button
-      type="submit"
-      className="px-8 py-3.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] w-full sm:w-auto"
-    >
-      Assign Case
-    </button>
-  </div>
-</form>
+            <button
+              type="submit"
+              className="px-8 py-3.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] w-full sm:w-auto"
+            >
+              Assign Case
+            </button>
+          </div>
+        </form>
       </div>
 
-    {showDeleteConfirm && typeof document !== "undefined" && createPortal(
+      {showDeleteConfirm && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl border border-slate-200 p-8 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-center">

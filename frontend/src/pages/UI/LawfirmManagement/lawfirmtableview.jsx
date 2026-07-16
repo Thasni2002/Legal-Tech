@@ -65,21 +65,15 @@ export default function LawfirmTableView({ advocate }) {
               {advocate.advocateName}
             </h2>
             <p className="text-[#64748B] mt-2 text-lg font-medium">
-              {advocate.specialization || "Advocate"} • {advocate.lawFirmName || "Independent"}
+              {advocate.practiceCourt || "Advocate"}
             </p>
             <div className="mt-4 flex flex-wrap gap-2 justify-center md:justify-start">
-              <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                advocate.status === "Active" || !advocate.status
+              <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${advocate.status === "Active" || !advocate.status
                   ? "bg-green-100 text-green-700"
                   : "bg-red-100 text-red-700"
-              }`}>
+                }`}>
                 {advocate.status || "Active"}
               </span>
-              {advocate.yearsOfExperience && (
-                <span className="px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-blue-100 text-blue-700">
-                  {advocate.yearsOfExperience} Years Exp
-                </span>
-              )}
             </div>
           </div>
         </div>
@@ -89,16 +83,13 @@ export default function LawfirmTableView({ advocate }) {
           {/* Personal Information */}
           <div className="space-y-6">
             <h3 className="text-lg font-extrabold text-[#0F172A] flex items-center gap-2">
-               <span className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-sm">👤</span>
+              <span className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-sm">👤</span>
               Personal Information
             </h3>
             <div className="bg-[#F8FAFC] rounded-2xl p-6 border border-[#E2E8F0] space-y-4">
               <InfoRow label="Phone Number" value={advocate.phoneNumber} />
               <InfoRow label="Email Address" value={advocate.emailAddress} />
-              <InfoRow label="Date of Birth" value={advocate.dateOfBirth} />
               <InfoRow label="Gender" value={advocate.gender} />
-              <InfoRow label="Aadhaar Number" value={advocate.aadhaarNumber} />
-              <InfoRow label="PAN Number" value={advocate.panNumber} />
               <InfoRow label="City" value={advocate.city} />
               <InfoRow label="State" value={advocate.state} />
               <InfoRow label="Pincode" value={advocate.pincode} />
@@ -108,15 +99,14 @@ export default function LawfirmTableView({ advocate }) {
           {/* Professional Information */}
           <div className="space-y-6">
             <h3 className="text-lg font-extrabold text-[#0F172A] flex items-center gap-2">
-               <span className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm">⚖️</span>
+              <span className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm">⚖️</span>
               Professional Information
             </h3>
             <div className="bg-[#F8FAFC] rounded-2xl p-6 border border-[#E2E8F0] space-y-4">
               <InfoRow label="Bar Council ID" value={advocate.barCouncilId} />
-              <InfoRow label="Enrollment Number" value={advocate.enrollmentNumber} />
-              <InfoRow label="Practice Area" value={advocate.practiceArea} />
-              <InfoRow label="Court Type" value={advocate.courtType} />
-              <InfoRow label="Specialization" value={advocate.specialization} />
+              <InfoRow label="Practice Court" value={advocate.practiceCourt} />
+              <InfoRow label="Years of Experience" value={advocate.yearsOfExperience ? `${advocate.yearsOfExperience} Years`  : "-" }
+/>
             </div>
           </div>
         </div>
@@ -125,7 +115,7 @@ export default function LawfirmTableView({ advocate }) {
         {advocate.chambersAddress && (
           <div className="mt-8 border-t border-[#F1F5F9] pt-8">
             <h3 className="text-lg font-extrabold text-[#0F172A] flex items-center gap-2 mb-4">
-               <span className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm">🏢</span>
+              <span className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm">🏢</span>
               Chambers Address
             </h3>
             <p className="text-[#475569] whitespace-pre-line leading-relaxed text-sm bg-[#F8FAFC] p-6 rounded-2xl border border-[#E2E8F0]">
@@ -140,9 +130,14 @@ export default function LawfirmTableView({ advocate }) {
 
 function InfoRow({ label, value }) {
   return (
-    <div className="flex justify-between items-center py-1">
-      <span className="font-semibold text-[#64748B] text-xs uppercase tracking-wider">{label}</span>
-      <span className="text-[#0F172A] font-bold text-sm text-right ml-4 break-words">{value || "-"}</span>
+    <div className="grid grid-cols-[150px_1fr] gap-4 py-3 border-b border-[#E2E8F0] last:border-b-0">
+      <span className="text-xs font-semibold uppercase tracking-wider text-[#64748B]">
+        {label}
+      </span>
+
+      <span className="text-sm font-medium text-[#0F172A] break-words">
+        {value || "-"}
+      </span>
     </div>
   );
 }

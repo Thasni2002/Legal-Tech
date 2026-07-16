@@ -5,10 +5,8 @@ from typing import Optional, List, Dict, Any
 class AdvocateBase(BaseModel):
     advocate_name: Optional[str] = Field(None, alias="advocateName")
     bar_council_id: Optional[str] = Field(None, alias="barCouncilId")
-    enrollment_number: Optional[str] = Field(None, alias="enrollmentNumber")
     phone_number: Optional[str] = Field(None, alias="phoneNumber")
     email_address: Optional[str] = Field(None, alias="emailAddress")
-    specialization: Optional[str] = None
     city: Optional[str] = None
     status: Optional[str] = "Active"
 
