@@ -180,11 +180,11 @@ export default function LawfirmView() {
   });
 
   return (
-    <div className="w-full space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="w-full space-y-5 sm:space-y-8 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-6 sm:p-8 md:p-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-5 sm:p-8 md:p-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-[#0F172A] font-extrabold text-3xl tracking-tight">
+          <h1 className="text-[#0F172A] font-extrabold text-2xl sm:text-3xl tracking-tight">
             Law Firm Management
           </h1>
           <p className="text-[#64748B] mt-2 font-medium">
@@ -195,14 +195,14 @@ export default function LawfirmView() {
 
       {/* Action Cards */}
       {allowedActions.length > 0 && (
-        <div className={`grid grid-cols-1 md:grid-cols-${allowedActions.length} gap-6`}>
+        <div className={`grid grid-cols-1 sm:grid-cols-${allowedActions.length} gap-4 sm:gap-6`}>
           {allowedActions.map((item, index) => {
             const Icon = item.icon;
 
             return (
               <div
                 key={index}
-                className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-6 sm:p-8 hover:-translate-y-1 transition-transform duration-300 flex flex-col justify-between"
+                className="bg-white rounded-2xl sm:rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-5 sm:p-8 hover:-translate-y-1 transition-transform duration-300 flex flex-col justify-between"
               >
                 <div>
                   <div className="w-14 h-14 bg-blue-50 text-[#2563EB] rounded-2xl flex items-center justify-center mb-6 border border-blue-100 shadow-sm">
@@ -227,41 +227,41 @@ export default function LawfirmView() {
       )}
 
       {/* Stats Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-6 sm:p-8 hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-6">
+        <div className="col-span-2 sm:col-span-1 bg-white rounded-2xl sm:rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-4 sm:p-8 hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-full blur-3xl opacity-60 -mr-10 -mt-10"></div>
           <div className="relative z-10">
             <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center mb-6 border border-purple-200">
               <Users className="w-6 h-6 text-purple-600" />
             </div>
             <p className="text-[#64748B] text-sm font-semibold uppercase tracking-wider">Total Advocates</p>
-            <h3 className="text-4xl md:text-5xl font-extrabold mt-3 text-[#0F172A]">
+            <h3 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mt-3 text-[#0F172A]">
               {advocates.length}
             </h3>
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-6 sm:p-8 hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-4 sm:p-8 hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-full blur-3xl opacity-60 -mr-10 -mt-10"></div>
           <div className="relative z-10">
             <div className="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center mb-6 border border-green-200">
               <Users className="w-6 h-6 text-green-600" />
             </div>
             <p className="text-[#64748B] text-sm font-semibold uppercase tracking-wider">Active Advocates</p>
-            <h3 className="text-4xl md:text-5xl font-extrabold mt-3 text-[#0F172A]">
+            <h3 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mt-3 text-[#0F172A]">
               {advocates.filter((a) => a.status === "Active" || !a.status).length}
             </h3>
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-6 sm:p-8 hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-4 sm:p-8 hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl opacity-60 -mr-10 -mt-10"></div>
           <div className="relative z-10">
             <div className="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center mb-6 border border-red-200">
               <Users className="w-6 h-6 text-red-600" />
             </div>
             <p className="text-[#64748B] text-sm font-semibold uppercase tracking-wider">Inactive</p>
-            <h3 className="text-4xl md:text-5xl font-extrabold mt-3 text-[#0F172A]">
+            <h3 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mt-3 text-[#0F172A]">
               {advocates.filter((a) => a.status === "Inactive").length}
             </h3>
           </div>
@@ -270,15 +270,15 @@ export default function LawfirmView() {
 
       {/* Search + Filter + Table Card */}
       {!loading && advocates.length > 0 && (
-        <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 overflow-hidden">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 overflow-hidden">
 
           {/* Header with Search + Filter */}
-          <div className="p-6 sm:p-8 border-b border-[#F1F5F9] flex flex-col md:flex-row gap-6 justify-between items-stretch md:items-center bg-white">
+          <div className="p-4 sm:p-8 border-b border-[#F1F5F9] flex flex-col sm:flex-row gap-3 sm:gap-6 justify-between items-stretch sm:items-center bg-white">
 
             <h2 className="text-xl font-extrabold text-[#0F172A]">
               Advocate Profile
             </h2>
-            <div className="flex items-center border border-[#E2E8F0] rounded-full px-5 py-3 w-full md:w-[400px] bg-[#F8FAFC] focus-within:ring-2 focus-within:ring-[#2563EB]/20 focus-within:border-[#2563EB] transition-all">
+            <div className="flex items-center border border-[#E2E8F0] rounded-full px-4 py-2.5 sm:py-3 w-full sm:w-[400px] bg-[#F8FAFC] focus-within:ring-2 focus-within:ring-[#2563EB]/20 focus-within:border-[#2563EB] transition-all">
               <Search className="w-5 h-5 text-[#94A3B8]" />
               <input
                 type="text"
@@ -319,11 +319,11 @@ export default function LawfirmView() {
                       <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                         Name
                       </th>
-                      <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                      <th className="hidden sm:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                         Phone
                       </th>
-                      <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                        Court Name
+                      <th className="hidden md:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                        City
                       </th>
                       <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                         Status
@@ -365,12 +365,12 @@ export default function LawfirmView() {
                           </div>
                         </td>
 
-                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">
+                        <td className="hidden sm:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">
                           {item.phoneNumber || "-"}
                         </td>
 
-                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">
-                          {item.practiceCourt || "-"}
+                        <td className="hidden md:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">
+                          {item.city || "-"}
                         </td>
 
                         {/* Status */}
@@ -453,16 +453,16 @@ export default function LawfirmView() {
       )}
 
       {assignedCases.length > 0 && (
-        <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 overflow-hidden mt-8">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 overflow-hidden mt-5 sm:mt-8">
 
           {/* Header */}
-          <div className="p-6 sm:p-8 border-b border-[#F1F5F9] flex flex-col md:flex-row gap-6 justify-between items-stretch md:items-center bg-white">
+          <div className="p-4 sm:p-8 border-b border-[#F1F5F9] flex flex-col sm:flex-row gap-3 sm:gap-6 justify-between items-stretch sm:items-center bg-white">
             <h2 className="text-xl font-extrabold text-[#0F172A]">
               Junior Assigned Cases
             </h2>
 
             {/* Search */}
-            <div className="flex items-center border border-[#E2E8F0] rounded-full px-5 py-3 w-full md:w-80 bg-[#F8FAFC] focus-within:ring-2 focus-within:ring-[#2563EB]/20 focus-within:border-[#2563EB] transition-all">
+            <div className="flex items-center border border-[#E2E8F0] rounded-full px-4 py-2.5 sm:py-3 w-full sm:w-80 bg-[#F8FAFC] focus-within:ring-2 focus-within:ring-[#2563EB]/20 focus-within:border-[#2563EB] transition-all">
               <Search className="w-5 h-5 text-[#94A3B8]" />
               <input
                 type="text"
@@ -488,7 +488,7 @@ export default function LawfirmView() {
                   <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                     Case ID
                   </th>
-                  <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                  <th className="hidden sm:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                     Advocate Name
                   </th>
                   <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-center text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
@@ -506,21 +506,11 @@ export default function LawfirmView() {
                       className="hover:bg-slate-50/50 transition duration-200 group"
                     >
                       <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-bold text-[#0F172A]">{item.case_name}</td>
-                      <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">{item.id}</td>
+                      <td className="hidden sm:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">{item.id}</td>
                       <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">
                         <div className="flex items-center gap-2">
-                          <img
-                            src={
-                              item.profile_image ||
-                              item.profileImage ||
-                              `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                                item.advocate_name || "Advocate"
-                              )}&background=E2E8F0&color=64748B&rounded=true&bold=true`
-                            }
-                            alt={item.advocate_name}
-                            className="w-8 h-8 rounded-full object-cover border border-slate-200"
-                          />
-                          <span>{item.advocate_name}</span>
+                          <img src={`https://ui-avatars.com/api/?name=${item.advocate_name || 'Advocate'}&background=E2E8F0&color=64748B&rounded=true&bold=true`} className="w-6 h-6 rounded-full" />
+                          {item.advocate_name}
                         </div>
                       </td>
 
@@ -583,7 +573,7 @@ export default function LawfirmView() {
           )}
         </div>
       )}
-      {showDeleteModal && createPortal(
+      {showDeleteModal &&  createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">        <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl border border-slate-200 p-8 animate-in fade-in zoom-in-95 duration-200">
 
           <div className="flex justify-center">
