@@ -323,7 +323,7 @@ export default function LawfirmView() {
                         Phone
                       </th>
                       <th className="hidden md:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                        City
+                        Court
                       </th>
                       <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                         Status
@@ -370,10 +370,10 @@ export default function LawfirmView() {
                         </td>
 
                         <td className="hidden md:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">
-                          {item.city || "-"}
+                          {item.practiceCourt || "-"}
                         </td>
 
-                        {/* Status */}
+
                         {/* Status */}
                         <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5">
                           <span
@@ -509,8 +509,16 @@ export default function LawfirmView() {
                       <td className="hidden sm:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">{item.id}</td>
                       <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">
                         <div className="flex items-center gap-2">
-                          <img src={`https://ui-avatars.com/api/?name=${item.advocate_name || 'Advocate'}&background=E2E8F0&color=64748B&rounded=true&bold=true`} className="w-6 h-6 rounded-full" />
-                          {item.advocate_name}
+                           <img
+                            src={
+                              item.profileImage?.trim()
+                                ? item.profileImage
+                                : `https://ui-avatars.com/api/?name=${item.advocate_name || "Advocate"}&background=E2E8F0&color=64748B&rounded=true&bold=true`
+                            }
+                            alt={item.advocate_name || "Advocate"}
+                            className="w-8 h-8 rounded-full object-cover border border-slate-200"
+                          />
+                          <span>{item.advocate_name}</span>
                         </div>
                       </td>
 
@@ -573,7 +581,7 @@ export default function LawfirmView() {
           )}
         </div>
       )}
-      {showDeleteModal &&  createPortal(
+      {showDeleteModal && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">        <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl border border-slate-200 p-8 animate-in fade-in zoom-in-95 duration-200">
 
           <div className="flex justify-center">
