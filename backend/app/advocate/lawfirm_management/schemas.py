@@ -59,11 +59,12 @@ class AssignedCaseCreate(BaseModel):
 
 class AssignedCaseOut(AssignedCaseCreate):
     id: int
-    profile_image: Optional[str] = None
+    profile_image: Optional[str] = Field(None, alias="profileImage")
+
 
     class Config:
         from_attributes = True
-
+        populate_by_name = True
 
 class AssignedCaseStatusUpdate(BaseModel):
     status: str

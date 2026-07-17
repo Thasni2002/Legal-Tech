@@ -121,13 +121,16 @@ def create_assigned_case(
     # Check for existing assignment to prevent duplicates
     existing = None
     if case_data.case_id:
+        cond = (AssignedCase.case_id == case_data.case_id)
+        if case_data.case_number and case_data.case_number.strip():
+            cond = cond | (
+                (AssignedCase.case_id == None) & 
+                (AssignedCase.case_number == case_data.case_number.strip())
+            )
+        existing = db.query(AssignedCase).filter(cond).first()
+    elif case_data.case_number and case_data.case_number.strip():
         existing = db.query(AssignedCase).filter(
-            AssignedCase.case_id == case_data.case_id
-        ).first()
-    else:
-        existing = db.query(AssignedCase).filter(
-            AssignedCase.case_number == case_data.case_number,
-            AssignedCase.advocate_name == case_data.advocate_name
+            AssignedCase.case_number == case_data.case_number.strip()
         ).first()
 
     if existing:
