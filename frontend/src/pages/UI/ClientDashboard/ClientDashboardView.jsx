@@ -15,7 +15,7 @@ export default function ClientDashboard() {
   const [hearings, setHearings] = useState([]);
   const [consultations, setConsultations] = useState([]);
   const [activities, setActivities] = useState([]);
-  const [assignedAdvocate, setAssignedAdvocate] = useState(null);
+  const [assignedAdvocates, setAssignedAdvocates] = useState([]);
   const [invoices, setInvoices] = useState([]);
 
   useEffect(() => {
@@ -142,39 +142,44 @@ export default function ClientDashboard() {
 
         // Show top 4
         setActivities(recentActivities.slice(0, 4));
-        // Derive assigned advocate info
-        const caseWithAdvocate = clientCases.find(
-          (c) => c.selected_advocate && c.selected_advocate !== "—" && c.selected_advocate !== ""
-        );
-        const advocateName = caseWithAdvocate
-          ? caseWithAdvocate.selected_advocate
-          : (clientHearings.find((h) => h.advocate_name && h.advocate_name !== "—")?.advocate_name || null);
+        // Derive unique assigned advocate names across cases and hearings
+        const advocateNamesInCases = clientCases
+          .map((c) => c.selected_advocate)
+          .filter((name) => name && name !== "—" && name !== "");
 
-        if (advocateName) {
+        const advocateNamesInHearings = clientHearings
+          .map((h) => h.advocate_name)
+          .filter((name) => name && name !== "—" && name !== "");
+
+        const uniqueAdvocateNames = Array.from(
+          new Set([...advocateNamesInCases, ...advocateNamesInHearings])
+        );
+
+        const advocatesList = uniqueAdvocateNames.map((name) => {
           const matchedAdvocate = Array.isArray(advocatesData)
             ? advocatesData.find(
-                (adv) => (adv.advocate_name || adv.advocateName || "").toLowerCase().trim() === advocateName.toLowerCase().trim()
-              )
+              (adv) => (adv.advocate_name || adv.advocateName || "").toLowerCase().trim() === name.toLowerCase().trim()
+            )
             : null;
 
           if (matchedAdvocate) {
-            setAssignedAdvocate({
-              name: matchedAdvocate.advocate_name || matchedAdvocate.advocateName || advocateName,
+            return {
+              name: matchedAdvocate.advocate_name || matchedAdvocate.advocateName || name,
               phone: matchedAdvocate.phone_number || matchedAdvocate.phoneNumber || "—",
               email: matchedAdvocate.email_address || matchedAdvocate.emailAddress || "—",
               specialization: matchedAdvocate.specialization || "—",
-            });
+            };
           } else {
-            setAssignedAdvocate({
-              name: advocateName,
+            return {
+              name: name,
               phone: "—",
               email: "—",
               specialization: "—",
-            });
+            };
           }
-        } else {
-          setAssignedAdvocate(null);
-        }
+        });
+
+        setAssignedAdvocates(advocatesList);
       } catch (err) {
         console.error("ClientDashboard fetch error:", err);
       } finally {
@@ -219,53 +224,109 @@ export default function ClientDashboard() {
     }
   };
 
+
+
+  const hour = new Date().getHours();
+
+  let greeting = "";
+
+  if (hour < 12) {
+    greeting = "Good Morning";
+  } else if (hour < 17) {
+    greeting = "Good Afternoon";
+  } else {
+    greeting = "Good Evening";
+  }
+
   return (
-    <div className="w-full space-y-8 max-w-7xl mx-auto animate-in fade-in zoom-in-95 duration-500">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5 space-y-4 lg:space-y-5 animate-in fade-in zoom-in-95 duration-500">
 
       {/* Page Header */}
-      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="bg-white rounded-2xl shadow-md border border-[#E2E8F0] p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
-            Client Dashboard
+            {greeting}
+            {userName ? `, ${userName}` : ""}
           </h1>
           <p className="text-[#64748B] mt-2 text-lg font-medium">
-            Welcome{userName ? <span className="capitalize"> {userName}</span> : ""}
+            Here's an overview of your legal matters.
           </p>
         </div>
       </div>
 
       {/* Top Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
 
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-6 md:p-8 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 cursor-pointer group">
-          <div className="w-14 h-14 md:w-16 md:h-16 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-sm">
-            <Briefcase className="w-7 h-7 md:w-8 md:h-8 text-blue-600" />
+        <div className="bg-white rounded-2xl shadow-md border border-[#E2E8F0] p-4 sm:p-5 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/60 transition-all duration-300 cursor-pointer group">
+          <div className="w-10 h-10 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-sm">
+            <Briefcase className="w-5 h-5 text-blue-600" />
           </div>
-          <p className="text-[#475569] text-xs font-bold uppercase tracking-wider mb-2">
+          <p className="text-[#475569] text-[10px] font-bold uppercase tracking-wider mb-1">
             Active Cases
           </p>
-          <h2 className="text-4xl md:text-5xl font-black text-[#0F172A] tracking-tight">
+          <h2 className="text-2xl font-black text-[#0F172A] tracking-tight">
             {loading ? (
-              <span className="inline-block w-12 h-10 rounded-xl bg-slate-100 animate-pulse" />
+              <span className="inline-block w-12 h-8 rounded-lg bg-slate-100 animate-pulse" />
             ) : activeCasesCount}
           </h2>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-6 md:p-8 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 cursor-pointer group">
-          <div className="w-14 h-14 md:w-16 md:h-16 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-sm">
-            <Calendar className="w-7 h-7 md:w-8 md:h-8 text-emerald-600" />
+        <div className="bg-white rounded-2xl shadow-md border border-[#E2E8F0] p-4 sm:p-5 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/60 transition-all duration-300 cursor-pointer group">
+          <div className="w-10 h-10 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-sm">
+            <Calendar className="w-5 h-5 text-emerald-600" />
           </div>
-          <p className="text-[#475569] text-xs font-bold uppercase tracking-wider mb-2">
+          <p className="text-[#475569] text-[10px] font-bold uppercase tracking-wider mb-1">
             Upcoming Hearings
           </p>
-          <h2 className="text-4xl md:text-5xl font-black text-[#0F172A] tracking-tight">
+          <h2 className="text-2xl font-black text-[#0F172A] tracking-tight">
             {loading ? (
-              <span className="inline-block w-12 h-10 rounded-xl bg-slate-100 animate-pulse" />
+              <span className="inline-block w-12 h-8 rounded-lg bg-slate-100 animate-pulse" />
             ) : upcomingHearingsCount}
           </h2>
         </div>
 
       </div>
+
+
+      {/* Upcoming Hearings */}
+      {!loading && hearings.length > 0 && (
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
+          <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">Upcoming Hearings</h2>
+          <div className="w-full overflow-x-auto rounded-2xl border border-[#E2E8F0]">
+            <table className="min-w-full divide-y divide-[#E2E8F0]">
+              <thead className="bg-[#F8FAFC]">
+                <tr>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case</th>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Court</th>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Advocate</th>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Hearing Date</th>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E2E8F0] bg-white">
+                {hearings.map((h, i) => (
+                  <tr key={i} className="hover:bg-[#F8FAFC] transition-colors duration-150">
+                    <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">{h.case_title}</td>
+                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{h.court}</td>
+                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">{h.advocate_name || "—"}</td>
+                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{fmtDate(h.date)}</td>
+                    <td className="p-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${h.status === "Scheduled"
+                        ? "bg-blue-50 text-blue-700 border-blue-200"
+                        : h.status === "Completed"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}>
+                        {h.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* My Cases */}
       <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
@@ -289,28 +350,49 @@ export default function ClientDashboard() {
             <table className="min-w-full divide-y divide-[#E2E8F0]">
               <thead className="bg-[#F8FAFC]">
                 <tr>
-                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case No</th>
-                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Title / Type</th>
-                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Court</th>
-                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">
+                    Title / Type
+                  </th>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">
+                    Advocate
+                  </th>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">
+                    Court
+                  </th>
+                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">
+                    Status
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8F0] bg-white">
                 {cases.map((item, index) => (
                   <tr key={index} className="hover:bg-[#F8FAFC] transition-colors duration-150">
-                    <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">{item.case_no}</td>
                     <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">
-                      <span className="block font-bold text-[#0F172A]">{item.case_title}</span>
-                      <span className="text-xs text-[#64748B]">{item.case_type}</span>
+                      <span className="block font-bold text-[#0F172A]">
+                        {item.case_title}
+                      </span>
+                      <span className="text-xs text-[#64748B]">
+                        {item.case_type}
+                      </span>
                     </td>
-                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.court_name}</td>
+
+                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap">
+                      {item.selected_advocate || "Not Assigned"}
+                    </td>
+
+                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap">
+                      {item.court_name}
+                    </td>
+
                     <td className="p-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${item.status === "Active"
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : item.status === "Hearing"
-                            ? "bg-blue-50 text-blue-700 border-blue-200"
-                            : "bg-amber-50 text-amber-700 border-amber-200"
-                        }`}>
+                      <span
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${item.status === "Active"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : item.status === "Hearing"
+                              ? "bg-blue-50 text-blue-700 border-blue-200"
+                              : "bg-amber-50 text-amber-700 border-amber-200"
+                          }`}
+                      >
                         {item.status}
                       </span>
                     </td>
@@ -328,7 +410,7 @@ export default function ClientDashboard() {
         {/* Consultation History */}
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
           <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">
-            Consultation History
+            Meeting History
           </h2>
 
           <div className="space-y-4 flex-1">
@@ -349,14 +431,14 @@ export default function ClientDashboard() {
                   <div>
                     <span className="block font-bold text-[#1E293B] mb-1">{fmtDate(item.date)}</span>
                     <span className="text-xs font-medium text-[#64748B]">
-                      {item.advocate_name || "—"} · {item.type}
+                      Meeting Type:  {item.type}
                     </span>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${item.status === "Completed"
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      : item.status === "In Progress"
-                        ? "bg-blue-50 text-blue-700 border-blue-200"
-                        : "bg-amber-50 text-amber-700 border-amber-200"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : item.status === "In Progress"
+                      ? "bg-blue-50 text-blue-700 border-blue-200"
+                      : "bg-amber-50 text-amber-700 border-amber-200"
                     }`}>
                     {item.status}
                   </span>
@@ -399,74 +481,37 @@ export default function ClientDashboard() {
 
       </div>
 
-      {/* Upcoming Hearings */}
-      {!loading && hearings.length > 0 && (
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
-          <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">Upcoming Hearings</h2>
-          <div className="w-full overflow-x-auto rounded-2xl border border-[#E2E8F0]">
-            <table className="min-w-full divide-y divide-[#E2E8F0]">
-              <thead className="bg-[#F8FAFC]">
-                <tr>
-                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case</th>
-                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Court</th>
-                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Advocate</th>
-                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date & Time</th>
-                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E2E8F0] bg-white">
-                {hearings.map((h, i) => (
-                  <tr key={i} className="hover:bg-[#F8FAFC] transition-colors duration-150">
-                    <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">{h.case_title}</td>
-                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{h.court}</td>
-                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">{h.advocate_name || "—"}</td>
-                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap">
-                      {fmtDate(h.date)} · {h.time}
-                    </td>
-                    <td className="p-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${h.status === "Scheduled"
-                          ? "bg-blue-50 text-blue-700 border-blue-200"
-                          : h.status === "Completed"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : "bg-amber-50 text-amber-700 border-amber-200"
-                        }`}>
-                        {h.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
-      {/* Assigned Advocate */}
-      {!loading && assignedAdvocate && (
+
+      {/* Assigned Advocates */}
+      {!loading && assignedAdvocates && assignedAdvocates.length > 0 && (
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
           <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
               <User className="w-5 h-5" />
             </div>
-            Assigned Advocate
+            Assigned Advocates
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-5 hover:bg-white hover:shadow-md transition-all">
-              <span className="block text-xs text-[#64748B] font-bold uppercase tracking-wider mb-2">Name</span>
-              <span className="font-extrabold text-lg text-[#0F172A]">{assignedAdvocate.name}</span>
-            </div>
-            <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-5 hover:bg-white hover:shadow-md transition-all">
-              <span className="block text-xs text-[#64748B] font-bold uppercase tracking-wider mb-2">Phone</span>
-              <span className="font-bold text-[#1E293B]">{assignedAdvocate.phone}</span>
-            </div>
-            <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-5 hover:bg-white hover:shadow-md transition-all">
-              <span className="block text-xs text-[#64748B] font-bold uppercase tracking-wider mb-2">Email</span>
-              <span className="font-bold text-[#1E293B]">{assignedAdvocate.email}</span>
-            </div>
-            <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-5 hover:bg-white hover:shadow-md transition-all">
-              <span className="block text-xs text-[#64748B] font-bold uppercase tracking-wider mb-2">Specialization</span>
-              <span className="font-bold text-[#1E293B]">{assignedAdvocate.specialization}</span>
-            </div>
+          
+          <div className="space-y-6">
+            {assignedAdvocates.map((adv, index) => (
+              <div key={index} className="border border-[#E2E8F0] rounded-3xl p-6 bg-white hover:shadow-md transition-all duration-300">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-5 hover:bg-white hover:shadow-md transition-all">
+                    <span className="block text-xs text-[#64748B] font-bold uppercase tracking-wider mb-2">Name</span>
+                    <span className="font-extrabold text-lg text-[#0F172A]">{adv.name}</span>
+                  </div>
+                  <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-5 hover:bg-white hover:shadow-md transition-all">
+                    <span className="block text-xs text-[#64748B] font-bold uppercase tracking-wider mb-2">Phone</span>
+                    <span className="font-bold text-[#1E293B]">{adv.phone}</span>
+                  </div>
+                  <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-5 hover:bg-white hover:shadow-md transition-all">
+                    <span className="block text-xs text-[#64748B] font-bold uppercase tracking-wider mb-2">Email</span>
+                    <span className="font-bold text-[#1E293B]">{adv.email}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

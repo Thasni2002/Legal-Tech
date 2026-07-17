@@ -526,12 +526,14 @@ export default function AddCaseForm() {
             }
 
             const uploadData = await uploadRes.json();
-             return {
+            return {
               documentType: doc.documentType || "",
               advocate: selectedAdvocate || "",
               file: doc.file.name,
               url: uploadData.url,
               password: doc.password || "",
+              uploadedAt: doc.uploadedAt || doc.uploaded_at || new Date().toISOString(),
+              uploaded_at: doc.uploadedAt || doc.uploaded_at || new Date().toISOString(),
             };
           }
 
@@ -542,6 +544,8 @@ export default function AddCaseForm() {
             file: doc.file ? doc.file.name : null,
             url: doc.url || null,
             password: doc.password || "",
+            uploadedAt: doc.uploadedAt || doc.uploaded_at || new Date().toISOString(),
+            uploaded_at: doc.uploadedAt || doc.uploaded_at || new Date().toISOString(),
           };
         })
       );

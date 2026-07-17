@@ -312,7 +312,9 @@ export default function CaseView() {
             advocate: d.advocate || "",
             file: d.file,
             url: d.url || "",
-            password: d.password || ""
+            password: d.password || "",
+            uploadedAt: d.uploadedAt || d.uploaded_at || null,
+            uploaded_at: d.uploadedAt || d.uploaded_at || null
           })),
           nextHearingDate: selectedCase.next_hearing_date
         })

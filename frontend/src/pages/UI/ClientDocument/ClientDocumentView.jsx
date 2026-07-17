@@ -79,7 +79,7 @@ export default function ClientDocuments() {
               fileUrl: doc.url || null,
               date: (() => {
                 // Use the document's own upload date; fall back to today if not stored
-                const raw = doc.uploadedAt || null;
+                const raw = doc.uploadedAt || doc.uploaded_at || null;
                 const d = raw ? new Date(raw) : new Date();
                 return isNaN(d.getTime())
                   ? new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
@@ -145,6 +145,7 @@ export default function ClientDocuments() {
         file: file.name,
         url: uploadedUrl,
         uploadedAt: new Date().toISOString(), // capture exact upload date/time
+        uploaded_at: new Date().toISOString(),
         view: true,
         upload: true,
         edit: true,
@@ -173,6 +174,8 @@ export default function ClientDocuments() {
           advocate: d.advocate || "",
           file: d.file,
           url: d.url || null,
+          uploadedAt: d.uploadedAt || d.uploaded_at || null,
+          uploaded_at: d.uploadedAt || d.uploaded_at || null,
           view: d.view !== undefined ? d.view : true,
           upload: d.upload !== undefined ? d.upload : true,
           edit: d.edit !== undefined ? d.edit : true,
@@ -247,6 +250,8 @@ export default function ClientDocuments() {
           advocate: d.advocate || "",
           file: d.file,
           url: d.url || null,
+          uploadedAt: d.uploadedAt || d.uploaded_at || null,
+          uploaded_at: d.uploadedAt || d.uploaded_at || null,
           view: d.view !== undefined ? d.view : true,
           upload: d.upload !== undefined ? d.upload : true,
           edit: d.edit !== undefined ? d.edit : true,
