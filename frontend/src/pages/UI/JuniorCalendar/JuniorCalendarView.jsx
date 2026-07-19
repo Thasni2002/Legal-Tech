@@ -265,7 +265,14 @@ export default function JuniorCalendarView() {
           casesToShow = data.filter((c) => {
             if (!c.advocate_name) return false;
             const normalizedAssignedName = c.advocate_name.toLowerCase().replace(/[^a-z0-9]/g, "");
-            return normalizedAssignedName === user.username;
+            const normalizedUsername = (user.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            const normalizedEmail = (user.email || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            return (
+              normalizedAssignedName === normalizedUsername ||
+              normalizedAssignedName === normalizedEmail ||
+              normalizedUsername.includes(normalizedAssignedName) ||
+              normalizedAssignedName.includes(normalizedUsername)
+            );
           });
         }
 

@@ -364,10 +364,15 @@ export default function AssignAdv({ isOpen, onClose }) {
                 <option value="">Select Advocate</option>
 
                 {advocates
-                  .filter(
-                    (advocate) =>
-                      advocate.practiceCourt === formData.courtName
-                  )
+                  .filter((advocate) => {
+                    // If the case has a court name set, only show advocates
+                    // whose practiceCourt matches that court name
+                    if (!formData.courtName) return true;
+                    return (
+                      (advocate.practiceCourt || "").toLowerCase().trim() ===
+                      formData.courtName.toLowerCase().trim()
+                    );
+                  })
                   .map((advocate) => (
                     <option
                       key={advocate.id}

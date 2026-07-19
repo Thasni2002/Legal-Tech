@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 import json
+from fastapi import HTTPException
 from .models import Advocate, AssignedCase
 from .schemas import (
     AdvocateCreate,
@@ -118,35 +119,76 @@ def create_assigned_case(
         case_dict.get("assigned_documents", [])
     )
 
-    # Check for existing assignment to prevent duplicates
+    # If documents are being assigned, validate that the advocate is already assigned to this case
+    raw_docs = case_data.assigned_documents
+    advocate_name = case_data.advocate_name
+    if raw_docs and advocate_name:
+        # Check whether a prior assignment exists for this case + advocate
+        case_id_val = case_data.case_id
+        case_number_val = (case_data.case_number or "").strip()
+        prior = None
+        if case_id_val:
+            prior = db.query(AssignedCase).filter(
+                (AssignedCase.case_id == case_id_val) |
+                (
+                    (AssignedCase.case_id == None) &
+                    (AssignedCase.case_number == case_number_val)
+                ),
+                AssignedCase.advocate_name == advocate_name
+            ).first()
+        elif case_number_val:
+            prior = db.query(AssignedCase).filter(
+                AssignedCase.case_number == case_number_val,
+                AssignedCase.advocate_name == advocate_name
+            ).first()
+    # Check for existing assignment to prevent duplicates.
+    # IMPORTANT: Filter by BOTH case and advocate_name — different advocates on the
+    # same case must each have their own separate AssignedCase record.
     existing = None
-    if case_data.case_id:
-        cond = (AssignedCase.case_id == case_data.case_id)
+    adv_name = (case_data.advocate_name or "").strip()
+    if case_data.case_id and adv_name:
+        cond = (
+            (AssignedCase.case_id == case_data.case_id) &
+            (AssignedCase.advocate_name == adv_name)
+        )
         if case_data.case_number and case_data.case_number.strip():
             cond = cond | (
-                (AssignedCase.case_id == None) & 
-                (AssignedCase.case_number == case_data.case_number.strip())
+                (AssignedCase.case_id == None) &
+                (AssignedCase.case_number == case_data.case_number.strip()) &
+                (AssignedCase.advocate_name == adv_name)
             )
         existing = db.query(AssignedCase).filter(cond).first()
-    elif case_data.case_number and case_data.case_number.strip():
+    elif case_data.case_number and case_data.case_number.strip() and adv_name:
         existing = db.query(AssignedCase).filter(
-            AssignedCase.case_number == case_data.case_number.strip()
+            AssignedCase.case_number == case_data.case_number.strip(),
+            AssignedCase.advocate_name == adv_name
         ).first()
 
     if existing:
         # Update fields instead of inserting a duplicate
         existing.case_id = case_dict.get("case_id", existing.case_id)
-        existing.case_name = case_dict.get("case_name")
-        existing.case_title = case_dict.get("case_title")
+        existing.case_name = case_dict.get("case_name") or existing.case_name
+        existing.case_title = case_dict.get("case_title") or existing.case_title
         existing.case_number = case_dict.get("case_number", existing.case_number)
         existing.advocate_name = case_dict.get("advocate_name", existing.advocate_name)
-        existing.practice_court = case_dict.get("practice_court")
-        existing.priority = case_dict.get("priority")
-        existing.due_date = case_dict.get("due_date")
-        existing.assignment_notes = case_dict.get("assignment_notes")
+        existing.practice_court = case_dict.get("practice_court") or existing.practice_court
+        existing.priority = case_dict.get("priority") or existing.priority
+        existing.due_date = case_dict.get("due_date") or existing.due_date
+        existing.assignment_notes = case_dict.get("assignment_notes") or existing.assignment_notes
         existing.status = case_dict.get("status", existing.status)
-        existing.assigned_documents = case_dict.get("assigned_documents")
-        existing.client_name = case_dict.get("client_name", existing.client_name)
+        existing.client_name = case_dict.get("client_name") or existing.client_name
+
+        # MERGE documents — add incoming docs not already present (de-duped by filename).
+        # This prevents a single-document assignment from wiping out all other documents.
+        incoming_docs = json.loads(case_dict.get("assigned_documents", "[]"))
+        current_docs = json.loads(existing.assigned_documents or "[]")
+        current_files = {d.get("file") for d in current_docs if d.get("file")}
+        for doc in incoming_docs:
+            if doc.get("file") and doc["file"] not in current_files:
+                current_docs.append(doc)
+                current_files.add(doc["file"])
+        existing.assigned_documents = json.dumps(current_docs)
+
         db.commit()
         db.refresh(existing)
         existing.assigned_documents = json.loads(existing.assigned_documents or "[]")

@@ -90,6 +90,13 @@ export default function CaseDetailView({ id }) {
   const [showPasswordIdx, setShowPasswordIdx] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  // Advocates already assigned to this specific case (via Lawfirm Management)
+  const [caseAssignedAdvocates, setCaseAssignedAdvocates] = useState([]);
+  // Per-document assignment state
+  const [docAssignedSet, setDocAssignedSet] = useState(new Set()); // filenames of already-assigned docs
+  const [docAssignModal, setDocAssignModal] = useState(null);    // doc index currently being assigned, or null
+  const [docAssignAdvocate, setDocAssignAdvocate] = useState("");
+  const [docAssignLoading, setDocAssignLoading] = useState(false);
 
   const fetchCaseDetails = async () => {
     try {
@@ -113,11 +120,54 @@ export default function CaseDetailView({ id }) {
       }
 
       // 3. Map status from Assigned Cases
-      const assigned = assignedCases.find(
-        ac => String(ac.case_number || "").trim().toLowerCase() === String(rawCase.case_no || "").trim().toLowerCase()
-      );
+      // Prefer matching by numeric case_id (unique), fall back to case_number only when needed
+      const assigned = assignedCases.find(ac => {
+        if (rawCase.id && ac.case_id) {
+          return String(ac.case_id) === String(rawCase.id);
+        }
+        // Fallback: match by case_number only if no numeric id on either side
+        return (
+          ac.case_number &&
+          rawCase.case_no &&
+          String(ac.case_number).trim().toLowerCase() ===
+            String(rawCase.case_no).trim().toLowerCase()
+        );
+      });
       const resolvedStatus = assigned ? assigned.status : rawCase.status;
-      
+
+      // 4. Collect all advocates assigned to this specific case
+      // Use case_id-first matching to avoid cross-case pollution from duplicate case numbers
+      const caseAssignments = assignedCases.filter(ac => {
+        if (rawCase.id && ac.case_id) {
+          // Both have numeric IDs — must match exactly
+          return String(ac.case_id) === String(rawCase.id);
+        }
+        // Fallback: only use case_number match when neither side has a case_id
+        if (!rawCase.id || !ac.case_id) {
+          return (
+            ac.case_number &&
+            rawCase.case_no &&
+            String(ac.case_number).trim().toLowerCase() ===
+              String(rawCase.case_no || "").trim().toLowerCase()
+          );
+        }
+        return false;
+      });
+      const assignedAdvNames = caseAssignments
+        .map(ac => ac.advocate_name)
+        .filter(Boolean);
+      setCaseAssignedAdvocates(assignedAdvNames);
+
+      // 5. Build set of already-assigned document filenames
+      const assignedDocFiles = new Set();
+      caseAssignments.forEach(ac => {
+        const docs = Array.isArray(ac.assigned_documents) ? ac.assigned_documents : [];
+        docs.forEach(d => {
+          if (d && d.file) assignedDocFiles.add(d.file);
+        });
+      });
+      setDocAssignedSet(assignedDocFiles);
+
       setSelectedCase({
         ...rawCase,
         status: getNormalizedStatus(resolvedStatus)
@@ -211,6 +261,13 @@ export default function CaseDetailView({ id }) {
         ...prev,
         selected_advocate: assignedAdvocate
       }));
+      // Mark all docs as assigned in the set
+      const allFileNames = (selectedCase.documents || []).map(d => d.file).filter(Boolean);
+      setDocAssignedSet(prev => {
+        const next = new Set(prev);
+        allFileNames.forEach(f => next.add(f));
+        return next;
+      });
       setAssignSuccess(true);
       setTimeout(() => setAssignSuccess(false), 3000);
     } catch (e) {
@@ -218,6 +275,50 @@ export default function CaseDetailView({ id }) {
       alert("Failed to assign advocate.");
     } finally {
       setAssignLoading(false);
+    }
+  };
+
+  // Assign a single document to a chosen advocate
+  const handleAssignSingleDoc = async () => {
+    if (docAssignModal === null || !docAssignAdvocate || !selectedCase) return;
+    setDocAssignLoading(true);
+    const doc = selectedCase.documents[docAssignModal];
+    try {
+      const res = await fetch(`${API_BASE_URL}/lawfirm-management/assign-case`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          case_id: selectedCase.id,
+          case_name: selectedCase.case_title,
+          case_number: selectedCase.case_no,
+          case_title: selectedCase.case_title,
+          advocate_name: docAssignAdvocate,
+          priority: "Normal",
+          due_date: selectedCase.next_hearing_date || "",
+          assignment_notes: `Document '${doc.file}' assigned from Case Management - Case #${selectedCase.case_no}`,
+          status: "Active",
+          assigned_documents: [doc],
+          client_name: selectedCase.client_name || ""
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.detail || "Failed to assign document.");
+        return;
+      }
+      // Mark this specific document as assigned
+      setDocAssignedSet(prev => {
+        const next = new Set(prev);
+        if (doc.file) next.add(doc.file);
+        return next;
+      });
+      setDocAssignModal(null);
+      setDocAssignAdvocate("");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to assign document.");
+    } finally {
+      setDocAssignLoading(false);
     }
   };
 
@@ -238,6 +339,11 @@ export default function CaseDetailView({ id }) {
       ...prev,
       documents: updatedDocs
     }));
+
+    // Only update backend if password is empty or exactly 6 digits
+    if (newPassword.length !== 0 && newPassword.length !== 6) {
+      return;
+    }
 
     try {
       await fetch(`${API_BASE_URL}/case-management/${selectedCase.id}`, {
@@ -547,11 +653,24 @@ export default function CaseDetailView({ id }) {
                       className="flex-1 rounded-xl border border-[#BFDBFE] bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition"
                     >
                       <option value="">— Select Junior Advocate —</option>
-                      {advocates.map((adv) => (
-                        <option key={adv.id} value={adv.advocateName || adv.advocate_name}>
-                          {adv.advocateName || adv.advocate_name}
+                      {caseAssignedAdvocates.length === 0 ? (
+                        <option value="" disabled>
+                          No advocates assigned to this case
                         </option>
-                      ))}
+                      ) : (
+                        advocates
+                          .filter((adv) => {
+                            const advName = (adv.advocateName || adv.advocate_name || "").toLowerCase().trim();
+                            return caseAssignedAdvocates.some(
+                              (name) => name.toLowerCase().trim() === advName
+                            );
+                          })
+                          .map((adv) => (
+                            <option key={adv.id} value={adv.advocateName || adv.advocate_name}>
+                              {adv.advocateName || adv.advocate_name}
+                            </option>
+                          ))
+                      )}
                     </select>
                     <button
                       onClick={handleAssignDocument}
@@ -574,6 +693,7 @@ export default function CaseDetailView({ id }) {
                         <th className="py-3.5 px-5 text-left">Case Documents</th>
                         <th className="py-3.5 px-5 text-left">Doc Type</th>
                         <th className="py-3.5 px-5 text-left">Document Password</th>
+                        <th className="py-3.5 px-5 text-left">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#F1F5F9] text-sm">
@@ -586,42 +706,75 @@ export default function CaseDetailView({ id }) {
                             </span>
                           </td>
                           <td className="py-4 px-5">
-                            <div className="flex items-center gap-3">
-                              <div className="relative flex-1 min-w-[200px]">
-                                <input
-                                  type={showPasswordIdx === idx ? "text" : "password"}
-                                  placeholder="Enter 6-digit PIN (e.g. 123456)"
-                                  value={doc.password || ""}
-                                  maxLength={6}
-                                  onChange={(e) => {
-                                    const val = e.target.value.replace(/\D/g, "");
-                                    handleDocPasswordChange(idx, val);
-                                  }}
-                                  className="w-full rounded-xl border border-[#E2E8F0] px-4 py-2.5 pr-10 text-sm font-mono tracking-[0.4em] text-[#0F172A] placeholder:font-sans placeholder:tracking-normal placeholder:text-xs focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setShowPasswordIdx(showPasswordIdx === idx ? null : idx)}
-                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition cursor-pointer flex items-center justify-center"
-                                  title={showPasswordIdx === idx ? "Hide PIN" : "Show PIN"}
-                                >
-                                  {showPasswordIdx === idx ? <EyeOff size={15} /> : <Eye size={15} />}
-                                </button>
-                              </div>
-                              {doc.password && doc.password.length === 6 ? (
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <span className="text-[10px] font-bold text-green-600 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
-                                    Set
-                                  </span>
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-3">
+                                <div className="relative flex-1 min-w-[200px]">
+                                  <input
+                                    type={showPasswordIdx === idx ? "text" : "password"}
+                                    placeholder="Enter 6-digit PIN (e.g. 123456)"
+                                    value={doc.password || ""}
+                                    maxLength={6}
+                                    onChange={(e) => {
+                                      const val = e.target.value.replace(/\D/g, "");
+                                      handleDocPasswordChange(idx, val);
+                                    }}
+                                    className={`w-full rounded-xl border px-4 py-2.5 pr-10 text-sm font-mono tracking-[0.4em] text-[#0F172A] placeholder:font-sans placeholder:tracking-normal placeholder:text-xs focus:outline-none focus:ring-2 transition ${
+                                      doc.password && doc.password.length > 0 && doc.password.length < 6
+                                        ? "border-red-500 focus:ring-red-500/20 focus:border-red-500"
+                                        : "border-[#E2E8F0] focus:ring-[#2563EB]/20 focus:border-[#2563EB]"
+                                    }`}
+                                  />
                                   <button
-                                    onClick={() => handleDocPasswordChange(idx, "")}
-                                    className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-200 hover:bg-red-100 px-2.5 py-1 rounded-full transition cursor-pointer"
+                                    type="button"
+                                    onClick={() => setShowPasswordIdx(showPasswordIdx === idx ? null : idx)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition cursor-pointer flex items-center justify-center"
+                                    title={showPasswordIdx === idx ? "Hide PIN" : "Show PIN"}
                                   >
-                                    Reset
+                                    {showPasswordIdx === idx ? <EyeOff size={15} /> : <Eye size={15} />}
                                   </button>
                                 </div>
-                              ) : null}
+                                {doc.password && doc.password.length === 6 ? (
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <span className="text-[10px] font-bold text-green-600 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
+                                      Set
+                                    </span>
+                                    <button
+                                      onClick={() => handleDocPasswordChange(idx, "")}
+                                      className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-200 hover:bg-red-100 px-2.5 py-1 rounded-full transition cursor-pointer"
+                                    >
+                                      Reset
+                                    </button>
+                                  </div>
+                                ) : null}
+                              </div>
+                              {doc.password && doc.password.length > 0 && doc.password.length < 6 && (
+                                <p className="text-red-500 text-[10px] font-medium ml-1">
+                                  PIN must be exactly 6 digits
+                                </p>
+                              )}
                             </div>
+                          </td>
+                          {/* Action column */}
+                          <td className="py-4 px-5">
+                            {docAssignedSet.has(doc.file) && doc.password && doc.password.trim().length === 6 ? (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default select-none">
+                                <CheckCircle size={12} />
+                                Assigned
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setDocAssignModal(idx);
+                                  setDocAssignAdvocate("");
+                                }}
+                                disabled={caseAssignedAdvocates.length === 0}
+                                title={caseAssignedAdvocates.length === 0 ? "No advocates assigned to this case yet" : "Assign this document to a junior advocate"}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-[#2563EB] hover:bg-[#1d4ed8] text-white transition shadow-sm active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                <Send size={11} />
+                                Assign
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -645,6 +798,85 @@ export default function CaseDetailView({ id }) {
           )}
         </div>
       </div>
+
+      {/* Per-document assign modal */}
+      {docAssignModal !== null && selectedCase && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => { setDocAssignModal(null); setDocAssignAdvocate(""); }}
+          />
+          <div className="relative bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl z-10 animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-xl bg-[#EFF6FF] flex items-center justify-center">
+                <Send size={16} className="text-[#2563EB]" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-[#0F172A]">Assign Document</h3>
+                <p className="text-xs text-[#64748B] mt-0.5 truncate max-w-[260px]">
+                  {selectedCase.documents[docAssignModal]?.file || "Document"}
+                </p>
+              </div>
+              <button
+                onClick={() => { setDocAssignModal(null); setDocAssignAdvocate(""); }}
+                className="ml-auto w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 transition cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Advocate picker */}
+            <label className="block text-xs font-bold text-[#0F172A] mb-2">
+              Select Junior Advocate
+            </label>
+            {caseAssignedAdvocates.length === 0 ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700 font-semibold mb-5">
+                No advocates are assigned to this case yet. Please assign an advocate from Lawfirm Management first.
+              </div>
+            ) : (
+              <select
+                value={docAssignAdvocate}
+                onChange={(e) => setDocAssignAdvocate(e.target.value)}
+                className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-2.5 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition mb-5"
+              >
+                <option value="">— Select Junior Advocate —</option>
+                {advocates
+                  .filter((adv) => {
+                    const advName = (adv.advocateName || adv.advocate_name || "").toLowerCase().trim();
+                    return caseAssignedAdvocates.some(
+                      (name) => name.toLowerCase().trim() === advName
+                    );
+                  })
+                  .map((adv) => (
+                    <option key={adv.id} value={adv.advocateName || adv.advocate_name}>
+                      {adv.advocateName || adv.advocate_name}
+                    </option>
+                  ))}
+              </select>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setDocAssignModal(null); setDocAssignAdvocate(""); }}
+                className="flex-1 py-2.5 rounded-xl border border-[#E2E8F0] text-[#64748B] font-semibold text-sm hover:bg-[#F8FAFC] transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAssignSingleDoc}
+                disabled={!docAssignAdvocate || docAssignLoading}
+                className="flex-1 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-semibold text-sm transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Send size={13} />
+                {docAssignLoading ? "Assigning..." : "Assign"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Delete confirmation modal */}
       {deleteConfirm && typeof document !== "undefined" && createPortal(
