@@ -50,7 +50,15 @@ export default function JunAdvDashView() {
           casesToShow = data.filter((item) => {
             if (!item.advocate_name) return false;
             const normalizedAssignedName = item.advocate_name.toLowerCase().replace(/[^a-z0-9]/g, "");
-            return normalizedAssignedName === user.username;
+            const normalizedUsername = (user.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            const normalizedEmail = (user.email || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            // Match by username OR email (advocates may log in with email)
+            return (
+              normalizedAssignedName === normalizedUsername ||
+              normalizedAssignedName === normalizedEmail ||
+              normalizedUsername.includes(normalizedAssignedName) ||
+              normalizedAssignedName.includes(normalizedUsername)
+            );
           });
         }
 

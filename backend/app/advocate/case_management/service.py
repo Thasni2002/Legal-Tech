@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 import json
 from datetime import datetime
+from fastapi import HTTPException
 
 from .models import Case
 from .schemas import CaseCreate, CaseUpdate
@@ -117,6 +118,19 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
                     ((AssignedCase.case_id == None) & (AssignedCase.case_number == case.case_no))
                 ).delete(synchronize_session=False)
             else:
+                # Validate: the selected advocate must already be assigned to this case
+                assignment_exists = db.query(AssignedCase).filter(
+                    (
+                        (AssignedCase.case_id == case.id) |
+                        ((AssignedCase.case_id == None) & (AssignedCase.case_number == case.case_no))
+                    ),
+                    AssignedCase.advocate_name == data.selectedAdvocate
+                ).first()
+                if not assignment_exists:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="This document cannot be assigned because the selected Junior Advocate is not assigned to this case."
+                    )
                 assigned_cases = db.query(AssignedCase).filter(
                     (AssignedCase.case_id == case.id) |
                     ((AssignedCase.case_id == None) & (AssignedCase.case_number == case.case_no))
@@ -125,6 +139,8 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
                     ac.advocate_name = data.selectedAdvocate
                     if ac.case_id is None:
                         ac.case_id = case.id
+        except HTTPException:
+            raise
         except Exception as e:
             print(f"Error synchronizing advocate on case update: {e}")
     if data.documents is not None:

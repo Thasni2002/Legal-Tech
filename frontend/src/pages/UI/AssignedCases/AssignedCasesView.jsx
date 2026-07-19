@@ -192,7 +192,15 @@ export default function AssignedCasesView() {
         casesToShow = data.filter((item) => {
           if (!item.advocate_name) return false;
           const normalizedAssignedName = item.advocate_name.toLowerCase().replace(/[^a-z0-9]/g, "");
-          return normalizedAssignedName === user.username;
+          const normalizedUsername = (user.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+          const normalizedEmail = (user.email || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+          // Match by username OR email (advocates may log in with email)
+          return (
+            normalizedAssignedName === normalizedUsername ||
+            normalizedAssignedName === normalizedEmail ||
+            normalizedUsername.includes(normalizedAssignedName) ||
+            normalizedAssignedName.includes(normalizedUsername)
+          );
         });
       }
 
@@ -868,7 +876,7 @@ export default function AssignedCasesView() {
                 <div className="flex-1 flex flex-col min-h-0 space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">
-                      Assigned Documents ({selectedCase.documents?.length || 0})
+                      Assigned Documents ({getVisibleDocs(selectedCase.documents || []).length})
                     </h4>
 
                     {/* UPLOAD button — only if any document has upload=true */}
