@@ -66,9 +66,10 @@ export default function ConsultationsView() {
         try {
             let url = `${API_BASE_URL}/consultations`;
             if (currentUser) {
-                if (currentUser.role === "Senior Advocate" || currentUser.role === "Junior Advocate") {
+                const roleLower = (currentUser.role || "").toLowerCase();
+                if (roleLower === "senior advocate" || roleLower === "junior advocate") {
                     url += `?advocate_id=${currentUser.id}`;
-                } else if (currentUser.role === "Client") {
+                } else if (roleLower === "client") {
                     url += `?client_id=${currentUser.id}`;
                 }
             }

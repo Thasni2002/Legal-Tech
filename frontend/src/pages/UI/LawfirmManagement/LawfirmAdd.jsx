@@ -9,6 +9,110 @@ import { useRouter } from "next/navigation";
 import InputField from "@/components/InputField/InputField";
 import SelectField from "@/components/SelectField/SelectField";
 
+const DISTRICT_COURTS = {
+  "Alappuzha": [
+    "District & Sessions Court, Alappuzha",
+    "Sub Court, Cherthala",
+    "Sub Court, Mavelikkara",
+    "Sub Court, Chengannur",
+    "Sub Court, Kayamkulam",
+    "Munsiff Court, Ambalapuzha"
+  ],
+  "Ernakulam": [
+    "High Court of Kerala, Kochi",
+    "District & Sessions Court, Ernakulam",
+    "Sub Court, Kochi (Fort Kochi)",
+    "Sub Court, Aluva",
+    "Sub Court, North Paravur",
+    "Sub Court, Perumbavoor",
+    "Sub Court, Muvattupuzha",
+    "Sub Court, Kothamangalam"
+  ],
+  "Idukki": [
+    "District & Sessions Court, Thodupuzha",
+    "Sub Court, Kattappana",
+    "Sub Court, Devikulam",
+    "Munsiff Court, Peermade"
+  ],
+  "Kannur": [
+    "District & Sessions Court, Thalassery",
+    "Sub Court, Kannur",
+    "Sub Court, Payyannur",
+    "Sub Court, Taliparamba",
+    "Munsiff Court, Kuthuparamba"
+  ],
+  "Kasaragod": [
+    "District & Sessions Court, Kasaragod",
+    "Sub Court, Kanhangad",
+    "Munsiff Court, Hosdurg"
+  ],
+  "Kollam": [
+    "District & Sessions Court, Kollam",
+    "Sub Court, Kottarakkara",
+    "Sub Court, Punalur",
+    "Sub Court, Karunagappally",
+    "Munsiff Court, Paravur"
+  ],
+  "Kottayam": [
+    "District & Sessions Court, Kottayam",
+    "Sub Court, Pala",
+    "Sub Court, Kanjirappally",
+    "Sub Court, Changanassery",
+    "Sub Court, Vaikom"
+  ],
+  "Kozhikode": [
+    "District & Sessions Court, Kozhikode",
+    "Sub Court, Vadakara",
+    "Sub Court, Koyilandy",
+    "Munsiff Court, Thamarassery"
+  ],
+  "Malappuram": [
+    "District & Sessions Court, Manjeri",
+    "Sub Court, Tirur",
+    "Sub Court, Perinthalmanna",
+    "Sub Court, Ponnani",
+    "Munsiff Court, Parappanangadi",
+    "Munsiff Court, Nilambur"
+  ],
+  "Palakkad": [
+    "District & Sessions Court, Palakkad",
+    "Sub Court, Ottapalam",
+    "Sub Court, Alathur",
+    "Sub Court, Mannarkkad",
+    "Munsiff Court, Chittur"
+  ],
+  "Pathanamthitta": [
+    "District & Sessions Court, Pathanamthitta",
+    "Sub Court, Thiruvalla",
+    "Sub Court, Adoor",
+    "Munsiff Court, Ranni",
+    "Munsiff Court, Mallappally"
+  ],
+  "Thiruvananthapuram": [
+    "District & Sessions Court, Vanchiyoor",
+    "Sub Court, Neyyattinkara",
+    "Sub Court, Nedumangad",
+    "Sub Court, Attingal",
+    "Munsiff Court, Varkala",
+    "Munsiff Court, Kattakkada"
+  ],
+  "Thrissur": [
+    "District & Sessions Court, Thrissur",
+    "Sub Court, Irinjalakuda",
+    "Sub Court, Chavakkad",
+    "Sub Court, Wadakkanchery",
+    "Munsiff Court, Kodungallur"
+  ],
+  "Wayanad": [
+    "District & Sessions Court, Kalpetta",
+    "Sub Court, Sulthan Bathery",
+    "Sub Court, Mananthavady"
+  ],
+  "National / New Delhi": [
+    "Supreme Court of India"
+  ]
+};
+
 export default function LawfirmAdd({ onCancel, initialData }) {
   const router = useRouter();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -50,8 +154,21 @@ export default function LawfirmAdd({ onCancel, initialData }) {
     profileImage: "",
     status: "Active",
     tempPassword: "",
-    role: "Junior Advocate",
+    role: "Clerk",
     ...sanitizedInitialData,
+  });
+
+  const [practiceDistrict, setPracticeDistrict] = useState(() => {
+    const pc = sanitizedInitialData.practiceCourt || "";
+    if (pc.includes(" - ")) {
+      return pc.split(" - ")[0];
+    }
+    for (const [dist, courts] of Object.entries(DISTRICT_COURTS)) {
+      if (courts.includes(pc)) {
+        return dist;
+      }
+    }
+    return "";
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,13 +177,16 @@ export default function LawfirmAdd({ onCancel, initialData }) {
   function validateField(name, value) {
     switch (name) {
       case "advocateName":
-        if (!value.trim()) return "Advocate Name is required";
+        if (!value.trim()) {
+          return formData.role === "Clerk" ? "Clerk Name is required" : "Advocate Name is required";
+        }
         return "";
       case "role":
         if (!value) return "Role is required";
         return "";
 
       case "barCouncilId":
+        if (formData.role === "Clerk") return "";
         if (!value.trim()) return "Bar Council ID is required";
         if (!/^K\/\d{1,5}\/\d{4}$/i.test(value.trim())) return "Must be Kerala format (e.g., K/1234/2023)";
         return "";
@@ -92,6 +212,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
         return "";
 
       case "practiceCourt":
+        if (formData.role === "Clerk") return "";
         if (!value.trim()) return "Practice Court is required";
         return "";
 
@@ -155,12 +276,14 @@ export default function LawfirmAdd({ onCancel, initialData }) {
   function validateAll() {
     const fields = [
       "advocateName",
-      "barCouncilId",
       "phoneNumber",
       "emailAddress",
-      "practiceCourt",
       "yearsOfExperience",
     ];
+
+    if (formData.role !== "Clerk") {
+      fields.push("barCouncilId", "practiceCourt");
+    }
 
     if (!formData.id) {
       fields.push("tempPassword");
@@ -195,11 +318,11 @@ export default function LawfirmAdd({ onCancel, initialData }) {
     try {
       const payload = {
         advocateName: formData.advocateName,
-        barCouncilId: formData.barCouncilId,
+        barCouncilId: formData.role === "Clerk" ? "" : formData.barCouncilId,
         phoneNumber: formData.phoneNumber,
         emailAddress: formData.emailAddress,
         gender: formData.gender,
-        practiceCourt: formData.practiceCourt,
+        practiceCourt: formData.role === "Clerk" ? "" : formData.practiceCourt,
         yearsOfExperience: formData.yearsOfExperience
           ? Number(formData.yearsOfExperience)
           : null,
@@ -211,6 +334,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
         status: formData.status || "Active",
         password: formData.tempPassword || null,
         confirmPassword: formData.tempPassword || null,
+        role: formData.role,
       };
 
       let response;
@@ -280,7 +404,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
               <img
                 src={
                   formData.profileImage ||
-                  "https://ui-avatars.com/api/?name=Advocate&background=E2E8F0&color=64748B&rounded=true&bold=true&size=150"
+                  `https://ui-avatars.com/api/?name=${formData.role === "Clerk" ? "Clerk" : "Advocate"}&background=E2E8F0&color=64748B&rounded=true&bold=true&size=150`
                 }
                 alt="profile"
                 className="w-36 h-36 rounded-full object-cover border-[6px] border-white shadow-xl shadow-slate-300/50 transition-transform group-hover:scale-105"
@@ -301,7 +425,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
               Law Firm Profile
             </h2>
             <p className="text-[#64748B] text-sm mt-1 font-medium">
-              Upload a professional photo for this advocate
+              Upload a professional photo for this {formData.role === "Clerk" ? "clerk" : "advocate"}
             </p>
           </div>
         </div>
@@ -317,12 +441,21 @@ export default function LawfirmAdd({ onCancel, initialData }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 
-            {/* Advocate Name */}
+            {/* Role select */}
+            <SelectField
+              label="Role"
+              options={["Clerk", "Junior Advocate"]}
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+            />
+
+            {/* Name */}
             <div>
               <InputField
-                label="Advocate Name"
+                label={formData.role === "Clerk" ? "Clerk Name" : "Advocate Name"}
                 name="advocateName"
-                placeholder="e.g. Adv. John"
+                placeholder={formData.role === "Clerk" ? "e.g. John" : "e.g. Adv. John"}
                 value={formData.advocateName}
                 onChange={handleChange}
               />
@@ -332,18 +465,20 @@ export default function LawfirmAdd({ onCancel, initialData }) {
             </div>
 
             {/* Bar Council ID */}
-            <div>
-              <InputField
-                label="Bar Council ID"
-                name="barCouncilId"
-                placeholder="e.g. K/1234/2023"
-                value={formData.barCouncilId}
-                onChange={handleChange}
-              />
-              {touched.barCouncilId && errors.barCouncilId && (
-                <p className="text-red-500 text-sm mt-1">{errors.barCouncilId}</p>
-              )}
-            </div>
+            {formData.role !== "Clerk" && (
+              <div>
+                <InputField
+                  label="Bar Council ID"
+                  name="barCouncilId"
+                  placeholder="e.g. K/1234/2023"
+                  value={formData.barCouncilId}
+                  onChange={handleChange}
+                />
+                {touched.barCouncilId && errors.barCouncilId && (
+                  <p className="text-red-500 text-sm mt-1">{errors.barCouncilId}</p>
+                )}
+              </div>
+            )}
 
             {/* Years of Experience */}
             <div>
@@ -365,7 +500,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
             {/* Phone Number */}
             <div>
               <InputField
-                label="Phone Number *"
+                label="Phone Number"
                 placeholder="e.g. 9876543210"
                 name="phoneNumber"
                 value={formData.phoneNumber}
@@ -380,7 +515,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
             {/* Email */}
             <div>
               <InputField
-                label="Email Address *"
+                label="Email Address"
                 type="email"
                 placeholder="e.g. example@email.com"
                 name="emailAddress"
@@ -403,21 +538,13 @@ export default function LawfirmAdd({ onCancel, initialData }) {
               onChange={handleChange}
             />
 
-            {/* Role select */}
-            <SelectField
-              label="Role *"
-              options={["Junior Advocate", "Clerk"]}
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-            />
 
             {/* Temporary Password */}
             {!formData.id && (
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-[#0F172A]">
-                    Temporary Password *
+                    Temporary Password
                   </label>
                   <button
                     type="button"
@@ -449,44 +576,6 @@ export default function LawfirmAdd({ onCancel, initialData }) {
               </div>
             )}
 
-          </div>
-        </div>
-
-        {/* Professional Information */}
-        <div className="bg-white rounded-3xl border border-[#E2E8F0] p-8 md:p-10 shadow-xl shadow-slate-200/40">
-          <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
-            <span className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              ⚖️
-            </span>
-            Professional Information
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-
-            {/* Practice Court */}
-            <div>
-              <SelectField
-                label="Practice Court"
-                options={[
-                  "District Court",
-                  "Sessions Court",
-                  "Family Court",
-                  "High Court",
-                  "Supreme Court",
-                  "Consumer Commission",
-                  "Labour Court",
-                  "Commercial Court",
-                 
-                ]}
-                name="practiceCourt"
-                value={formData.practiceCourt}
-                onChange={handleChange}
-              />
-              {touched.practiceCourt && errors.practiceCourt && (
-                <p className="text-red-500 text-sm mt-1">{errors.practiceCourt}</p>
-              )}
-            </div>
-
             {/* Status */}
             <div>
               <SelectField
@@ -500,6 +589,61 @@ export default function LawfirmAdd({ onCancel, initialData }) {
 
           </div>
         </div>
+
+        {/* Professional Information */}
+        {formData.role !== "Clerk" && (
+          <div className="bg-white rounded-3xl border border-[#E2E8F0] p-8 md:p-10 shadow-xl shadow-slate-200/40">
+            <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
+              <span className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                ⚖️
+              </span>
+              Professional Information
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+
+              {/* Practice District */}
+              <div>
+                <SelectField
+                  label="Practice District"
+                  options={Object.keys(DISTRICT_COURTS)}
+                  name="practiceDistrict"
+                  value={practiceDistrict}
+                  onChange={(e) => {
+                    const dist = e.target.value;
+                    setPracticeDistrict(dist);
+                    setFormData(prev => ({ ...prev, practiceCourt: "" }));
+                  }}
+                />
+              </div>
+
+              {/* Practice Court */}
+              <div>
+                <SelectField
+                  label="Practice Court"
+                  options={practiceDistrict ? DISTRICT_COURTS[practiceDistrict] : []}
+                  name="practiceCourt"
+                  value={formData.practiceCourt.includes(" - ") ? formData.practiceCourt.split(" - ")[1] : formData.practiceCourt}
+                  disabled={!practiceDistrict}
+                  onChange={(e) => {
+                    const court = e.target.value;
+                    setFormData(prev => ({
+                      ...prev,
+                      practiceCourt: practiceDistrict ? `${practiceDistrict} - ${court}` : court
+                    }));
+                    const error = validateField("practiceCourt", practiceDistrict ? `${practiceDistrict} - ${court}` : court);
+                    setErrors(prev => ({ ...prev, practiceCourt: error }));
+                    setTouched(prev => ({ ...prev, practiceCourt: true }));
+                  }}
+                />
+                {touched.practiceCourt && errors.practiceCourt && (
+                  <p className="text-red-500 text-sm mt-1">{errors.practiceCourt}</p>
+                )}
+              </div>
+
+            </div>
+          </div>
+        )}
 
         {/* Address Information */}
         <div className="bg-white rounded-3xl border border-[#E2E8F0] p-8 md:p-10 shadow-xl shadow-slate-200/40">

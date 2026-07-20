@@ -199,6 +199,10 @@ def startup():
                 with engine.begin() as conn:
                     conn.execute(text("ALTER TABLE advocates ADD COLUMN temp_password VARCHAR(255) NULL;"))
                 print("Successfully added temp_password column to advocates table.")
+            if 'role' not in columns:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE advocates ADD COLUMN role VARCHAR(50) NULL DEFAULT 'Junior Advocate';"))
+                print("Successfully added role column to advocates table.")
     except Exception as e:
         print(f"Error checking/adding migration columns: {e}")
 

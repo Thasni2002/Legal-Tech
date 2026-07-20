@@ -43,7 +43,7 @@ export default function AssignAdv({ isOpen, onClose }) {
           caseName: data.case_name || "",
           caseNumber: data.case_number || "",
           advocateName: data.advocate_name || "",
-           courtName: data.court_name || "",
+          courtName: data.practiceCourt || data.practice_court || "",
           assignmentNotes: data.assignment_notes || "",
           status: data.status || "Active",
           clientName: data.client_name || "",
@@ -184,6 +184,7 @@ export default function AssignAdv({ isOpen, onClose }) {
       case_name: formData.caseName,
       case_number: formData.caseNumber,
       advocate_name: formData.advocateName,
+      practice_court: formData.courtName,
       assignment_notes: formData.assignmentNotes,
       status: formData.status,
       client_name: formData.clientName,
@@ -368,9 +369,12 @@ export default function AssignAdv({ isOpen, onClose }) {
                     // If the case has a court name set, only show advocates
                     // whose practiceCourt matches that court name
                     if (!formData.courtName) return true;
+                    const courtNameClean = formData.courtName.toLowerCase().trim();
+                    const practiceCourtClean = (advocate.practiceCourt || "").toLowerCase().trim();
                     return (
-                      (advocate.practiceCourt || "").toLowerCase().trim() ===
-                      formData.courtName.toLowerCase().trim()
+                      practiceCourtClean === courtNameClean ||
+                      practiceCourtClean.includes(courtNameClean) ||
+                      courtNameClean.includes(practiceCourtClean)
                     );
                   })
                   .map((advocate) => (

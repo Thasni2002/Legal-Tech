@@ -70,7 +70,7 @@ export default function ClientConsultationView() {
     try {
       let url = `${API_BASE_URL}/consultations`;
       if (currentUser) {
-        if (currentUser.role === "Client") {
+        if (currentUser.role && currentUser.role.toLowerCase() === "client") {
           url += `?client_id=${currentUser.id}`;
         } 
       }
@@ -114,13 +114,15 @@ export default function ClientConsultationView() {
             return false;
           }
           if (currentUser) {
-            if (currentUser.role === "Client") {
+            if (currentUser.role && currentUser.role.toLowerCase() === "client") {
               const clientEmailMatch = c.email_id && currentUser.email && c.email_id.toLowerCase() === currentUser.email.toLowerCase();
               const clientNameMatch = c.client_name && currentUser.username && c.client_name.toLowerCase() === currentUser.username.toLowerCase();
               return clientEmailMatch || clientNameMatch;
             } else if (
-              currentUser.role === "Senior Advocate" ||
-              currentUser.role === "Junior Advocate"
+              currentUser.role && (
+                currentUser.role.toLowerCase() === "senior advocate" ||
+                currentUser.role.toLowerCase() === "junior advocate"
+              )
             ) {
               let advocateName = currentUser.username;
               const matchingAdv = currentAdvocates.find(
@@ -175,7 +177,8 @@ export default function ClientConsultationView() {
       const resPerms = await fetch(`${API_BASE_URL}/permissions`);
       if (resPerms.ok) {
         const allPerms = await resPerms.json();
-        const rolePerms = allPerms[loggedInUser.role] || {};
+        const roleKey = Object.keys(allPerms).find(k => k.toLowerCase() === loggedInUser.role.toLowerCase()) || loggedInUser.role;
+        const rolePerms = allPerms[roleKey] || {};
         const consultPerm = rolePerms["Consultation"];
         if (consultPerm !== undefined) {
           setCanAddConsultation(consultPerm.add === true);

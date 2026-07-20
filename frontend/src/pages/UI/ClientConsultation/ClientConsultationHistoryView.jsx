@@ -45,7 +45,7 @@ export default function ClientConsultationHistoryView() {
     try {
       let url = `${API_BASE_URL}/consultations`;
       if (currentUser) {
-        if (currentUser.role === "Client") {
+        if (currentUser.role && currentUser.role.toLowerCase() === "client") {
           url += `?client_id=${currentUser.id}`;
         } 
       }
