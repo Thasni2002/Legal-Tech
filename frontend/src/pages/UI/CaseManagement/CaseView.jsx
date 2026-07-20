@@ -165,6 +165,7 @@ export default function CaseView() {
     }
   };
 
+
   const filteredCases = cases.filter((item) => {
     const term = searchTerm.toLowerCase();
     return (
@@ -288,14 +289,32 @@ export default function CaseView() {
                   >
                     <td className="px-5 py-4">
                       <p className="text-sm font-semibold text-[#0F172A] max-w-[200px] truncate">{item.case_title}</p>
-                      <p className="text-xs text-[#94A3B8] mt-0.5">{item.case_type}</p>
+                      <p className="text-xs text-[#94A3B8] mt-0.5">
+                        {item.case_type && item.case_type.includes(": ")
+                          ? item.case_type.replace(": ", " · ")
+                          : item.case_type}
+                      </p>
                     </td>
                     <td className="px-5 py-4">
-                      <span className="text-xs font-mono font-bold text-[#2563EB] bg-blue-50 px-2.5 py-1 rounded-lg">
-                        {item.case_id || item.case_no}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs font-mono font-bold text-[#2563EB] bg-blue-50 px-2.5 py-1 rounded-lg w-fit">
+                          {item.case_id}
+                        </span>
+                        {item.case_no && (
+                          <span className="text-xs font-semibold text-[#334155] bg-slate-100 px-2 py-0.5 rounded w-fit border border-slate-200">
+                            {item.case_no}
+                          </span>
+                        )}
+                      </div>
                     </td>
-                    <td className="px-5 py-4 text-sm text-[#475569] font-medium">{item.client_name}</td>
+                    <td className="px-5 py-4">
+                      <p className="text-sm text-[#0F172A] font-semibold">{item.client_name}</p>
+                      {item.client_role ? (
+                        <span className="inline-block mt-1 text-[11px] font-bold text-[#2563EB] bg-blue-50/80 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-wider">
+                          {item.client_role}
+                        </span>
+                      ) : null}
+                    </td>
                     <td className="px-5 py-4 text-sm text-[#475569]">{item.court_name}</td>
                     <td className="px-5 py-4">
                       <StatusBadge status={item.status} />

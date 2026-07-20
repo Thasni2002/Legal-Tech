@@ -63,7 +63,7 @@ export default function Navbar() {
         setNotifications(data);
       }
     } catch (err) {
-      console.warn("Could not fetch notifications:", err.message);
+      // Quietly ignore transient network/dev-server reload errors
     } finally {
       setLoadingNotifs(false);
     }

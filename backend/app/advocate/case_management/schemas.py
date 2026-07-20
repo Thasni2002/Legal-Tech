@@ -24,6 +24,9 @@ class CaseCreate(BaseModel):
     clientName: str
     contactNumber: str
     emailId: str
+    clientRole: Optional[str] = None
+    clientAddress: Optional[str] = None
+    clientDistrict: Optional[str] = None
 
     courtName: str
     courtType: str
@@ -47,6 +50,9 @@ class CaseUpdate(BaseModel):
     clientName: Optional[str] = None
     contactNumber: Optional[str] = None
     emailId: Optional[str] = None
+    clientRole: Optional[str] = None
+    clientAddress: Optional[str] = None
+    clientDistrict: Optional[str] = None
 
     courtName: Optional[str] = None
     courtType: Optional[str] = None

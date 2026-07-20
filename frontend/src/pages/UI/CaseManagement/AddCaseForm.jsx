@@ -1,10 +1,191 @@
 "use client";
 
 import { API_BASE_URL } from "@/utils/api";
+import { DISTRICT_COURTS } from "@/utils/districtCourts";
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, X, Eye, CheckCircle, Edit3 } from "lucide-react";
+
+const keralaCaseCategories = {
+  "Civil Cases": [
+    "OP – Original Petition",
+    "OS – Original Suit",
+    "AS – Appeal Suit",
+    "RFA – Regular First Appeal",
+    "RSA – Regular Second Appeal",
+    "CRP – Civil Revision Petition",
+    "CMA – Civil Miscellaneous Appeal",
+    "CMP – Civil Miscellaneous Petition",
+    "IA – Interlocutory Application",
+    "EP – Execution Petition",
+    "EA – Execution Application",
+    "OP(C) – Original Petition (Civil)",
+    "WP(C) – Writ Petition (Civil)",
+    "WA – Writ Appeal",
+    "RP – Review Petition"
+  ],
+  "Criminal Cases": [
+    "CC – Calendar Case",
+    "SC – Sessions Case",
+    "ST – Special Trial",
+    "CRL.MC – Criminal Miscellaneous Case",
+    "Crl.A – Criminal Appeal",
+    "Crl.RP – Criminal Revision Petition",
+    "OP(Crl) – Original Petition (Criminal)",
+    "Bail Appl. – Bail Application",
+    "Anticipatory Bail – Anticipatory Bail Application"
+  ],
+  "Family Court Cases": [
+    "OP – Original Petition",
+    "MC – Maintenance Case",
+    "G&W – Guardians and Wards Case",
+    "Divorce OP – Divorce Petition",
+    "Restitution of Conjugal Rights (RCR)",
+    "Custody Petition",
+    "Adoption Petition"
+  ],
+  "Motor Accident Cases": [
+    "OP(MV) – Motor Vehicle Original Petition",
+    "MACT – Motor Accident Claims Tribunal Case"
+  ],
+  "Consumer Cases": [
+    "CC – Consumer Complaint",
+    "FA – First Appeal (Consumer)"
+  ],
+  "Labour & Tribunal Cases": [
+    "OA – Original Application",
+    "OP(KAT) – Original Petition (Kerala Administrative Tribunal)",
+    "ID – Industrial Dispute"
+  ],
+  "Company & Commercial Cases": [
+    "CP – Company Petition",
+    "ARB – Arbitration Petition",
+    "Insolvency Petition"
+  ],
+  "Rent Control Cases": [
+    "RCP – Rent Control Petition",
+    "RCA – Rent Control Appeal",
+    "RCR – Rent Control Revision"
+  ],
+  "Revenue & Land Cases": [
+    "LAA – Land Acquisition Appeal",
+    "LRP – Land Reforms Petition"
+  ],
+  "Cheque & Financial Cases": [
+    "NI Act Case (Section 138)",
+    "Money Suit",
+    "Recovery Suit"
+  ]
+};
+
+const documentCategories = {
+  "Pleadings": [
+    "Petition",
+    "Plaint",
+    "Written Statement",
+    "Counter Affidavit",
+    "Reply Statement",
+    "Objection",
+    "Rejoinder",
+    "Replication",
+    "Appeal Memorandum",
+    "Revision Petition",
+    "Review Petition"
+  ],
+  "Affidavits": [
+    "Affidavit",
+    "Supporting Affidavit",
+    "Counter Affidavit",
+    "Proof Affidavit",
+    "Additional Affidavit"
+  ],
+  "Applications": [
+    "Interlocutory Application (IA)",
+    "Miscellaneous Application",
+    "Bail Application",
+    "Anticipatory Bail Application",
+    "Stay Petition",
+    "Delay Condonation Petition",
+    "Restoration Petition",
+    "Amendment Petition",
+    "Impleading Petition",
+    "Execution Petition"
+  ],
+  "Evidence/Documents": [
+    "Sale Deed",
+    "Title Deed",
+    "Agreement",
+    "Will",
+    "Power of Attorney",
+    "Legal Notice",
+    "Reply Notice",
+    "FIR",
+    "Charge Sheet",
+    "Final Report",
+    "Medical Certificate",
+    "Postmortem Report",
+    "Accident Report",
+    "Insurance Policy",
+    "Tax Receipt",
+    "Property Tax Receipt",
+    "Encumbrance Certificate (EC)",
+    "Possession Certificate",
+    "Birth Certificate",
+    "Death Certificate",
+    "Marriage Certificate",
+    "Aadhaar Card",
+    "PAN Card",
+    "Passport",
+    "Driving Licence",
+    "Ration Card",
+    "Voter ID",
+    "Photographs",
+    "Bank Statement",
+    "Passbook Copy",
+    "Bills/Invoices",
+    "Receipts",
+    "Email/Chat Printouts",
+    "Call Records",
+    "CCTV Images",
+    "Audio Recording Transcript",
+    "Video Recording Transcript"
+  ],
+  "Court Documents": [
+    "Summons",
+    "Notice",
+    "Warrant",
+    "Court Order",
+    "Interim Order",
+    "Judgment",
+    "Decree",
+    "Commission Report",
+    "Advocate Commission Report",
+    "Court Fee Receipt",
+    "Filing Receipt",
+    "Certified Copy",
+    "Cause List"
+  ],
+  "Advocate Documents": [
+    "Vakalatnama",
+    "Memo of Appearance",
+    "Memo",
+    "Case Diary",
+    "Case Notes",
+    "Brief Notes",
+    "Written Arguments",
+    "Synopsis",
+    "List of Witnesses",
+    "List of Documents"
+  ],
+  "Witness Documents": [
+    "Witness Statement",
+    "Chief Examination",
+    "Cross Examination",
+    "Re-Examination",
+    "Expert Opinion"
+  ]
+};
 
 const courtMappings = {
   "Supreme Court": ["Civil","Criminal", "Constitutional","Appellate","Public Interest Litigation (PIL)","Election", "Tax","Corporate","Environmental", "Other"],
@@ -94,6 +275,125 @@ const courtMappings = {
   "Other": ["Other"]
 };
 
+const getTypesForCourtName = (courtName) => {
+  if (!courtName) return ["Civil", "Criminal", "Appellate", "Original Jurisdiction", "Sessions", "Other"];
+  
+  if (courtName.includes("District & Sessions") || courtName.includes("District Court")) {
+    return [
+      "Civil",
+      "Criminal",
+      "Appellate",
+      "Original Jurisdiction",
+      "Sessions",
+      "Other"
+    ];
+  }
+  
+  if (courtName.includes("Sub Court")) {
+    return [
+      "Civil",
+      "Criminal",
+      "Appellate",
+      "Original Jurisdiction",
+      "Other"
+    ];
+  }
+  
+  if (courtName.includes("Munsiff Court")) {
+    return [
+      "Civil",
+      "Original Jurisdiction",
+      "Small Cause",
+      "Other"
+    ];
+  }
+
+  if (courtName.includes("Magistrate") || courtName.includes("CJM") || courtName.includes("JFCM")) {
+    return [
+      "Criminal",
+      "Summary Trial",
+      "Bail",
+      "Other"
+    ];
+  }
+
+  if (courtName.includes("Family")) {
+    return [
+      "Divorce",
+      "Child Custody",
+      "Maintenance",
+      "Domestic Violence",
+      "Adoption",
+      "Guardianship",
+      "Marriage",
+      "Other"
+    ];
+  }
+
+  if (courtName.includes("MACT") || courtName.includes("Accident")) {
+    return [
+      "Motor Accident Claim",
+      "Compensation",
+      "Insurance Claim",
+      "Fatal Accident",
+      "Permanent Disability",
+      "Vehicle Damage",
+      "Other"
+    ];
+  }
+
+  if (courtName.includes("Consumer")) {
+    return [
+      "Consumer Complaint",
+      "Medical Negligence",
+      "Banking",
+      "Insurance",
+      "E-Commerce",
+      "Defective Products",
+      "Unfair Trade Practice",
+      "Other"
+    ];
+  }
+
+  if (courtName.includes("High Court")) {
+    return [
+      "Civil",
+      "Criminal",
+      "Family",
+      "Company",
+      "Labour",
+      "Consumer",
+      "Tax",
+      "Writ Petition",
+      "Appeal",
+      "Bail",
+      "Public Interest Litigation (PIL)",
+      "Other"
+    ];
+  }
+
+  if (courtName.includes("Supreme Court")) {
+    return [
+      "Civil",
+      "Criminal",
+      "Constitutional",
+      "Appellate",
+      "Public Interest Litigation (PIL)",
+      "Election",
+      "Tax",
+      "Corporate",
+      "Environmental",
+      "Other"
+    ];
+  }
+
+  if (courtMappings[courtName] && courtMappings[courtName].length > 0) {
+    return courtMappings[courtName];
+  }
+
+  return ["Civil", "Criminal", "Appellate", "Original Jurisdiction", "Sessions", "Other"];
+};
+
 // Error message component
 function ErrorMsg({ message }) {
   if (!message) return null;
@@ -112,7 +412,7 @@ export default function AddCaseForm() {
 
   const isEditMode = !!editId;
   const [documents, setDocuments] = useState([
-    { documentType: "", advocate: "", file: null },
+    { documentCategory: "", documentType: "", advocate: "", file: null },
   ]);
 
 
@@ -123,10 +423,12 @@ export default function AddCaseForm() {
     caseNo: "",
     caseType: "",
     facts: "",
-    issues: "",
+    clientRole: "",
     clientName: "",
     contactNumber: "",
     emailId: "",
+    clientAddress: "",
+    clientDistrict: "",
     tempPassword: "",
     courtName: "",
     courtType: "",
@@ -148,6 +450,8 @@ export default function AddCaseForm() {
   const [existingClients, setExistingClients] = useState([]);
   const [existingUsers, setExistingUsers] = useState([]);
   const [originalEmail, setOriginalEmail] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedSubtype, setSelectedSubtype] = useState("");
 
   // ─── Fetch case data for edit mode ───
   async function fetchCaseForEdit(id) {
@@ -156,6 +460,18 @@ export default function AddCaseForm() {
       const res = await fetch(`${API_BASE_URL}/case-management/${id}`);
       if (!res.ok) throw new Error("Case not found");
       const data = await res.json();
+      const dbCaseType = data.case_type || "";
+      let category = "";
+      let subtype = "";
+      if (dbCaseType.includes(": ")) {
+        const parts = dbCaseType.split(": ");
+        category = parts[0];
+        subtype = parts[1];
+      } else {
+        category = dbCaseType;
+      }
+      setSelectedCategory(category);
+      setSelectedSubtype(subtype);
       setFormData({
         cnrNumber: data.cnr_number || "",
         caseId: data.case_id || "",
@@ -171,17 +487,12 @@ export default function AddCaseForm() {
           }
           return rawDes;
         })(),
-        issues: (() => {
-          const rawDes = data.case_description || "";
-          if (rawDes.startsWith("Facts:\n")) {
-            const parts = rawDes.split("\n\nIssues:\n");
-            return parts[1] || "";
-          }
-          return "";
-        })(),
         clientName: data.client_name || "",
         contactNumber: data.contact_number || "",
         emailId: data.email_id || "",
+        clientRole: data.client_role || "",
+        clientAddress: data.client_address || "",
+        clientDistrict: data.client_district || "",
         courtName: data.court_name || "",
         courtType: data.court_type || "",
         status: data.status || "Active",
@@ -190,13 +501,32 @@ export default function AddCaseForm() {
       setSelectedAdvocate(data.selected_advocate || "");
       setOriginalEmail(data.email_id || "");
       if (data.documents && data.documents.length > 0) {
-        setDocuments(data.documents.map(d => ({
-          documentType: d.documentType || "",
-          advocate: d.advocate || "",
-          file: d.file ? { name: d.file } : null,
-          url: d.url || null,
-          password: d.password || "",
-        })));
+        setDocuments(data.documents.map(d => {
+          const rawType = d.documentType || "";
+          let category = "";
+          let subtype = rawType;
+          if (rawType.includes(": ")) {
+            const parts = rawType.split(": ");
+            category = parts[0];
+            subtype = parts[1];
+          } else {
+            for (const [cat, types] of Object.entries(documentCategories)) {
+              if (types.includes(rawType)) {
+                category = cat;
+                break;
+              }
+            }
+            if (!category) category = "Evidence/Documents";
+          }
+          return {
+            documentCategory: category,
+            documentType: subtype,
+            advocate: d.advocate || "",
+            file: d.file ? { name: d.file } : null,
+            url: d.url || null,
+            password: d.password || "",
+          };
+        }));
       }
       setClientMode("new"); // Force show fields in edit mode
     } catch (err) {
@@ -229,6 +559,9 @@ export default function AddCaseForm() {
             clientName: c.client_name,
             contactNumber: c.contact_number || "",
             emailId: c.email_id || "",
+            clientRole: c.client_role || "",
+            clientAddress: c.client_address || "",
+            clientDistrict: c.client_district || "",
           });
         }
       });
@@ -309,13 +642,22 @@ export default function AddCaseForm() {
         if (value.trim().length < 3) return "Case Title must be at least 3 characters";
         return "";
       case "caseType":
-        if (!value) return "Please select a Case Type";
+        if (!value) return "Please select a Case Category and Subtype";
+        if (value.includes(": ")) {
+          const parts = value.split(": ");
+          if (!parts[1] || parts[1].trim() === "") {
+            return "Please select a Case Subtype";
+          }
+        } else {
+          return "Please select both Case Category and Subtype";
+        }
         return "";
       case "facts":
         if (!value.trim()) return "Facts are required";
         if (value.trim().length < 10) return "Facts must be at least 10 characters";
         return "";
-      case "issues":
+      case "clientRole":
+        if (!value) return "Please select a Client Role";
         return "";
       case "clientName":
         if (!value.trim()) return "Client Name is required";
@@ -377,7 +719,7 @@ export default function AddCaseForm() {
   const handleExistingClientChange = (e) => {
     const selectedName = e.target.value;
     if (!selectedName) {
-      setFormData(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "", tempPassword: "" }));
+      setFormData(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "", clientRole: "", clientAddress: "", clientDistrict: "", tempPassword: "" }));
       return;
     }
     const client = existingClients.find(c => c.clientName === selectedName);
@@ -387,6 +729,9 @@ export default function AddCaseForm() {
         clientName: client.clientName,
         contactNumber: client.contactNumber,
         emailId: client.emailId,
+        clientRole: client.clientRole || prev.clientRole,
+        clientAddress: client.clientAddress || prev.clientAddress,
+        clientDistrict: client.clientDistrict || prev.clientDistrict,
         tempPassword: "",
       }));
       setErrors(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "", tempPassword: "" }));
@@ -396,7 +741,7 @@ export default function AddCaseForm() {
   };
 
   function validateAll() {
-    const fields = ["cnrNumber", "caseTitle", "caseType", "facts", "issues", "clientName", "contactNumber", "emailId", "courtName", "courtType"];
+    const fields = ["cnrNumber", "caseTitle", "caseType", "facts", "clientRole", "clientName", "contactNumber", "emailId", "courtName", "courtType"];
     if (!isEditMode && clientMode === "new") {
       fields.push("tempPassword");
     }
@@ -439,12 +784,30 @@ export default function AddCaseForm() {
       val = value.replace(/\D/g, "").slice(0, 10);
     }
 
-    // Update form data
-    if (name === "courtName") {
+    // Address auto-district extraction
+    if (name === "clientAddress") {
+      const lowerAddress = val.toLowerCase();
+      const matchedDistrict = Object.keys(DISTRICT_COURTS).find((dist) =>
+        lowerAddress.includes(dist.toLowerCase())
+      );
+      if (matchedDistrict) {
+        setFormData((prev) => ({
+          ...prev,
+          clientAddress: val,
+          clientDistrict: matchedDistrict,
+        }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          clientAddress: val,
+        }));
+      }
+    } else if (name === "courtName") {
+      const types = getTypesForCourtName(val);
       setFormData((prev) => ({
         ...prev,
         [name]: val,
-        courtType: courtMappings[val] && courtMappings[val].length > 0 ? courtMappings[val][0] : "",
+        courtType: types && types.length > 0 ? types[0] : "Civil",
       }));
     } else {
       setFormData((prev) => ({
@@ -469,7 +832,60 @@ export default function AddCaseForm() {
     }));
   };
 
+  const handleCategoryChange = (e) => {
+    const cat = e.target.value;
+    setSelectedCategory(cat);
+    setSelectedSubtype("");
 
+    const combinedType = cat ? `${cat}: ` : "";
+    setFormData((prev) => ({
+      ...prev,
+      caseType: combinedType,
+    }));
+
+    setTouched((prev) => ({
+      ...prev,
+      caseType: true,
+    }));
+
+    const error = validateField("caseType", combinedType);
+    setErrors((prev) => ({
+      ...prev,
+      caseType: error,
+    }));
+  };
+
+  const handleSubtypeChange = (e) => {
+    const sub = e.target.value;
+    setSelectedSubtype(sub);
+
+    const combinedType = selectedCategory && sub ? `${selectedCategory}: ${sub}` : "";
+    
+    // Auto-suggest Case Number prefix if caseNo is empty
+    let autoCaseNo = formData.caseNo || "";
+    if (sub && !formData.caseNo) {
+      const codePart = sub.split("–")[0].split("-")[0].trim();
+      const currentYear = new Date().getFullYear();
+      autoCaseNo = `${codePart} 125/${currentYear}`;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      caseType: combinedType,
+      caseNo: autoCaseNo,
+    }));
+
+    setTouched((prev) => ({
+      ...prev,
+      caseType: true,
+    }));
+
+    const error = validateField("caseType", combinedType);
+    setErrors((prev) => ({
+      ...prev,
+      caseType: error,
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -511,6 +927,10 @@ export default function AddCaseForm() {
       // 1. Process and upload any new files using FormData
       const processedDocs = await Promise.all(
         documents.map(async (doc) => {
+          const combinedType = doc.documentCategory && doc.documentType
+            ? `${doc.documentCategory}: ${doc.documentType}`
+            : doc.documentType || "";
+
           // If doc.file is an actual File object, we need to upload it
           if (doc.file && doc.file instanceof File) {
             const formDataObj = new FormData();
@@ -527,7 +947,7 @@ export default function AddCaseForm() {
 
             const uploadData = await uploadRes.json();
             return {
-              documentType: doc.documentType || "",
+              documentType: combinedType,
               advocate: selectedAdvocate || "",
               file: doc.file.name,
               url: uploadData.url,
@@ -539,7 +959,7 @@ export default function AddCaseForm() {
 
           // If doc.file is already uploaded previously (it won't be an instance of File), keep as-is
           return {
-            documentType: doc.documentType || "",
+            documentType: combinedType,
             advocate: selectedAdvocate || "",
             file: doc.file ? doc.file.name : null,
             url: doc.url || null,
@@ -556,11 +976,14 @@ export default function AddCaseForm() {
         caseTitle: formData.caseTitle,
         caseNo: formData.caseNo,
         caseType: formData.caseType,
-        caseDes: `Facts:\n${formData.facts || ""}\n\nIssues:\n${formData.issues || ""}`,
+        caseDes: `Facts:\n${formData.facts || ""}`,
 
         clientName: formData.clientName,
         contactNumber: formData.contactNumber,
         emailId: formData.emailId,
+        clientRole: formData.clientRole || "",
+        clientAddress: formData.clientAddress || "",
+        clientDistrict: formData.clientDistrict || "",
 
         courtName: formData.courtName,
         courtType: formData.courtType,
@@ -643,9 +1066,12 @@ export default function AddCaseForm() {
           caseType: "",
           caseCat: "",
           caseDes: "",
+          clientRole: "",
           clientName: "",
           contactNumber: "",
           emailId: "",
+          clientAddress: "",
+          clientDistrict: "",
           courtName: "",
           courtType: "",
           status: "Active",
@@ -656,6 +1082,7 @@ export default function AddCaseForm() {
         setTouched({});
         setDocuments([
           {
+            documentCategory: "",
             documentType: "",
             advocate: "",
             file: null,
@@ -664,6 +1091,8 @@ export default function AddCaseForm() {
 
         setSelectedAdvocate("");
         setClientMode("");
+        setSelectedCategory("");
+        setSelectedSubtype("");
         
       }
     } catch (error) {
@@ -777,7 +1206,7 @@ export default function AddCaseForm() {
             {clientMode !== "" && (
               <div className="space-y-5">
                 {/* Main Client Fields Row */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client Name</label>
@@ -825,6 +1254,58 @@ export default function AddCaseForm() {
                       readOnly={clientMode === "existing"}
                       className={`${baseInputClass} ${getBorderClass("emailId")} ${clientMode === "existing" ? "bg-gray-50" : ""}`} />
                     {touched.emailId && errors.emailId && <ErrorMsg message={errors.emailId} />}
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client Role</label>
+                    </div>
+                    <select
+                      name="clientRole"
+                      value={formData.clientRole}
+                      onChange={handleChange}
+                      className={`${baseInputClass} ${getBorderClass("clientRole")}`}
+                    >
+                      <option value="">Select Role</option>
+                      <option value="Petitioner">Petitioner</option>
+                      <option value="Respondent">Respondent</option>
+                    </select>
+                    {touched.clientRole && errors.clientRole && <ErrorMsg message={errors.clientRole} />}
+                  </div>
+                </div>
+
+                {/* Address and District Row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <div className="md:col-span-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client Address</label>
+                    </div>
+                    <input
+                      type="text"
+                      name="clientAddress"
+                      placeholder="House No, Street, City"
+                      value={formData.clientAddress || ""}
+                      onChange={handleChange}
+                      readOnly={clientMode === "existing"}
+                      className={`${baseInputClass} ${getBorderClass("clientAddress")} ${clientMode === "existing" ? "bg-gray-50" : ""}`}
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client District / Location</label>
+                    </div>
+                    <select
+                      name="clientDistrict"
+                      value={formData.clientDistrict || ""}
+                      onChange={handleChange}
+                      className={`${baseInputClass} ${getBorderClass("clientDistrict")}`}
+                    >
+                      <option value="">Select District / Location</option>
+                      {Object.keys(DISTRICT_COURTS).map((dist) => (
+                        <option key={dist} value={dist}>
+                          {dist}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
@@ -878,6 +1359,20 @@ export default function AddCaseForm() {
               Case Details
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Case Title */}
+              <div>
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Case Name</label>
+                <input
+                  type="text"
+                  name="caseTitle"
+                  placeholder="e.g. State vs. John Doe"
+                  value={formData.caseTitle}
+                  onChange={handleChange}
+                  className={`${baseInputClass} ${getBorderClass("caseTitle")}`}
+                />
+                {touched.caseTitle && errors.caseTitle && <ErrorMsg message={errors.caseTitle} />}
+              </div>
+
               {/* CNR Number */}
               <div>
                 <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">CNR Number</label>
@@ -890,6 +1385,60 @@ export default function AddCaseForm() {
                   className={`${baseInputClass} ${getBorderClass("cnrNumber")}`}
                 />
                 {touched.cnrNumber && errors.cnrNumber && <ErrorMsg message={errors.cnrNumber} />}
+              </div>
+
+              {/* Case Category */}
+              <div>
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Case Category</label>
+                <select
+                  name="caseCategory"
+                  value={selectedCategory}
+                  onChange={handleCategoryChange}
+                  className={`${baseInputClass} ${getBorderClass("caseType")}`}
+                >
+                  <option value="">Select Category</option>
+                  {Object.keys(keralaCaseCategories).map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+                {touched.caseType && errors.caseType && !selectedCategory && <ErrorMsg message={errors.caseType} />}
+              </div>
+
+              {/* Case Subtype */}
+              <div>
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Case Subtype / Type</label>
+                <select
+                  name="caseSubtype"
+                  value={selectedSubtype}
+                  onChange={handleSubtypeChange}
+                  disabled={!selectedCategory}
+                  className={`${baseInputClass} ${getBorderClass("caseType")} ${!selectedCategory ? "bg-slate-50 cursor-not-allowed" : ""}`}
+                >
+                  <option value="">Select Subtype</option>
+                  {selectedCategory &&
+                    keralaCaseCategories[selectedCategory].map((sub) => (
+                      <option key={sub} value={sub}>
+                        {sub}
+                      </option>
+                    ))}
+                </select>
+                {touched.caseType && errors.caseType && selectedCategory && <ErrorMsg message={errors.caseType} />}
+              </div>
+
+              {/* Case Number */}
+              <div>
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Case Number</label>
+                <input
+                  type="text"
+                  name="caseNo"
+                  placeholder="e.g. OS 125/2025"
+                  value={formData.caseNo || ""}
+                  onChange={handleChange}
+                  className={`${baseInputClass} ${getBorderClass("caseNo")}`}
+                />
+                {touched.caseNo && errors.caseNo && <ErrorMsg message={errors.caseNo} />}
               </div>
 
               {/* Case ID — auto-generated */}
@@ -907,57 +1456,19 @@ export default function AddCaseForm() {
                 />
               </div>
 
-              {/* Case Title */}
+              {/* Current Date */}
               <div>
-                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Case Name</label>
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">
+                  Date
+                </label>
                 <input
                   type="text"
-                  name="caseTitle"
-                  placeholder="e.g. State vs. John Doe"
-                  value={formData.caseTitle}
-                  onChange={handleChange}
-                  className={`${baseInputClass} ${getBorderClass("caseTitle")}`}
+                  value={new Date().toLocaleDateString("en-GB")}
+                  readOnly
+                  className={`${baseInputClass} bg-slate-50 text-[#475569] cursor-not-allowed border-[#E2E8F0]`}
                 />
-                {touched.caseTitle && errors.caseTitle && <ErrorMsg message={errors.caseTitle} />}
               </div>
-
-              {/* Case Type */}
-              <div>
-                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Case Type</label>
-                <select
-                  name="caseType"
-                  value={formData.caseType}
-                  onChange={handleChange}
-                  className={`${baseInputClass} ${getBorderClass("caseType")}`}
-                >
-                  <option value="">Select Case Type</option>
-                  <option value="Civil">Civil</option>
-                  <option value="Criminal">Criminal</option>
-                  <option value="Family">Family</option>
-                  <option value="Consumer">Consumer</option>
-                  <option value="Corporate">Corporate</option>
-                  <option value="Labour">Labour</option>
-                  <option value="Property">Property</option>
-                  <option value="Motor Accident">Motor Accident</option>
-                  <option value="Cyber Crime">Cyber Crime</option>
-                  <option value="Tax">Tax</option>
-                </select>
-                {touched.caseType && errors.caseType && <ErrorMsg message={errors.caseType} />}
-              </div>
-
-              {/* Current Date */}
-<div>
-  <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">
-    Date
-  </label>
-
-  <input
-    type="text"
-    value={new Date().toLocaleDateString("en-GB")}
-    readOnly
-    className={`${baseInputClass} bg-slate-50 text-[#475569] cursor-not-allowed border-[#E2E8F0]`}
-  />
-</div>
+            </div>
 
               {/* Date */}
               {/* <div>
@@ -971,37 +1482,19 @@ export default function AddCaseForm() {
                 />
                 {touched.nextHearingDate && errors.nextHearingDate && <ErrorMsg message={errors.nextHearingDate} />}
               </div> */}
-            </div>
 
-            {/* Facts and Issues (Side-by-Side) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Facts */}
-              <div>
-                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Facts *</label>
-                <textarea
-                  name="facts"
-                  placeholder="Provide facts of the case..."
-                  value={formData.facts || ""}
-                  onChange={handleChange}
-                  className={`${baseInputClass} ${getBorderClass("facts")} resize-y`}
-                  rows="5"
-                />
-                {touched.facts && errors.facts && <ErrorMsg message={errors.facts} />}
-              </div>
-
-              {/* Issues */}
-              <div>
-                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Issues</label>
-                <textarea
-                  name="issues"
-                  placeholder="Provide issues of the case..."
-                  value={formData.issues || ""}
-                  onChange={handleChange}
-                  className={`${baseInputClass} ${getBorderClass("issues")} resize-y`}
-                  rows="5"
-                />
-                {touched.issues && errors.issues && <ErrorMsg message={errors.issues} />}
-              </div>
+            {/* Facts (Full Width) */}
+            <div>
+              <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Facts *</label>
+              <textarea
+                name="facts"
+                placeholder="Provide facts of the case..."
+                value={formData.facts || ""}
+                onChange={handleChange}
+                className={`${baseInputClass} ${getBorderClass("facts")} resize-y`}
+                rows="6"
+              />
+              {touched.facts && errors.facts && <ErrorMsg message={errors.facts} />}
             </div>
           </div>
 
@@ -1009,28 +1502,38 @@ export default function AddCaseForm() {
 
           {/* Court Information */}
           <div className="space-y-5 pt-4 border-t border-[#F1F5F9]">
-            <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">Jurisdiction & Court</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">Court Details</h3>
+              {formData.clientDistrict && (
+                <span className="text-xs font-semibold text-[#2563EB] bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
+                  Filtered by Location: {formData.clientDistrict}
+                </span>
+              )}
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Court Name</label>
                 <select name="courtName" value={formData.courtName} onChange={handleChange}
                   className={`${baseInputClass} ${getBorderClass("courtName")}`}>
                   <option value="">Select Court Name</option>
-                  {Object.keys(courtMappings).map((court) => (
-                    <option key={court} value={court}>{court}</option>
-                  ))}
+                  {formData.clientDistrict && DISTRICT_COURTS[formData.clientDistrict] ? (
+                    DISTRICT_COURTS[formData.clientDistrict].map((court) => (
+                      <option key={court} value={court}>{court}</option>
+                    ))
+                  ) : (
+                    Object.values(DISTRICT_COURTS).flat().map((court, idx) => (
+                      <option key={idx} value={court}>{court}</option>
+                    ))
+                  )}
                 </select>
                 {touched.courtName && errors.courtName && <ErrorMsg message={errors.courtName} />}
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">
-                  {formData.courtName ? `${formData.courtName} Type` : "Court Type"}
-                </label>
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Court Type</label>
                 <select name="courtType" value={formData.courtType} onChange={handleChange}
-                  className={`${baseInputClass} ${getBorderClass("courtType")}`}
-                  disabled={!formData.courtName}>
-                  <option value="">{formData.courtName ? `Select ${formData.courtName} Type` : "Select Court Type"}</option>
-                  {formData.courtName && courtMappings[formData.courtName]?.map((type) => (
+                  className={`${baseInputClass} ${getBorderClass("courtType")}`}>
+                  <option value="">Select Court Type</option>
+                  {getTypesForCourtName(formData.courtName).map((type) => (
                     <option key={type} value={type}>{type}</option>
                   ))}
                 </select>
@@ -1048,27 +1551,52 @@ export default function AddCaseForm() {
             {documents.map((doc, index) => (
               <div
                 key={index}
-                className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end border border-[#E2E8F0] p-5 rounded-2xl bg-[#F8FAFC]"
+                className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border border-[#E2E8F0] p-5 rounded-2xl bg-[#F8FAFC]"
               >
                 <div>
-                  <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Document Type</label>
+                  <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Document Category</label>
                   <select
-                    value={doc.documentType}
+                    value={doc.documentCategory || ""}
+                    onChange={(e) => {
+                      const updated = [...documents];
+                      updated[index].documentCategory = e.target.value;
+                      updated[index].documentType = "";
+                      setDocuments(updated);
+                    }}
+                    className="w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-sm"
+                  >
+                    <option value="">Select Category</option>
+                    {Object.keys(documentCategories).map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">
+                    {doc.documentCategory === "Affidavits" ? "Affidavit Type" : "Document Type"}
+                  </label>
+                  <select
+                    value={doc.documentType || ""}
                     onChange={(e) => {
                       const updated = [...documents];
                       updated[index].documentType = e.target.value;
                       setDocuments(updated);
                     }}
-                    className="w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-sm"
+                    disabled={!doc.documentCategory}
+                    className={`w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-sm ${!doc.documentCategory ? "bg-slate-50 cursor-not-allowed" : ""}`}
                   >
-                    <option value="">Select Type</option>
-                    <option value="Petition">Petition</option>
-                    <option value="Evidence">Evidence</option>
-                    <option value="Affidavit">Affidavit</option>
-                    <option value="Audio Recording">Audio Recording</option>
-                    <option value="Video Footage">Video Footage</option>
-                    <option value="Written Document">Written Document</option>
-                    <option value="Other">Other</option>
+                    <option value="">
+                      {doc.documentCategory === "Affidavits" ? "Select Affidavit Type" : "Select Document Type"}
+                    </option>
+                    {doc.documentCategory &&
+                      documentCategories[doc.documentCategory]?.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
                   </select>
                 </div>
 
@@ -1161,7 +1689,7 @@ export default function AddCaseForm() {
                   <button
                     type="button"
                     onClick={() =>
-                      setDocuments([...documents, { documentType: "", file: null }])
+                      setDocuments([...documents, { documentCategory: "", documentType: "", file: null }])
                     }
                     className="bg-[#2563EB] text-white px-4 py-2 rounded-lg hover:bg-[#1d4ed8] transition"
                   >
