@@ -205,8 +205,8 @@ export default function CaseTracking() {
               </thead>
 
               <tbody className="divide-y divide-[#F1F5F9]">
-                {selectedClient.cases.map((item) => (
-                  <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors duration-150">
+                {selectedClient.cases.map((item, index) => (
+                  <tr key={item.dbId || `${item.id}-${index}`} className="hover:bg-[#F8FAFC] transition-colors duration-150">
                     <td className="p-3 text-sm font-medium text-[#1E293B]">{item.id}</td>
                     <td className="p-3 text-sm text-[#1E293B]">{item.name}</td>
                     <td className="p-3 text-sm">
@@ -392,7 +392,7 @@ export default function CaseTracking() {
                   />
                   <select
                     className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none cursor-pointer"
-                    value={selectedCase?.status || "Active"}
+                    value={selectedCase?.status || "Client Consulting"}
                     onChange={async (e) => {
                       const newStatus = e.target.value;
                       if (!selectedCase) return;
@@ -420,12 +420,23 @@ export default function CaseTracking() {
                       }
                     }}
                   >
-                    <option value="Case Submit">Case Submit</option>
-                    <option value="Document Upload">Document Upload</option>
-                    <option value="Hearing Scheduled">Hearing Scheduled</option>
+                    <option value="Client Consulting">Client Consulting</option>
+                    <option value="Client Detail Collection">Client Detail Collection</option>
+                    <option value="Document Data Collection">Document Data Collection</option>
+                    <option value="Document Pending">Document Pending</option>
+                    <option value="Document Verified">Document Verified</option>
+                    <option value="Under Review">Under Review</option>
+                    <option value="Case Preparation">Case Preparation</option>
+                    <option value="Court File">Court File</option>
+                    <option value="Advocate Assigned">Advocate Assigned</option>
                     <option value="In Progress">In Progress</option>
+                    <option value="Hearing Scheduled">Hearing Scheduled</option>
+                    <option value="Hearing Completed">Hearing Completed</option>
+                    <option value="Awaiting Judgment">Awaiting Judgment</option>
+                    <option value="Judgment Delivered">Judgment Delivered</option>
+                    <option value="On Hold">On Hold</option>
+                    <option value="Rejected">Rejected</option>
                     <option value="Closed">Closed</option>
-                    <option value="Active">Active</option>
                   </select>
                   <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-[#64748B]">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>

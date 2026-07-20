@@ -71,13 +71,22 @@ export default function ClientCaseTrackingView() {
 
         const mappedCases = clientCases.map(item => {
           let step = 0;
-          const statusLower = (item.status || "").toLowerCase();
-          if (statusLower.includes("submit") || statusLower.includes("file")) step = 0;
-          else if (statusLower.includes("document")) step = 1;
-          else if (statusLower.includes("schedule") || statusLower.includes("hearing")) step = 2;
-          else if (statusLower.includes("progress") || statusLower.includes("active")) step = 3;
-          else if (statusLower.includes("close") || statusLower.includes("resolve")) step = 4;
-          else step = 0;
+          const s = (item.status || "").toLowerCase();
+          
+          if (s.includes("consulting") || s.includes("detail collection") || s.includes("new case") || s.includes("submit")) {
+            step = 0;
+          } else if (s.includes("document") || s.includes("preparation") || s.includes("court file") || s.includes("review") || s.includes("advocate") || s.includes("case field")) {
+            step = 1;
+          } else if (s.includes("hearing") || s.includes("schedule")) {
+            step = 2;
+          } else if (s.includes("progress") || s.includes("judgment") || s.includes("hold") || s.includes("active")) {
+            if (s.includes("delivered")) step = 4;
+            else step = 3;
+          } else if (s.includes("close") || s.includes("reject") || s.includes("resolve")) {
+            step = 4;
+          } else {
+            step = 0;
+          }
 
           return {
             caseId: item.case_no || "N/A",
@@ -319,7 +328,7 @@ export default function ClientCaseTrackingView() {
                                   : "text-[#64748B]"
                               }`}
                             >
-                              {step}
+                              {isCurrent ? item.status : step}
                             </span>
                           </div>
 
@@ -383,7 +392,7 @@ export default function ClientCaseTrackingView() {
                                 : "text-[#64748B]"
                             }`}
                           >
-                            {step}
+                            {isCurrent ? item.status : step}
                           </span>
                         </div>
                       );
