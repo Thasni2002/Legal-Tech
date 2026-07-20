@@ -9,6 +9,7 @@ class AdvocateBase(BaseModel):
     email_address: Optional[str] = Field(None, alias="emailAddress")
     city: Optional[str] = None
     status: Optional[str] = "Active"
+    role: Optional[str] = Field("Junior Advocate", alias="role")
 
     # Extended fields
     gender: Optional[str] = Field(None, alias="gender")

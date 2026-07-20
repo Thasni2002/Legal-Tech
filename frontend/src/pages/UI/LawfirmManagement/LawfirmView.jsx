@@ -35,9 +35,9 @@ export default function LawfirmView() {
   const [deleteId, setDeleteId] = useState(null);
   const actions = [
     {
-      title: "Add Advocate",
+      title: "Add Member",
       icon: Building2,
-      button: "Add Advocate",
+      button: "Add Member",
       color: "bg-blue-600",
       path: "/lawfirm-management/add-manage-firm",
       permissionAction: "add"
@@ -234,7 +234,7 @@ export default function LawfirmView() {
             <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center mb-6 border border-purple-200">
               <Users className="w-6 h-6 text-purple-600" />
             </div>
-            <p className="text-[#64748B] text-sm font-semibold uppercase tracking-wider">Total Advocates</p>
+            <p className="text-[#64748B] text-sm font-semibold uppercase tracking-wider">Total Members</p>
             <h3 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mt-3 text-[#0F172A]">
               {advocates.length}
             </h3>
@@ -247,7 +247,7 @@ export default function LawfirmView() {
             <div className="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center mb-6 border border-green-200">
               <Users className="w-6 h-6 text-green-600" />
             </div>
-            <p className="text-[#64748B] text-sm font-semibold uppercase tracking-wider">Active Advocates</p>
+            <p className="text-[#64748B] text-sm font-semibold uppercase tracking-wider">Active Members</p>
             <h3 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mt-3 text-[#0F172A]">
               {advocates.filter((a) => a.status === "Active" || !a.status).length}
             </h3>
@@ -276,7 +276,7 @@ export default function LawfirmView() {
           <div className="p-4 sm:p-8 border-b border-[#F1F5F9] flex flex-col sm:flex-row gap-3 sm:gap-6 justify-between items-stretch sm:items-center bg-white">
 
             <h2 className="text-xl font-extrabold text-[#0F172A]">
-              Advocate Profile
+              Firm Members Profile
             </h2>
             <div className="flex items-center border border-[#E2E8F0] rounded-full px-4 py-2.5 sm:py-3 w-full sm:w-[400px] bg-[#F8FAFC] focus-within:ring-2 focus-within:ring-[#2563EB]/20 focus-within:border-[#2563EB] transition-all">
               <Search className="w-5 h-5 text-[#94A3B8]" />
@@ -323,7 +323,7 @@ export default function LawfirmView() {
                         Phone
                       </th>
                       <th className="hidden md:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                        Court
+                        Role
                       </th>
                       <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                         Status
@@ -370,7 +370,7 @@ export default function LawfirmView() {
                         </td>
 
                         <td className="hidden md:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">
-                          {item.practiceCourt || "-"}
+                          {item.role || "Junior Advocate"}
                         </td>
 
 

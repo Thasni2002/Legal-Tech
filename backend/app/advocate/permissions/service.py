@@ -34,8 +34,10 @@ BASE_MODULES = [
     "Users",
     "Permissions",
     "Client Document Generate",
-    "Junior Document Approval",
-    "Senior Document Approval",
+    "Clerk Dashboard",
+    "Document Draft",
+    "Format Physical File",
+    "Case Number from Court",
 ]
 
 # Default permission matrix for seeding core roles
@@ -64,8 +66,10 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Users": {"view": True, "add": True, "edit": True, "delete": True},
         "Permissions": {"view": True, "add": True, "edit": True, "delete": True},
         "Client Document Generate": {"view": True, "add": True, "edit": True, "delete": True},
-        "Junior Document Approval": {"view": True, "add": True, "edit": True, "delete": True},
-        "Senior Document Approval": {"view": True, "add": True, "edit": True, "delete": True},
+        "Clerk Dashboard": {"view": True, "add": True, "edit": True, "delete": True},
+        "Document Draft": {"view": True, "add": True, "edit": True, "delete": True},
+        "Format Physical File": {"view": True, "add": True, "edit": True, "delete": True},
+        "Case Number from Court": {"view": True, "add": True, "edit": True, "delete": True},
     },
     "junioradvocate": {
         "Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
@@ -91,8 +95,10 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Users": {"view": False, "add": False, "edit": False, "delete": False},
         "Permissions": {"view": False, "add": False, "edit": False, "delete": False},
         "Client Document Generate": {"view": False, "add": False, "edit": False, "delete": False},
-        "Junior Document Approval": {"view": True, "add": True, "edit": True, "delete": False},
-        "Senior Document Approval": {"view": False, "add": False, "edit": False, "delete": False},
+        "Clerk Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
+        "Document Draft": {"view": False, "add": False, "edit": False, "delete": False},
+        "Format Physical File": {"view": False, "add": False, "edit": False, "delete": False},
+        "Case Number from Court": {"view": False, "add": False, "edit": False, "delete": False},
     },
     "client": {
         "Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
@@ -117,8 +123,39 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Roles": {"view": False, "add": False, "edit": False, "delete": False},
         "Users": {"view": False, "add": False, "edit": False, "delete": False},
         "Client Document Generate": {"view": True, "add": False, "edit": False, "delete": False},
-        "Junior Document Approval": {"view": False, "add": False, "edit": False, "delete": False},
-        "Senior Document Approval": {"view": False, "add": False, "edit": False, "delete": False},
+        "Clerk Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
+        "Document Draft": {"view": False, "add": False, "edit": False, "delete": False},
+        "Format Physical File": {"view": False, "add": False, "edit": False, "delete": False},
+        "Case Number from Court": {"view": False, "add": False, "edit": False, "delete": False},
+    },
+    "clerk": {
+        "Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
+        "Junior Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
+        "Client Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
+        "Clerk Dashboard": {"view": True, "add": True, "edit": True, "delete": True},
+        "Law Firm Management": {"view": False, "add": False, "edit": False, "delete": False},
+        "Client Management": {"view": False, "add": False, "edit": False, "delete": False},
+        "Case Management": {"view": False, "add": False, "edit": False, "delete": False},
+        "Consultations": {"view": False, "add": False, "edit": False, "delete": False},
+        "Finance Management": {"view": False, "add": False, "edit": False, "delete": False},
+        "Calendar": {"view": False, "add": False, "edit": False, "delete": False},
+        "Junior Calendar": {"view": False, "add": False, "edit": False, "delete": False},
+        "Profile": {"view": True, "add": True, "edit": True, "delete": False},
+        "Assigned Cases": {"view": False, "add": False, "edit": False, "delete": False},
+        "Assigned Tasks": {"view": False, "add": False, "edit": False, "delete": False},
+        "Junior Assigned Tasks": {"view": False, "add": False, "edit": False, "delete": False},
+        "Consultation": {"view": False, "add": False, "edit": False, "delete": False},
+        "Case Tracking": {"view": False, "add": False, "edit": False, "delete": False},
+        "Documents": {"view": False, "add": False, "edit": False, "delete": False},
+        "Payments": {"view": False, "add": False, "edit": False, "delete": False},
+        "User Roles": {"view": False, "add": False, "edit": False, "delete": False},
+        "Roles": {"view": False, "add": False, "edit": False, "delete": False},
+        "Users": {"view": False, "add": False, "edit": False, "delete": False},
+        "Permissions": {"view": False, "add": False, "edit": False, "delete": False},
+        "Client Document Generate": {"view": False, "add": False, "edit": False, "delete": False},
+        "Document Draft": {"view": True, "add": True, "edit": True, "delete": True},
+        "Format Physical File": {"view": True, "add": True, "edit": True, "delete": True},
+        "Case Number from Court": {"view": True, "add": True, "edit": True, "delete": True},
     },
 }
 
@@ -299,6 +336,7 @@ def seed_roles_and_permissions(db: Session) -> None:
         {"id": "junioradvocate", "name": "Junior Advocate", "description": "Limited access"},
         {"id": "client",         "name": "Client",          "description": "Client access"},
         {"id": "legalspecialist", "name": "Legal Specialist", "description": "Handles document filing and scheduling"},
+        {"id": "clerk",           "name": "Clerk",            "description": "Clerk access"},
     ]
 
     for role_data in core_roles:
@@ -337,6 +375,8 @@ def seed_roles_and_permissions(db: Session) -> None:
                 )
                 db.add(db_perm)
 
+    # Clean up any obsolete permissions not in BASE_MODULES
+    db.query(Permission).filter(~Permission.module.in_(BASE_MODULES)).delete(synchronize_session=False)
     db.commit()
 
 

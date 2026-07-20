@@ -22,6 +22,10 @@ export default function Home() {
         router.push("/junior-dashboard");
         return;
       }
+      if (roleName === "clerk") {
+        router.push("/clerk/dashboard");
+        return;
+      }
     }
     setLoading(false);
   }, [router]);

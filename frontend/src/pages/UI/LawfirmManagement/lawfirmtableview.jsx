@@ -65,7 +65,7 @@ export default function LawfirmTableView({ advocate }) {
               {advocate.advocateName}
             </h2>
             <p className="text-[#64748B] mt-2 text-lg font-medium">
-              {advocate.practiceCourt || "Advocate"}
+              {advocate.role || "Junior Advocate"}
             </p>
             <div className="mt-4 flex flex-wrap gap-2 justify-center md:justify-start">
               <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${advocate.status === "Active" || !advocate.status
@@ -103,6 +103,7 @@ export default function LawfirmTableView({ advocate }) {
               Professional Information
             </h3>
             <div className="bg-[#F8FAFC] rounded-2xl p-6 border border-[#E2E8F0] space-y-4">
+              <InfoRow label="Role" value={advocate.role || "Junior Advocate"} />
               <InfoRow label="Bar Council ID" value={advocate.barCouncilId} />
               <InfoRow label="Practice Court" value={advocate.practiceCourt} />
               <InfoRow label="Years of Experience" value={advocate.yearsOfExperience ? `${advocate.yearsOfExperience} Years`  : "-" }

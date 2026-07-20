@@ -50,6 +50,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
     profileImage: "",
     status: "Active",
     tempPassword: "",
+    role: "Junior Advocate",
     ...sanitizedInitialData,
   });
 
@@ -60,6 +61,9 @@ export default function LawfirmAdd({ onCancel, initialData }) {
     switch (name) {
       case "advocateName":
         if (!value.trim()) return "Advocate Name is required";
+        return "";
+      case "role":
+        if (!value) return "Role is required";
         return "";
 
       case "barCouncilId":
@@ -396,6 +400,15 @@ export default function LawfirmAdd({ onCancel, initialData }) {
               options={["Male", "Female", "Other"]}
               name="gender"
               value={formData.gender}
+              onChange={handleChange}
+            />
+
+            {/* Role select */}
+            <SelectField
+              label="Role *"
+              options={["Junior Advocate", "Clerk"]}
+              name="role"
+              value={formData.role}
               onChange={handleChange}
             />
 

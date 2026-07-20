@@ -31,8 +31,10 @@ const ALL_MODULES = [
   "Roles",
   "Users",
   "Permissions",
-  "Junior Document Approval",
-  "Senior Document Approval",
+  "Clerk Dashboard",
+  "Document Draft",
+  "Format Physical File",
+  "Case Number from Court",
 ];
 
 export default function UserEdit() {
