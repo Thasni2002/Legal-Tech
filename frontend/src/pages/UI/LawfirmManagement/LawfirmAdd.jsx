@@ -126,6 +126,22 @@ export default function LawfirmAdd({ onCancel, initialData }) {
     return () => setMounted(false);
   }, []);
 
+  const [existingUsers, setExistingUsers] = useState([]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/permissions/users`);
+        if (res.ok) {
+          setExistingUsers(await res.json());
+        }
+      } catch (err) {
+        console.error("Failed to load existing users for validation:", err);
+      }
+    };
+    fetchUsers();
+  }, []);
+
   // Convert null values in initialData to empty strings to avoid controlled input warnings
   const sanitizedInitialData = {};
   if (initialData) {
@@ -180,6 +196,12 @@ export default function LawfirmAdd({ onCancel, initialData }) {
         if (!value.trim()) {
           return formData.role === "Clerk" ? "Clerk Name is required" : "Advocate Name is required";
         }
+        const generatedUsername = value.trim().toLowerCase().replace(/\s+/g, "");
+        const isNameNew = !formData.id;
+        const isNameChanged = initialData && initialData.advocateName !== value.trim();
+        if ((isNameNew || isNameChanged) && existingUsers.some(u => u.username?.toLowerCase() === generatedUsername)) {
+          return "This name/username is already in use.";
+        }
         return "";
       case "role":
         if (!value) return "Role is required";
@@ -203,6 +225,12 @@ export default function LawfirmAdd({ onCancel, initialData }) {
         if (!value.trim()) return "Email Address is required";
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
           return "Invalid email address";
+        
+        const isEmailNew = !formData.id;
+        const isEmailChanged = initialData && initialData.emailAddress !== value.trim();
+        if ((isEmailNew || isEmailChanged) && existingUsers.some(u => u.email?.toLowerCase() === value.trim().toLowerCase())) {
+          return "This email address is already in use.";
+        }
         return "";
 
 
@@ -361,7 +389,32 @@ export default function LawfirmAdd({ onCancel, initialData }) {
       }
 
       if (!response.ok) {
-        throw new Error("Failed to save advocate");
+        const errorData = await response.json().catch(() => ({}));
+        const errMsg = errorData.detail || "";
+        
+        if (errMsg.toLowerCase().includes("email")) {
+          setErrors((prev) => ({
+            ...prev,
+            emailAddress: "This email address is already in use.",
+          }));
+          setTouched((prev) => ({
+            ...prev,
+            emailAddress: true,
+          }));
+        } else if (errMsg.toLowerCase().includes("username") || errMsg.toLowerCase().includes("name")) {
+          setErrors((prev) => ({
+            ...prev,
+            advocateName: "This name/username is already in use.",
+          }));
+          setTouched((prev) => ({
+            ...prev,
+            advocateName: true,
+          }));
+        } else {
+          alert(errMsg || "Failed to save advocate/clerk profile");
+        }
+        setIsSubmitting(false);
+        return;
       }
 
       const data = await response.json();
@@ -378,6 +431,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
 
     } catch (error) {
       console.error("Save failed:", error);
+      alert(error.message || "Failed to save");
     } finally {
       setIsSubmitting(false);
     }

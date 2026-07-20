@@ -252,6 +252,7 @@ export default function Login() {
                     onChange={handleChange}
                     onBlur={handleBlur}
                     className={inputClass("email")}
+                    suppressHydrationWarning
                   />
                 </div>
                 {errors.email && touched.email && (
@@ -276,11 +277,13 @@ export default function Login() {
                     onChange={handleChange}
                     onBlur={handleBlur}
                     className={`${inputClass("password")} pr-11`}
+                    suppressHydrationWarning
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    suppressHydrationWarning
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
@@ -303,6 +306,7 @@ export default function Login() {
                     : "linear-gradient(135deg, #1a56db, #1E3A5F)",
                   boxShadow: "0 4px 14px rgba(26, 86, 219, 0.35)",
                 }}
+                suppressHydrationWarning
               >
                 {loading ? "Signing in..." : "Sign In"}
               </button>

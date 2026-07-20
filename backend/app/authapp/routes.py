@@ -133,7 +133,9 @@ def login(user: LoginSchema, db: Session = Depends(get_db)):
         "id": db_user.id,
         "email": db_user.email,
         "role": db_user.role,
-        "username": db_user.username
+        "username": db_user.username,
+        "firstName": db_user.first_name or "",
+        "lastName": db_user.last_name or ""
     })
 
     return {
