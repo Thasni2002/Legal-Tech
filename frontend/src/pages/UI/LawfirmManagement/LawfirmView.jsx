@@ -282,7 +282,7 @@ export default function LawfirmView() {
               <Search className="w-5 h-5 text-[#94A3B8]" />
               <input
                 type="text"
-                placeholder="Search advocate..."
+                placeholder="Search member..."
                 className="w-full ml-3 bg-transparent outline-none text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
                 value={search}
                 onChange={(e) => {
@@ -344,11 +344,11 @@ export default function LawfirmView() {
                         <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5">
                           <img
                             src={
-                              item.profileImage?.trim()
+                              item.profileImage
                                 ? item.profileImage
-                                : `https://ui-avatars.com/api/?name=${item.advocateName || 'Advocate'}&background=E2E8F0&color=64748B&rounded=true&bold=true`
+                                : `https://ui-avatars.com/api/?name=${item.advocateName || (item.role === 'Clerk' ? 'Clerk' : 'Advocate')}&background=E2E8F0&color=64748B&rounded=true&bold=true`
                             }
-                            alt={item.advocateName || "Advocate"}
+                            alt={item.advocateName || (item.role === 'Clerk' ? "Clerk" : "Advocate")}
                             className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm ring-1 ring-[#E2E8F0] group-hover:ring-[#CBD5E1] transition-all"
                           />
                         </td>
@@ -445,7 +445,7 @@ export default function LawfirmView() {
               <div className="w-16 h-16 bg-[#F8FAFC] rounded-full flex items-center justify-center mb-4 border border-[#E2E8F0]">
                 <Search className="w-8 h-8 text-[#94A3B8]" />
               </div>
-              <h3 className="text-lg font-bold text-[#0F172A] mb-1">No advocates found</h3>
+              <h3 className="text-lg font-bold text-[#0F172A] mb-1">No members found</h3>
               <p className="text-[#64748B] text-sm">Try adjusting your search or filters.</p>
             </div>
           )}
@@ -511,11 +511,11 @@ export default function LawfirmView() {
                         <div className="flex items-center gap-2">
                            <img
                             src={
-                              item.profileImage?.trim()
-                                ? item.profileImage
-                                : `https://ui-avatars.com/api/?name=${item.advocate_name || "Advocate"}&background=E2E8F0&color=64748B&rounded=true&bold=true`
-                            }
-                            alt={item.advocate_name || "Advocate"}
+                            item.advocate_name
+                              ? `https://ui-avatars.com/api/?name=${item.advocate_name}&background=E2E8F0&color=64748B&rounded=true&bold=true`
+                              : `https://ui-avatars.com/api/?name=${item.role === 'Clerk' ? 'Clerk' : 'Advocate'}&background=E2E8F0&color=64748B&rounded=true&bold=true`
+                          }
+                          alt={item.advocate_name || (item.role === 'Clerk' ? "Clerk" : "Advocate")}
                             className="w-8 h-8 rounded-full object-cover border border-slate-200"
                           />
                           <span>{item.advocate_name}</span>
@@ -594,10 +594,10 @@ export default function LawfirmView() {
             Confirm Delete
           </h2>
 
-          <p className="text-center text-slate-500 mt-3 leading-relaxed">
+          <p className="text-gray-600 mb-6 text-center mt-3 leading-relaxed">
             {deleteType === "advocate"
-              ? "Are you sure you want to delete this advocate profile?"
-              : "Are you sure you want to remove this assigned case?"}
+              ? "Are you sure you want to delete this member profile?"
+              : "Are you sure you want to delete this assigned case?"}
           </p>
 
           <div className="flex justify-center gap-4 mt-8">

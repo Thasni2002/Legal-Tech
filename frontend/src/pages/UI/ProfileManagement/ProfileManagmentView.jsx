@@ -45,6 +45,110 @@ function getStrength(pwd) {
 }
 
 /* ────────────────────────────────────────────────────────── */
+const DISTRICT_COURTS = {
+  "Alappuzha": [
+    "District & Sessions Court, Alappuzha",
+    "Sub Court, Cherthala",
+    "Sub Court, Mavelikkara",
+    "Sub Court, Chengannur",
+    "Sub Court, Kayamkulam",
+    "Munsiff Court, Ambalapuzha"
+  ],
+  "Ernakulam": [
+    "High Court of Kerala, Kochi",
+    "District & Sessions Court, Ernakulam",
+    "Sub Court, Kochi (Fort Kochi)",
+    "Sub Court, Aluva",
+    "Sub Court, North Paravur",
+    "Sub Court, Perumbavoor",
+    "Sub Court, Muvattupuzha",
+    "Sub Court, Kothamangalam"
+  ],
+  "Idukki": [
+    "District & Sessions Court, Thodupuzha",
+    "Sub Court, Kattappana",
+    "Sub Court, Devikulam",
+    "Munsiff Court, Peermade"
+  ],
+  "Kannur": [
+    "District & Sessions Court, Thalassery",
+    "Sub Court, Kannur",
+    "Sub Court, Payyannur",
+    "Sub Court, Taliparamba",
+    "Munsiff Court, Kuthuparamba"
+  ],
+  "Kasaragod": [
+    "District & Sessions Court, Kasaragod",
+    "Sub Court, Kanhangad",
+    "Munsiff Court, Hosdurg"
+  ],
+  "Kollam": [
+    "District & Sessions Court, Kollam",
+    "Sub Court, Kottarakkara",
+    "Sub Court, Punalur",
+    "Sub Court, Karunagappally",
+    "Munsiff Court, Paravur"
+  ],
+  "Kottayam": [
+    "District & Sessions Court, Kottayam",
+    "Sub Court, Pala",
+    "Sub Court, Kanjirappally",
+    "Sub Court, Changanassery",
+    "Sub Court, Vaikom"
+  ],
+  "Kozhikode": [
+    "District & Sessions Court, Kozhikode",
+    "Sub Court, Vadakara",
+    "Sub Court, Koyilandy",
+    "Munsiff Court, Thamarassery"
+  ],
+  "Malappuram": [
+    "District & Sessions Court, Manjeri",
+    "Sub Court, Tirur",
+    "Sub Court, Perinthalmanna",
+    "Sub Court, Ponnani",
+    "Munsiff Court, Parappanangadi",
+    "Munsiff Court, Nilambur"
+  ],
+  "Palakkad": [
+    "District & Sessions Court, Palakkad",
+    "Sub Court, Ottapalam",
+    "Sub Court, Alathur",
+    "Sub Court, Mannarkkad",
+    "Munsiff Court, Chittur"
+  ],
+  "Pathanamthitta": [
+    "District & Sessions Court, Pathanamthitta",
+    "Sub Court, Thiruvalla",
+    "Sub Court, Adoor",
+    "Munsiff Court, Ranni",
+    "Munsiff Court, Mallappally"
+  ],
+  "Thiruvananthapuram": [
+    "District & Sessions Court, Vanchiyoor",
+    "Sub Court, Neyyattinkara",
+    "Sub Court, Nedumangad",
+    "Sub Court, Attingal",
+    "Munsiff Court, Varkala",
+    "Munsiff Court, Kattakkada"
+  ],
+  "Thrissur": [
+    "District & Sessions Court, Thrissur",
+    "Sub Court, Irinjalakuda",
+    "Sub Court, Chavakkad",
+    "Sub Court, Wadakkanchery",
+    "Munsiff Court, Kodungallur"
+  ],
+  "Wayanad": [
+    "District & Sessions Court, Kalpetta",
+    "Sub Court, Sulthan Bathery",
+    "Sub Court, Mananthavady"
+  ],
+  "National / New Delhi": [
+    "Supreme Court of India"
+  ]
+};
+
 export default function ProfileManagmentView({ onSubmit, onCancel, initialData }) {
   const specializationOptionsMap = {
     "Civil Law": ["Property Disputes", "Contracts", "Torts", "Consumer Protection"],
@@ -77,6 +181,19 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
     chambersAddress: "",
     profileImage: "",
     ...cleanInitialData,
+  });
+
+  const [practiceDistrict, setPracticeDistrict] = useState(() => {
+    const pc = cleanInitialData.practiceCourt || "";
+    if (pc.includes(" - ")) {
+      return pc.split(" - ")[0];
+    }
+    for (const [dist, courts] of Object.entries(DISTRICT_COURTS)) {
+      if (courts.includes(pc)) {
+        return dist;
+      }
+    }
+    return "";
   });
 
   const [errors, setErrors] = useState({});
@@ -261,15 +378,37 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               <div>
-                <SelectField label="Practice Court" options={[
-                  "District Court",
-                  "High Court",
-                  "Supreme Court",
-                  "Family Court",
-                  "Consumer Court",
-                  "Labour Court",
-                  "Tribunal"
-                ]} name="practiceCourt" value={formData.practiceCourt} onChange={handleChange} />
+                <SelectField
+                  label="Practice District"
+                  options={Object.keys(DISTRICT_COURTS)}
+                  name="practiceDistrict"
+                  value={practiceDistrict}
+                  onChange={(e) => {
+                    const dist = e.target.value;
+                    setPracticeDistrict(dist);
+                    setFormData(prev => ({ ...prev, practiceCourt: "" }));
+                  }}
+                />
+              </div>
+
+              <div>
+                <SelectField
+                  label="Practice Court"
+                  options={practiceDistrict ? DISTRICT_COURTS[practiceDistrict] : []}
+                  name="practiceCourt"
+                  value={formData.practiceCourt.includes(" - ") ? formData.practiceCourt.split(" - ")[1] : formData.practiceCourt}
+                  disabled={!practiceDistrict}
+                  onChange={(e) => {
+                    const court = e.target.value;
+                    setFormData(prev => ({
+                      ...prev,
+                      practiceCourt: practiceDistrict ? `${practiceDistrict} - ${court}` : court
+                    }));
+                    const error = validateField("practiceCourt", practiceDistrict ? `${practiceDistrict} - ${court}` : court);
+                    setErrors(prev => ({ ...prev, practiceCourt: error }));
+                    setTouched(prev => ({ ...prev, practiceCourt: true }));
+                  }}
+                />
                 {touched.practiceCourt && errors.practiceCourt && <p className="text-red-500 text-sm mt-1">{errors.practiceCourt}</p>}
               </div>
 

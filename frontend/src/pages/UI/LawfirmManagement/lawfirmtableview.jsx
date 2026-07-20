@@ -53,7 +53,7 @@ export default function LawfirmTableView({ advocate }) {
           {/* Profile Image */}
           <div className="shrink-0">
             <img
-              src={advocate.profileImage?.trim() ? advocate.profileImage : `https://ui-avatars.com/api/?name=${advocate.advocateName || 'Advocate'}&background=E2E8F0&color=64748B&rounded=true&bold=true&size=150`}
+              src={advocate.profileImage?.trim() ? advocate.profileImage : `https://ui-avatars.com/api/?name=${advocate.advocateName || (advocate.role === 'Clerk' ? 'Clerk' : 'Advocate')}&background=E2E8F0&color=64748B&rounded=true&bold=true&size=150`}
               alt="Profile"
               className="w-36 h-36 rounded-full object-cover border-[6px] border-white shadow-xl shadow-slate-300/50 bg-white"
             />
@@ -104,10 +104,9 @@ export default function LawfirmTableView({ advocate }) {
             </h3>
             <div className="bg-[#F8FAFC] rounded-2xl p-6 border border-[#E2E8F0] space-y-4">
               <InfoRow label="Role" value={advocate.role || "Junior Advocate"} />
-              <InfoRow label="Bar Council ID" value={advocate.barCouncilId} />
-              <InfoRow label="Practice Court" value={advocate.practiceCourt} />
-              <InfoRow label="Years of Experience" value={advocate.yearsOfExperience ? `${advocate.yearsOfExperience} Years`  : "-" }
-/>
+              {advocate.role !== "Clerk" && <InfoRow label="Bar Council ID" value={advocate.barCouncilId} />}
+              {advocate.role !== "Clerk" && <InfoRow label="Practice Court" value={advocate.practiceCourt} />}
+              <InfoRow label="Years of Experience" value={advocate.yearsOfExperience ? `${advocate.yearsOfExperience} Years`  : "-" } />
             </div>
           </div>
         </div>
