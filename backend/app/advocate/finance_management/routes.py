@@ -130,12 +130,13 @@ def get_registered_clients(db: Session = Depends(get_db)):
     
     # Process registered clients
     for user in users:
-        client_dict[user.username] = {
+        client_dict[user.username.lower().strip()] = {
             "id": user.id,
             "name": user.username,
-            "email": user.email,
-            "mobile": user.phone,
-            "case_number": ""
+            "email": user.email or "",
+            "mobile": user.phone or "",
+            "case_number": "",
+            "cases": []
         }
         
     # Process cases to find case numbers and add unregistered clients
@@ -144,18 +145,32 @@ def get_registered_clients(db: Session = Depends(get_db)):
         if not client_name:
             continue
             
-        if client_name in client_dict:
-            if not client_dict[client_name]["case_number"]:
-                client_dict[client_name]["case_number"] = case.case_no
-        else:
+        key = client_name.lower().strip()
+        case_no_str = case.case_no or case.case_id or f"Case #{case.id}"
+        case_info = {
+            "id": case.id,
+            "case_no": case_no_str,
+            "case_title": case.case_title or ""
+        }
+        
+        if key not in client_dict:
             # Add client from Case Management
-            client_dict[client_name] = {
+            client_dict[key] = {
                 "id": case.id + 10000,
                 "name": client_name,
                 "email": case.email_id or "",
                 "mobile": case.contact_number or "",
-                "case_number": case.case_no
+                "case_number": case_no_str,
+                "cases": []
             }
+
+        if not any(c["id"] == case.id for c in client_dict[key]["cases"]):
+            client_dict[key]["cases"].append(case_info)
+
+    # Set default case_number if cases list is populated
+    for client in client_dict.values():
+        if client["cases"] and not client["case_number"]:
+            client["case_number"] = client["cases"][0]["case_no"]
 
     return list(client_dict.values())
 

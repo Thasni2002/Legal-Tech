@@ -138,11 +138,34 @@ export default function Navbar() {
 
         {/* Notifications */}
         <div className="relative" ref={notificationRef}>
+          <style>{`
+            @keyframes bellShake {
+              0%, 100% { transform: rotate(0deg); }
+              10% { transform: rotate(16deg); }
+              20% { transform: rotate(-14deg); }
+              30% { transform: rotate(14deg); }
+              40% { transform: rotate(-10deg); }
+              50% { transform: rotate(6deg); }
+              60% { transform: rotate(-4deg); }
+              70% { transform: rotate(0deg); }
+            }
+            .animate-bell-shake {
+              animation: bellShake 2.2s ease-in-out infinite;
+              transform-origin: top center;
+            }
+          `}</style>
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className="relative p-2.5 rounded-lg hover:bg-slate-50 transition-colors duration-200"
+            className="relative p-2.5 rounded-lg hover:bg-slate-50 transition-colors duration-200 cursor-pointer"
           >
-            <Bell size={20} className={unreadCount > 0 ? "text-[#0F172A]" : "text-[#64748B]"} />
+            <Bell
+              size={20}
+              className={`${
+                unreadCount > 0
+                  ? "text-[#0F172A] animate-bell-shake"
+                  : "text-[#64748B]"
+              }`}
+            />
             {unreadCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 bg-[#DC2626] text-white text-[10px] font-semibold h-[18px] w-[18px] rounded-full flex items-center justify-center animate-pulse">
                 {unreadCount > 9 ? "9+" : unreadCount}
