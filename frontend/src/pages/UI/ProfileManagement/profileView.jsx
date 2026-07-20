@@ -76,6 +76,26 @@ export default function ProfileView({ profile = {}, onEdit }) {
   const isClient = user?.role?.toLowerCase() === "client";
   const isJuniorAdvocate = user?.role?.toLowerCase()?.replace(" ", "") === "junioradvocate";
 
+  // Full name: prefer firstName+lastName from JWT (always accurate), then
+  // profile.advocateName as fallback (may contain system username like "admin").
+  const userFullName = user
+    ? [user.firstName, user.lastName].filter(Boolean).join(" ") || user.username
+    : null;
+
+  // Resolve profile image: API record first, then localStorage cache (keeps
+  // navbar and profile page in sync), then ui-avatars initials fallback.
+  const resolvedProfileImage = (() => {
+    if (profile?.profileImage) return profile.profileImage;
+    try {
+      const saved = typeof window !== "undefined" && localStorage.getItem("advocate_profile");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.profileImage) return parsed.profileImage;
+      }
+    } catch (e) {}
+    return null;
+  })();
+
   const roleLabel = isClient
     ? "Client"
     : profile.practiceCourt || "Advocate";
@@ -107,7 +127,7 @@ export default function ProfileView({ profile = {}, onEdit }) {
               {/* Profile Image */}
               <div className="shrink-0">
                 <img
-                  src={profile.profileImage || (user ? `https://ui-avatars.com/api/?name=${user.firstName || user.username}&background=2563EB&color=fff&rounded=true&bold=true&size=150` : "https://ui-avatars.com/api/?name=?&background=E2E8F0&color=64748B&rounded=true&bold=true&size=150")}
+                  src={resolvedProfileImage || (user ? `https://ui-avatars.com/api/?name=${encodeURIComponent(userFullName || user.firstName || user.username)}&background=2563EB&color=fff&rounded=true&bold=true&size=150` : "https://ui-avatars.com/api/?name=?&background=E2E8F0&color=64748B&rounded=true&bold=true&size=150")}
                   alt="Profile"
                   className="w-36 h-36 rounded-full object-cover border-[6px] border-white shadow-xl shadow-slate-300/50 bg-white"
                 />
@@ -116,8 +136,15 @@ export default function ProfileView({ profile = {}, onEdit }) {
               {/* Profile Info */}
               <div className="flex-1">
                 <h1 className="text-[#0F172A] font-extrabold text-4xl tracking-tight">
-                  {profile.advocateName || profile.clientName || user?.username || (isClient ? "Client Name" : "Advocate Name")}
+                  {userFullName || profile.advocateName || profile.clientName || (isClient ? "Client Name" : "Advocate Name")}
                 </h1>
+
+                {/* Role badge */}
+                {user?.role && (
+                  <span className="inline-block mt-2 px-3 py-1 rounded-full bg-blue-50 text-[#2563EB] text-xs font-bold uppercase tracking-wider border border-blue-100">
+                    {user.role}
+                  </span>
+                )}
 
                 <p className="text-[#64748B] mt-2 text-lg font-medium">
                   {roleLabel}

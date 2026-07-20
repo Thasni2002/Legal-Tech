@@ -1004,9 +1004,12 @@ export default function UsersView() {
 
                               <div>
                                 <p className="font-bold text-slate-900 text-sm">
-                                  {user.firstName} {user.lastName}
+                                  {(user.firstName || user.lastName)
+                                    ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
+                                    : user.username}
                                 </p>
                                 <p className="text-xs text-slate-400">@{user.username}</p>
+                                <p className="text-xs font-semibold text-blue-600 mt-0.5">{user.role}</p>
                               </div>
                             </div>
                           </td>

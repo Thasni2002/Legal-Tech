@@ -56,6 +56,19 @@ async def add_advocate(
     advocate: AdvocateCreate,
     db: Session = Depends(get_db)
 ):
+    # Check if a user with this email or username already exists in the users table
+    from app.authapp.models import User
+    username = (advocate.advocate_name or "").lower().replace(" ", "")
+    existing_user = db.query(User).filter(
+        (User.email == advocate.email_address) |
+        (User.username == username)
+    ).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="A user with this Email or Username already exists."
+        )
+
     new_adv = create_advocate(db, advocate)
 
     if advocate.password:
@@ -288,6 +301,33 @@ def edit_advocate(
             status_code=404,
             detail="Advocate not found"
         )
+
+    # Sync the corresponding user record in the users table
+    try:
+        from app.authapp.models import User
+        # Match user by old email (before update) or by username derived from name
+        user = db.query(User).filter(User.email == updated.email_address).first()
+        if not user:
+            # fallback: try to match by username derived from advocate name
+            username = (updated.advocate_name or "").lower().replace(" ", "")
+            user = db.query(User).filter(User.username == username).first()
+
+        if user:
+            # Update email
+            if updated.email_address:
+                user.email = updated.email_address
+            # Update phone
+            if updated.phone_number:
+                user.phone = updated.phone_number
+            # Update name parts
+            if updated.advocate_name:
+                name_parts = (updated.advocate_name or "").strip().split(" ")
+                user.first_name = name_parts[0] if name_parts else user.first_name
+                user.last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else user.last_name
+            db.commit()
+            db.refresh(user)
+    except Exception as sync_err:
+        print(f"Warning: Failed to sync user record for advocate {advocate_id}: {sync_err}")
 
     return updated
 
