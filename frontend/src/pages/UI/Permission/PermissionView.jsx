@@ -8,7 +8,8 @@ import { Shield, ShieldAlert, Save, HelpCircle, Check, CheckSquare } from "lucid
 const DEFAULT_ROLES = [
   { id: "senioradvocate", name: "Senior Advocate", description: "Full system access" },
   { id: "junioradvocate", name: "Junior Advocate", description: "Limited access" },
-  { id: "client", name: "Client", description: "Client access" }
+  { id: "client", name: "Client", description: "Client access" },
+  { id: "clerk", name: "Clerk", description: "Clerk access" }
 ];
 
 const DEFAULT_USERS = [
@@ -66,7 +67,6 @@ const ALL_GROUPS = [
       { key: "Calendar", label: "Calendar" },
       { key: "Assigned Tasks", label: "Assigned Tasks" },
       { key: "Profile", label: "Profile" },
-      { key: "Senior Document Approval", label: "Document Approval (Senior)" },
     ],
   },
   {
@@ -76,7 +76,6 @@ const ALL_GROUPS = [
       { key: "Assigned Cases", label: "Assigned Cases" },
       { key: "Junior Assigned Tasks", label: "Assigned Tasks (Junior)" },
       { key: "Junior Calendar", label: "Calendar (Junior)" },
-      { key: "Junior Document Approval", label: "Document Approval (Junior)" },
     ],
   },
   {
@@ -99,6 +98,15 @@ const ALL_GROUPS = [
       { key: "Permissions", label: "Permissions" },
     ],
   },
+  {
+    category: "Clerk Features",
+    modules: [
+      { key: "Clerk Dashboard", label: "Dashboard (Clerk)" },
+      { key: "Document Draft", label: "Document Draft" },
+      { key: "Format Physical File", label: "Format Physical File" },
+      { key: "Case Number from Court", label: "Case Number from Court" }
+    ]
+  }
 ];
 
 // Client-only group
@@ -149,8 +157,10 @@ const DEFAULT_PERMISSIONS = {
     "Roles": { view: true, add: true, edit: true, delete: true },
     "Users": { view: true, add: true, edit: true, delete: true },
     "Permissions": { view: true, add: true, edit: true, delete: true },
-    "Junior Document Approval": { view: true, add: true, edit: true, delete: true },
-    "Senior Document Approval": { view: true, add: true, edit: true, delete: true }
+    "Clerk Dashboard": { view: true, add: true, edit: true, delete: true },
+    "Document Draft": { view: true, add: true, edit: true, delete: true },
+    "Format Physical File": { view: true, add: true, edit: true, delete: true },
+    "Case Number from Court": { view: true, add: true, edit: true, delete: true }
   },
   "Junior Advocate": {
     "Dashboard": { view: true, add: false, edit: false, delete: false },
@@ -176,8 +186,10 @@ const DEFAULT_PERMISSIONS = {
     "Roles": { view: false, add: false, edit: false, delete: false },
     "Users": { view: false, add: false, edit: false, delete: false },
     "Permissions": { view: false, add: false, edit: false, delete: false },
-    "Junior Document Approval": { view: true, add: true, edit: true, delete: false },
-    "Senior Document Approval": { view: false, add: false, edit: false, delete: false }
+    "Clerk Dashboard": { view: false, add: false, edit: false, delete: false },
+    "Document Draft": { view: false, add: false, edit: false, delete: false },
+    "Format Physical File": { view: false, add: false, edit: false, delete: false },
+    "Case Number from Court": { view: false, add: false, edit: false, delete: false }
   },
   "Client": {
     "Dashboard": { view: false, add: false, edit: false, delete: false },
@@ -203,8 +215,39 @@ const DEFAULT_PERMISSIONS = {
     "Roles": { view: false, add: false, edit: false, delete: false },
     "Users": { view: false, add: false, edit: false, delete: false },
     "Permissions": { view: false, add: false, edit: false, delete: false },
-    "Junior Document Approval": { view: false, add: false, edit: false, delete: false },
-    "Senior Document Approval": { view: false, add: false, edit: false, delete: false }
+    "Clerk Dashboard": { view: false, add: false, edit: false, delete: false },
+    "Document Draft": { view: false, add: false, edit: false, delete: false },
+    "Format Physical File": { view: false, add: false, edit: false, delete: false },
+    "Case Number from Court": { view: false, add: false, edit: false, delete: false }
+  },
+  "Clerk": {
+    "Dashboard": { view: false, add: false, edit: false, delete: false },
+    "Law Firm Management": { view: false, add: false, edit: false, delete: false },
+    "Client Management": { view: false, add: false, edit: false, delete: false },
+    "Case Management": { view: false, add: false, edit: false, delete: false },
+    "Consultations": { view: false, add: false, edit: false, delete: false },
+    "Calendar": { view: false, add: false, edit: false, delete: false },
+    "Finance Management": { view: false, add: false, edit: false, delete: false },
+    "Profile": { view: true, add: true, edit: true, delete: false },
+    "Assigned Tasks": { view: false, add: false, edit: false, delete: false },
+    "Junior Assigned Tasks": { view: false, add: false, edit: false, delete: false },
+    "Junior Dashboard": { view: false, add: false, edit: false, delete: false },
+    "Assigned Cases": { view: false, add: false, edit: false, delete: false },
+    "Junior Calendar": { view: false, add: false, edit: false, delete: false },
+    "Client Dashboard": { view: false, add: false, edit: false, delete: false },
+    "Consultation": { view: false, add: false, edit: false, delete: false },
+    "Case Tracking": { view: false, add: false, edit: false, delete: false },
+    "Client Document Generate": { view: false, add: false, edit: false, delete: false },
+    "Documents": { view: false, add: false, edit: false, delete: false },
+    "Payments": { view: false, add: false, edit: false, delete: false },
+    "User Roles": { view: false, add: false, edit: false, delete: false },
+    "Roles": { view: false, add: false, edit: false, delete: false },
+    "Users": { view: false, add: false, edit: false, delete: false },
+    "Permissions": { view: false, add: false, edit: false, delete: false },
+    "Clerk Dashboard": { view: true, add: true, edit: true, delete: true },
+    "Document Draft": { view: true, add: true, edit: true, delete: true },
+    "Format Physical File": { view: true, add: true, edit: true, delete: true },
+    "Case Number from Court": { view: true, add: true, edit: true, delete: true }
   }
 };
 ;

@@ -78,7 +78,7 @@ async def add_advocate(
                 phone=new_adv.phone_number or "",
                 username=username,
                 email=new_adv.email_address,
-                role="Junior Advocate",
+                role=new_adv.role or "Junior Advocate",
                 tempPassword=advocate.password
             )
             provision_user(db, prov_data)
@@ -88,13 +88,14 @@ async def add_advocate(
         # Send onboarding credentials email
         try:
             from app.utils.email import send_email
-            subject = "Your Junior Advocate Credentials"
+            role_label = new_adv.role or "Junior Advocate"
+            subject = f"Your {role_label} Credentials"
             body = f"""
             <html>
                 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                     <h2>Welcome to Legal-Tech</h2>
                     <p>Dear {new_adv.advocate_name},</p>
-                    <p>Your Junior Advocate account has been successfully created. Below are your login credentials:</p>
+                    <p>Your {role_label} account has been successfully created. Below are your login credentials:</p>
                     <div style="background-color: #f5f5f5; padding: 15px; border-left: 4px solid #2563EB; margin: 15px 0;">
                         <p style="margin: 5px 0;"><strong>Login URL:</strong> <a href="http://localhost:3000/login">http://localhost:3000/login</a></p>
                         <p style="margin: 5px 0;"><strong>Username / Email:</strong> {new_adv.email_address}</p>

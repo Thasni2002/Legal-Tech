@@ -13,7 +13,8 @@ import {
 const DEFAULT_ROLES = [
   { id: "senioradvocate", name: "Senior Advocate", description: "Full system access" },
   { id: "junioradvocate", name: "Junior Advocate", description: "Limited access" },
-  { id: "client", name: "Client", description: "Client access" }
+  { id: "client", name: "Client", description: "Client access" },
+  { id: "clerk", name: "Clerk", description: "Clerk access" }
 ];
 
 
@@ -45,8 +46,10 @@ const ALL_MODULES = [
   "Roles",
   "Users",
   "Permissions",
-  "Junior Document Approval",
-  "Senior Document Approval",
+  "Clerk Dashboard",
+  "Document Draft",
+  "Format Physical File",
+  "Case Number from Court",
 ];
 
 const SENIOR_JUNIOR_MODULES = [
@@ -61,8 +64,7 @@ const SENIOR_JUNIOR_MODULES = [
       { key: "Finance Management", label: "Finance Management" },
       { key: "Calendar", label: "Calendar" },
       { key: "Assigned Tasks", label: "Assigned Tasks" },
-      { key: "Profile", label: "Profile" },
-      { key: "Senior Document Approval", label: "Document Approval (Senior)" }
+      { key: "Profile", label: "Profile" }
     ]
   },
   {
@@ -71,8 +73,7 @@ const SENIOR_JUNIOR_MODULES = [
       { key: "Junior Dashboard", label: "Dashboard (Junior)" },
       { key: "Assigned Cases", label: "Assigned Cases" },
       { key: "Junior Assigned Tasks", label: "Assigned Tasks (Junior)" },
-      { key: "Junior Calendar", label: "Calendar (Junior)" },
-      { key: "Junior Document Approval", label: "Document Approval (Junior)" }
+      { key: "Junior Calendar", label: "Calendar (Junior)" }
     ]
   },
   {
@@ -93,6 +94,15 @@ const SENIOR_JUNIOR_MODULES = [
       { key: "Roles", label: "Roles" },
       { key: "Users", label: "Users" },
       { key: "Permissions", label: "Permissions" }
+    ]
+  },
+  {
+    category: "Clerk Features",
+    modules: [
+      { key: "Clerk Dashboard", label: "Dashboard (Clerk)" },
+      { key: "Document Draft", label: "Document Draft" },
+      { key: "Format Physical File", label: "Format Physical File" },
+      { key: "Case Number from Court", label: "Case Number from Court" }
     ]
   }
 ];

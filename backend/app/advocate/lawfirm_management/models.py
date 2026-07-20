@@ -14,6 +14,7 @@ class Advocate(Base):
     email_address = Column(String(100))
     city = Column(String(100))
     status = Column(String(20), default="Active")
+    role = Column(String(50), default="Junior Advocate", nullable=True)
 
     # New fields
   

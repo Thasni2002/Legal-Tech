@@ -9,7 +9,8 @@ import { createPortal } from "react-dom";
 const DEFAULT_ROLES = [
   { id: "senioradvocate", name: "Senior Advocate", description: "Full system access" },
   { id: "junioradvocate", name: "Junior Advocate", description: "Limited access" },
-  { id: "client", name: "Client", description: "Client access" }
+  { id: "client", name: "Client", description: "Client access" },
+  { id: "clerk", name: "Clerk", description: "Clerk access" }
 ];
 
 export default function RolesView() {
@@ -348,9 +349,11 @@ export default function RolesView() {
                               role.id === "senioradvocate" ||
                               role.id === "junioradvocate" ||
                               role.id === "client" ||
+                              role.id === "clerk" ||
                               role.name === "Senior Advocate" ||
                               role.name === "Junior Advocate" ||
-                              role.name === "Client"
+                              role.name === "Client" ||
+                              role.name === "Clerk"
                                 ? "text-slate-200 cursor-not-allowed"
                                 : "text-slate-400 hover:text-red-600"
                             }`}
@@ -358,9 +361,11 @@ export default function RolesView() {
                               role.id === "senioradvocate" ||
                               role.id === "junioradvocate" ||
                               role.id === "client" ||
+                              role.id === "clerk" ||
                               role.name === "Senior Advocate" ||
                               role.name === "Junior Advocate" ||
-                              role.name === "Client"
+                              role.name === "Client" ||
+                              role.name === "Clerk"
                             }
                             title="Delete Role"
                           >
