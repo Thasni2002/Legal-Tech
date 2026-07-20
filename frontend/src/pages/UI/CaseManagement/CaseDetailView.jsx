@@ -494,7 +494,9 @@ export default function CaseDetailView({ id }) {
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <StatusBadge status={selectedCase.status} />
                 <span className="text-xs text-[#94A3B8] font-semibold tracking-wide uppercase">
-                  {selectedCase.case_type} · {selectedCase.court_type}
+                  {selectedCase.case_type && selectedCase.case_type.includes(": ")
+                    ? selectedCase.case_type.replace(": ", " · ")
+                    : selectedCase.case_type} · {selectedCase.court_type}
                 </span>
               </div>
 
@@ -504,7 +506,15 @@ export default function CaseDetailView({ id }) {
                   <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Case Details</h4>
                   <InfoRow icon={<Hash size={14} />} label="CNR Number" value={selectedCase.cnr_number} />
                   <InfoRow icon={<Hash size={14} />} label="Case ID" value={selectedCase.case_id} />
-                  <InfoRow icon={<Scale size={14} />} label="Case Type" value={selectedCase.case_type} />
+                  <InfoRow
+                    icon={<Scale size={14} />}
+                    label="Case Type"
+                    value={
+                      selectedCase.case_type && selectedCase.case_type.includes(": ")
+                        ? selectedCase.case_type.replace(": ", " · ")
+                        : selectedCase.case_type
+                    }
+                  />
                 </div>
                 <div className="bg-[#F8FAFC] rounded-2xl p-5 border border-[#F1F5F9] space-y-4">
                   <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Court & Jurisdiction</h4>
@@ -702,7 +712,9 @@ export default function CaseDetailView({ id }) {
                           <td className="py-4 px-5 font-semibold text-slate-700">{doc.file || "Unnamed File"}</td>
                           <td className="py-4 px-5">
                             <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
-                              {doc.documentType || "Other"}
+                              {doc.documentType && doc.documentType.includes(": ")
+                                ? doc.documentType.split(": ")[1]
+                                : doc.documentType || "Other"}
                             </span>
                           </td>
                           <td className="py-4 px-5">

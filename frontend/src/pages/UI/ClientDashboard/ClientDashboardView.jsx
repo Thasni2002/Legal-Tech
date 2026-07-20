@@ -22,28 +22,28 @@ export default function ClientDashboard() {
     const user = getLoggedInUser();
     const name = user?.username || user?.name || "";
 
+    const safeFetch = async (url) => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return Array.isArray(data) ? data : (data.results || data.data || []);
+      } catch (err) {
+        return [];
+      }
+    };
+
     const fetchAll = async () => {
       setUserName(name);
       try {
-        const [casesRes, hearingsRes, consultRes, activitiesRes, invoicesRes, advocatesRes] = await Promise.all([
-          fetch(`${BASE_URL}/case-management/`),
-          fetch(`${BASE_URL}/clients/hearings`),
-          fetch(`${BASE_URL}/consultations`),
-          fetch(`${BASE_URL}/clients/activities`),
-          fetch(`${BASE_URL}/finance/invoices${name ? `?client_name=${encodeURIComponent(name)}` : ""}`),
-          fetch(`${BASE_URL}/lawfirm-management/`),
+        const [casesData, consultData, invoicesData, advocatesData] = await Promise.all([
+          safeFetch(`${BASE_URL}/case-management/`),
+          safeFetch(`${BASE_URL}/consultations`),
+          safeFetch(`${BASE_URL}/finance/invoices${name ? `?client_name=${encodeURIComponent(name)}` : ""}`),
+          safeFetch(`${BASE_URL}/lawfirm-management/`),
         ]);
 
-        const [casesData, hearingsData, consultData, activitiesData, invoicesData, advocatesData] = await Promise.all([
-          casesRes.json(),
-          hearingsRes.json(),
-          consultRes.json(),
-          activitiesRes.json(),
-          invoicesRes.json(),
-          advocatesRes.json(),
-        ]);
-
-        setInvoices(Array.isArray(invoicesData) ? invoicesData : []);
+        setInvoices(invoicesData);
 
         // Filter cases for this client by email or client_name matching username
         const clientCases = Array.isArray(casesData)

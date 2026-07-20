@@ -21,6 +21,9 @@ class Case(Base):
     client_name = Column(String(255))
     contact_number = Column(String(50))
     email_id = Column(String(255))
+    client_role = Column(String(50), nullable=True)
+    client_address = Column(Text, nullable=True)
+    client_district = Column(String(100), nullable=True)
 
     court_name = Column(String(255))
     court_type = Column(String(100))
