@@ -2,33 +2,16 @@
 
 import { API_BASE_URL } from "@/utils/api";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
   Eye,
   FileText,
-  Calendar,
-  X,
-  User,
-  Building2,
-  Download,
-  Briefcase,
-  File,
-  Gavel,
   Trash2,
-  Lock,
-  Upload,
-  Pencil,
-  ShieldOff,
-  CheckCircle,
-  ExternalLink,
 } from "lucide-react";
 import useModulePermission from "@/utils/useModulePermission";
 import { getLoggedInUser } from "@/utils/auth";
-import DocumentViewerModal from "@/components/common/DocumentViewerModal";
-
-
-
+import AssignedCaseDetailView from "./AssignedCaseDetailView";
 
 const getStatusSelectClass = (status) => {
   switch (status) {
@@ -70,114 +53,12 @@ export default function AssignedCasesView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedCase, setSelectedCase] = useState(null);
-  const [selectedDocument, setSelectedDocument] = useState(null);
-  const [modalViewMode, setModalViewMode] = useState("full");
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-
-  // Upload state
-  const [uploadLoading, setUploadLoading] = useState(false);
-  const [uploadSuccess, setUploadSuccess] = useState(false);
-  const fileInputRef = useRef(null);
-
-  // Document password/lock states
-  const [docPasswordModal, setDocPasswordModal] = useState(null); // { doc, callback }
-  const [passwordInput, setPasswordInput] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [unlockedDocFiles, setUnlockedDocFiles] = useState(new Set());
-
-  // Edit (rename) state
-  const [editingDocIdx, setEditingDocIdx] = useState(null);
-  const [editingDocName, setEditingDocName] = useState("");
-
-  // Doc-level delete confirm
-  const [docDeleteIdx, setDocDeleteIdx] = useState(null);
-
-  const [viewerUrl, setViewerUrl] = useState("");
-  const [isPdf, setIsPdf] = useState(false);
-  const [isImage, setIsImage] = useState(false);
-  const [isAudio, setIsAudio] = useState(false);
-  const [isVideo, setIsVideo] = useState(false);
-  const [selectedDoc, setSelectedDoc] = useState(null);
 
   useEffect(() => {
     fetchAssignedCases();
   }, []);
-
-  useEffect(() => {
-    if (!selectedDocument) {
-      setViewerUrl("");
-      setIsPdf(false);
-      setIsImage(false);
-      setIsAudio(false);
-      setIsVideo(false);
-      return;
-    }
-
-    let fileUrl = selectedDocument.url || selectedDocument.file_path;
-    if (!fileUrl && selectedDocument.file) {
-      const title = selectedDocument.file;
-      if (title.includes(".") || title.toLowerCase().endsWith(".pdf") || title.toLowerCase().endsWith(".jpg") || title.toLowerCase().endsWith(".png") || title.toLowerCase().endsWith(".jpeg")) {
-        fileUrl = `${API_BASE_URL}/uploads/${title}`;
-      }
-    }
-
-    if (!fileUrl) {
-      setViewerUrl("");
-      setIsPdf(false);
-      setIsImage(false);
-      setIsAudio(false);
-      setIsVideo(false);
-      return;
-    }
-
-    if (fileUrl.startsWith("data:")) {
-      const mime = fileUrl.split(";")[0].split(":")[1] || "";
-      setIsImage(mime.startsWith("image/"));
-      setIsPdf(mime === "application/pdf");
-      setIsAudio(mime.startsWith("audio/"));
-      setIsVideo(mime.startsWith("video/"));
-
-      try {
-        const parts = fileUrl.split(",");
-        const mimeType = parts[0].match(/:(.*?);/)[1];
-        const bstr = atob(parts[1]);
-        let n = bstr.length;
-        const u8arr = new Uint8Array(n);
-        while (n--) {
-          u8arr[n] = bstr.charCodeAt(n);
-        }
-        const blob = new Blob([u8arr], { type: mimeType });
-        const bUrl = URL.createObjectURL(blob);
-        setViewerUrl(bUrl);
-        return () => {
-          URL.revokeObjectURL(bUrl);
-        };
-      } catch (e) {
-        console.error("Failed to parse base64 for preview in AssignedCases:", e);
-        setViewerUrl(fileUrl);
-      }
-    } else {
-      let ext = (fileUrl || "").split(".").pop().toLowerCase().split("?")[0];
-      if (fileUrl.startsWith("blob:") || ext.length > 5) {
-        ext = (selectedDocument.file || "").split(".").pop().toLowerCase().split("?")[0];
-      }
-      setIsImage(["jpg", "jpeg", "png", "webp", "gif", "bmp", "svg"].includes(ext));
-      setIsPdf(ext === "pdf");
-      setIsAudio(["mp3", "wav", "ogg", "aac", "m4a", "wma", "flac"].includes(ext));
-      setIsVideo(["mp4", "webm", "ogg", "mov", "avi", "mkv", "3gp"].includes(ext));
-      
-      let normalized = fileUrl;
-      if (typeof window !== "undefined") {
-        if (window.location.hostname === "127.0.0.1") {
-          normalized = fileUrl.replace("localhost:8000", "127.0.0.1:8000");
-        } else {
-          normalized = fileUrl.replace("127.0.0.1:8000", "localhost:8000");
-        }
-      }
-      setViewerUrl(normalized);
-    }
-  }, [selectedDocument]);
 
   const fetchAssignedCases = async () => {
     try {
@@ -194,7 +75,6 @@ export default function AssignedCasesView() {
           const normalizedAssignedName = item.advocate_name.toLowerCase().replace(/[^a-z0-9]/g, "");
           const normalizedUsername = (user.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
           const normalizedEmail = (user.email || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-          // Match by username OR email (advocates may log in with email)
           return (
             normalizedAssignedName === normalizedUsername ||
             normalizedAssignedName === normalizedEmail ||
@@ -214,6 +94,7 @@ export default function AssignedCasesView() {
         hearing: item.due_date || "No hearing date",
         status: item.status || "Active",
         documents: item.assigned_documents || [],
+        appearances: item.appearances || [],
         notes: item.assignment_notes || "",
       }));
 
@@ -223,351 +104,49 @@ export default function AssignedCasesView() {
     }
   };
 
-  // No view access
-  if (!loading && !perms.view) {
-    return (
-      <div className="w-full min-h-[400px] flex items-center justify-center">
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-10 max-w-sm text-center">
-          <div className="text-4xl mb-3">🔒</div>
-          <h2 className="text-xl font-bold text-slate-800">Access Restricted</h2>
-          <p className="text-slate-500 text-sm mt-2">You do not have permission to view Assigned Cases.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Determine if logged-in user is a junior advocate ──
-  const loggedInUser = getLoggedInUser();
-  const isJuniorAdvocate =
-    loggedInUser &&
-    loggedInUser.role &&
-    loggedInUser.role.toLowerCase().includes("junior");
-
-  // ── For junior advocates: only show documents that have a password set ──
-  const getVisibleDocs = (docs = []) => {
-    if (!isJuniorAdvocate) return docs; // seniors/admins see all docs
-    return docs.filter((d) => d.password && d.password.trim().length > 0);
-  };
-
-  // ── Open modal & default to first VIEWABLE document ──
-  const handleOpenDetails = (caseItem, viewMode = "full") => {
-    setSelectedCase(caseItem);
-    setModalViewMode(viewMode);
-    setUploadSuccess(false);
-    setEditingDocIdx(null);
-    setDocDeleteIdx(null);
-
-    // For juniors: default-select the first password-protected document
-    // For seniors: default-select the first document that has view permission
-    const visibleDocs = getVisibleDocs(caseItem.documents || []);
-    const firstViewable = visibleDocs[0] || null;
-    setSelectedDocument(firstViewable);
-  };
-
   const closeModal = () => {
     setSelectedCase(null);
-    setSelectedDocument(null);
-    setEditingDocIdx(null);
-    setDocDeleteIdx(null);
-    setUploadSuccess(false);
   };
 
   const handleStatusChange = async (id, newStatus) => {
-  if (!perms.edit) return;
+    if (!perms.edit) return;
 
-  try {
-    const res = await fetch(
-      `${API_BASE_URL}/lawfirm-management/assigned-cases/${id}/status`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          status: newStatus,
-        }),
-      }
-    );
-
-    if (!res.ok) {
-      throw new Error("Failed to update status on server");
-    }
-
-    setCases((prevCases) =>
-      prevCases.map((c) =>
-        c.id === id ? { ...c, status: newStatus } : c
-      )
-    );
-
-    if (selectedCase && selectedCase.id === id) {
-      setSelectedCase((prev) => ({
-        ...prev,
-        status: newStatus,
-      }));
-    }
-  } catch (error) {
-    console.error("Status update error:", error);
-    alert("Failed to update status. Please try again.");
-  }
-};
-
-
-
-  // const handleStatusChange = (caseNo, newStatus) => {
-  //   if (!perms.edit) return;
-  //   setCases((prevCases) =>
-  //     prevCases.map((c) =>
-  //       c.caseNo === caseNo ? { ...c, status: newStatus } : c
-  //     )
-  //   );
-  //   if (selectedCase && selectedCase.caseNo === caseNo) {
-  //     setSelectedCase((prev) => ({ ...prev, status: newStatus }));
-  //   }
-  // };
-
-  // ── VIEW: check doc.view permission ──
-  const handleViewDocument = (doc) => {
-    setSelectedDocument(doc);
-    let fileUrl = doc.url || doc.file_path || null;
-    if (!fileUrl && doc.file) {
-      const title = doc.file;
-      if (title.includes(".") || title.toLowerCase().endsWith(".pdf") || title.toLowerCase().endsWith(".jpg") || title.toLowerCase().endsWith(".png") || title.toLowerCase().endsWith(".jpeg")) {
-        fileUrl = `${API_BASE_URL}/uploads/${title}`;
-      }
-    }
-    if (!fileUrl) {
-      const content = `Mock preview content for ${doc.file}\nDocument Type: ${doc.documentType}`;
-      const blob = new Blob([content], { type: "text/plain" });
-      fileUrl = URL.createObjectURL(blob);
-    }
-    
-    // Normalize localhost
-    if (fileUrl && typeof window !== "undefined") {
-      if (window.location.hostname === "127.0.0.1") {
-        fileUrl = fileUrl.replace("localhost:8000", "127.0.0.1:8000");
-      } else {
-        fileUrl = fileUrl.replace("127.0.0.1:8000", "localhost:8000");
-      }
-    }
-
-    setSelectedDoc({
-      fileUrl: fileUrl,
-      title: doc.file,
-      badge: doc.documentType,
-    });
-  };
-
-//   const handleViewDocument = async (doc) => {
-//   if (doc.view === false) return;
-
-//   setSelectedDocument(doc);
-
-//   let fileUrl =
-//     doc.url ||
-//     doc.file_path ||
-//     doc.document_url ||
-//     doc.document ||
-//     "";
-
-//   if (!fileUrl) {
-//     console.error("No document URL found.");
-//     return;
-//   }
-
-//   // Normalize localhost
-//   if (typeof window !== "undefined") {
-//     if (window.location.hostname === "127.0.0.1") {
-//       fileUrl = fileUrl.replace("localhost:8000", "127.0.0.1:8000");
-//     } else {
-//       fileUrl = fileUrl.replace("127.0.0.1:8000", "localhost:8000");
-//     }
-//   }
-
-//   const extension = fileUrl
-//     .split("?")[0]
-//     .split(".")
-//     .pop()
-//     .toLowerCase();
-
-//   setViewerUrl(fileUrl);
-
-//   setIsPdf(extension === "pdf");
-
-//   setIsImage(
-//     [
-//       "jpg",
-//       "jpeg",
-//       "png",
-//       "gif",
-//       "bmp",
-//       "webp",
-//       "svg",
-//     ].includes(extension)
-//   );
-// };
-
-  // ── DOWNLOAD ──
-  const handleDownloadDocument = (doc) => {
-    if (!doc) return;
-    const url = doc.url || doc.file_path;
-    if (url) {
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = doc.file || "document";
-      a.target = "_blank";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    } else {
-      const content = `Mock content for ${doc.file}\nDocument Type: ${doc.documentType}`;
-      const blob = new Blob([content], { type: "text/plain" });
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = doc.file || "mock_document.txt";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
-    }
-  };
-
-  // ── UPLOAD ──
-  // Anyone assigned to the case can upload documents.
-  const caseAllowsUpload = (caseItem) => {
-    return true;
-  };
-
-  // Helper to persist documents to MySQL table case_management_cases
-  const saveDocumentsToBackend = async (caseId, caseNo, updatedDocs) => {
     try {
-      let targetId = caseId;
-      if (!targetId) {
-        // 1. Fetch all case management cases to find the target case ID
-        const res = await fetch(`${API_BASE_URL}/case-management/`);
-        if (!res.ok) throw new Error("Failed to fetch cases list");
-        const casesList = await res.json();
-        
-        const targetCase = casesList.find(c => c.case_no === caseNo);
-        if (!targetCase) {
-          console.error("Target case not found in case management:", caseNo);
-          return;
+      const res = await fetch(
+        `${API_BASE_URL}/lawfirm-management/assigned-cases/${id}/status`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            status: newStatus,
+          }),
         }
-        targetId = targetCase.id;
+      );
+
+      if (!res.ok) {
+        throw new Error("Failed to update status on server");
       }
-      
-      // 2. Build the CaseUpdate payload
-      const payload = {
-        documents: updatedDocs.map(d => ({
-          documentType: d.documentType,
-          advocate: d.advocate || "",
-          file: d.file,
-          url: d.url || null,
-          password: d.password || ""
-        }))
-      };
-      
-      // 3. Make PUT request to update case documents
-      const updateRes = await fetch(`${API_BASE_URL}/case-management/${targetId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-      
-      if (!updateRes.ok) {
-        throw new Error("Failed to update case documents in database");
+
+      setCases((prevCases) =>
+        prevCases.map((c) =>
+          c.id === id ? { ...c, status: newStatus } : c
+        )
+      );
+
+      if (selectedCase && selectedCase.id === id) {
+        setSelectedCase((prev) => ({
+          ...prev,
+          status: newStatus,
+        }));
       }
-    } catch (err) {
-      console.error("Error saving documents to backend:", err);
-      alert("Failed to save documents to database: " + err.message);
+    } catch (error) {
+      console.error("Status update error:", error);
+      alert("Failed to update status. Please try again.");
     }
   };
 
-  const handleUploadFile = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file || !selectedCase) return;
-
-    setUploadLoading(true);
-    try {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const newDoc = {
-          file: file.name,
-          documentType: "Uploaded",
-          url: reader.result,
-          password: "",
-        };
-        const updatedDocs = [...(selectedCase.documents || []), newDoc];
-        const updatedCase = { ...selectedCase, documents: updatedDocs };
-        
-        setSelectedCase(updatedCase);
-        setCases((prev) =>
-          prev.map((c) => (c.id === selectedCase.id ? updatedCase : c))
-        );
-        setSelectedDocument(newDoc);
-
-        await saveDocumentsToBackend(selectedCase.caseId, selectedCase.caseNo, updatedDocs);
-        fetchAssignedCases();
-
-        setUploadSuccess(true);
-        setUploadLoading(false);
-        setTimeout(() => setUploadSuccess(false), 3000);
-      };
-      reader.readAsDataURL(file);
-    } catch (err) {
-      console.error("Upload failed:", err);
-      alert("Upload failed. Please try again.");
-      setUploadLoading(false);
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
-  // ── EDIT (rename): check doc.edit ──
-  const startEditing = (idx, currentName) => {
-    setEditingDocIdx(idx);
-    setEditingDocName(currentName);
-  };
-
-  const saveEdit = async () => {
-    if (editingDocIdx === null || !selectedCase) return;
-    const updatedDocs = selectedCase.documents.map((d, i) =>
-      i === editingDocIdx ? { ...d, file: editingDocName } : d
-    );
-    const updatedCase = { ...selectedCase, documents: updatedDocs };
-    setSelectedCase(updatedCase);
-    setCases((prev) =>
-      prev.map((c) => (c.id === selectedCase.id ? updatedCase : c))
-    );
-    setEditingDocIdx(null);
-    setEditingDocName("");
-
-    await saveDocumentsToBackend(selectedCase.caseId, selectedCase.caseNo, updatedDocs);
-    fetchAssignedCases();
-  };
-
-  // ── DELETE document: check doc.delete ──
-  const handleDeleteDocument = async (docIdx) => {
-    if (!selectedCase) return;
-    const updatedDocs = selectedCase.documents.filter((_, i) => i !== docIdx);
-    const updatedCase = { ...selectedCase, documents: updatedDocs };
-    setSelectedCase(updatedCase);
-    setCases((prev) =>
-      prev.map((c) => (c.id === selectedCase.id ? updatedCase : c))
-    );
-    // If the deleted doc was the selected preview, clear it
-    if (selectedDocument === selectedCase.documents[docIdx]) {
-      setSelectedDocument(null);
-    }
-    setDocDeleteIdx(null);
-
-    await saveDocumentsToBackend(selectedCase.caseId, selectedCase.caseNo, updatedDocs);
-    fetchAssignedCases();
-  };
-
-  // ── DELETE assigned case ──
   const handleDelete = async (id) => {
     setDeleteLoading(true);
     try {
@@ -601,425 +180,197 @@ export default function AssignedCasesView() {
     return matchesSearch && matchesStatus;
   });
 
+  // No view access
+  if (!loading && !perms.view) {
+    return (
+      <div className="w-full min-h-[400px] flex items-center justify-center">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-10 max-w-sm text-center">
+          <div className="text-4xl mb-3">🔒</div>
+          <h2 className="text-xl font-bold text-slate-800">Access Restricted</h2>
+          <p className="text-slate-500 text-sm mt-2">You do not have permission to view Assigned Cases.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Render Full Case Details Page if a case is selected ──
+  if (selectedCase) {
+    return (
+      <AssignedCaseDetailView
+        selectedCase={selectedCase}
+        setSelectedCase={setSelectedCase}
+        onClose={closeModal}
+        perms={perms}
+        getStatusSelectClass={getStatusSelectClass}
+        getStatusBadgeClass={getStatusBadgeClass}
+        handleStatusChange={handleStatusChange}
+        setCases={setCases}
+      />
+    );
+  }
+
   return (
     <div className="w-full space-y-6 md:space-y-8">
+      {/* Page Header */}
+      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 sm:p-6">
+        <h1 className="text-[#0F172A] font-bold text-2xl sm:text-3xl md:text-4xl" style={{ fontWeight: 700, lineHeight: 1.2 }}>
+          Assigned Cases
+        </h1>
+        <p className="text-[#64748B] mt-1.5 text-xs sm:text-sm">
+          View and manage your assigned legal cases
+        </p>
+      </div>
 
-        {/* Page Header */}
-        <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 sm:p-6">
-          <h1 className="text-[#0F172A] font-bold text-2xl sm:text-3xl md:text-4xl" style={{ fontWeight: 700, lineHeight: 1.2 }}>
-            Assigned Cases
-          </h1>
-          <p className="text-[#64748B] mt-1.5 text-xs sm:text-sm">
-            View and manage your assigned legal cases
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-xl p-6 border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow">
+          <h3 className="text-[#64748B] text-sm font-medium">Total Assigned Cases</h3>
+          <p className="text-3xl font-bold text-[#0F172A] mt-2">{cases.length}</p>
+        </div>
+
+        <div className="bg-white rounded-xl p-6 border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow">
+          <h3 className="text-[#64748B] text-sm font-medium">Active Cases</h3>
+          <p className="text-3xl font-bold text-[#16A34A] mt-2">
+            {cases.filter((c) => c.status === "Active").length}
           </p>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-xl p-6 border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow">
+          <h3 className="text-[#64748B] text-sm font-medium">Upcoming Hearings</h3>
+          <p className="text-3xl font-bold text-[#2563EB] mt-2">
+            {cases.filter((c) => c.hearing !== "No hearing date").length}
+          </p>
+        </div>
+      </div>
 
-          <div className="bg-white rounded-xl p-6 border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow">
-            <h3 className="text-[#64748B] text-sm font-medium">
-              Total Assigned Cases
-            </h3>
-            <p className="text-3xl font-bold text-[#0F172A] mt-2">
-            {cases.length}
-            </p>
+      {/* Cases Table */}
+      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
+        <div className="p-5 border-b border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <h2 className="text-lg font-bold text-[#0F172A] whitespace-nowrap">My Assigned Cases</h2>
+          
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            <div className="flex w-full sm:w-auto items-center gap-3">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full sm:w-auto border border-[#E2E8F0] rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all text-sm text-[#0F172A] cursor-pointer bg-white"
+              >
+                <option value="All">All Statuses</option>
+                <option value="Active">Active</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Closed">Closed</option>
+              </select>
+              <input
+                type="text"
+                placeholder="Search by case title, case no, client or court..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full sm:w-72 border border-[#E2E8F0] rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
+              />
+            </div>
+            <span className="text-xs font-semibold text-[#64748B] bg-[#F1F5F9] px-3 py-1.5 rounded-full whitespace-nowrap self-end sm:self-auto">
+              {filteredCases.length} cases
+            </span>
           </div>
-
-          <div className="bg-white rounded-xl p-6 border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow">
-            <h3 className="text-[#64748B] text-sm font-medium">
-              Active Cases
-            </h3>
-            <p className="text-3xl font-bold text-[#16A34A] mt-2">
-             {cases.filter((c) => c.status === "Active").length}
-            </p>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow">
-            <h3 className="text-[#64748B] text-sm font-medium">
-              Upcoming Hearings
-            </h3>
-            <p className="text-3xl font-bold text-[#2563EB] mt-2">
-              {cases.filter((c) => c.hearing !== "No hearing date").length}
-            </p>
-          </div>
-
         </div>
 
-        {/* Cases Table */}
-        <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
+                <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Case ID</th>
+                <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Client</th>
+                <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Court</th>
+                <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Next Hearing</th>
+                <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Status</th>
+                <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
 
-          <div className="p-5 border-b border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <h2 className="text-lg font-bold text-[#0F172A] whitespace-nowrap">My Assigned Cases</h2>
-            
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-              <div className="flex w-full sm:w-auto items-center gap-3">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full sm:w-auto border border-[#E2E8F0] rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all text-sm text-[#0F172A] cursor-pointer bg-white"
-                >
-                  <option value="All">All Statuses</option>
-                  <option value="Active">Active</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Closed">Closed</option>
-                </select>
-                <input
-                  type="text"
-                  placeholder="Search by case title, case no, client or court..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full sm:w-72 border border-[#E2E8F0] rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
-                />
-              </div>
-              <span className="text-xs font-semibold text-[#64748B] bg-[#F1F5F9] px-3 py-1.5 rounded-full whitespace-nowrap self-end sm:self-auto">
-                {filteredCases.length} cases
-              </span>
-            </div>
-          </div>
+            <tbody className="divide-y divide-[#F1F5F9]">
+              {filteredCases.length > 0 ? (
+                filteredCases.map((item, index) => (
+                  <tr
+                    key={index}
+                    className="hover:bg-[#F8FAFC] transition-colors duration-150 group"
+                  >
+                    <td className="px-5 py-4 text-sm font-semibold text-[#0F172A]">
+                      #{item.id}
+                    </td>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-                  <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Case ID</th>
-                  <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Client</th>
-                  <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Court</th>
-                  <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Next Hearing</th>
-                  <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
+                    <td className="px-5 py-4 text-sm text-[#475569] font-medium">
+                      {item.client}
+                    </td>
 
-              <tbody className="divide-y divide-[#F1F5F9]">
-                {filteredCases.length > 0 ? (
-                  filteredCases.map((item, index) => (
-                    <tr
-                      key={index}
-                      className="hover:bg-[#F8FAFC] transition-colors duration-150 group"
-                    >
-                      <td className="px-5 py-4 text-sm font-semibold text-[#0F172A]">
-                        #{item.id}
-                      </td>
+                    <td className="px-5 py-4 text-sm text-[#475569]">
+                      {item.court}
+                    </td>
 
-                      <td className="px-5 py-4 text-sm text-[#475569] font-medium">
-                        {item.client}
-                      </td>
+                    <td className="px-5 py-4">
+                      <span className="text-xs font-semibold text-[#64748B] bg-[#F1F5F9] px-2.5 py-1 rounded-lg">
+                        {item.hearing}
+                      </span>
+                    </td>
 
-                      <td className="px-5 py-4 text-sm text-[#475569]">
-                        {item.court}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <span className="text-xs font-semibold text-[#64748B] bg-[#F1F5F9] px-2.5 py-1 rounded-lg">
-                          {item.hearing}
+                    <td className="px-5 py-4">
+                      {perms.edit ? (
+                        <select
+                          value={item.status}
+                          onChange={(e) => handleStatusChange(item.id, e.target.value)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold border-0 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 cursor-pointer transition-colors ${getStatusSelectClass(item.status)}`}
+                        >
+                          <option value="Closed" className="bg-white text-[#0F172A]">Completed</option>
+                          <option value="In Progress" className="bg-white text-[#0F172A]">In Progress</option>
+                          <option value="Active" className="bg-white text-[#0F172A]">Active</option>
+                        </select>
+                      ) : (
+                        <span className={`px-3 py-1.5 rounded-lg text-xs font-bold inline-block ${getStatusBadgeClass(item.status)}`}>
+                          {item.status}
                         </span>
-                      </td>
+                      )}
+                    </td>
 
-                      <td className="px-5 py-4">
-                        {perms.edit ? (
-                          <select
-                            value={item.status}
-                            onChange={(e) => handleStatusChange(item.id, e.target.value)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border-0 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 cursor-pointer transition-colors ${getStatusSelectClass(item.status)}`}
-                          >
-                            {/* <option value="Completed" className="bg-white text-[#0F172A]">Completed</option> */}
-                            <option value="Closed" className="bg-white text-[#0F172A]">Completed</option>
-                            <option value="In Progress" className="bg-white text-[#0F172A]">In Progress</option>
-                            <option value="Active" className="bg-white text-[#0F172A]">Active</option>
-                            {/* <option value="To Do" className="bg-white text-[#0F172A]">To Do</option> */}
-                          </select>
-                        ) : (
-                          <span className={`px-3 py-1.5 rounded-lg text-xs font-bold inline-block ${getStatusBadgeClass(item.status)}`}>
-                            {item.status}
-                          </span>
-                        )}
-                      </td>
+                    <td className="px-5 py-4">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setSelectedCase(item)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#2563EB] bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer"
+                          title="See Case Details"
+                        >
+                          <Eye size={14} />
+                          View
+                        </button>
 
-                      <td className="px-5 py-4">
-                        <div className="flex gap-2">
+                        {perms.delete && (
                           <button
-                            onClick={() => handleOpenDetails(item, "full")}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#2563EB] bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer"
-                            title="See Case Details"
+                            onClick={() => setDeleteConfirm(item.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors cursor-pointer"
+                            title="Delete Case"
                           >
-                            <Eye size={14} />
-                            View
+                            <Trash2 size={14} />
+                            Delete
                           </button>
-
-                          {perms.delete && (
-                            <button
-                              onClick={() => setDeleteConfirm(item.id)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors cursor-pointer"
-                              title="Delete Case"
-                            >
-                              <Trash2 size={14} />
-                              Delete
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="7" className="px-5 py-16 text-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <FileText size={32} className="text-[#CBD5E1]" />
-                        <p className="text-[#64748B] text-sm font-medium">No matching assigned cases found.</p>
+                        )}
                       </div>
                     </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" className="px-5 py-16 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <FileText size={32} className="text-[#CBD5E1]" />
+                      <p className="text-[#64748B] text-sm font-medium">No matching assigned cases found.</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
+      </div>
 
-      {/* ══════════════════════════════════════════════
-          CASE DETAILS MODAL
-      ══════════════════════════════════════════════ */}
-      {selectedCase && typeof document !== "undefined" && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-[#F8FAFC]/60 backdrop-blur-sm transition-opacity"
-            onClick={closeModal}
-          />
-
-          {/* Modal Container */}
-          <div className="relative bg-white rounded-3xl w-full max-w-5xl border border-[#E2E8F0] shadow-2xl flex flex-col max-h-[92vh] lg:max-h-[85vh] overflow-hidden transition-all animate-in fade-in zoom-in-95 duration-200">
-            
-            {/* Header */}
-            <div className="p-4 sm:p-6 border-b border-[#E2E8F0] flex items-center justify-between bg-[#F1F5F9]/50">
-              <div className="flex items-center gap-3">
-                <span className="bg-blue-50 text-[#2563EB] p-2.5 rounded-2xl border border-blue-100">
-                  <Gavel size={20} />
-                </span>
-                <div>
-                  <h3 className="font-bold text-[#0F172A] text-lg sm:text-xl leading-tight">
-                    {selectedCase.title}
-                  </h3>
-                  <p className="text-[10px] sm:text-xs text-[#64748B] font-semibold uppercase tracking-wider mt-1">
-                    Case No: {selectedCase.caseNo}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={closeModal}
-                className="p-2 text-[#64748B] hover:text-[#64748B] rounded-xl hover:bg-[#F8FAFC] transition-colors cursor-pointer"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Body Layout: Split Columns */}
-            <div className="flex-1 overflow-y-auto lg:overflow-hidden grid grid-cols-1 lg:grid-cols-5 gap-6 p-4 sm:p-6 min-h-0 bg-white">
-              
-              {/* Left Column: Metadata & Notes */}
-              <div className="lg:col-span-3 space-y-6 flex flex-col lg:h-full lg:overflow-y-auto pr-0 lg:pr-4">
-                
-                {modalViewMode === "full" && (
-                  <>
-                    {/* Metadata Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#F1F5F9]/70 p-5 rounded-2xl border border-[#E2E8F0]">
-                      <div className="space-y-1">
-                        <span className="text-xxs font-bold text-[#64748B] uppercase tracking-wider block">Client</span>
-                        <div className="flex items-center gap-2">
-                          <User size={15} className="text-[#64748B]" />
-                          <span className="text-sm font-bold text-[#0F172A]">{selectedCase.client}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-1">
-                        <span className="text-xxs font-bold text-[#64748B] uppercase tracking-wider block">Court / Forum</span>
-                        <div className="flex items-center gap-2">
-                          <Building2 size={15} className="text-[#64748B]" />
-                          <span className="text-sm font-semibold text-[#0F172A]">{selectedCase.court}</span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <span className="text-xxs font-bold text-[#64748B] uppercase tracking-wider block">Next Hearing</span>
-                        <div className="flex items-center gap-2">
-                          <Calendar size={15} className="text-blue-500" />
-                          <span className="text-sm font-semibold text-[#0F172A]">{selectedCase.hearing}</span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <span className="text-xxs font-bold text-[#64748B] uppercase tracking-wider block">Case Status</span>
-                        <span className={`inline-block px-2.5 py-0.5 mt-0.5 rounded-full text-xxs font-bold uppercase tracking-wider ${getStatusBadgeClass(selectedCase.status)}`}>
-                          {selectedCase.status}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Notes Section */}
-                    <div className="space-y-2">
-                      <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider flex items-center gap-1.5">
-                        <Briefcase size={14} className="text-[#64748B]" />
-                        <span>Case Strategy & Advocate Notes</span>
-                      </h4>
-                      <div className="bg-amber-50/30 border border-amber-200/40 p-4 rounded-2xl text-[#64748B] text-sm font-medium leading-relaxed italic">
-                        "{selectedCase.notes}"
-                      </div>
-                    </div>
-                  </>
-                )}
-
-              </div>
-
-              {/* Right Column: Documents Section */}
-              <div className="lg:col-span-2 flex flex-col space-y-4 lg:h-full min-h-[300px] lg:min-h-0 lg:overflow-y-auto pl-0 lg:pl-4 border-t lg:border-t-0 lg:border-l border-[#E2E8F0]/40 pt-6 lg:pt-0">
-                {/* ── Documents Section ── */}
-                <div className="flex-1 flex flex-col min-h-0 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">
-                      Assigned Documents ({getVisibleDocs(selectedCase.documents || []).length})
-                    </h4>
-
-                    {/* UPLOAD button — only if any document has upload=true */}
-                    {caseAllowsUpload(selectedCase) && (
-                      <div>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          className="hidden"
-                          id="doc-upload-input"
-                          onChange={handleUploadFile}
-                        />
-                        <label
-                          htmlFor="doc-upload-input"
-                          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl cursor-pointer transition-all ${
-                            uploadLoading
-                              ? "bg-[#E2E8F0] text-[#94A3B8]"
-                              : "bg-[#2563EB] text-white hover:bg-[#1d4ed8]"
-                          }`}
-                        >
-                          <Upload size={12} />
-                          {uploadLoading ? "Uploading..." : "Upload Doc"}
-                        </label>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Upload success banner */}
-                  {uploadSuccess && (
-                    <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2">
-                      <CheckCircle size={14} className="text-green-600" />
-                      <p className="text-xs font-semibold text-green-700">Document uploaded successfully!</p>
-                    </div>
-                  )}
-
-                  <div className="space-y-2 overflow-y-auto flex-1 pr-1 max-h-[320px] lg:max-h-[480px]">
-                    {(() => {
-                      // Junior advocates only see password-protected documents;
-                      // senior/admin users see all documents.
-                      const visibleDocs = getVisibleDocs(selectedCase.documents || []);
-
-                      if (visibleDocs.length === 0) {
-                        return (
-                          <div className="text-center py-8 text-[#94A3B8] text-xs">
-                            {isJuniorAdvocate
-                              ? "No documents have been shared with you yet."
-                              : "No documents attached to this case."}
-                          </div>
-                        );
-                      }
-
-                      return visibleDocs.map((doc, idx) => {
-                        const isSelected = selectedDocument?.file === doc.file;
-                        const isLocked = doc.password && doc.password.trim().length > 0;
-
-                        return (
-                          <div
-                            key={idx}
-                            className={`rounded-2xl border transition-all ${
-                              isLocked
-                                ? "bg-slate-50 border-slate-200"
-                                : isSelected
-                                ? "bg-blue-50/50 border-blue-200 shadow-sm"
-                                : "bg-white border-[#E2E8F0] hover:border-[#E2E8F0] hover:bg-[#F1F5F9]"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between p-3.5">
-                              <div className="flex items-center gap-3 flex-1 min-w-0">
-                                {/* File Icon / Lock Icon */}
-                                {isLocked ? (
-                                  <Lock size={18} className="text-[#3B82F6] shrink-0" />
-                                ) : (
-                                  <FileText size={18} className={isSelected ? "text-[#2563EB]" : "text-[#64748B]"} />
-                                )}
-
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-bold truncate max-w-[140px] sm:max-w-[220px]">
-                                    {doc.file}
-                                  </p>
-                                  <div className="flex items-center gap-1.5 mt-0.5">
-                                    <p className="text-[10px] text-[#64748B]">{doc.documentType}</p>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Action buttons */}
-                              <div className="flex items-center gap-1.5 ml-2 shrink-0">
-                                {/* VIEW button */}
-                                <button
-                                  onClick={() => {
-                                    if (isLocked) {
-                                      setDocPasswordModal({
-                                        doc: doc,
-                                        callback: () => handleViewDocument(doc)
-                                      });
-                                      setPasswordInput("");
-                                      setPasswordError("");
-                                    } else {
-                                      handleViewDocument(doc);
-                                    }
-                                  }}
-                                  className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                                    isLocked
-                                      ? "bg-[#EFF6FF] text-[#2563EB] border border-[#BFDBFE] hover:bg-[#DBEAFE]"
-                                      : isSelected
-                                      ? "bg-[#2563EB] text-white shadow-sm"
-                                      : "bg-[#F8FAFC] text-[#64748B] hover:bg-slate-200"
-                                  }`}
-                                >
-                                  {isLocked ? "Unlock & View" : "View"}
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
-                </div>
-
-              </div>
-
-
-
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 border-t border-[#E2E8F0] flex justify-end bg-[#F1F5F9]/50">
-              <button
-                onClick={closeModal}
-                className="px-6 py-2 bg-slate-900 text-white hover:bg-[#1E293B] text-xs font-bold uppercase rounded-xl tracking-wider transition-all cursor-pointer"
-              >
-                Close Case Details
-              </button>
-            </div>
-
-          </div>
-        </div>
-      , document.body)}
-
-      {/* ══════════════════════════════════════════════
-          DELETE CONFIRM DIALOG
-      ══════════════════════════════════════════════ */}
+      {/* DELETE CONFIRM DIALOG */}
       {deleteConfirm && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
@@ -1049,80 +400,6 @@ export default function AssignedCasesView() {
           </div>
         </div>
       , document.body)}
-
-      {selectedDoc && (
-        <DocumentViewerModal
-          fileUrl={selectedDoc.fileUrl}
-          title={selectedDoc.title}
-          badge={selectedDoc.badge}
-          onClose={() => setSelectedDoc(null)}
-        />
-      )}
-
-      {/* ══════════════════════════════════════════════
-          DOCUMENT PASSWORD PROMPT DIALOG
-      ══════════════════════════════════════════════ */}
-      {docPasswordModal && typeof document !== "undefined" && createPortal(
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setDocPasswordModal(null)} />
-          <div className="relative bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl z-10 text-center space-y-4">
-            <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mx-auto shadow-sm">
-              <Lock size={24} className="text-[#2563EB]" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-[#0F172A]">Enter Document PIN</h3>
-              <p className="text-xs text-[#64748B] mt-1">
-                Please enter the 6-digit PIN set by the senior advocate to view this file.
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <input
-                type="text"
-                pattern="\d{6}"
-                maxLength={6}
-                placeholder="••••••"
-                value={passwordInput}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, "");
-                  setPasswordInput(val);
-                  setPasswordError("");
-                }}
-                className="w-32 mx-auto rounded-xl border border-[#E2E8F0] px-4 py-3 text-center text-lg font-mono tracking-[0.75em] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition"
-                autoFocus
-              />
-              {passwordError && (
-                <p className="text-xs text-red-500 font-semibold">{passwordError}</p>
-              )}
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => setDocPasswordModal(null)}
-                className="flex-1 py-2 rounded-xl border border-[#E2E8F0] text-[#64748B] font-semibold text-xs hover:bg-[#F8FAFC] transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  if (passwordInput === docPasswordModal.doc.password) {
-                    docPasswordModal.callback();
-                    setDocPasswordModal(null);
-                  } else {
-                    setPasswordError("Incorrect 6-digit PIN");
-                  }
-                }}
-                disabled={passwordInput.length !== 6}
-                className="flex-1 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-semibold text-xs transition disabled:opacity-50"
-              >
-                Unlock
-              </button>
-            </div>
-          </div>
-        </div>
-      , document.body)}
     </div>
   );
 }
-
-

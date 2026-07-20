@@ -226,6 +226,9 @@ def get_assigned_cases(db: Session):
         case.assigned_documents = json.loads(
             case.assigned_documents or "[]"
         )
+        case.appearances = json.loads(
+            case.appearances or "[]"
+        )
 
         # Add profile image dynamically
         case.profile_image = profile_image
@@ -248,6 +251,9 @@ def get_assigned_case_by_id(
     if assigned_case:
         assigned_case.assigned_documents = json.loads(
             assigned_case.assigned_documents or "[]"
+        )
+        assigned_case.appearances = json.loads(
+            assigned_case.appearances or "[]"
         )
 
     return assigned_case

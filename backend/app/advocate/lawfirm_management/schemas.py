@@ -44,6 +44,19 @@ class AdvocateOut(AdvocateBase):
         from_attributes = True
 
 
+class CaseAppearanceCreate(BaseModel):
+    appearance_date: Optional[str] = Field(None, alias="appearanceDate")
+    advocate_name: Optional[str] = Field(None, alias="advocateName")
+    court_bench: Optional[str] = Field(None, alias="courtBench")
+    stage: Optional[str] = Field(None, alias="stage")
+    summary: Optional[str] = Field(None, alias="summary")
+    next_date: Optional[str] = Field(None, alias="nextDate")
+
+    class Config:
+        populate_by_name = True
+        from_attributes = True
+
+
 class AssignedCaseCreate(BaseModel):
     case_id: Optional[int] = None
     case_name: Optional[str] = None
@@ -56,6 +69,7 @@ class AssignedCaseCreate(BaseModel):
     assignment_notes: Optional[str] = None
     status: Optional[str] = "Active"
     assigned_documents: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
+    appearances: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
     client_name: Optional[str] = None
 
 class AssignedCaseOut(AssignedCaseCreate):

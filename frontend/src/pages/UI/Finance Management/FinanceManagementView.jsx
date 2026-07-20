@@ -36,27 +36,12 @@ export default function CourtFeeCalView() {
   const [caseNumber, setCaseNumber] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
   const [email, setEmail] = useState("");
-
-  // Court Fee inputs
-  const [courtFeeCaseType, setCourtFeeCaseType] = useState("");
-  const [courtFee, setCourtFee] = useState("");
-  const [courtFeeJurisdiction, setCourtFeeJurisdiction] = useState("");
-
-  // Stamp Duty inputs
-  const [stampDutyDocType, setStampDutyDocType] = useState("");
-  const [stampDuty, setStampDuty] = useState("");
-  const [stampDutyState, setStampDutyState] = useState("");
+  const [clientCases, setClientCases] = useState([]);
 
   // Advocate Fee inputs
   const [advocateFeeCaseType, setAdvocateFeeCaseType] = useState("");
   const [advocateFee, setAdvocateFee] = useState("");
   const [advocateFeeRemarks, setAdvocateFeeRemarks] = useState("");
-
-  // Paper Filing inputs
-  const [filingCostPages, setFilingCostPages] = useState("");
-  const [filingCost, setFilingCost] = useState("");
-  const [filingCostNotes, setFilingCostNotes] = useState("");
-
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredClients, setFilteredClients] = useState([]);
@@ -66,11 +51,7 @@ export default function CourtFeeCalView() {
   const [gpayNumber, setGpayNumber] = useState("");
   const [upiId, setUpiId] = useState("");
 
-  const total =
-    Number(courtFee || 0) +
-    Number(stampDuty || 0) +
-    Number(advocateFee || 0) +
-    Number(filingCost || 0);
+  const total = Number(advocateFee || 0);
 
   const currentMonthInvoiced = invoices
     .filter((invoice) => {
@@ -144,21 +125,21 @@ export default function CourtFeeCalView() {
         mobile_number: mobileNumber,
         email: email,
 
-        court_fee_case_type: courtFeeCaseType || "N/A",
-        court_fee_amount: Number(courtFee || 0),
-        court_fee_jurisdiction: courtFeeJurisdiction || "N/A",
+        court_fee_case_type: "N/A",
+        court_fee_amount: 0,
+        court_fee_jurisdiction: "N/A",
 
-        stamp_duty_doc_type: stampDutyDocType || "N/A",
-        stamp_duty_amount: Number(stampDuty || 0),
-        stamp_duty_state: stampDutyState || "N/A",
+        stamp_duty_doc_type: "N/A",
+        stamp_duty_amount: 0,
+        stamp_duty_state: "N/A",
 
         advocate_fee_case_type: advocateFeeCaseType || "N/A",
         advocate_fee_amount: Number(advocateFee || 0),
         advocate_fee_remarks: advocateFeeRemarks || "N/A",
 
-        filing_cost_pages: Number(filingCostPages || 0),
-        filing_cost_amount: Number(filingCost || 0),
-        filing_cost_notes: filingCostNotes || "N/A",
+        filing_cost_pages: 0,
+        filing_cost_amount: 0,
+        filing_cost_notes: "N/A",
 
         payment_method: paymentMethod,
         gpay_number: gpayNumber,
@@ -232,6 +213,8 @@ export default function CourtFeeCalView() {
       setShowDropdown(false);
       setEmail("");
       setMobileNumber("");
+      setClientCases([]);
+      setCaseNumber("");
       return;
     }
 
@@ -279,124 +262,6 @@ export default function CourtFeeCalView() {
 
 
 
-  const handleDownloadPDF = () => {
-    const doc = new jsPDF();
-
-    // 1. Primary Blue Color Banner Header Block
-    doc.setFillColor(37, 99, 235); // Blue primary color (#2563EB)
-    doc.rect(0, 0, 210, 35, "F");
-
-    // Title inside the blue block
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(22);
-    doc.text("INVOICE REPORT", 20, 23);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 150, 23);
-
-    // 2. Client Details section
-    doc.setTextColor(15, 23, 42); // slate-900
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text("Client Information", 20, 50);
-
-    // Light line separator
-    doc.setDrawColor(226, 232, 240);
-    doc.setLineWidth(0.5);
-    doc.line(20, 53, 190, 53);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.text(`Name: ${clientName || "N/A"}`, 20, 62);
-    doc.text(`Case No: ${caseNumber || "N/A"}`, 20, 70);
-    doc.text(`Mobile: ${mobileNumber || "N/A"}`, 110, 62);
-    doc.text(`Email: ${email || "N/A"}`, 110, 70);
-
-    // 3. Billing details section header
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text("Fee Details", 20, 85);
-    doc.line(20, 88, 190, 88);
-
-    // Table Columns Header
-    doc.setFillColor(248, 250, 252); // soft grey
-    doc.rect(20, 93, 170, 8, "F");
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.text("Description", 25, 98);
-    doc.text("Jurisdiction / Remarks", 95, 98);
-    doc.text("Amount", 165, 98);
-
-    doc.line(20, 101, 190, 101);
-
-    // Table Rows
-    doc.setFont("helvetica", "normal");
-    let currentY = 108;
-
-    const items = [
-      {
-        name: `Court Fee (${courtFeeCaseType || "N/A"})`,
-        details: courtFeeJurisdiction || "N/A",
-        amount: Number(courtFee || 0)
-      },
-      {
-        name: `Stamp Duty (${stampDutyDocType || "N/A"})`,
-        details: stampDutyState || "N/A",
-        amount: Number(stampDuty || 0)
-      },
-      {
-        name: `Advocate Fee (${advocateFeeCaseType || "N/A"})`,
-        details: advocateFeeRemarks || "N/A",
-        amount: Number(advocateFee || 0)
-      },
-      {
-        name: "Paper Filing",
-        details: filingCostPages ? `${filingCostPages} pages` : "N/A",
-        amount: Number(filingCost || 0)
-      }
-    ];
-
-    items.forEach((item) => {
-      doc.text(item.name, 25, currentY);
-      doc.text(item.details, 95, currentY);
-      doc.text(`Rs. ${item.amount.toFixed(2)}`, 165, currentY);
-      currentY += 8;
-    });
-
-    // Summary lines
-    doc.line(20, currentY, 190, currentY);
-    currentY += 8;
-
-    doc.text("Subtotal:", 130, currentY);
-    doc.text(`Rs. ${total.toFixed(2)}`, 165, currentY);
-    currentY += 8;
-
-    doc.text("GST (18%):", 130, currentY);
-    doc.text(
-      `Rs. ${(Number(advocateFee || 0) * 0.18).toFixed(2)}`,
-      165,
-      currentY
-    ); currentY += 8;
-
-    doc.setFont("helvetica", "bold");
-    doc.text("Grand Total:", 130, currentY);
-    doc.text(
-      `Rs. ${(Number(total) + Number(advocateFee || 0) * 0.18).toFixed(2)}`,
-      165,
-      currentY
-    );
-    // 4. Footer info
-    doc.setFont("helvetica", "italic");
-    doc.setFontSize(9);
-    doc.setTextColor(100, 116, 139);
-    doc.text("This document is a computer-generated calculation report and does not require a physical signature.", 20, 275);
-    doc.text("Thank you for your trust in our services.", 20, 280);
-
-    doc.save(`Invoice_${clientName || "Calculation"}.pdf`);
-  };
-
   const generateInvoicePDF = (inv) => {
     const doc = new jsPDF();
 
@@ -442,10 +307,7 @@ export default function CourtFeeCalView() {
 
     let y = 104;
     const rows = [
-      [`Court Fee (${inv.court_fee_case_type || "N/A"})`, inv.court_fee_jurisdiction || "N/A", inv.court_fee_amount],
-      [`Stamp Duty (${inv.stamp_duty_doc_type || "N/A"})`, inv.stamp_duty_state || "N/A", inv.stamp_duty_amount],
       [`Advocate Fee (${inv.advocate_fee_case_type || "N/A"})`, inv.advocate_fee_remarks || "N/A", inv.advocate_fee_amount],
-      ["Paper Filing", `${inv.filing_cost_pages || 0} pages`, inv.filing_cost_amount],
     ];
     rows.forEach(([name, detail, amount]) => {
       doc.setFontSize(10);
@@ -496,9 +358,6 @@ export default function CourtFeeCalView() {
     doc.save(`Invoice_${inv.id}_${inv.client_name || "Record"}.pdf`);
   };
 
-
-
-
   if (isHistoryOpen) {
     return (
       <InvoiceHistoryView
@@ -515,13 +374,25 @@ export default function CourtFeeCalView() {
   return (
     <div className="w-full space-y-8 max-w-7xl mx-auto pb-10">
       {/* Page Header */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-3xl shadow-sm p-8 md:p-10">
+      <div className="relative overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-3xl shadow-sm p-8 md:p-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="relative z-10">
           <h1 className="text-[#0F172A] font-extrabold text-3xl md:text-4xl tracking-tight leading-tight">
             Billing
           </h1>
-
+          <p className="text-[#64748B] text-sm mt-1">
+            Generate and manage client invoices & fee details
+          </p>
         </div>
+        <button
+          onClick={() => setIsHistoryOpen(true)}
+          className="relative z-10 flex items-center gap-2.5 px-6 py-3.5 bg-[#0F172A] hover:bg-slate-800 text-white rounded-2xl font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95 cursor-pointer self-start sm:self-auto"
+        >
+          <History size={18} />
+          Invoice History
+          <span className="bg-blue-600 text-white text-xs px-2.5 py-0.5 rounded-full font-bold ml-1">
+            {invoices.length}
+          </span>
+        </button>
         <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 opacity-10 pointer-events-none text-blue-600">
           <Landmark size={200} />
         </div>
@@ -546,7 +417,8 @@ export default function CourtFeeCalView() {
           </div>
           <div className="relative z-10 text-xs font-medium text-[#94A3B8] mt-4">
             Current Month Invoiced
-          </div>        </div>
+          </div>
+        </div>
 
         <div className="group bg-white border border-[#E2E8F0] p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-emerald-50 rounded-full blur-2xl group-hover:bg-emerald-100 transition-colors"></div>
@@ -642,36 +514,63 @@ export default function CourtFeeCalView() {
                           setSearchTerm(client.name);
                           setEmail(client.email);
                           setMobileNumber(client.mobile || "");
-                          setCaseNumber(client.case_number || "");
+                          const cList = client.cases || [];
+                          setClientCases(cList);
+                          if (cList.length > 0) {
+                            setCaseNumber(cList[0].case_no);
+                          } else {
+                            setCaseNumber(client.case_number || "");
+                          }
                           setShowDropdown(false);
                         }}
                         className="p-4 cursor-pointer hover:bg-[#F8FAFC] transition-colors border-b border-slate-50 last:border-0"
                       >
                         <div className="font-bold text-[#0F172A]">{client.name}</div>
-                        <div className="text-xs text-[#64748B] mt-1">{client.email}</div>
+                        <div className="text-xs text-[#64748B] mt-1">
+                          {client.email} {client.cases && client.cases.length > 0 ? `• (${client.cases.length} cases)` : ""}
+                        </div>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">Case Number</label>
+              {/* Case Selection — full width */}
+              <div className="md:col-span-2">
+                <label className="block text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">
+                  {clientCases.length > 0 ? "Select Case Number" : "Case Number"}
+                </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
                     <Briefcase size={16} className="text-[#94A3B8]" />
                   </div>
-                  <input
-                    type="text"
-                    placeholder="e.g. CR-2023-145"
-                    value={caseNumber}
-                    readOnly
-                    className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm bg-[#F8FAFC] text-[#64748B] cursor-not-allowed"
-                  />
+                  {clientCases.length > 0 ? (
+                    <select
+                      value={caseNumber}
+                      onChange={(e) => setCaseNumber(e.target.value)}
+                      className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                    >
+                      <option value="">Select a Case Number</option>
+                      {clientCases.map((c, idx) => (
+                        <option key={idx} value={c.case_no}>
+                          {c.case_no} {c.case_title ? `— ${c.case_title}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="e.g. CR-2023-145"
+                      value={caseNumber}
+                      onChange={(e) => setCaseNumber(e.target.value)}
+                      className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                    />
+                  )}
                 </div>
               </div>
 
-              <div>
+              {/* Mobile Number */}
+              <div className="md:col-span-2">
                 <label className="block text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">Mobile Number</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -687,6 +586,7 @@ export default function CourtFeeCalView() {
                 </div>
               </div>
 
+              {/* Email Address */}
               <div className="md:col-span-2">
                 <label className="block text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">Email Address</label>
                 <div className="relative">
@@ -706,84 +606,7 @@ export default function CourtFeeCalView() {
           </div>
 
           {/* Calculator Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-            {/* Court Fee */}
-            <div className="bg-gradient-to-br from-blue-50/50 to-transparent border border-blue-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:opacity-40 transition-opacity pointer-events-none text-blue-600">
-                <Scale size={48} />
-              </div>
-              <h3 className="font-extrabold text-blue-700 mb-5 flex items-center gap-2">
-                Court Fee
-              </h3>
-              <div className="space-y-4 relative z-10">
-                <select
-                  value={courtFeeCaseType}
-                  onChange={(e) => setCourtFeeCaseType(e.target.value)}
-                  className="w-full border border-blue-200 rounded-xl p-3 text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-                >
-                  <option value="">Select Case Type</option>
-                  <option value="Civil Suit">Civil Suit</option>
-                  <option value="Criminal Appeal">Criminal Appeal</option>
-                  <option value="Writ Petition">Writ Petition</option>
-                  <option value="Family Dispute">Family Dispute</option>
-                  <option value="Corporate/Commercial Case">Corporate/Commercial Case</option>
-                  <option value="Other">Other</option>
-                </select>
-                <input
-                  type="number"
-                  placeholder="Amount (₹)"
-                  value={courtFee}
-                  onChange={(e) => setCourtFee(e.target.value)}
-                  className="w-full border border-blue-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-                />
-
-                <div className="pt-2 font-bold text-blue-700 text-lg">
-                  ₹{courtFee || 0}
-                </div>
-              </div>
-            </div>
-
-            {/* Stamp Duty */}
-            <div className="bg-gradient-to-br from-emerald-50/50 to-transparent border border-emerald-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:opacity-40 transition-opacity pointer-events-none text-emerald-600">
-                <FileText size={48} />
-              </div>
-              <h3 className="font-extrabold text-emerald-700 mb-5 flex items-center gap-2">
-                Stamp Duty
-              </h3>
-              <div className="space-y-4 relative z-10">
-                <select
-                  value={stampDutyDocType}
-                  onChange={(e) => setStampDutyDocType(e.target.value)}
-                  className="w-full border border-emerald-200 rounded-xl p-3 text-sm bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-                >
-                  <option value="">Document Type</option>
-                  <option value="Sale Deed">Sale Deed</option>
-                  <option value="Gift Deed">Gift Deed</option>
-                  <option value="Lease Agreement">Lease Agreement</option>
-                  <option value="Power of Attorney">Power of Attorney</option>
-                  <option value="Other">Other</option>
-                </select>
-                <input
-                  type="number"
-                  placeholder="Amount (₹)"
-                  value={stampDuty}
-                  onChange={(e) => setStampDuty(e.target.value)}
-                  className="w-full border border-emerald-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-                />
-                {/* <input
-                  type="text"
-                  placeholder="State"
-                  value={stampDutyState}
-                  onChange={(e) => setStampDutyState(e.target.value)}
-                  className="w-full border border-emerald-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-                /> */}
-                <div className="pt-2 font-bold text-emerald-700 text-lg">
-                  ₹{stampDuty || 0}
-                </div>
-              </div>
-            </div>
+          <div className="grid grid-cols-1 gap-6">
 
             {/* Advocate Fee */}
             <div className="bg-gradient-to-br from-amber-50/50 to-transparent border border-amber-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
@@ -813,45 +636,16 @@ export default function CourtFeeCalView() {
                   onChange={(e) => setAdvocateFee(e.target.value)}
                   className="w-full border border-amber-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
                 />
+                <input
+                  type="text"
+                  placeholder="Remarks / Description"
+                  value={advocateFeeRemarks}
+                  onChange={(e) => setAdvocateFeeRemarks(e.target.value)}
+                  className="w-full border border-amber-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
+                />
 
                 <div className="pt-2 font-bold text-amber-700 text-lg">
                   ₹{advocateFee || 0}
-                </div>
-              </div>
-            </div>
-
-            {/* Paper Filing */}
-            <div className="bg-gradient-to-br from-purple-50/50 to-transparent border border-purple-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:opacity-40 transition-opacity pointer-events-none text-purple-600">
-                <Receipt size={48} />
-              </div>
-              <h3 className="font-extrabold text-purple-700 mb-5 flex items-center gap-2">
-                Paper Filing
-              </h3>
-              <div className="space-y-4 relative z-10">
-                <input
-                  type="number"
-                  placeholder="Number of Pages"
-                  value={filingCostPages}
-                  onChange={(e) => setFilingCostPages(e.target.value)}
-                  className="w-full border border-purple-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
-                />
-                <input
-                  type="number"
-                  placeholder="Amount (₹)"
-                  value={filingCost}
-                  onChange={(e) => setFilingCost(e.target.value)}
-                  className="w-full border border-purple-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
-                />
-                {/* <input
-                  type="text"
-                  placeholder="Notes"
-                  value={filingCostNotes}
-                  onChange={(e) => setFilingCostNotes(e.target.value)}
-                  className="w-full border border-purple-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
-                /> */}
-                <div className="pt-2 font-bold text-purple-700 text-lg">
-                  ₹{filingCost || 0}
                 </div>
               </div>
             </div>
@@ -882,20 +676,8 @@ export default function CourtFeeCalView() {
 
             <div className="space-y-4 text-sm border-t border-slate-700/50 pt-6 mb-6">
               <div className="flex justify-between items-center">
-                <span className="text-slate-300">Court Fee</span>
-                <span className="font-bold">₹{courtFee || 0}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-300">Stamp Duty</span>
-                <span className="font-bold">₹{stampDuty || 0}</span>
-              </div>
-              <div className="flex justify-between items-center">
                 <span className="text-slate-300">Advocate Fee</span>
                 <span className="font-bold">₹{advocateFee || 0}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-300">Paper Filing</span>
-                <span className="font-bold">₹{filingCost || 0}</span>
               </div>
 
               <div className="flex justify-between items-center pt-4 border-t border-dashed border-slate-700">
@@ -928,24 +710,6 @@ export default function CourtFeeCalView() {
                 <Send size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
               </button>
             )}
-
-            {/* Actions */}
-            <div className="mt-6 pt-6 border-t border-slate-800">
-              <button
-                onClick={() => setIsHistoryOpen(true)}
-                className="w-full flex items-center justify-between px-4 py-3 bg-slate-800/50 hover:bg-slate-800 rounded-xl transition-colors group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 group-hover:text-white transition-colors">
-                    <History size={16} />
-                  </div>
-                  <span className="text-sm font-semibold text-slate-300 group-hover:text-white transition-colors">Invoice History</span>
-                </div>
-                <div className="bg-slate-700 text-xs font-bold px-2.5 py-1 rounded-full text-slate-300">
-                  {invoices.length} records
-                </div>
-              </button>
-            </div>
 
           </div>
         </div>

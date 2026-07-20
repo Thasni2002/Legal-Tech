@@ -7,7 +7,8 @@ from .schemas import (
     AdvocateOut,
     AssignedCaseCreate,
     AssignedCaseOut,
-    AssignedCaseStatusUpdate
+    AssignedCaseStatusUpdate,
+    CaseAppearanceCreate
 )
 from .service import (
     get_all_advocates,
@@ -21,6 +22,12 @@ from .service import (
     delete_assigned_case,
     update_assigned_case
 )
+
+try:
+    from .migration_appearances import run_migration
+    run_migration()
+except Exception as _mig_e:
+    pass
 
 router = APIRouter(
     prefix="/lawfirm-management",
@@ -350,3 +357,109 @@ def remove_advocate(
         )
 
     return deleted
+
+
+# Add court appearance entry for assigned case
+@router.post("/assigned-cases/{case_id}/appearances", response_model=AssignedCaseOut)
+def add_assigned_case_appearance(
+    case_id: int,
+    data: CaseAppearanceCreate,
+    db: Session = Depends(get_db)
+):
+    import json
+    from .models import AssignedCase
+    assigned_case = db.query(AssignedCase).filter(AssignedCase.id == case_id).first()
+    if not assigned_case:
+        raise HTTPException(
+            status_code=404,
+            detail="Assigned case not found"
+        )
+    
+    current_appearances = json.loads(assigned_case.appearances or "[]")
+    new_entry = {
+        "appearanceDate": data.appearance_date,
+        "advocateName": data.advocate_name,
+        "courtBench": data.court_bench,
+        "stage": data.stage,
+        "summary": data.summary,
+        "nextDate": data.next_date
+    }
+    current_appearances.append(new_entry)
+    assigned_case.appearances = json.dumps(current_appearances)
+    
+    if data.next_date:
+        assigned_case.due_date = data.next_date
+        
+    db.commit()
+    db.refresh(assigned_case)
+    
+    assigned_case.assigned_documents = json.loads(assigned_case.assigned_documents or "[]")
+    assigned_case.appearances = json.loads(assigned_case.appearances or "[]")
+    return assigned_case
+
+
+# Update a court appearance entry
+@router.put("/assigned-cases/{case_id}/appearances/{index}", response_model=AssignedCaseOut)
+def edit_assigned_case_appearance(
+    case_id: int,
+    index: int,
+    data: CaseAppearanceCreate,
+    db: Session = Depends(get_db)
+):
+    import json
+    from .models import AssignedCase
+    assigned_case = db.query(AssignedCase).filter(AssignedCase.id == case_id).first()
+    if not assigned_case:
+        raise HTTPException(status_code=404, detail="Assigned case not found")
+    
+    current_appearances = json.loads(assigned_case.appearances or "[]")
+    if index < 0 or index >= len(current_appearances):
+        raise HTTPException(status_code=404, detail="Appearance entry index out of bounds")
+        
+    current_appearances[index] = {
+        "appearanceDate": data.appearance_date,
+        "advocateName": data.advocate_name,
+        "courtBench": data.court_bench,
+        "stage": data.stage,
+        "summary": data.summary,
+        "nextDate": data.next_date
+    }
+    assigned_case.appearances = json.dumps(current_appearances)
+    
+    if data.next_date:
+        assigned_case.due_date = data.next_date
+        
+    db.commit()
+    db.refresh(assigned_case)
+    
+    assigned_case.assigned_documents = json.loads(assigned_case.assigned_documents or "[]")
+    assigned_case.appearances = json.loads(assigned_case.appearances or "[]")
+    return assigned_case
+
+
+# Delete a court appearance entry
+@router.delete("/assigned-cases/{case_id}/appearances/{index}", response_model=AssignedCaseOut)
+def delete_assigned_case_appearance(
+    case_id: int,
+    index: int,
+    db: Session = Depends(get_db)
+):
+    import json
+    from .models import AssignedCase
+    assigned_case = db.query(AssignedCase).filter(AssignedCase.id == case_id).first()
+    if not assigned_case:
+        raise HTTPException(status_code=404, detail="Assigned case not found")
+    
+    current_appearances = json.loads(assigned_case.appearances or "[]")
+    if index < 0 or index >= len(current_appearances):
+        raise HTTPException(status_code=404, detail="Appearance entry index out of bounds")
+        
+    current_appearances.pop(index)
+    assigned_case.appearances = json.dumps(current_appearances)
+    
+    db.commit()
+    db.refresh(assigned_case)
+    
+    assigned_case.assigned_documents = json.loads(assigned_case.assigned_documents or "[]")
+    assigned_case.appearances = json.loads(assigned_case.appearances or "[]")
+    return assigned_case
