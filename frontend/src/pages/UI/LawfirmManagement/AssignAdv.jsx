@@ -1,11 +1,29 @@
 "use client";
 
 import { API_BASE_URL } from "@/utils/api";
+import { DISTRICT_COURTS } from "@/utils/districtCourts";
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Trash2, ArrowLeft } from "lucide-react";
+
+// Helper function to resolve district from a court name string
+const findDistrictForCourt = (courtName) => {
+  if (!courtName) return "";
+  for (const [district, courts] of Object.entries(DISTRICT_COURTS)) {
+    if (courts.includes(courtName)) {
+      return district;
+    }
+  }
+  // Partial match fallback
+  for (const [district, courts] of Object.entries(DISTRICT_COURTS)) {
+    if (courts.some(c => c.toLowerCase().includes(courtName.toLowerCase()) || courtName.toLowerCase().includes(district.toLowerCase()))) {
+      return district;
+    }
+  }
+  return "";
+};
 
 export default function AssignAdv({ isOpen, onClose }) {
 
@@ -16,12 +34,13 @@ export default function AssignAdv({ isOpen, onClose }) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-
   const [formData, setFormData] = useState({
     caseName: "",
     caseNumber: "",
+    district: "",
     courtName: "",
     advocateName: "",
+    secondaryAdvocateName: "",
     assignmentNotes: "",
     status: "Active",
     clientName: "",
@@ -38,12 +57,16 @@ export default function AssignAdv({ isOpen, onClose }) {
         );
 
         const data = await res.json();
+        const courtNameVal = data.practiceCourt || data.practice_court || "";
+        const districtVal = data.district || data.client_district || findDistrictForCourt(courtNameVal);
 
         setFormData({
           caseName: data.case_name || "",
           caseNumber: data.case_number || "",
           advocateName: data.advocate_name || "",
-          courtName: data.practiceCourt || data.practice_court || "",
+          secondaryAdvocateName: data.secondary_advocate_name || data.secondaryAdvocateName || "",
+          district: districtVal,
+          courtName: courtNameVal,
           assignmentNotes: data.assignment_notes || "",
           status: data.status || "Active",
           clientName: data.client_name || "",
@@ -56,7 +79,6 @@ export default function AssignAdv({ isOpen, onClose }) {
 
     fetchCase();
   }, [caseId]);
-
 
   const [advocates, setAdvocates] = useState([]);
 
@@ -76,22 +98,28 @@ export default function AssignAdv({ isOpen, onClose }) {
 
     fetchAdvocates();
   }, []);
+
   const [cases, setCases] = useState([]);
 
   useEffect(() => {
     const fetchCases = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/case-management/");
+        const res = await fetch(`${API_BASE_URL}/case-management/`);
         if (res.ok) {
           const data = await res.json();
-          const mappedCases = data.map((c) => ({
-            id: c.id,
-            name: c.case_title || `Case ${c.id}`,
-            caseNumber: c.case_no || `CASE-${c.id}`,
-            caseTitle: c.case_title || `Case ${c.id}`,
-            clientName: c.client_name || "",
-            courtName: c.court_name,
-          }));
+          const mappedCases = data.map((c) => {
+            const courtName = c.court_name || "";
+            const district = c.client_district || c.district || findDistrictForCourt(courtName);
+            return {
+              id: c.id,
+              name: c.case_title || `Case ${c.id}`,
+              caseNumber: c.case_no || `CASE-${c.id}`,
+              caseTitle: c.case_title || `Case ${c.id}`,
+              clientName: c.client_name || "",
+              district: district,
+              courtName: courtName,
+            };
+          });
           setCases(mappedCases);
 
           // Handle auto-preselection when directCaseId is passed
@@ -102,7 +130,8 @@ export default function AssignAdv({ isOpen, onClose }) {
                 ...prev,
                 caseName: selected.name,
                 caseNumber: selected.caseNumber,
-                courtName: selected.courtName, 
+                district: selected.district || "",
+                courtName: selected.courtName || "", 
                 clientName: selected.clientName,
                 caseIdVal: selected.id,
               }));
@@ -116,8 +145,6 @@ export default function AssignAdv({ isOpen, onClose }) {
 
     fetchCases();
   }, [directCaseId]);
-
-
 
   const handleChange = (e) => {
     setFormData({
@@ -141,19 +168,24 @@ export default function AssignAdv({ isOpen, onClose }) {
         caseNumber: selectedCase.caseNumber,
         clientName: selectedCase.clientName,
         caseIdVal: selectedCase.id,
-        courtName: selectedCase.courtName,
+        district: selectedCase.district || "",
+        courtName: selectedCase.courtName || "",
         advocateName: "",
+        secondaryAdvocateName: "",
       });
     } else {
       // Reset when "Select Case" chosen
-      setFormData({
-        ...formData,
-        caseName: "",
-        caseNumber: "",
-        courtName: "", 
-        clientName: "",
-        caseIdVal: "",
-      });
+        setFormData({
+          ...formData,
+          caseName: "",
+          caseNumber: "",
+          district: "",
+          courtName: "", 
+          advocateName: "",
+          secondaryAdvocateName: "",
+          clientName: "",
+          caseIdVal: "",
+        });
     }
   };
 
@@ -184,6 +216,10 @@ export default function AssignAdv({ isOpen, onClose }) {
       case_name: formData.caseName,
       case_number: formData.caseNumber,
       advocate_name: formData.advocateName,
+      secondary_advocate_name: formData.secondaryAdvocateName || null,
+      secondaryAdvocateName: formData.secondaryAdvocateName || null,
+
+      district: formData.district,
       practice_court: formData.courtName,
       assignment_notes: formData.assignmentNotes,
       status: formData.status,
@@ -208,15 +244,16 @@ export default function AssignAdv({ isOpen, onClose }) {
       );
 
       const data = await response.json();
-      console.log("Saved:", data);
 
       if (response.ok) {
         // Reset form
         setFormData({
           caseName: "",
           caseNumber: "",
+          district: "",
           courtName: "", 
           advocateName: "",
+          secondaryAdvocateName: "",
           assignmentNotes: "",
           status: "Active",
           clientName: "",
@@ -226,14 +263,16 @@ export default function AssignAdv({ isOpen, onClose }) {
         setShowSuccess(true);
       } else {
         console.log("Error:", data);
+        alert(`Failed to save assignment: ${data.detail || "Server error"}`);
       }
     } catch (error) {
       console.error("Submit error:", error);
+      alert(`Error submitting assignment: ${error.message || "Network error"}`);
     }
+
   };
 
   if (!isOpen) return null;
-
 
   if (showSuccess) {
     return (
@@ -248,57 +287,79 @@ export default function AssignAdv({ isOpen, onClose }) {
             {caseId ? "Update Successful" : "Assign Successful"}
           </h3>
           <p className="text-[#64748B] text-sm mb-6">
-            {caseId
-              ? "The case assignment has been successfully updated."
-              : "The case has been successfully assigned to the advocate."}
+            The case has been successfully {caseId ? "updated" : "assigned to the advocate"}.
           </p>
           <button
-            type="button"
             onClick={() => {
               setShowSuccess(false);
               if (onClose) onClose();
               else router.back();
             }}
-            className="w-full py-3 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold rounded-xl shadow-lg shadow-blue-500/20 transition duration-200"
+            className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors cursor-pointer shadow-md"
           >
-            Go Back
+            Done
           </button>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="w-full">
-      <div className="bg-white w-full max-w-4xl mx-auto rounded-3xl shadow-xl shadow-slate-200/60 border border-[#E2E8F0]">
+  const filteredAdvocates = advocates.filter((adv) => {
+    const advCourt = (adv.practiceCourt || adv.practice_court || "").trim();
+    const advCity = (adv.city || "").trim();
+    const selectedCourt = (formData.courtName || "").trim();
+    const selectedDistrict = (formData.district || "").trim();
 
-        {/* Header */}
-        <div className="flex items-center gap-4 border-b border-[#F1F5F9] px-8 py-6 sticky top-0 bg-white/95 backdrop-blur z-10">
+    if (!selectedCourt && !selectedDistrict) return true;
+
+    if (selectedCourt) {
+      if (advCourt.toLowerCase() === selectedCourt.toLowerCase()) return true;
+      if (advCourt && (selectedCourt.toLowerCase().includes(advCourt.toLowerCase()) || advCourt.toLowerCase().includes(selectedCourt.toLowerCase()))) return true;
+    }
+
+    if (selectedDistrict) {
+      const distLower = selectedDistrict.toLowerCase();
+      if (advCourt && advCourt.toLowerCase().includes(distLower)) return true;
+      if (advCity && advCity.toLowerCase().includes(distLower)) return true;
+      const districtCourtsList = DISTRICT_COURTS[selectedDistrict] || [];
+      if (advCourt && districtCourtsList.some(c => c.toLowerCase() === advCourt.toLowerCase())) return true;
+    }
+
+    return false;
+  });
+
+  const displayAdvocates = filteredAdvocates.length > 0 ? filteredAdvocates : advocates;
+
+  return (
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 sm:p-6 overflow-y-auto">
+      <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-[#E2E8F0] overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[92vh] flex flex-col">
+
+        {/* Modal Header */}
+        <div className="px-6 py-4 bg-[#F8FAFC] border-b border-[#E2E8F0] flex items-center justify-between gap-4 flex-shrink-0">
           <button
-            type="button"
             onClick={onClose || (() => router.back())}
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-[#F8FAFC] text-[#64748B] hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full flex items-center justify-center bg-[#F8FAFC] text-[#64748B] hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={18} />
           </button>
-          <h2 className="text-2xl font-extrabold text-[#0F172A] flex-1">
+          <h2 className="text-lg font-bold text-[#0F172A] flex-1">
             {caseId ? "Update Assigned Case" : "Assign Case to Advocate"}
           </h2>
           <button
             onClick={onClose || (() => router.back())}
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-[#F8FAFC] text-[#64748B] hover:bg-rose-100 hover:text-rose-600 transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full flex items-center justify-center bg-[#F8FAFC] text-[#64748B] hover:bg-rose-100 hover:text-rose-600 transition-colors cursor-pointer"
           >
-            <span className="text-xl font-bold">✕</span>
+            <span className="text-lg font-bold">✕</span>
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form onSubmit={handleSubmit} className="p-6 md:p-8 overflow-y-auto space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
 
             {/* Case Name */}
             <div>
-              <label className="block mb-2 text-sm font-bold text-[#0F172A]">
+              <label className="block mb-1.5 text-xs font-semibold text-[#475569] uppercase tracking-wider">
                 Case Name
               </label>
               {directCaseId || caseId ? (
@@ -306,13 +367,13 @@ export default function AssignAdv({ isOpen, onClose }) {
                   type="text"
                   value={formData.caseName}
                   readOnly
-                  className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3.5 bg-slate-100 text-[#475569] text-sm outline-none cursor-not-allowed"
+                  className="w-full rounded-xl border border-[#E2E8F0] px-3.5 py-2.5 bg-slate-100 text-[#475569] text-xs font-medium outline-none cursor-not-allowed"
                 />
               ) : (
                 <select
                   value={formData.caseName}
                   onChange={handleCaseSelect}
-                  className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+                  className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3.5 py-2.5 text-xs font-medium text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
                   required
                 >
                   <option value="">Select Case</option>
@@ -327,146 +388,192 @@ export default function AssignAdv({ isOpen, onClose }) {
 
             {/* Case Number */}
             <div>
-              <label className="block mb-2 text-sm font-bold text-[#0F172A]">
+              <label className="block mb-1.5 text-xs font-semibold text-[#475569] uppercase tracking-wider">
                 Case Number
               </label>
               <input
                 type="text"
                 value={formData.caseNumber}
                 readOnly
-                className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3.5 bg-slate-100 text-[#475569] text-sm outline-none cursor-not-allowed"
+                className="w-full rounded-xl border border-[#E2E8F0] px-3.5 py-2.5 bg-slate-100 text-[#475569] text-xs font-medium outline-none cursor-not-allowed"
               />
             </div>
-            <div>
-              <label className="block mb-2 text-sm font-bold text-[#0F172A]">
-                Court Name
-              </label>
 
+            {/* District */}
+            <div>
+              <label className="block mb-1.5 text-xs font-semibold text-[#475569] uppercase tracking-wider">
+                District
+              </label>
               <input
                 type="text"
-                value={formData.courtName}
+                value={formData.district || "N/A"}
                 readOnly
-                className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3.5 bg-slate-100 text-[#475569]"
+                className="w-full rounded-xl border border-[#E2E8F0] px-3.5 py-2.5 bg-slate-100 text-[#475569] text-xs font-medium outline-none cursor-not-allowed"
               />
             </div>
 
-            {/* Advocate Name */}
+            {/* Court Name */}
             <div>
-              <label className="block mb-2 text-sm font-bold text-[#0F172A]">
-                Advocate Name
+              <label className="block mb-1.5 text-xs font-semibold text-[#475569] uppercase tracking-wider">
+                Court Name
+              </label>
+              <input
+                type="text"
+                value={formData.courtName || "N/A"}
+                readOnly
+                className="w-full rounded-xl border border-[#E2E8F0] px-3.5 py-2.5 bg-slate-100 text-[#475569] text-xs font-medium outline-none cursor-not-allowed"
+              />
+            </div>
+
+            {/* Primary Advocate Name */}
+            <div>
+              <label className="block mb-1.5 text-xs font-semibold text-[#475569] uppercase tracking-wider">
+                Primary Advocate *
               </label>
               <select
                 name="advocateName"
                 value={formData.advocateName}
                 onChange={handleChange}
-                className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+                className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3.5 py-2.5 text-xs font-medium text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
                 required
               >
-                <option value="">Select Advocate</option>
+                <option value="">Select Primary Advocate</option>
+                {displayAdvocates.map((adv) => (
+                  <option key={adv.id} value={adv.advocateName}>
+                    {adv.advocateName} ({adv.role || "Advocate"}){adv.practiceCourt ? ` - ${adv.practiceCourt}` : ''}
+                  </option>
+                ))}
+              </select>
+              {(formData.courtName || formData.district) && (
+                <span className={`text-[11px] font-medium mt-1 block ${filteredAdvocates.length > 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  {filteredAdvocates.length > 0 
+                    ? `Showing ${filteredAdvocates.length} advocate(s) matching ${formData.courtName || formData.district}`
+                    : `No exact advocate matches for ${formData.courtName || formData.district}; showing all advocates`}
+                </span>
+              )}
+            </div>
 
-                {advocates
-                  .filter((advocate) => {
-                    // If the case has a court name set, only show advocates
-                    // whose practiceCourt matches that court name
-                    if (!formData.courtName) return true;
-                    const courtNameClean = formData.courtName.toLowerCase().trim();
-                    const practiceCourtClean = (advocate.practiceCourt || "").toLowerCase().trim();
-                    return (
-                      practiceCourtClean === courtNameClean ||
-                      practiceCourtClean.includes(courtNameClean) ||
-                      courtNameClean.includes(practiceCourtClean)
-                    );
-                  })
-                  .map((advocate) => (
-                    <option
-                      key={advocate.id}
-                      value={advocate.advocateName}
-                    >
-                      {advocate.advocateName}
+            {/* Secondary / Standby Advocate (Optional) */}
+            <div>
+              <label className="block mb-1.5 text-xs font-semibold text-[#475569] uppercase tracking-wider">
+                Secondary / Standby Advocate (Optional)
+              </label>
+              <select
+                name="secondaryAdvocateName"
+                value={formData.secondaryAdvocateName}
+                onChange={handleChange}
+                className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3.5 py-2.5 text-xs font-medium text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+              >
+                <option value="">None (No Standby Advocate)</option>
+                {displayAdvocates
+                  .filter(adv => adv.advocateName !== formData.advocateName)
+                  .map((adv) => (
+                    <option key={adv.id} value={adv.advocateName}>
+                      {adv.advocateName} ({adv.role || "Advocate"}){adv.practiceCourt ? ` - ${adv.practiceCourt}` : ''}
                     </option>
                   ))}
+              </select>
+              <span className="text-[11px] text-[#64748B] font-medium mt-1 block">
+                Proxy / backup if Primary Advocate is absent on hearing date
+              </span>
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className="block mb-1.5 text-xs font-semibold text-[#475569] uppercase tracking-wider">
+                Status
+              </label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3.5 py-2.5 text-xs font-medium text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+              >
+                <option value="Active">Active</option>
+                <option value="Pending">Pending</option>
+                <option value="Closed">Closed</option>
               </select>
             </div>
 
           </div>
 
           {/* Notes */}
-          <div className="mt-8">
-            <label className="block mb-2 text-sm font-bold text-[#0F172A]">
+          <div>
+            <label className="block mb-1.5 text-xs font-semibold text-[#475569] uppercase tracking-wider">
               Assignment Notes / Instructions
             </label>
             <textarea
               name="assignmentNotes"
               value={formData.assignmentNotes}
               onChange={handleChange}
-              rows={4}
+              rows="3"
               placeholder="Enter instructions for the advocate..."
-              className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-            />
+              className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3 text-xs font-medium text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+            ></textarea>
           </div>
 
-          {/* Footer */}
-          <div className="flex justify-end gap-3 mt-10 border-t border-[#F1F5F9] pt-8">
-            {caseId && (
+          {/* Buttons */}
+          <div className="pt-2 flex items-center justify-between gap-4">
+            {caseId ? (
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(true)}
-                className="px-8 py-3.5 rounded-full bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold uppercase tracking-wider transition-colors w-full sm:w-auto mr-auto"
+                className="px-4 py-2.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold text-xs transition-colors cursor-pointer flex items-center gap-2"
               >
-                Remove Assignment
+                <Trash2 size={14} />
+                Unassign Case
               </button>
-            )}
-            <button
-              type="button"
-              onClick={onClose || (() => router.back())}
-              className="px-8 py-3.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[#475569] text-xs font-bold uppercase tracking-wider transition-colors w-full sm:w-auto"
-            >
-              Cancel
-            </button>
+            ) : <div></div>}
 
-            <button
-              type="submit"
-              className="px-8 py-3.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] w-full sm:w-auto"
-            >
-              Assign Case
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {showDeleteConfirm && typeof document !== "undefined" && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl border border-slate-200 p-8 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex justify-center">
-              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
-                <Trash2 className="w-8 h-8 text-red-600" />
-              </div>
-            </div>
-            <h2 className="text-2xl font-bold text-center text-slate-900 mt-6">
-              Confirm Removal
-            </h2>
-            <p className="text-center text-slate-500 mt-3 leading-relaxed">
-              Are you sure you want to remove this assignment?
-            </p>
-            <div className="flex justify-center gap-4 mt-8">
+            <div className="flex items-center gap-3">
               <button
                 type="button"
+                onClick={onClose || (() => router.back())}
+                className="px-5 py-2.5 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] hover:bg-slate-100 text-[#475569] font-semibold text-xs transition-colors cursor-pointer"
+              >
+                CANCEL
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-semibold text-xs shadow-md transition-all cursor-pointer"
+              >
+                {caseId ? "UPDATE ASSIGNMENT" : "ASSIGN CASE"}
+              </button>
+            </div>
+          </div>
+
+
+        </form>
+
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 text-center shadow-2xl border border-[#E2E8F0]">
+            <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-[#0F172A] mb-2">Unassign Case?</h3>
+            <p className="text-[#64748B] text-sm mb-6">
+              Are you sure you want to remove this advocate assignment?
+            </p>
+            <div className="flex items-center justify-center gap-3">
+              <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="px-6 py-3 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold hover:bg-slate-100 transition"
+                className="flex-1 py-3 bg-[#F8FAFC] border border-[#E2E8F0] text-[#475569] font-bold rounded-xl hover:bg-slate-100 transition-colors"
               >
                 Cancel
               </button>
               <button
-                type="button"
                 onClick={handleUnassign}
-                className="px-6 py-3 rounded-xl bg-red-600 text-white font-semibold shadow-lg shadow-red-600/30 hover:bg-red-700 transition"
+                className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition-colors shadow-md"
               >
-                Yes, Remove
+                Yes, Unassign
               </button>
             </div>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   );

@@ -26,36 +26,72 @@ import {
 } from "lucide-react";
 import { usePermissions } from "@/utils/usePermissions";
 
-// Helper to normalize status capitalization
-function getNormalizedStatus(status) {
-  const s = String(status || "").trim().toLowerCase();
-  if (s === "in progress") return "In Progress";
-  if (s === "pending") return "Pending";
-  if (s === "closed" || s === "completed") return "Completed";
-  if (s === "to do") return "To Do";
-  return "Active";
+// Helper to get status badge styling and icon
+function getStatusBadgeStyle(status) {
+  const s = String(status || "").trim();
+  const lower = s.toLowerCase();
+
+  if (lower.includes("won") || lower === "completed" || lower === "judgment delivered") {
+    return {
+      className: "bg-emerald-50 text-emerald-700 border border-emerald-200 font-extrabold",
+      icon: <CheckCircle size={11} />,
+    };
+  }
+  if (lower.includes("lost") || lower === "closed" || lower.includes("reject")) {
+    return {
+      className: "bg-rose-50 text-rose-700 border border-rose-200 font-extrabold",
+      icon: <AlertCircle size={11} />,
+    };
+  }
+  if (
+    lower === "in progress" ||
+    lower === "hearing scheduled" ||
+    lower === "hearing completed" ||
+    lower === "case preparation" ||
+    lower === "advocate assigned"
+  ) {
+    return {
+      className: "bg-blue-50 text-blue-700 border border-blue-200 font-bold",
+      icon: <Clock size={11} />,
+    };
+  }
+  if (lower === "active" || lower === "document verified") {
+    return {
+      className: "bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold",
+      icon: <CheckCircle size={11} />,
+    };
+  }
+  if (
+    lower === "under review" ||
+    lower === "awaiting judgment" ||
+    lower === "on hold" ||
+    lower === "document pending" ||
+    lower === "client consulting" ||
+    lower === "client detail collection" ||
+    lower === "document data collection" ||
+    lower === "court file" ||
+    lower === "pending"
+  ) {
+    return {
+      className: "bg-amber-50 text-amber-700 border border-amber-200 font-bold",
+      icon: <Clock size={11} />,
+    };
+  }
+  return {
+    className: "bg-slate-100 text-slate-700 border border-slate-200 font-bold",
+    icon: <Clock size={11} />,
+  };
 }
 
 // Status badge helper
 function StatusBadge({ status }) {
-  const displayStatus = getNormalizedStatus(status);
-  const map = {
-    Active: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-    "In Progress": "bg-blue-50 text-blue-700 border border-blue-200",
-    Pending: "bg-amber-50 text-amber-700 border border-amber-200",
-    Completed: "bg-red-50 text-red-700 border border-red-200",
-    "To Do": "bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]",
-  };
-  const icons = {
-    Active: <CheckCircle size={11} />,
-    "In Progress": <Clock size={11} />,
-    Pending: <Clock size={11} />,
-    Completed: <AlertCircle size={11} />,
-    "To Do": <Clock size={11} />,
-  };
+  const rawStatus = status || "Active";
+  const displayStatus = rawStatus === "Won" ? "🏆 Case Won" : rawStatus === "Lost" ? "❌ Case Lost" : rawStatus;
+  const style = getStatusBadgeStyle(rawStatus);
+
   return (
-    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${map[displayStatus] || "bg-gray-50 text-gray-600 border border-gray-200"}`}>
-      {icons[displayStatus]}
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide whitespace-nowrap ${style.className}`}>
+      {style.icon}
       {displayStatus}
     </span>
   );
@@ -154,9 +190,10 @@ export default function CaseDetailView({ id }) {
         return false;
       });
       const assignedAdvNames = caseAssignments
-        .map(ac => ac.advocate_name)
+        .flatMap(ac => [ac.advocate_name, ac.secondary_advocate_name || ac.secondaryAdvocateName])
         .filter(Boolean);
       setCaseAssignedAdvocates(assignedAdvNames);
+
 
       // 5. Build set of already-assigned document filenames
       const assignedDocFiles = new Set();
@@ -170,7 +207,7 @@ export default function CaseDetailView({ id }) {
 
       setSelectedCase({
         ...rawCase,
-        status: getNormalizedStatus(resolvedStatus)
+        status: resolvedStatus || rawCase.status || "Active"
       });
     } catch (error) {
       console.error("Error loading case details:", error);

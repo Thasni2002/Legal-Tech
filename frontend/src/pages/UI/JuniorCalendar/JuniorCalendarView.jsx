@@ -263,16 +263,29 @@ export default function JuniorCalendarView() {
         let casesToShow = data;
         if (user && user.role && user.role.toLowerCase().includes("junior")) {
           casesToShow = data.filter((c) => {
-            if (!c.advocate_name) return false;
-            const normalizedAssignedName = c.advocate_name.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const primaryName = c.advocate_name || "";
+            const secondaryName = c.secondary_advocate_name || c.secondaryAdvocateName || "";
+
+            const normalizedPrimary = primaryName.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const normalizedSecondary = secondaryName.toLowerCase().replace(/[^a-z0-9]/g, "");
             const normalizedUsername = (user.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
             const normalizedEmail = (user.email || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-            return (
-              normalizedAssignedName === normalizedUsername ||
-              normalizedAssignedName === normalizedEmail ||
-              normalizedUsername.includes(normalizedAssignedName) ||
-              normalizedAssignedName.includes(normalizedUsername)
+
+            const isPrimaryMatch = primaryName && (
+              normalizedPrimary === normalizedUsername ||
+              normalizedPrimary === normalizedEmail ||
+              normalizedUsername.includes(normalizedPrimary) ||
+              normalizedPrimary.includes(normalizedUsername)
             );
+
+            const isSecondaryMatch = secondaryName && (
+              normalizedSecondary === normalizedUsername ||
+              normalizedSecondary === normalizedEmail ||
+              normalizedUsername.includes(normalizedSecondary) ||
+              normalizedSecondary.includes(normalizedUsername)
+            );
+
+            return isPrimaryMatch || isSecondaryMatch;
           });
         }
 

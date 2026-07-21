@@ -28,6 +28,7 @@ export default function LawfirmView() {
   const [caseFilter, setCaseFilter] = useState("All");
   const [advocatesPage, setAdvocatesPage] = useState(0);
   const [casesPage, setCasesPage] = useState(0);
+  const [selectedViewCase, setSelectedViewCase] = useState(null);
 
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -179,6 +180,19 @@ export default function LawfirmView() {
     return matchesSearch && matchesFilter;
   });
 
+  const getAdvocateProfileImage = (name) => {
+    if (!name) return null;
+    const normSearch = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const found = advocates.find((adv) => {
+      const advName = (adv.advocateName || adv.advocate_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      return advName === normSearch || advName.includes(normSearch) || normSearch.includes(advName);
+    });
+    if (found && (found.profileImage || found.profile_image)) {
+      return found.profileImage || found.profile_image;
+    }
+    return null;
+  };
+
   return (
     <div className="w-full space-y-5 sm:space-y-8 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
       {/* Header */}
@@ -195,28 +209,25 @@ export default function LawfirmView() {
 
       {/* Action Cards */}
       {allowedActions.length > 0 && (
-        <div className={`grid grid-cols-1 sm:grid-cols-${allowedActions.length} gap-4 sm:gap-6`}>
+        <div className={`grid grid-cols-1 sm:grid-cols-${allowedActions.length} gap-3 sm:gap-4`}>
           {allowedActions.map((item, index) => {
             const Icon = item.icon;
-
             return (
               <div
                 key={index}
-                className="bg-white rounded-2xl sm:rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-5 sm:p-8 hover:-translate-y-1 transition-transform duration-300 flex flex-col justify-between"
+                className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 flex items-center justify-between gap-4 hover:-translate-y-0.5 transition-transform duration-200"
               >
-                <div>
-                  <div className="w-14 h-14 bg-blue-50 text-[#2563EB] rounded-2xl flex items-center justify-center mb-6 border border-blue-100 shadow-sm">
-                    <Icon className="w-7 h-7" />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-50 text-[#2563EB] rounded-xl flex items-center justify-center border border-blue-100 flex-shrink-0">
+                    <Icon className="w-5 h-5" />
                   </div>
-
-                  <h3 className="font-extrabold text-xl text-[#0F172A] mb-6">
+                  <h3 className="font-bold text-base text-[#0F172A]">
                     {item.title}
                   </h3>
                 </div>
-
                 <button
                   onClick={() => router.push(item.path)}
-                  className={`px-8 py-3.5 rounded-full text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] w-full ${item.color}`}
+                  className={`px-5 py-2 rounded-full text-white text-xs font-bold uppercase tracking-wide transition-all shadow hover:shadow-md active:scale-[0.98] flex-shrink-0 ${item.color}`}
                 >
                   {item.button}
                 </button>
@@ -228,40 +239,40 @@ export default function LawfirmView() {
 
       {/* Stats Overview Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-6">
-        <div className="col-span-2 sm:col-span-1 bg-white rounded-2xl sm:rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-4 sm:p-8 hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-full blur-3xl opacity-60 -mr-10 -mt-10"></div>
+        <div className="col-span-2 sm:col-span-1 bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 hover:-translate-y-0.5 transition-transform duration-200 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-50 rounded-full blur-3xl opacity-60 -mr-8 -mt-8"></div>
           <div className="relative z-10">
-            <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center mb-6 border border-purple-200">
-              <Users className="w-6 h-6 text-purple-600" />
+            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center mb-3 border border-purple-200">
+              <Users className="w-5 h-5 text-purple-600" />
             </div>
-            <p className="text-[#64748B] text-sm font-semibold uppercase tracking-wider">Total Members</p>
-            <h3 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mt-3 text-[#0F172A]">
+            <p className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Total Members</p>
+            <h3 className="text-3xl font-extrabold mt-1 text-[#0F172A]">
               {advocates.length}
             </h3>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl sm:rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-4 sm:p-8 hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-full blur-3xl opacity-60 -mr-10 -mt-10"></div>
+        <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 hover:-translate-y-0.5 transition-transform duration-200 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-green-50 rounded-full blur-3xl opacity-60 -mr-8 -mt-8"></div>
           <div className="relative z-10">
-            <div className="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center mb-6 border border-green-200">
-              <Users className="w-6 h-6 text-green-600" />
+            <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center mb-3 border border-green-200">
+              <Users className="w-5 h-5 text-green-600" />
             </div>
-            <p className="text-[#64748B] text-sm font-semibold uppercase tracking-wider">Active Members</p>
-            <h3 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mt-3 text-[#0F172A]">
+            <p className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Active Members</p>
+            <h3 className="text-3xl font-extrabold mt-1 text-[#0F172A]">
               {advocates.filter((a) => a.status === "Active" || !a.status).length}
             </h3>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl sm:rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 p-4 sm:p-8 hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl opacity-60 -mr-10 -mt-10"></div>
+        <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 hover:-translate-y-0.5 transition-transform duration-200 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-red-50 rounded-full blur-3xl opacity-60 -mr-8 -mt-8"></div>
           <div className="relative z-10">
-            <div className="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center mb-6 border border-red-200">
-              <Users className="w-6 h-6 text-red-600" />
+            <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center mb-3 border border-red-200">
+              <Users className="w-5 h-5 text-red-600" />
             </div>
-            <p className="text-[#64748B] text-sm font-semibold uppercase tracking-wider">Inactive</p>
-            <h3 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mt-3 text-[#0F172A]">
+            <p className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Inactive</p>
+            <h3 className="text-3xl font-extrabold mt-1 text-[#0F172A]">
               {advocates.filter((a) => a.status === "Inactive").length}
             </h3>
           </div>
@@ -489,7 +500,7 @@ export default function LawfirmView() {
                     Case ID
                   </th>
                   <th className="hidden sm:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                    Advocate Name
+                    Advocates
                   </th>
                   <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-center text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
                     Actions
@@ -508,35 +519,53 @@ export default function LawfirmView() {
                       <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-bold text-[#0F172A]">{item.case_name}</td>
                       <td className="hidden sm:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">{item.id}</td>
                       <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">
-                        <div className="flex items-center gap-2">
-                           <img
-                            src={
-                            item.advocate_name
-                              ? `https://ui-avatars.com/api/?name=${item.advocate_name}&background=E2E8F0&color=64748B&rounded=true&bold=true`
-                              : `https://ui-avatars.com/api/?name=${item.role === 'Clerk' ? 'Clerk' : 'Advocate'}&background=E2E8F0&color=64748B&rounded=true&bold=true`
-                          }
-                          alt={item.advocate_name || (item.role === 'Clerk' ? "Clerk" : "Advocate")}
-                            className="w-8 h-8 rounded-full object-cover border border-slate-200"
-                          />
-                          <span>{item.advocate_name}</span>
+                        <div
+                          className="flex items-center -space-x-2 overflow-hidden cursor-pointer"
+                          title={`Primary Advocate: ${item.advocate_name || 'N/A'}${item.secondary_advocate_name || item.secondaryAdvocateName ? `, Standby Advocate: ${item.secondary_advocate_name || item.secondaryAdvocateName}` : ''}`}
+                        >
+                          {/* Primary Advocate Avatar */}
+                          {(() => {
+                            const pImg = getAdvocateProfileImage(item.advocate_name);
+                            const fallbackUrl = item.advocate_name
+                              ? `https://ui-avatars.com/api/?name=${encodeURIComponent(item.advocate_name)}&background=2563EB&color=FFFFFF&rounded=true&bold=true`
+                              : `https://ui-avatars.com/api/?name=Advocate&background=E2E8F0&color=64748B&rounded=true&bold=true`;
+                            return (
+                              <img
+                                src={pImg || fallbackUrl}
+                                alt={item.advocate_name || "Primary Advocate"}
+                                title={`Primary Advocate: ${item.advocate_name || 'N/A'}`}
+                                className="inline-block w-8 h-8 rounded-full ring-2 ring-white object-cover shadow-xs"
+                              />
+                            );
+                          })()}
+
+                          {/* Standby Advocate Avatar */}
+                          {(item.secondary_advocate_name || item.secondaryAdvocateName) && (() => {
+                            const secName = item.secondary_advocate_name || item.secondaryAdvocateName;
+                            const sImg = getAdvocateProfileImage(secName);
+                            const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(secName)}&background=F59E0B&color=FFFFFF&rounded=true&bold=true`;
+                            return (
+                              <img
+                                src={sImg || fallbackUrl}
+                                alt={secName}
+                                title={`Standby Advocate: ${secName}`}
+                                className="inline-block w-8 h-8 rounded-full ring-2 ring-amber-400 object-cover shadow-xs"
+                              />
+                            );
+                          })()}
                         </div>
                       </td>
 
                       {/* Actions */}
                       <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5">
                         <div className="flex justify-center gap-2">
-                          {hasPermission("Law Firm Management", "edit") && (
-                            <button
-                              onClick={() =>
-                                router.push(
-                                  `/lawfirm-management/assign-advocate?id=${item.id}`
-                                )
-                              }
-                              className="px-4 py-1.5 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-yellow-100 hover:text-yellow-600 text-[11px] font-bold uppercase tracking-widest transition-colors"
-                            >
-                              Edit
-                            </button>
-                          )}
+                          <button
+                            onClick={() => setSelectedViewCase(item)}
+                            className="w-8 h-8 rounded-full bg-blue-50 text-[#2563EB] hover:bg-blue-100 flex items-center justify-center transition-colors shadow-xs cursor-pointer"
+                            title="View Details & Edit"
+                          >
+                            <Eye size={15} />
+                          </button>
 
                           {hasPermission("Law Firm Management", "delete") && (
                             <button
@@ -544,7 +573,8 @@ export default function LawfirmView() {
                                 setDeleteType("case");
                                 setDeleteId(item.id);
                                 setShowDeleteModal(true);
-                              }} className="w-8 h-8 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors"
+                              }} className="w-8 h-8 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors cursor-pointer"
+                              title="Delete Assignment"
                             >
                               <Trash2 size={14} />
                             </button>
@@ -619,6 +649,163 @@ export default function LawfirmView() {
           </div>
 
         </div>
+        </div>,
+        document.body
+      )}
+      {selectedViewCase && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 sm:p-6">
+          <div className="w-full max-w-2xl md:max-w-3xl rounded-3xl bg-white shadow-2xl border border-slate-200 p-6 md:p-8 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] overflow-y-auto">
+            
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-slate-100 pb-4 mb-6">
+              <div>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+                    Assigned Case Details
+                  </span>
+                  <span className={`text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border ${
+                    selectedViewCase.status === "Active"
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : "bg-amber-50 text-amber-700 border-amber-200"
+                  }`}>
+                    {selectedViewCase.status || "Active"}
+                  </span>
+                </div>
+                <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 mt-1">
+                  {selectedViewCase.case_name || selectedViewCase.case_title}
+                </h2>
+                {selectedViewCase.case_number && (
+                  <p className="text-xs text-slate-500 font-semibold mt-1">
+                    Case No: <span className="font-mono text-slate-700 bg-slate-100 px-2 py-0.5 rounded">{selectedViewCase.case_number}</span>
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setSelectedViewCase(null)}
+                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 font-bold flex items-center justify-center transition cursor-pointer text-base shrink-0"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Case Info Grid */}
+            <div className="space-y-5 text-xs">
+              {/* Advocates Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80">
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-2">
+                    Primary Advocate (Lead)
+                  </span>
+                  <div className="flex items-center gap-3">
+                    {getAdvocateProfileImage(selectedViewCase.advocate_name) ? (
+                      <img
+                        src={getAdvocateProfileImage(selectedViewCase.advocate_name)}
+                        alt="Primary Advocate"
+                        className="w-9 h-9 rounded-full object-cover border-2 border-blue-300 shadow-xs"
+                      />
+                    ) : (
+                      <span className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center text-xs shadow-xs">PA</span>
+                    )}
+                    <div>
+                      <span className="font-bold text-slate-900 text-sm capitalize block">
+                        {selectedViewCase.advocate_name || "Not Specified"}
+                      </span>
+                      <span className="text-[11px] text-slate-500 font-medium">Primary Counsel</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80">
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-2">
+                    Standby Advocate (Backup)
+                  </span>
+                  <div className="flex items-center gap-3">
+                    {getAdvocateProfileImage(selectedViewCase.secondary_advocate_name || selectedViewCase.secondaryAdvocateName) ? (
+                      <img
+                        src={getAdvocateProfileImage(selectedViewCase.secondary_advocate_name || selectedViewCase.secondaryAdvocateName)}
+                        alt="Standby Advocate"
+                        className="w-9 h-9 rounded-full object-cover border-2 border-amber-300 shadow-xs"
+                      />
+                    ) : (
+                      <span className="w-9 h-9 rounded-full bg-amber-100 text-amber-700 font-black flex items-center justify-center text-xs shadow-xs">SA</span>
+                    )}
+                    <div>
+                      <span className="font-bold text-slate-900 text-sm capitalize block">
+                        {selectedViewCase.secondary_advocate_name || selectedViewCase.secondaryAdvocateName || "None"}
+                      </span>
+                      <span className="text-[11px] text-slate-500 font-medium">Backup / Proxy Counsel</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Forum & Client Info Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80">
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">
+                    Client Name
+                  </span>
+                  <span className="font-bold text-slate-900 text-sm">
+                    {selectedViewCase.client_name || "N/A"}
+                  </span>
+                </div>
+
+                <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80">
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">
+                    Court / Forum
+                  </span>
+                  <span className="font-bold text-slate-900 text-sm block truncate">
+                    {selectedViewCase.practice_court || selectedViewCase.practice_area || "N/A"}
+                  </span>
+                </div>
+
+                <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80">
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">
+                    Next Hearing Date
+                  </span>
+                  <span className="font-bold text-slate-900 text-sm block">
+                    {selectedViewCase.due_date || "No date scheduled"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Assignment Notes */}
+              {selectedViewCase.assignment_notes && (
+                <div className="bg-amber-50/50 p-4 rounded-2xl border border-amber-200/70">
+                  <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider block mb-1">
+                    Assignment Notes / Instructions
+                  </span>
+                  <p className="text-slate-800 italic font-medium leading-relaxed">
+                    "{selectedViewCase.assignment_notes}"
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions Footer */}
+            <div className="flex items-center justify-end gap-3 mt-8 pt-4 border-t border-slate-100">
+              <button
+                onClick={() => setSelectedViewCase(null)}
+                className="px-6 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-50 transition cursor-pointer"
+              >
+                Close
+              </button>
+
+              {hasPermission("Law Firm Management", "edit") && (
+                <button
+                  onClick={() => {
+                    const editId = selectedViewCase.id;
+                    setSelectedViewCase(null);
+                    router.push(`/lawfirm-management/assign-advocate?id=${editId}`);
+                  }}
+                  className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition cursor-pointer flex items-center gap-2"
+                >
+                  ✏️ Edit Assignment
+                </button>
+              )}
+            </div>
+
+          </div>
         </div>,
         document.body
       )}

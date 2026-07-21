@@ -9,11 +9,14 @@ export async function generateStaticParams() {
   ];
 }
 
+export const dynamicParams = true;
+
 export default async function Page({ params }) {
-  const { slug } = await params;
+  const resolvedParams = await params;
+  const slug = resolvedParams?.slug;
   return (
     <Suspense fallback={<div>Loading...</div>}>
       <LawfirmManagementClient slug={slug} />
     </Suspense>
   );
-}
+}

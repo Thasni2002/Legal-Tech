@@ -48,4 +48,4 @@ class AssignedCase(Base):
     assigned_documents = Column(LONGTEXT, nullable=True)
     appearances = Column(LONGTEXT, nullable=True)
     client_name = Column(String(255), nullable=True)
-    
+    secondary_advocate_name = Column(String(255), nullable=True)

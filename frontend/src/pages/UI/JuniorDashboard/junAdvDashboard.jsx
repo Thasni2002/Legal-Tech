@@ -48,19 +48,32 @@ export default function JunAdvDashView() {
         let casesToShow = data;
         if (user && user.role && user.role.toLowerCase().includes("junior")) {
           casesToShow = data.filter((item) => {
-            if (!item.advocate_name) return false;
-            const normalizedAssignedName = item.advocate_name.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const primaryName = item.advocate_name || "";
+            const secondaryName = item.secondary_advocate_name || item.secondaryAdvocateName || "";
+
+            const normalizedPrimary = primaryName.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const normalizedSecondary = secondaryName.toLowerCase().replace(/[^a-z0-9]/g, "");
             const normalizedUsername = (user.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
             const normalizedEmail = (user.email || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-            // Match by username OR email (advocates may log in with email)
-            return (
-              normalizedAssignedName === normalizedUsername ||
-              normalizedAssignedName === normalizedEmail ||
-              normalizedUsername.includes(normalizedAssignedName) ||
-              normalizedAssignedName.includes(normalizedUsername)
+
+            const isPrimaryMatch = primaryName && (
+              normalizedPrimary === normalizedUsername ||
+              normalizedPrimary === normalizedEmail ||
+              normalizedUsername.includes(normalizedPrimary) ||
+              normalizedPrimary.includes(normalizedUsername)
             );
+
+            const isSecondaryMatch = secondaryName && (
+              normalizedSecondary === normalizedUsername ||
+              normalizedSecondary === normalizedEmail ||
+              normalizedUsername.includes(normalizedSecondary) ||
+              normalizedSecondary.includes(normalizedUsername)
+            );
+
+            return isPrimaryMatch || isSecondaryMatch;
           });
         }
+
 
         // --- Stats ---
         const todayStr = new Date().toISOString().split("T")[0];
@@ -146,13 +159,17 @@ export default function JunAdvDashView() {
         const sortedDocs = juniorDocs.slice(-8).reverse();
         setRecentDocuments(sortedDocs);
 
-        // --- Cases table ---
         const formattedCases = casesToShow.map((item) => ({
           title: item.case_title || item.case_name,
           hearing: item.due_date ? item.due_date.split("T")[0] : "No date",
           status: item.status || "Active",
           clientName: item.client_name || "N/A",
+          court: item.practice_court || item.practice_area || "Family Court",
+          advocateName: item.advocate_name || "",
+          secondaryAdvocateName: item.secondaryAdvocateName || item.secondary_advocate_name || "",
         }));
+
+
 
         setCases(formattedCases);
       } catch (error) {
@@ -357,7 +374,8 @@ export default function JunAdvDashView() {
       <div className="grid lg:grid-cols-12 gap-8">
 
         {/* Cases Table */}
-        <div className="lg:col-span-8 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
+        <div className="lg:col-span-12 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
+
           <div className="flex justify-between items-center mb-8">
             <h2 className="text-2xl font-extrabold text-[#0F172A]">
               Assigned Cases
@@ -389,37 +407,165 @@ export default function JunAdvDashView() {
                   <tr>
                     <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case</th>
                     <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client Name</th>
+                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">My Role</th>
                     <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
                   </tr>
                 </thead>
 
                 <tbody className="divide-y divide-[#E2E8F0] bg-white">
-                  {cases.map((item, index) => (
-                    <tr key={index} className="hover:bg-[#F8FAFC] transition-colors duration-150">
-                      <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">
-                        {item.title}
-                      </td>
-                      <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">
-                        {item.clientName}
-                      </td>
-                      <td className="p-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${item.status === "Active"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : "bg-amber-50 text-amber-700 border-amber-200"
+                  {cases.map((item, index) => {
+                    const normUser = (userName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                    const normSec = (item.secondaryAdvocateName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                    const isStandby = normSec && (normSec === normUser || normUser.includes(normSec) || normSec.includes(normUser));
+
+                    return (
+                      <tr key={index} className="hover:bg-[#F8FAFC] transition-colors duration-150">
+                        <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">
+                          {item.title}
+                        </td>
+                        <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">
+                          {item.clientName}
+                        </td>
+                        <td className="p-4 whitespace-nowrap">
+                          {isStandby ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                              🛡️ Standby / Backup
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                              👤 Primary Counsel
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${item.status === "Active"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-amber-50 text-amber-700 border-amber-200"
+                            }`}>
+                            {item.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+
+          </div>
+        </div>
+
+
+        {/* Upcoming Court Hearings Table Card */}
+        <div className="lg:col-span-12 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
+          <div className="flex justify-between items-center mb-8">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-extrabold text-[#0F172A]">
+                  Upcoming Court Hearings
+                </h2>
+                <p className="text-xs text-[#64748B] font-medium mt-0.5">
+                  Hearings assigned to you as Primary or Standby Counsel
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => router.push("/calendar")}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2.5 rounded-full font-bold uppercase tracking-wider text-xs transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 cursor-pointer"
+            >
+              View Calendar
+            </button>
+          </div>
+
+          <div className="w-full overflow-x-auto rounded-2xl border border-[#E2E8F0]">
+            {loading ? (
+              <div className="p-8 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                  <p className="text-sm text-[#64748B] font-medium">Loading hearings…</p>
+                </div>
+              </div>
+            ) : upcomingHearingsList.length === 0 ? (
+              <div className="p-10 text-center text-[#94A3B8] font-medium text-sm">
+                No upcoming court hearings scheduled.
+              </div>
+            ) : (
+              <table className="min-w-full divide-y divide-[#E2E8F0]">
+                <thead className="bg-[#F8FAFC]">
+                  <tr>
+                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Hearing Date</th>
+                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case Title</th>
+                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Court / Forum</th>
+                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">My Role</th>
+                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-[#E2E8F0] bg-white">
+                  {upcomingHearingsList.map((item, index) => {
+                    const normUser = (userName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                    const normSec = (item.secondaryAdvocateName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                    const isStandby = normSec && (normSec === normUser || normUser.includes(normSec) || normSec.includes(normUser));
+
+                    const formatDate = (dStr) => {
+                      if (!dStr || dStr === "No date") return "No date";
+                      const parts = dStr.split("-");
+                      if (parts.length !== 3) return dStr;
+                      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                      const mIdx = parseInt(parts[1], 10) - 1;
+                      return `${parts[2]} ${months[mIdx]} ${parts[0]}`;
+                    };
+
+                    return (
+                      <tr key={index} className="hover:bg-[#F8FAFC] transition-colors duration-150">
+                        <td className="p-4 whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                            <Calendar size={13} />
+                            {formatDate(item.hearing)}
+                          </span>
+                        </td>
+                        <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">
+                          {item.title}
+                        </td>
+                        <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">
+                          {item.court || "Family Court"}
+                        </td>
+                        <td className="p-4 whitespace-nowrap">
+                          {isStandby ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                              🛡️ Standby / Backup
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                              👤 Primary Counsel
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                            item.status === "Active" || item.status === "Hearing"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-amber-50 text-amber-700 border-amber-200"
                           }`}>
-                          {item.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                            {item.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
           </div>
         </div>
 
+
         {/* Recent Documents */}
-        <div className="lg:col-span-4 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-6 md:p-8 flex flex-col">
+        <div className="lg:col-span-12 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-extrabold text-[#0F172A]">
               Recent Documents

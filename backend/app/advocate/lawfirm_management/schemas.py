@@ -71,8 +71,14 @@ class AssignedCaseCreate(BaseModel):
     assigned_documents: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
     appearances: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
     client_name: Optional[str] = None
+    secondary_advocate_name: Optional[str] = Field(None, alias="secondaryAdvocateName")
+
+    class Config:
+        populate_by_name = True
+        from_attributes = True
 
 class AssignedCaseOut(AssignedCaseCreate):
+
     id: int
     profile_image: Optional[str] = Field(None, alias="profileImage")
 
