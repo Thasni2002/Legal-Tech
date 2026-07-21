@@ -16,34 +16,64 @@ import AssignedCaseDetailView from "./AssignedCaseDetailView";
 const getStatusSelectClass = (status) => {
   switch (status) {
     case "Completed":
-      return "bg-green-100 text-green-700 border-green-200";
+    case "Judgment Delivered":
+    case "Won":
+      return "bg-emerald-100 text-emerald-800 border-emerald-300 font-bold";
     case "Closed":
-      return "bg-red-100 text-red-700 border-red-200";
+    case "Lost":
+      return "bg-rose-100 text-rose-800 border-rose-300 font-bold";
     case "In Progress":
-      return "bg-blue-100 text-blue-700 border-blue-200";
+    case "Hearing Scheduled":
+    case "Hearing Completed":
+    case "Case Preparation":
+    case "Advocate Assigned":
+      return "bg-blue-100 text-blue-800 border-blue-300";
     case "Active":
-      return "bg-emerald-100 text-emerald-700 border-emerald-200";
-    case "To Do":
-      return "bg-[#F8FAFC] text-[#64748B] border-[#E2E8F0]";
+    case "Document Verified":
+      return "bg-emerald-100 text-emerald-800 border-emerald-300";
+    case "Under Review":
+    case "Awaiting Judgment":
+    case "On Hold":
+    case "Document Pending":
+    case "Client Consulting":
+    case "Client Detail Collection":
+    case "Document Data Collection":
+    case "Court File":
+      return "bg-amber-100 text-amber-800 border-amber-300";
     default:
-      return "bg-gray-100 text-gray-700 border-gray-200";
+      return "bg-slate-100 text-slate-800 border-slate-300";
   }
 };
 
 const getStatusBadgeClass = (status) => {
   switch (status) {
     case "Completed":
-      return "bg-green-50 text-green-700 border border-green-100";
+    case "Judgment Delivered":
+    case "Won":
+      return "bg-emerald-50 text-emerald-700 border border-emerald-200 font-extrabold";
     case "Closed":
-      return "bg-red-50 text-red-700 border border-red-100";
+    case "Lost":
+      return "bg-rose-50 text-rose-700 border border-rose-200 font-extrabold";
     case "In Progress":
-      return "bg-blue-50 text-blue-700 border border-blue-100";
+    case "Hearing Scheduled":
+    case "Hearing Completed":
+    case "Case Preparation":
+    case "Advocate Assigned":
+      return "bg-blue-50 text-blue-700 border border-blue-200 font-bold";
     case "Active":
-      return "bg-emerald-50 text-emerald-700 border border-emerald-100";
-    case "To Do":
-      return "bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]";
+    case "Document Verified":
+      return "bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold";
+    case "Under Review":
+    case "Awaiting Judgment":
+    case "On Hold":
+    case "Document Pending":
+    case "Client Consulting":
+    case "Client Detail Collection":
+    case "Document Data Collection":
+    case "Court File":
+      return "bg-amber-50 text-amber-700 border border-amber-200 font-bold";
     default:
-      return "bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]";
+      return "bg-slate-100 text-slate-700 border border-slate-200 font-bold";
   }
 };
 
@@ -71,18 +101,32 @@ export default function AssignedCasesView() {
       let casesToShow = data;
       if (user && user.role && user.role.toLowerCase().includes("junior")) {
         casesToShow = data.filter((item) => {
-          if (!item.advocate_name) return false;
-          const normalizedAssignedName = item.advocate_name.toLowerCase().replace(/[^a-z0-9]/g, "");
+          const primaryName = item.advocate_name || "";
+          const secondaryName = item.secondary_advocate_name || item.secondaryAdvocateName || "";
+
+          const normalizedPrimary = primaryName.toLowerCase().replace(/[^a-z0-9]/g, "");
+          const normalizedSecondary = secondaryName.toLowerCase().replace(/[^a-z0-9]/g, "");
           const normalizedUsername = (user.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
           const normalizedEmail = (user.email || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-          return (
-            normalizedAssignedName === normalizedUsername ||
-            normalizedAssignedName === normalizedEmail ||
-            normalizedUsername.includes(normalizedAssignedName) ||
-            normalizedAssignedName.includes(normalizedUsername)
+
+          const isPrimaryMatch = primaryName && (
+            normalizedPrimary === normalizedUsername ||
+            normalizedPrimary === normalizedEmail ||
+            normalizedUsername.includes(normalizedPrimary) ||
+            normalizedPrimary.includes(normalizedUsername)
           );
+
+          const isSecondaryMatch = secondaryName && (
+            normalizedSecondary === normalizedUsername ||
+            normalizedSecondary === normalizedEmail ||
+            normalizedUsername.includes(normalizedSecondary) ||
+            normalizedSecondary.includes(normalizedUsername)
+          );
+
+          return isPrimaryMatch || isSecondaryMatch;
         });
       }
+
 
       const formattedCases = casesToShow.map((item) => ({
         id: item.id,
@@ -90,13 +134,19 @@ export default function AssignedCasesView() {
         title: item.case_title,
         caseNo: item.case_number,
         client: item.client_name || "N/A",
-        court: item.practice_area,
+        court: item.practice_court || item.practice_area || "N/A",
         hearing: item.due_date || "No hearing date",
         status: item.status || "Active",
         documents: item.assigned_documents || [],
         appearances: item.appearances || [],
         notes: item.assignment_notes || "",
+        primaryAdvocate: item.advocate_name || "",
+        secondaryAdvocate: item.secondaryAdvocateName || item.secondary_advocate_name || "",
+        secondary_advocate_name: item.secondaryAdvocateName || item.secondary_advocate_name || "",
+        advocate_name: item.advocate_name || "",
       }));
+
+
 
       setCases(formattedCases);
     } catch (error) {
@@ -109,8 +159,6 @@ export default function AssignedCasesView() {
   };
 
   const handleStatusChange = async (id, newStatus) => {
-    if (!perms.edit) return;
-
     try {
       const res = await fetch(
         `${API_BASE_URL}/lawfirm-management/assigned-cases/${id}/status`,
@@ -313,22 +361,11 @@ export default function AssignedCasesView() {
                     </td>
 
                     <td className="px-5 py-4">
-                      {perms.edit ? (
-                        <select
-                          value={item.status}
-                          onChange={(e) => handleStatusChange(item.id, e.target.value)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold border-0 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 cursor-pointer transition-colors ${getStatusSelectClass(item.status)}`}
-                        >
-                          <option value="Closed" className="bg-white text-[#0F172A]">Completed</option>
-                          <option value="In Progress" className="bg-white text-[#0F172A]">In Progress</option>
-                          <option value="Active" className="bg-white text-[#0F172A]">Active</option>
-                        </select>
-                      ) : (
-                        <span className={`px-3 py-1.5 rounded-lg text-xs font-bold inline-block ${getStatusBadgeClass(item.status)}`}>
-                          {item.status}
-                        </span>
-                      )}
+                      <span className={`px-3 py-1.5 rounded-lg text-xs font-bold inline-block uppercase tracking-wider shadow-xs ${getStatusBadgeClass(item.status)}`}>
+                        {item.status === "Won" ? "🏆 Case Won" : item.status === "Lost" ? "❌ Case Lost" : item.status}
+                      </span>
                     </td>
+
 
                     <td className="px-5 py-4">
                       <div className="flex gap-2">

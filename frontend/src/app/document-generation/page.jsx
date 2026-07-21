@@ -1,4 +1,5 @@
-import DocumentGenerationView from "@/pages/UI/DocumentGeneration/DocumentGenerationView";
+import DocumentGenerationView from "@/pages/UI/CaseManagement/DocumentGenerationView";
+
 
 export default function DocumentGenerationPage() {
     return (

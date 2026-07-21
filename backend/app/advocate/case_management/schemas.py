@@ -124,4 +124,24 @@ class CaseDocumentWorkflowResponse(BaseModel):
     updated_at: datetime
 
     class Config:
-        from_attributes = True
+        from_attributes = True
+
+
+class AIDocumentHistoryUpdate(BaseModel):
+    content: Optional[str] = None
+    prompt: Optional[str] = None
+
+
+class AIDocumentHistoryResponse(BaseModel):
+    id: int
+    case_id: Optional[int] = None
+    case_no: Optional[str] = None
+    case_title: Optional[str] = None
+    prompt: str
+    content: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+

@@ -70,4 +70,20 @@ class CaseDocumentWorkflow(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     junior = relationship("User", foreign_keys=[junior_id])
-    senior = relationship("User", foreign_keys=[senior_id])
+    senior = relationship("User", foreign_keys=[senior_id])
+
+
+class AIDocumentHistory(Base):
+    __tablename__ = "ai_document_histories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    case_id = Column(Integer, ForeignKey("case_management_cases.id", ondelete="CASCADE"), nullable=True)
+    case_no = Column(String(100), nullable=True)
+    case_title = Column(String(255), nullable=True)
+    prompt = Column(Text, nullable=False)
+    content = Column(LONGTEXT, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    case = relationship("app.advocate.case_management.models.Case", backref="ai_document_histories")
+

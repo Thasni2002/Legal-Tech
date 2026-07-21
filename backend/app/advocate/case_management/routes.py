@@ -27,6 +27,44 @@ def fetch_cases(
     return get_all_cases(db)
 
 
+from typing import Optional
+from .schemas import AIDocumentHistoryResponse, AIDocumentHistoryUpdate
+
+@router.get("/ai-documents/history", response_model=list[AIDocumentHistoryResponse])
+def fetch_ai_document_history(
+    case_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    from .service import get_ai_document_histories
+    return get_ai_document_histories(db, case_id=case_id)
+
+
+@router.put("/ai-documents/history/{doc_id}", response_model=AIDocumentHistoryResponse)
+def update_ai_document(
+    doc_id: int,
+    data: AIDocumentHistoryUpdate,
+    db: Session = Depends(get_db)
+):
+    from .service import update_ai_document_history
+    updated = update_ai_document_history(db, doc_id, content=data.content, prompt=data.prompt)
+    if not updated:
+        raise HTTPException(status_code=404, detail="AI document history item not found")
+    return updated
+
+
+@router.delete("/ai-documents/history/{doc_id}")
+def delete_ai_document(
+    doc_id: int,
+    db: Session = Depends(get_db)
+):
+    from .service import delete_ai_document_history
+    success = delete_ai_document_history(db, doc_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="AI document history item not found")
+    return {"message": "Document deleted successfully"}
+
+
+
 @router.get("/{case_id}")
 def fetch_case(
     case_id: int,
@@ -73,6 +111,10 @@ def generate_document(
 ):
     from .service import generate_legal_document
     return generate_legal_document(db, case_id, request.prompt)
+
+
+
+
 
 
 from fastapi import UploadFile, File, Response

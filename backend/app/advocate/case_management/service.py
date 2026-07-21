@@ -3,8 +3,9 @@ import json
 from datetime import datetime
 from fastapi import HTTPException
 
-from .models import Case
+from .models import Case, AIDocumentHistory
 from .schemas import CaseCreate, CaseUpdate
+
 
 
 def create_case(db: Session, data: CaseCreate):
@@ -102,13 +103,12 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
         case.status = data.status
         try:
             from app.advocate.lawfirm_management.models import AssignedCase
+            # Only match by the specific case.id to avoid cross-case contamination
+            # when multiple cases share the same case_no.
             assigned_cases = db.query(AssignedCase).filter(
-                (AssignedCase.case_id == case.id) |
-                ((AssignedCase.case_id == None) & (AssignedCase.case_number == case.case_no))
+                AssignedCase.case_id == case.id
             ).all()
             for ac in assigned_cases:
-                if ac.case_id is None:
-                    ac.case_id = case.id
                 if data.status == "Pending":
                     ac.status = "In Progress"
                 elif data.status == "Closed":
@@ -117,6 +117,7 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
                     ac.status = data.status
         except Exception as e:
             print(f"Error synchronizing case status to assignment: {e}")
+
     if data.selectedAdvocate is not None:
         case.selected_advocate = data.selectedAdvocate
         try:
@@ -242,9 +243,62 @@ User Request:
     try:
         model = genai.GenerativeModel('gemini-flash-latest')
         response = model.generate_content(full_prompt)
-        return {"document": response.text}
+        doc_content = response.text
+
+        # Save to history database table
+        history_item = AIDocumentHistory(
+            case_id=case.id,
+            case_no=case.case_no,
+            case_title=case.case_title,
+            prompt=user_prompt,
+            content=doc_content
+        )
+        db.add(history_item)
+        db.commit()
+        db.refresh(history_item)
+
+        return {
+            "id": history_item.id,
+            "document": doc_content,
+            "case_id": case.id,
+            "case_no": case.case_no,
+            "case_title": case.case_title,
+            "prompt": user_prompt,
+            "created_at": history_item.created_at.isoformat() if history_item.created_at else None
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
+
+
+def get_ai_document_histories(db: Session, case_id: int = None):
+    query = db.query(AIDocumentHistory)
+    if case_id:
+        query = query.filter(AIDocumentHistory.case_id == case_id)
+    return query.order_by(AIDocumentHistory.created_at.desc()).all()
+
+
+def update_ai_document_history(db: Session, doc_id: int, content: str = None, prompt: str = None):
+    doc = db.query(AIDocumentHistory).filter(AIDocumentHistory.id == doc_id).first()
+    if not doc:
+        return None
+    if content is not None:
+        doc.content = content
+    if prompt is not None:
+        doc.prompt = prompt
+    doc.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(doc)
+    return doc
+
+
+def delete_ai_document_history(db: Session, doc_id: int):
+    doc = db.query(AIDocumentHistory).filter(AIDocumentHistory.id == doc_id).first()
+    if not doc:
+        return False
+    db.delete(doc)
+    db.commit()
+    return True
+
 
 
 def ask_ai_assistant(db: Session, user_query: str, user_role: str = None, advocate_name: str = None, client_name: str = None):

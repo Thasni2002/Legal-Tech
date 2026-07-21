@@ -116,7 +116,10 @@ def create_assigned_case(
     case_dict = case_data.model_dump()
 
     case_dict["assigned_documents"] = json.dumps(
-        case_dict.get("assigned_documents", [])
+        case_dict.get("assigned_documents", []) if isinstance(case_dict.get("assigned_documents"), (list, dict)) else []
+    )
+    case_dict["appearances"] = json.dumps(
+        case_dict.get("appearances", []) if isinstance(case_dict.get("appearances"), (list, dict)) else []
     )
 
     # If documents are being assigned, validate that the advocate is already assigned to this case
@@ -177,6 +180,8 @@ def create_assigned_case(
         existing.assignment_notes = case_dict.get("assignment_notes") or existing.assignment_notes
         existing.status = case_dict.get("status", existing.status)
         existing.client_name = case_dict.get("client_name") or existing.client_name
+        existing.secondary_advocate_name = case_dict.get("secondary_advocate_name", existing.secondary_advocate_name)
+
 
         # MERGE documents — add incoming docs not already present (de-duped by filename).
         # This prevents a single-document assignment from wiping out all other documents.
@@ -192,6 +197,7 @@ def create_assigned_case(
         db.commit()
         db.refresh(existing)
         existing.assigned_documents = json.loads(existing.assigned_documents or "[]")
+        existing.appearances = json.loads(existing.appearances or "[]")
         return existing
 
     new_case = AssignedCase(
@@ -204,6 +210,9 @@ def create_assigned_case(
 
     new_case.assigned_documents = json.loads(
         new_case.assigned_documents or "[]"
+    )
+    new_case.appearances = json.loads(
+        new_case.appearances or "[]"
     )
 
     return new_case
@@ -299,9 +308,13 @@ def update_assigned_case(
         exclude_unset=True
     )
 
-    if "assigned_documents" in case_dict:
+    if "assigned_documents" in case_dict and isinstance(case_dict["assigned_documents"], (list, dict)):
         case_dict["assigned_documents"] = json.dumps(
             case_dict.get("assigned_documents", [])
+        )
+    if "appearances" in case_dict and isinstance(case_dict["appearances"], (list, dict)):
+        case_dict["appearances"] = json.dumps(
+            case_dict.get("appearances", [])
         )
 
     for key, value in case_dict.items():
@@ -309,6 +322,8 @@ def update_assigned_case(
 
     if isinstance(assigned_case.assigned_documents, (list, dict)):
         assigned_case.assigned_documents = json.dumps(assigned_case.assigned_documents)
+    if isinstance(assigned_case.appearances, (list, dict)):
+        assigned_case.appearances = json.dumps(assigned_case.appearances)
 
     db.commit()
     db.refresh(assigned_case)
@@ -316,5 +331,9 @@ def update_assigned_case(
     assigned_case.assigned_documents = json.loads(
         assigned_case.assigned_documents or "[]"
     )
+    assigned_case.appearances = json.loads(
+        assigned_case.appearances or "[]"
+    )
+
 
     return assigned_case

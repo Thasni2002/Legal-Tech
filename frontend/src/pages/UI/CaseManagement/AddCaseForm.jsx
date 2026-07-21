@@ -405,10 +405,10 @@ function ErrorMsg({ message }) {
   );
 }
 
-export default function AddCaseForm() {
+export default function AddCaseForm({ editId: propEditId } = {}) {
   const router = useRouter();
   const params = useParams();
-  const editId = params?.id;
+  const editId = propEditId || params?.id;
 
   const isEditMode = !!editId;
   const [documents, setDocuments] = useState([
@@ -500,33 +500,43 @@ export default function AddCaseForm() {
       });
       setSelectedAdvocate(data.selected_advocate || "");
       setOriginalEmail(data.email_id || "");
-      if (data.documents && data.documents.length > 0) {
-        setDocuments(data.documents.map(d => {
-          const rawType = d.documentType || "";
-          let category = "";
-          let subtype = rawType;
-          if (rawType.includes(": ")) {
-            const parts = rawType.split(": ");
-            category = parts[0];
-            subtype = parts[1];
-          } else {
-            for (const [cat, types] of Object.entries(documentCategories)) {
-              if (types.includes(rawType)) {
-                category = cat;
-                break;
-              }
-            }
-            if (!category) category = "Evidence/Documents";
+      if (data.documents) {
+        let docsArr = data.documents;
+        if (typeof docsArr === "string") {
+          try {
+            docsArr = JSON.parse(docsArr);
+          } catch (e) {
+            docsArr = [];
           }
-          return {
-            documentCategory: category,
-            documentType: subtype,
-            advocate: d.advocate || "",
-            file: d.file ? { name: d.file } : null,
-            url: d.url || null,
-            password: d.password || "",
-          };
-        }));
+        }
+        if (Array.isArray(docsArr) && docsArr.length > 0) {
+          setDocuments(docsArr.map(d => {
+            const rawType = d.documentType || "";
+            let category = "";
+            let subtype = rawType;
+            if (rawType.includes(": ")) {
+              const parts = rawType.split(": ");
+              category = parts[0];
+              subtype = parts[1];
+            } else {
+              for (const [cat, types] of Object.entries(documentCategories)) {
+                if (types.includes(rawType)) {
+                  category = cat;
+                  break;
+                }
+              }
+              if (!category) category = "Evidence/Documents";
+            }
+            return {
+              documentCategory: category,
+              documentType: subtype,
+              advocate: d.advocate || "",
+              file: d.file ? { name: d.file } : null,
+              url: d.url || null,
+              password: d.password || "",
+            };
+          }));
+        }
       }
       setClientMode("new"); // Force show fields in edit mode
     } catch (err) {
@@ -1418,7 +1428,7 @@ export default function AddCaseForm() {
                 >
                   <option value="">Select Subtype</option>
                   {selectedCategory &&
-                    keralaCaseCategories[selectedCategory].map((sub) => (
+                    (keralaCaseCategories[selectedCategory] || []).map((sub) => (
                       <option key={sub} value={sub}>
                         {sub}
                       </option>
@@ -1470,18 +1480,7 @@ export default function AddCaseForm() {
               </div>
             </div>
 
-              {/* Date */}
-              {/* <div>
-                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Date</label>
-                <input
-                  type="date"
-                  name="nextHearingDate"
-                  value={formData.nextHearingDate || ""}
-                  onChange={handleChange}
-                  className={`${baseInputClass} ${getBorderClass("nextHearingDate")}`}
-                />
-                {touched.nextHearingDate && errors.nextHearingDate && <ErrorMsg message={errors.nextHearingDate} />}
-              </div> */}
+
 
             {/* Facts (Full Width) */}
             <div>
@@ -1533,7 +1532,7 @@ export default function AddCaseForm() {
                 <select name="courtType" value={formData.courtType} onChange={handleChange}
                   className={`${baseInputClass} ${getBorderClass("courtType")}`}>
                   <option value="">Select Court Type</option>
-                  {getTypesForCourtName(formData.courtName).map((type) => (
+                  {(getTypesForCourtName(formData.courtName) || []).map((type) => (
                     <option key={type} value={type}>{type}</option>
                   ))}
                 </select>

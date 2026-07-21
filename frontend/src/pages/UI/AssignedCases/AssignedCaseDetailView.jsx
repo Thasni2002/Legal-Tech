@@ -350,23 +350,8 @@ export default function AssignedCaseDetailView({
             </div>
           </div>
 
-          <div className="flex items-center gap-3 self-start sm:self-auto">
-            {perms.edit ? (
-              <select
-                value={selectedCase.status}
-                onChange={(e) => handleStatusChange(selectedCase.id, e.target.value)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold border-0 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 cursor-pointer transition-colors shadow-xs ${getStatusSelectClass(selectedCase.status)}`}
-              >
-                <option value="Closed" className="bg-white text-[#0F172A]">Completed</option>
-                <option value="In Progress" className="bg-white text-[#0F172A]">In Progress</option>
-                <option value="Active" className="bg-white text-[#0F172A]">Active</option>
-              </select>
-            ) : (
-              <span className={`px-4 py-2 rounded-xl text-xs font-bold inline-block shadow-xs ${getStatusBadgeClass(selectedCase.status)}`}>
-                {selectedCase.status}
-              </span>
-            )}
-          </div>
+
+
         </div>
 
         {/* Top Segmented Tab Navigation */}
@@ -463,13 +448,34 @@ export default function AssignedCaseDetailView({
           {/* ── Tab 1: Overview & Strategy ── */}
           {caseTab === "overview" && (
             <div className="space-y-8 animate-in fade-in duration-200">
+              {/* Standby Advocate Alert Banner */}
+              {(() => {
+                const normUser = (loggedInUser?.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                const normSec = (selectedCase.secondaryAdvocate || selectedCase.secondary_advocate_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                const isStandby = normSec && (normSec === normUser || normUser.includes(normSec) || normSec.includes(normUser));
+                if (!isStandby) return null;
+                return (
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3.5 text-amber-900 shadow-xs">
+                    <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 text-xl font-bold">
+                      🛡️
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-extrabold uppercase tracking-wider text-amber-900">You are assigned as Standby / Backup Advocate</h4>
+                      <p className="text-xs text-amber-800 font-medium mt-0.5">
+                        Primary Counsel: <span className="font-bold">{selectedCase.primaryAdvocate || selectedCase.advocate_name || "N/A"}</span>. You have full proxy access to manage hearings, log court appearances, and view records if the primary advocate is absent.
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div>
                 <h3 className="text-sm font-extrabold uppercase tracking-wider text-[#64748B] mb-4 flex items-center gap-2">
                   <Building2 size={16} className="text-[#2563EB]" />
-                  <span>Case Forum & Information</span>
+                  <span>Case Forum & Assigned Counsel</span>
                 </h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200/80 hover:border-slate-300 transition-all">
                     <span className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider block mb-1.5">
                       Client Name
@@ -483,6 +489,43 @@ export default function AssignedCaseDetailView({
                       </span>
                     </div>
                   </div>
+
+                  <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200/80 hover:border-slate-300 transition-all">
+                    <span className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider block mb-1.5">
+                      Primary Advocate
+                    </span>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0 font-black text-xs">
+                        PA
+                      </div>
+                      <span className="text-sm font-bold text-[#0F172A] truncate">
+                        {(() => {
+                          const p = selectedCase.primaryAdvocate || selectedCase.advocate_name || selectedCase.advocateName;
+                          if (!p) return "Not Specified";
+                          return p.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200/80 hover:border-slate-300 transition-all">
+                    <span className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider block mb-1.5">
+                      Standby Advocate
+                    </span>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 shrink-0 font-black text-xs">
+                        SA
+                      </div>
+                      <span className="text-sm font-bold text-[#0F172A] truncate">
+                        {(() => {
+                          const s = selectedCase.secondaryAdvocate || selectedCase.secondary_advocate_name || selectedCase.secondaryAdvocateName;
+                          if (!s || s === "None") return "None";
+                          return s.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+
 
                   <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200/80 hover:border-slate-300 transition-all">
                     <span className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider block mb-1.5">
@@ -513,17 +556,49 @@ export default function AssignedCaseDetailView({
                   </div>
 
                   <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200/80 hover:border-slate-300 transition-all">
-                    <span className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider block mb-1.5">
-                      Current Status
+                    <span className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider block mb-1.5 flex items-center justify-between">
+                      <span>Current Status</span>
+                      <span className="text-[9px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded">Update Status</span>
                     </span>
                     <div className="mt-1">
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${getStatusBadgeClass(selectedCase.status)}`}>
-                        {selectedCase.status}
-                      </span>
+                      <select
+                        value={selectedCase.status || "Active"}
+                        onChange={(e) => {
+                          const newStatus = e.target.value;
+                          if (handleStatusChange && selectedCase.id) {
+                            handleStatusChange(selectedCase.id, newStatus);
+                          }
+                        }}
+                        className={`w-full px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wider border outline-none cursor-pointer transition-all shadow-xs ${
+                          getStatusSelectClass ? getStatusSelectClass(selectedCase.status) : "bg-white text-slate-800 border-slate-200"
+                        }`}
+                      >
+                        <option value="Active" className="bg-white text-slate-800">Active</option>
+                        <option value="Client Consulting" className="bg-white text-slate-800">Client Consulting</option>
+                        <option value="Client Detail Collection" className="bg-white text-slate-800">Client Detail Collection</option>
+                        <option value="Document Data Collection" className="bg-white text-slate-800">Document Data Collection</option>
+                        <option value="Document Pending" className="bg-white text-slate-800">Document Pending</option>
+                        <option value="Document Verified" className="bg-white text-slate-800">Document Verified</option>
+                        <option value="Advocate Assigned" className="bg-white text-slate-800">Advocate Assigned</option>
+                        <option value="Under Review" className="bg-white text-slate-800">Under Review</option>
+                        <option value="Case Preparation" className="bg-white text-slate-800">Case Preparation</option>
+                        <option value="Court File" className="bg-white text-slate-800">Court File</option>
+                        <option value="In Progress" className="bg-white text-slate-800">In Progress</option>
+                        <option value="Hearing Scheduled" className="bg-white text-slate-800">Hearing Scheduled</option>
+                        <option value="Hearing Completed" className="bg-white text-slate-800">Hearing Completed</option>
+                        <option value="Awaiting Judgment" className="bg-white text-slate-800">Awaiting Judgment</option>
+                        <option value="Judgment Delivered" className="bg-white text-slate-800">Judgment Delivered</option>
+                        <option value="Won" className="bg-white text-emerald-700 font-bold">🏆 Case Won</option>
+                        <option value="Lost" className="bg-white text-rose-700 font-bold">❌ Case Lost</option>
+                        <option value="On Hold" className="bg-white text-slate-800">On Hold</option>
+                        <option value="Closed" className="bg-white text-slate-800">Closed</option>
+                      </select>
                     </div>
                   </div>
+
                 </div>
               </div>
+
 
               <div>
                 <h3 className="text-sm font-extrabold uppercase tracking-wider text-[#64748B] mb-4 flex items-center gap-2">
