@@ -2,17 +2,41 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { FileText, FolderOpen, User, CheckSquare, Plus, Trash2 } from "lucide-react";
+import { FileText, FolderOpen, User, CheckSquare, Plus, Trash2, AlertCircle } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
+import { API_BASE_URL } from "@/utils/api";
 
 export default function ClerkDashboard() {
   const router = useRouter();
   const [user, setUser] = useState(null);
-
-  // Dynamic tasks state
   const [tasks, setTasks] = useState([]);
-  const [isHydrated, setIsHydrated] = useState(false);
   const [newTaskText, setNewTaskText] = useState("");
+  const [stats, setStats] = useState({ templates: 12, cabinets: 4, objections: 2 });
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchTasks = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/clerk/dashboard/tasks`);
+      if (response.ok) {
+        const data = await response.json();
+        setTasks(data);
+      }
+    } catch (e) {
+      console.error("Failed to load tasks:", e);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/clerk/dashboard/stats`);
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data);
+      }
+    } catch (e) {
+      console.error("Failed to load stats:", e);
+    }
+  };
 
   useEffect(() => {
     const loggedIn = getLoggedInUser();
@@ -20,68 +44,60 @@ export default function ClerkDashboard() {
       router.push("/login");
     } else {
       setUser(loggedIn);
+      setIsLoading(true);
+      Promise.all([fetchTasks(), fetchStats()]).finally(() => {
+        setIsLoading(false);
+      });
     }
-
-    // Load from localStorage on mount
-    const savedTasks = localStorage.getItem("clerk_tasks");
-    if (savedTasks) {
-      try {
-        setTasks(JSON.parse(savedTasks));
-      } catch (e) {
-        console.error("Failed to load tasks:", e);
-      }
-    } else {
-      setTasks([
-        { id: 1, text: "Generate Vakalatnama printout for Adv. Ram", completed: true },
-        { id: 2, text: "Format physical file folders for cases registered yesterday", completed: false },
-        { id: 3, text: "Review document template updates", completed: false },
-      ]);
-    }
-    setIsHydrated(true);
   }, [router]);
 
-  useEffect(() => {
-    if (isHydrated) {
-      localStorage.setItem("clerk_tasks", JSON.stringify(tasks));
-    }
-  }, [tasks, isHydrated]);
-
-  const handleAddTask = (e) => {
+  const handleAddTask = async (e) => {
     e.preventDefault();
     if (!newTaskText.trim()) return;
-    setTasks([
-      ...tasks,
-      { id: Date.now(), text: newTaskText.trim(), completed: false }
-    ]);
-    setNewTaskText("");
+    try {
+      const response = await fetch(`${API_BASE_URL}/clerk/dashboard/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: newTaskText.trim(), completed: false })
+      });
+      if (response.ok) {
+        const newTask = await response.json();
+        setTasks((prev) => [...prev, newTask]);
+        setNewTaskText("");
+      }
+    } catch (e) {
+      console.error("Failed to add task:", e);
+    }
   };
 
-  const toggleTask = (id) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+  const toggleTask = async (id, currentCompleted) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/clerk/dashboard/tasks/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed: !currentCompleted })
+      });
+      if (response.ok) {
+        const updatedTask = await response.json();
+        setTasks((prev) => prev.map((t) => (t.id === id ? updatedTask : t)));
+      }
+    } catch (e) {
+      console.error("Failed to toggle task:", e);
+    }
   };
 
-  const deleteTask = (id) => {
-    setTasks(tasks.filter(t => t.id !== id));
+  const deleteTask = async (id) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/clerk/dashboard/tasks/${id}`, {
+        method: "DELETE"
+      });
+      if (response.ok) {
+        setTasks((prev) => prev.filter((t) => t.id !== id));
+      }
+    } catch (e) {
+      console.error("Failed to delete task:", e);
+    }
   };
-
-  const clerkActions = [
-    {
-      id: "doc-draft-btn",
-      title: "Document Draft",
-      description: "Draft legal documents, fill templates (Petitions, Affidavits) and export for court filing.",
-      icon: FileText,
-      color: "from-blue-500 to-indigo-600",
-      path: "/clerk/document-draft",
-    },
-    {
-      id: "physical-file-btn",
-      title: "Format Physical File",
-      description: "Log cabinet locations, organize shelving indices, and print folder spine labels.",
-      icon: FolderOpen,
-      color: "from-emerald-500 to-teal-600",
-      path: "/clerk/format-physical-file",
-    },
-  ];
 
   if (!user) {
     return (
@@ -121,53 +137,27 @@ export default function ClerkDashboard() {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div className="bg-white rounded-2xl p-6 border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow">
           <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4 border border-blue-100">
             <FileText size={22} />
           </div>
-          <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Physical File Templates</p>
-          <h3 className="text-2xl font-extrabold text-[#0F172A] mt-2">12 Ready Templates</h3>
+          <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Templates & Drafts</p>
+          <h3 className="text-2xl font-extrabold text-[#0F172A] mt-2">{stats.templates} Registered</h3>
         </div>
         <div className="bg-white rounded-2xl p-6 border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow">
           <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4 border border-emerald-100">
             <FolderOpen size={22} />
           </div>
           <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Active Shelf Cabinets</p>
-          <h3 className="text-2xl font-extrabold text-[#0F172A] mt-2">4 Active Cabinets</h3>
+          <h3 className="text-2xl font-extrabold text-[#0F172A] mt-2">{stats.cabinets} Cabinets</h3>
         </div>
-      </div>
-
-      {/* Quick Action Cards */}
-      <div className="space-y-6">
-        <h2 className="text-xl font-extrabold text-[#0F172A] flex items-center gap-2">
-          <span>⚡</span> Quick Actions
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {clerkActions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <div
-                key={action.id}
-                className="bg-white rounded-3xl border border-[#E2E8F0] hover:border-slate-300 shadow-sm p-6 hover:-translate-y-1 transition duration-300 flex flex-col justify-between"
-              >
-                <div>
-                  <div className={`w-14 h-14 bg-gradient-to-br ${action.color} text-white rounded-2xl flex items-center justify-center mb-6 shadow-md`}>
-                    <Icon size={24} />
-                  </div>
-                  <h3 className="text-[#0F172A] font-extrabold text-lg mb-2">{action.title}</h3>
-                  <p className="text-[#64748B] text-sm font-medium leading-relaxed mb-6">{action.description}</p>
-                </div>
-                <button
-                  id={action.id}
-                  onClick={() => router.push(action.path)}
-                  className="w-full bg-[#0F172A] hover:bg-[#1E293B] text-white font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl transition duration-200 shadow-sm"
-                >
-                  Open Tool
-                </button>
-              </div>
-            );
-          })}
+        <div className="bg-white rounded-2xl p-6 border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow">
+          <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center mb-4 border border-amber-100">
+            <AlertCircle size={22} />
+          </div>
+          <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Pending Objections</p>
+          <h3 className="text-2xl font-extrabold text-[#0F172A] mt-2">{stats.objections} Objections</h3>
         </div>
       </div>
 
@@ -197,32 +187,40 @@ export default function ClerkDashboard() {
         </div>
 
         <div className="divide-y divide-[#F1F5F9] font-medium text-sm text-[#334155]">
-          {tasks.map((task) => (
-            <div key={task.id} className="py-3.5 flex items-center justify-between gap-3 group">
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={task.completed}
-                  onChange={() => toggleTask(task.id)}
-                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
-                />
-                <span className={task.completed ? "line-through text-slate-400" : ""}>
-                  {task.text}
-                </span>
-              </div>
-              <button
-                onClick={() => deleteTask(task.id)}
-                className="text-slate-400 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 focus:opacity-100 transition duration-200"
-                title="Delete Task"
-              >
-                <Trash2 size={16} />
-              </button>
+          {isLoading ? (
+            <div className="py-6 text-center text-slate-400 font-medium animate-pulse">
+              Loading checklist...
             </div>
-          ))}
-          {tasks.length === 0 && (
-            <div className="py-6 text-center text-slate-400 font-medium">
-              No tasks logged. Add a new task above!
-            </div>
+          ) : (
+            <>
+              {tasks.map((task) => (
+                <div key={task.id} className="py-3.5 flex items-center justify-between gap-3 group">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={task.completed}
+                      onChange={() => toggleTask(task.id, task.completed)}
+                      className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                    />
+                    <span className={task.completed ? "line-through text-slate-400" : ""}>
+                      {task.text}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => deleteTask(task.id)}
+                    className="text-slate-400 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 focus:opacity-100 transition duration-200"
+                    title="Delete Task"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+              {tasks.length === 0 && (
+                <div className="py-6 text-center text-slate-400 font-medium">
+                  No tasks logged. Add a new task above!
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

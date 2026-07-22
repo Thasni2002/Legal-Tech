@@ -49,7 +49,6 @@ const ALL_MODULES = [
   "Clerk Dashboard",
   "Document Draft",
   "Format Physical File",
-  "Case Number from Court",
   "Leave Management",
   "Junior Leave",
   "Clerk Leave",
@@ -107,7 +106,6 @@ const SENIOR_JUNIOR_MODULES = [
       { key: "Clerk Dashboard", label: "Dashboard (Clerk)" },
       { key: "Document Draft", label: "Document Draft" },
       { key: "Format Physical File", label: "Format Physical File" },
-      { key: "Case Number from Court", label: "Case Number from Court" },
       { key: "Clerk Leave", label: "Clerk Leave" },
     ]
   }

@@ -106,7 +106,6 @@ const ALL_GROUPS = [
       { key: "Clerk Dashboard", label: "Dashboard (Clerk)" },
       { key: "Document Draft", label: "Document Draft" },
       { key: "Format Physical File", label: "Format Physical File" },
-      { key: "Case Number from Court", label: "Case Number from Court" },
       { key: "Clerk Leave", label: "Clerk Leave" },
     ]
   }
@@ -163,7 +162,6 @@ const DEFAULT_PERMISSIONS = {
     "Clerk Dashboard": { view: true, add: true, edit: true, delete: true },
     "Document Draft": { view: true, add: true, edit: true, delete: true },
     "Format Physical File": { view: true, add: true, edit: true, delete: true },
-    "Case Number from Court": { view: true, add: true, edit: true, delete: true },
     "Leave Management": { view: true, add: true, edit: true, delete: true },
     "Junior Leave": { view: true, add: true, edit: true, delete: true },
     "Clerk Leave": { view: true, add: true, edit: true, delete: true }
@@ -195,7 +193,6 @@ const DEFAULT_PERMISSIONS = {
     "Clerk Dashboard": { view: false, add: false, edit: false, delete: false },
     "Document Draft": { view: false, add: false, edit: false, delete: false },
     "Format Physical File": { view: false, add: false, edit: false, delete: false },
-    "Case Number from Court": { view: false, add: false, edit: false, delete: false },
     "Leave Management": { view: false, add: false, edit: false, delete: false },
     "Junior Leave": { view: true, add: true, edit: true, delete: false },
     "Clerk Leave": { view: false, add: false, edit: false, delete: false }
@@ -227,7 +224,6 @@ const DEFAULT_PERMISSIONS = {
     "Clerk Dashboard": { view: false, add: false, edit: false, delete: false },
     "Document Draft": { view: false, add: false, edit: false, delete: false },
     "Format Physical File": { view: false, add: false, edit: false, delete: false },
-    "Case Number from Court": { view: false, add: false, edit: false, delete: false },
     "Leave Management": { view: false, add: false, edit: false, delete: false },
     "Junior Leave": { view: false, add: false, edit: false, delete: false },
     "Clerk Leave": { view: false, add: false, edit: false, delete: false }
@@ -259,7 +255,6 @@ const DEFAULT_PERMISSIONS = {
     "Clerk Dashboard": { view: true, add: true, edit: true, delete: true },
     "Document Draft": { view: true, add: true, edit: true, delete: true },
     "Format Physical File": { view: true, add: true, edit: true, delete: true },
-    "Case Number from Court": { view: true, add: true, edit: true, delete: true },
     "Leave Management": { view: false, add: false, edit: false, delete: false },
     "Junior Leave": { view: true, add: false, edit: true, delete: false },
     "Clerk Leave": { view: true, add: true, edit: true, delete: true }
