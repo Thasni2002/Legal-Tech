@@ -21,6 +21,7 @@ import {
   UserCheck,
   Building,
   Users,
+  ArrowLeft,
 } from "lucide-react";
 import { API_BASE_URL } from "@/utils/api";
 import { getLoggedInUser } from "@/utils/auth";
@@ -67,8 +68,13 @@ export default function LeaveManagementView({
   // Clerk specific tab: "own" vs "team"
   const [clerkTab, setClerkTab] = useState("own"); // "own" | "team"
 
-  // Modal States
-  const [showApplyModal, setShowApplyModal] = useState(false);
+  // Apply View Page State
+  const [isApplying, setIsApplying] = useState(false);
+  const [duration, setDuration] = useState("Multiple Days"); // "Single Day" | "Half Day" | "Multiple Days"
+  const [halfDayPeriod, setHalfDayPeriod] = useState("First Half"); // "First Half" | "Second Half"
+  const [leaveTypeSearch, setLeaveTypeSearch] = useState("");
+  const [isLeaveTypeDropdownOpen, setIsLeaveTypeDropdownOpen] = useState(false);
+
   const [showActionModal, setShowActionModal] = useState(false);
   const [selectedLeave, setSelectedLeave] = useState(null);
   const [actionType, setActionType] = useState("Approved"); // Approved or Rejected
@@ -76,7 +82,7 @@ export default function LeaveManagementView({
 
   // Apply Form State
   const [applyForm, setApplyForm] = useState({
-    leave_type: "Emergency Leave",
+    leave_type: "Casual Leave",
     subject: "",
     description: "",
     from_date: "",
@@ -180,9 +186,10 @@ export default function LeaveManagementView({
       });
 
       if (res.ok) {
-        setShowApplyModal(false);
+        setIsApplying(false);
         setApplyForm({
-          leave_type: "Emergency Leave",
+          leave_type: "Casual Leave",
+          subject: "",
           description: "",
           from_date: "",
           to_date: "",
@@ -392,6 +399,360 @@ export default function LeaveManagementView({
     return "Review employee leave applications and manage balances";
   };
 
+  if (isApplying) {
+    const leaveTypesList = [
+      "Select Leave Type",
+      "Emergency Leave",
+      "Casual Leave",
+      "Sick Leave",
+      "Floater Leave",
+      "Loss of Pay",
+    ];
+
+    const filteredLeaveTypes = leaveTypesList.filter((t) =>
+      t.toLowerCase().includes(leaveTypeSearch.toLowerCase())
+    );
+
+    return (
+      <div style={{ padding: "32px", maxWidth: "900px", margin: "0 auto", fontFamily: "Inter, sans-serif" }}>
+        {/* Top Header with Back Button */}
+        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "28px" }}>
+          <button
+            type="button"
+            onClick={() => setIsApplying(false)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "42px",
+              height: "42px",
+              borderRadius: "50%",
+              border: "1px solid #E2E8F0",
+              background: "#ffffff",
+              color: "#0F172A",
+              cursor: "pointer",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+              transition: "all 0.2s",
+            }}
+          >
+            <ArrowLeft style={{ width: "20px", height: "20px" }} />
+          </button>
+          <div>
+            <h1 style={{ fontSize: "24px", fontWeight: "800", color: "#0F172A", margin: 0, tracking: "-0.02em" }}>
+              Apply for Leave
+            </h1>
+            <p style={{ fontSize: "14px", color: "#64748B", margin: "4px 0 0 0", fontWeight: "500" }}>
+              Submit a new leave application for approval
+            </p>
+          </div>
+        </div>
+
+        {/* Form Container */}
+        <form
+          onSubmit={handleApplySubmit}
+          style={{
+            background: "#ffffff",
+            borderRadius: "24px",
+            border: "1px solid #E2E8F0",
+            padding: "36px",
+            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.04)",
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+            {/* Leave Type Selector (Searchable Dropdown matching Screenshot 4) */}
+            <div style={{ position: "relative" }}>
+              <label style={{ display: "block", fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "8px" }}>
+                Leave Type <span style={{ color: "#DC2626" }}>*</span>
+              </label>
+              <div style={{ position: "relative" }}>
+                <button
+                  type="button"
+                  onClick={() => setIsLeaveTypeDropdownOpen(!isLeaveTypeDropdownOpen)}
+                  style={{
+                    width: "100%",
+                    padding: "14px 16px",
+                    borderRadius: "12px",
+                    border: "1px solid #CBD5E1",
+                    background: "#F8FAFC",
+                    fontSize: "15px",
+                    color: applyForm.leave_type ? "#0F172A" : "#64748B",
+                    fontWeight: "500",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    cursor: "pointer",
+                    outline: "none",
+                  }}
+                >
+                  <span>{applyForm.leave_type || "Select Leave Type"}</span>
+                  <ChevronDown style={{ width: "18px", height: "18px", color: "#64748B" }} />
+                </button>
+
+                {isLeaveTypeDropdownOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      right: 0,
+                      marginTop: "6px",
+                      background: "#ffffff",
+                      border: "1px solid #E2E8F0",
+                      borderRadius: "16px",
+                      boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
+                      zIndex: 50,
+                      overflow: "hidden",
+                      padding: "8px",
+                    }}
+                  >
+                    {/* Search inside dropdown */}
+                    <div style={{ position: "relative", marginBottom: "8px", padding: "4px" }}>
+                      <Search style={{ position: "absolute", left: "14px", top: "14px", width: "16px", height: "16px", color: "#94A3B8" }} />
+                      <input
+                        type="text"
+                        placeholder="Search..."
+                        value={leaveTypeSearch}
+                        onChange={(e) => setLeaveTypeSearch(e.target.value)}
+                        style={{
+                          width: "100%",
+                          paddingLeft: "36px",
+                          paddingRight: "12px",
+                          paddingTop: "10px",
+                          paddingBottom: "10px",
+                          borderRadius: "10px",
+                          border: "1px solid #E2E8F0",
+                          fontSize: "14px",
+                          outline: "none",
+                          boxSizing: "border-box",
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ maxHeight: "200px", overflowY: "auto" }}>
+                      {filteredLeaveTypes.map((type) => (
+                        <div
+                          key={type}
+                          onClick={() => {
+                            if (type !== "Select Leave Type") {
+                              setApplyForm({ ...applyForm, leave_type: type });
+                            }
+                            setIsLeaveTypeDropdownOpen(false);
+                          }}
+                          style={{
+                            padding: "12px 16px",
+                            borderRadius: "8px",
+                            fontSize: "14px",
+                            fontWeight: "500",
+                            color: type === "Select Leave Type" ? "#64748B" : "#0F172A",
+                            cursor: type === "Select Leave Type" ? "default" : "pointer",
+                            background: applyForm.leave_type === type ? "#EFF6FF" : "transparent",
+                            transition: "background 0.15s",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (type !== "Select Leave Type") e.currentTarget.style.background = "#F1F5F9";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = applyForm.leave_type === type ? "#EFF6FF" : "transparent";
+                          }}
+                        >
+                          {type}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Duration Section (Radio Buttons matching Screenshots 1, 2, 3) */}
+            <div>
+              <label style={{ display: "block", fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "12px" }}>
+                Duration
+              </label>
+              <div style={{ display: "flex", alignItems: "center", gap: "32px", marginBottom: "20px" }}>
+                {["Single Day", "Half Day", "Multiple Days"].map((durOption) => (
+                  <label key={durOption} style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", fontSize: "15px", fontWeight: "600", color: "#0F172A" }}>
+                    <input
+                      type="radio"
+                      name="duration"
+                      value={durOption}
+                      checked={duration === durOption}
+                      onChange={(e) => {
+                        const newDur = e.target.value;
+                        setDuration(newDur);
+                        if (newDur === "Single Day") {
+                          setApplyForm((prev) => ({
+                            ...prev,
+                            to_date: prev.from_date,
+                            is_half_day: "None",
+                          }));
+                        } else if (newDur === "Half Day") {
+                          setApplyForm((prev) => ({
+                            ...prev,
+                            to_date: prev.from_date,
+                            is_half_day: halfDayPeriod,
+                          }));
+                        } else {
+                          setApplyForm((prev) => ({
+                            ...prev,
+                            is_half_day: "None",
+                          }));
+                        }
+                      }}
+                      style={{ width: "18px", height: "18px", accentColor: "#2563EB", cursor: "pointer" }}
+                    />
+                    {durOption}
+                  </label>
+                ))}
+              </div>
+
+              {/* Dynamic Date Inputs based on Duration */}
+              {duration === "Multiple Days" ? (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: "800", color: "#475569", textTransform: "uppercase", tracking: "0.05em", marginBottom: "6px" }}>
+                      Start Date <span style={{ color: "#DC2626" }}>*</span>
+                    </label>
+                    <CustomDatePicker
+                      selected={applyForm.from_date}
+                      onChange={(dateStr) =>
+                        setApplyForm({ ...applyForm, from_date: dateStr })
+                      }
+                      minDate={new Date()}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: "800", color: "#475569", textTransform: "uppercase", tracking: "0.05em", marginBottom: "6px" }}>
+                      End Date <span style={{ color: "#DC2626" }}>*</span>
+                    </label>
+                    <CustomDatePicker
+                      selected={applyForm.to_date}
+                      onChange={(dateStr) =>
+                        setApplyForm({ ...applyForm, to_date: dateStr })
+                      }
+                      minDate={applyForm.from_date ? new Date(applyForm.from_date + "T00:00:00") : new Date()}
+                      required
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div style={{ maxWidth: "320px" }}>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: "800", color: "#475569", textTransform: "uppercase", tracking: "0.05em", marginBottom: "6px" }}>
+                    Date <span style={{ color: "#DC2626" }}>*</span>
+                  </label>
+                  <CustomDatePicker
+                    selected={applyForm.from_date}
+                    onChange={(dateStr) =>
+                      setApplyForm({
+                        ...applyForm,
+                        from_date: dateStr,
+                        to_date: dateStr,
+                      })
+                    }
+                    minDate={new Date()}
+                    required
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Half Day Period (When Half Day is selected matching Screenshot 3) */}
+            {duration === "Half Day" && (
+              <div>
+                <label style={{ display: "block", fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "10px" }}>
+                  Half Day Period
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
+                  {["First Half", "Second Half"].map((period) => (
+                    <label key={period} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "600", color: "#334155" }}>
+                      <input
+                        type="radio"
+                        name="halfDayPeriod"
+                        value={period}
+                        checked={halfDayPeriod === period}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setHalfDayPeriod(val);
+                          setApplyForm((prev) => ({ ...prev, is_half_day: val }));
+                        }}
+                        style={{ width: "16px", height: "16px", accentColor: "#2563EB", cursor: "pointer" }}
+                      />
+                      {period}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Reason for Absence (Optional) matching Screenshot 3 */}
+            <div>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: "800", color: "#475569", textTransform: "uppercase", tracking: "0.05em", marginBottom: "8px" }}>
+                Reason for Absence (Optional)
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Provide a reason..."
+                value={applyForm.description}
+                onChange={(e) => setApplyForm({ ...applyForm, description: e.target.value })}
+                style={{
+                  width: "100%",
+                  padding: "14px 16px",
+                  borderRadius: "12px",
+                  border: "1px solid #CBD5E1",
+                  background: "#F8FAFC",
+                  fontSize: "14px",
+                  color: "#0F172A",
+                  outline: "none",
+                  resize: "vertical",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "16px", paddingTop: "12px", borderTop: "1px solid #F1F5F9" }}>
+              <button
+                type="button"
+                onClick={() => setIsApplying(false)}
+                style={{
+                  padding: "12px 24px",
+                  borderRadius: "12px",
+                  border: "1px solid #CBD5E1",
+                  background: "#ffffff",
+                  color: "#475569",
+                  fontWeight: "700",
+                  fontSize: "14px",
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                style={{
+                  padding: "12px 28px",
+                  borderRadius: "12px",
+                  border: "none",
+                  background: "#0F172A",
+                  color: "#ffffff",
+                  fontWeight: "700",
+                  fontSize: "14px",
+                  cursor: "pointer",
+                  opacity: submitting ? 0.7 : 1,
+                  boxShadow: "0 4px 12px rgba(15, 23, 42, 0.15)",
+                }}
+              >
+                {submitting ? "Submitting..." : "Submit Leave Request"}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: "24px", maxWidth: "1400px", margin: "0 auto", fontFamily: "Inter, sans-serif" }}>
       {/* Header */}
@@ -543,10 +904,10 @@ export default function LeaveManagementView({
 
 
 
-            {/* Apply Leave Button */}
-            {perms.add && (
+            {/* Apply Leave Button (Only shown for Junior Advocate or Clerk own leave tab) */}
+            {perms.add && viewMode !== "senior" && (viewMode !== "clerk" || clerkTab === "own") && (
               <button
-                onClick={() => setShowApplyModal(true)}
+                onClick={() => setIsApplying(true)}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -796,197 +1157,6 @@ export default function LeaveManagementView({
           </div>
         )}
       </div>
-
-      {/* APPLY LEAVE MODAL */}
-      {mounted && showApplyModal && createPortal(
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            background: "rgba(15, 23, 42, 0.65)",
-            backdropFilter: "blur(5px)",
-            WebkitBackdropFilter: "blur(5px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 999999,
-            padding: "16px",
-            boxSizing: "border-box",
-          }}
-        >
-          <div
-            style={{
-              background: "#ffffff",
-              borderRadius: "16px",
-              width: "100%",
-              maxWidth: "520px",
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-              overflow: "hidden",
-              maxHeight: "90vh",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <div
-              style={{
-                padding: "20px 24px",
-                borderBottom: "1px solid #E2E8F0",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                background: "#F8FAFC",
-              }}
-            >
-              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#0F172A" }}>Apply for Leave</h3>
-              <button
-                onClick={() => setShowApplyModal(false)}
-                style={{ border: "none", background: "transparent", cursor: "pointer", color: "#64748B" }}
-              >
-                <X style={{ width: "20px", height: "20px" }} />
-              </button>
-            </div>
-
-            <form onSubmit={handleApplySubmit} style={{ padding: "24px" }}>
-              {/* Leave Type */}
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "6px" }}>
-                  Leave Type <span style={{ color: "#DC2626" }}>*</span>
-                </label>
-                <select
-                  value={applyForm.leave_type}
-                  onChange={(e) => setApplyForm({ ...applyForm, leave_type: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: "8px",
-                    border: "1px solid #CBD5E1",
-                    fontSize: "14px",
-                    outline: "none",
-                  }}
-                >
-                  <option value="Emergency Leave">Emergency Leave</option>
-                  <option value="Sick Leave">Sick Leave</option>
-                  <option value="Floater Leave">Floater Leave</option>
-                </select>
-              </div>
-
-              {/* Description */}
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "6px" }}>
-                  Description / Reason <span style={{ color: "#DC2626" }}>*</span>
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Provide details for your leave request..."
-                  value={applyForm.description}
-                  onChange={(e) => setApplyForm({ ...applyForm, description: e.target.value })}
-                  required
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: "8px",
-                    border: "1px solid #CBD5E1",
-                    fontSize: "14px",
-                    outline: "none",
-                    resize: "vertical",
-                  }}
-                />
-              </div>
-
-              {/* Date Range: From Date & To Date */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "6px" }}>
-                    From Date <span style={{ color: "#DC2626" }}>*</span>
-                  </label>
-                  <CustomDatePicker
-                    selected={applyForm.from_date}
-                    onChange={(dateStr) => setApplyForm({ ...applyForm, from_date: dateStr })}
-                    minDate={new Date()}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "6px" }}>
-                    To Date <span style={{ color: "#DC2626" }}>*</span>
-                  </label>
-                  <CustomDatePicker
-                    selected={applyForm.to_date}
-                    onChange={(dateStr) => setApplyForm({ ...applyForm, to_date: dateStr })}
-                    minDate={applyForm.from_date ? new Date(applyForm.from_date + "T00:00:00") : new Date()}
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Half Day Option */}
-              <div style={{ marginBottom: "24px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "6px" }}>
-                  Half Day Request
-                </label>
-                <select
-                  value={applyForm.is_half_day}
-                  onChange={(e) => setApplyForm({ ...applyForm, is_half_day: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: "8px",
-                    border: "1px solid #CBD5E1",
-                    fontSize: "14px",
-                    outline: "none",
-                  }}
-                >
-                  <option value="None">Full Day</option>
-                  <option value="First Half">First Half Only</option>
-                  <option value="Second Half">Second Half Only</option>
-                </select>
-              </div>
-
-              {/* Modal Buttons */}
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
-                <button
-                  type="button"
-                  onClick={() => setShowApplyModal(false)}
-                  style={{
-                    padding: "10px 18px",
-                    borderRadius: "8px",
-                    border: "1px solid #CBD5E1",
-                    background: "#ffffff",
-                    color: "#475569",
-                    fontWeight: "600",
-                    fontSize: "14px",
-                    cursor: "pointer",
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  style={{
-                    padding: "10px 20px",
-                    borderRadius: "8px",
-                    border: "none",
-                    background: "#0F172A",
-                    color: "#ffffff",
-                    fontWeight: "600",
-                    fontSize: "14px",
-                    cursor: "pointer",
-                    opacity: submitting ? 0.7 : 1,
-                  }}
-                >
-                  {submitting ? "Submitting..." : "Submit Application"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>,
-        document.body
-      )}
 
       {/* APPROVE / REJECT ACTION MODAL */}
       {mounted && showActionModal && selectedLeave && createPortal(
