@@ -177,7 +177,6 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         { name: "Dashboard", path: "/clerk/dashboard", icon: Home, moduleKey: "Clerk Dashboard" },
         { name: "Document Draft", path: "/clerk/document-draft", icon: FileText, moduleKey: "Document Draft" },
         { name: "Format Physical File", path: "/clerk/format-physical-file", icon: Folder, moduleKey: "Format Physical File" },
-        { name: "Case Number from Court", path: "/clerk/case-number", icon: Scale, moduleKey: "Case Number from Court" },
         { name: "Leave", path: "/clerk/leave", icon: Calendar, moduleKey: "Clerk Leave" },
       ],
     },

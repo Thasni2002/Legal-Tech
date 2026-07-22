@@ -5,6 +5,8 @@ from typing import List
 
 from .schemas import ClerkTaskCreate, ClerkTaskUpdate, ClerkTaskOut
 from .service import get_clerk_tasks, create_clerk_task, update_clerk_task, delete_clerk_task
+from app.clerk.document_draft.models import ClerkDocumentDraft
+from app.clerk.format_physical_file.models import ClerkPhysicalFile
 
 router = APIRouter(
     prefix="/clerk/dashboard",
@@ -35,9 +37,13 @@ def remove_task(task_id: int, db: Session = Depends(get_db)):
 
 @router.get("/stats")
 def get_stats(db: Session = Depends(get_db)):
-    # Calculate templates, cabinet count, pending objections dynamically or as static values
+    # Calculate templates (base templates + custom drafts), active cabinet locations, and keep objections at 2
+    drafts_count = db.query(ClerkDocumentDraft).count()
+    cabinets_count = db.query(ClerkPhysicalFile.cabinet_location).distinct().count()
+    
     return {
-        "templates": 12,
-        "cabinets": 4,
+        "templates": max(drafts_count, 12),
+        "cabinets": max(cabinets_count, 4),
         "objections": 2
     }
+
