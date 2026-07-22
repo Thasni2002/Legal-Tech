@@ -2,6 +2,7 @@ import os
 import sys
 import json
 from sqlalchemy import create_engine, MetaData, Table, text
+# pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 
 # Load env variables from backend/.env
