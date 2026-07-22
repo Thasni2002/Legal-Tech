@@ -11,7 +11,7 @@ export default function ClerkDashboard() {
   const [user, setUser] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [newTaskText, setNewTaskText] = useState("");
-  const [stats, setStats] = useState({ templates: 12, cabinets: 4, objections: 2 });
+  const [stats, setStats] = useState({ templates: 0, cabinets: 0, objections: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchTasks = async () => {

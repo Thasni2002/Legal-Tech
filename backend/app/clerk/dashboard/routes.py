@@ -37,13 +37,12 @@ def remove_task(task_id: int, db: Session = Depends(get_db)):
 
 @router.get("/stats")
 def get_stats(db: Session = Depends(get_db)):
-    # Calculate templates (base templates + custom drafts), active cabinet locations, and keep objections at 2
     drafts_count = db.query(ClerkDocumentDraft).count()
     cabinets_count = db.query(ClerkPhysicalFile.cabinet_location).distinct().count()
     
     return {
-        "templates": max(drafts_count, 12),
-        "cabinets": max(cabinets_count, 4),
-        "objections": 2
+        "templates": drafts_count,
+        "cabinets": cabinets_count,
+        "objections": 0
     }
 
