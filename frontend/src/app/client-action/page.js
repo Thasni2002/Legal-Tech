@@ -3,6 +3,8 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/utils/api";
+import { getTodayDateString, getCurrentTimeString } from "@/utils/dateUtils";
+import CustomDatePicker from "@/components/ui/CustomDatePicker";
 import { CheckCircle, XCircle } from "lucide-react";
 
 function ClientActionContent() {
@@ -140,17 +142,17 @@ function ClientActionContent() {
                         <form onSubmit={handleRescheduleSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-[#475569] uppercase mb-2">Suggested Date (Optional)</label>
-                                <input 
-                                    type="date"
-                                    value={rescheduleDate}
-                                    onChange={(e) => setRescheduleDate(e.target.value)}
-                                    className="w-full border border-[#E2E8F0] rounded-xl p-3 text-sm focus:ring-2 focus:ring-[#2563EB]/20 outline-none"
+                                <CustomDatePicker
+                                    selected={rescheduleDate}
+                                    onChange={(dateStr) => setRescheduleDate(dateStr)}
+                                    minDate={new Date()}
                                 />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-[#475569] uppercase mb-2">Suggested Time (Optional)</label>
                                 <input 
                                     type="time"
+                                    min={rescheduleDate === getTodayDateString() ? getCurrentTimeString() : undefined}
                                     value={rescheduleTime}
                                     onChange={(e) => setRescheduleTime(e.target.value)}
                                     className="w-full border border-[#E2E8F0] rounded-xl p-3 text-sm focus:ring-2 focus:ring-[#2563EB]/20 outline-none"

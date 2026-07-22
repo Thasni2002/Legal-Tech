@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Printer, Plus, Search, Folder, PrinterCheck } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
+import { getTodayDateString } from "@/utils/dateUtils";
+import CustomDatePicker from "@/components/ui/CustomDatePicker";
 
 export default function ClerkFormatPhysicalFile() {
   const router = useRouter();
@@ -199,11 +201,10 @@ export default function ClerkFormatPhysicalFile() {
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Date Logged</label>
-              <input
-                type="date"
-                value={formData.dateFiled}
-                onChange={(e) => setFormData({ ...formData, dateFiled: e.target.value })}
-                className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0F172A] font-semibold outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition"
+              <CustomDatePicker
+                selected={formData.dateFiled}
+                onChange={(dateStr) => setFormData({ ...formData, dateFiled: dateStr })}
+                minDate={new Date()}
               />
             </div>
           </div>

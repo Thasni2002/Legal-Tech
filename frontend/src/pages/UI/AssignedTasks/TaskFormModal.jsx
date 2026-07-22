@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, Save, AlertCircle, Loader2, Briefcase, User, Calendar, FileText } from "lucide-react";
 import { API_BASE_URL } from "@/utils/api";
+import { getTodayDateString } from "@/utils/dateUtils";
+import CustomDatePicker from "@/components/ui/CustomDatePicker";
 
 const PRIORITY_OPTIONS = ["Low", "Medium", "High", "Urgent"];
 
@@ -370,14 +372,10 @@ export default function TaskFormModal({ onClose, onSaved, editTask = null }) {
                 <Calendar size={10} style={{ marginRight: "4px", display: "inline" }} />
                 Due Date
               </label>
-              <input
-                type="date"
-                name="due_date"
-                value={form.due_date}
-                onChange={handleChange}
-                style={{ ...inputStyle, cursor: "pointer" }}
-                onFocus={(e) => (e.target.style.borderColor = "#2563EB")}
-                onBlur={(e) => (e.target.style.borderColor = "#E2E8F0")}
+              <CustomDatePicker
+                selected={form.due_date}
+                onChange={(dateStr) => setForm({ ...form, due_date: dateStr })}
+                minDate={new Date()}
               />
             </div>
           </div>

@@ -4,6 +4,8 @@ import { API_BASE_URL } from "@/utils/api";
 
 import { useState, useEffect } from "react";
 import { getLoggedInUser } from "@/utils/auth";
+import { getTodayDateString } from "@/utils/dateUtils";
+import CustomDatePicker from "@/components/ui/CustomDatePicker";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { createPortal } from "react-dom";
@@ -760,11 +762,10 @@ export default function ConsultationsView() {
                     </div>
                     <div className="flex flex-col">
                         <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">Date</label>
-                        <input
-                            type="date"
-                            value={consultationDate}
-                            onChange={(e) => setConsultationDate(e.target.value)}
-                            className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium cursor-pointer"
+                        <CustomDatePicker
+                            selected={consultationDate}
+                            onChange={(dateStr) => setConsultationDate(dateStr)}
+                            minDate={new Date()}
                         />
                     </div>
                     <div className="flex flex-col">
