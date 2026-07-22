@@ -6,6 +6,7 @@ import InputField from "@/components/InputField/InputField";
 import SelectField from "@/components/SelectField/SelectField";
 import { getLoggedInUser } from "@/utils/auth";
 import { DISTRICT_COURTS } from "@/utils/districtCourts";
+import ResetPasswordModal from "./ResetPasswordModal";
 
 
 export default function ProfileManagmentView({ onSubmit, onCancel, initialData }) {

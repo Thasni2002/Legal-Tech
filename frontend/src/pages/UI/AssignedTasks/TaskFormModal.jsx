@@ -69,15 +69,47 @@ export default function TaskFormModal({ onClose, onSaved, editTask = null }) {
   const fetchJuniors = async () => {
     const token = localStorage.getItem("token");
     try {
+      let staffList = [];
       const res = await fetch(`${API_BASE_URL}/permissions/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         const users = await res.json();
-        setJuniors(users.filter((u) => u.role && u.role.toLowerCase().includes("junior")));
+        staffList = users.filter((u) => u.role && (u.role.toLowerCase().includes("junior") || u.role.toLowerCase().includes("clerk")));
       }
+
+      // Also fetch from lawfirm-management/ to ensure all newly added Clerks & Advocates are included
+      try {
+        const resAdv = await fetch(`${API_BASE_URL}/lawfirm-management/`);
+        if (resAdv.ok) {
+          const advs = await resAdv.json();
+          advs.forEach((adv) => {
+            const advName = adv.advocateName || adv.advocate_name || "";
+            if (
+              advName &&
+              !staffList.some(
+                (s) =>
+                  (s.username || "").toLowerCase() === advName.toLowerCase() ||
+                  (s.email || "").toLowerCase() === (adv.emailAddress || adv.email_address || "").toLowerCase()
+              )
+            ) {
+              staffList.push({
+                id: adv.id,
+                username: advName,
+                first_name: advName,
+                last_name: `(${adv.role || "Staff"})`,
+                role: adv.role || "Clerk",
+              });
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching lawfirm members:", err);
+      }
+
+      setJuniors(staffList);
     } catch (e) {
-      console.error("Error fetching juniors:", e);
+      console.error("Error fetching juniors and clerks:", e);
     }
   };
 
@@ -380,11 +412,11 @@ export default function TaskFormModal({ onClose, onSaved, editTask = null }) {
             </div>
           </div>
 
-          {/* Junior Advocate */}
+          {/* Assignee Selection (Junior Advocate / Clerk) */}
           <div>
             <label style={labelStyle}>
               <User size={10} style={{ marginRight: "4px", display: "inline" }} />
-              Assign To (Junior Advocate) *
+              Assign To (Junior Advocate / Clerk) *
             </label>
             <select
               name="junior_advocate_id"
@@ -394,10 +426,10 @@ export default function TaskFormModal({ onClose, onSaved, editTask = null }) {
               onFocus={(e) => (e.target.style.borderColor = "#2563EB")}
               onBlur={(e) => (e.target.style.borderColor = "#E2E8F0")}
             >
-              <option value="">— Select Junior Advocate —</option>
+              <option value="">— Select Assignee (Junior Advocate / Clerk) —</option>
               {juniors.map((j) => (
                 <option key={j.id} value={j.id}>
-                  {j.username || `${j.first_name || ""} ${j.last_name || ""}`.trim() || `User #${j.id}`}
+                  {j.username || `${j.first_name || ""} ${j.last_name || ""}`.trim() || `User #${j.id}`} ({j.role || "Staff"})
                 </option>
               ))}
             </select>

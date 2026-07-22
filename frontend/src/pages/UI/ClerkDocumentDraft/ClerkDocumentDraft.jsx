@@ -9,10 +9,10 @@ export default function ClerkDocumentDraft() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [template, setTemplate] = useState("vakalatnama");
-  const [clientName, setClientName] = useState("John Doe");
-  const [advocateName, setAdvocateName] = useState("Adv. K. R. Ram");
-  const [caseTitle, setCaseTitle] = useState("John Doe v. State of Kerala");
-  const [courtName, setCourtName] = useState("District Court, Ernakulam");
+  const [clientName, setClientName] = useState("");
+  const [advocateName, setAdvocateName] = useState("");
+  const [caseTitle, setCaseTitle] = useState("");
+  const [courtName, setCourtName] = useState("");
 
   // Kerala Batta/Process specific parameters
   const [battaFee, setBattaFee] = useState("50");

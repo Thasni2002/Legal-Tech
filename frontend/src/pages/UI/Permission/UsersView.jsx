@@ -696,7 +696,53 @@ export default function UsersView() {
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                 First Name *
               </label>
-              {(selectedRole || "").toUpperCase().includes("ADVOCATE") ? (
+              {(selectedRole || "").toUpperCase().includes("CLERK") ? (
+                <select
+                  value={selectedAdvocateId}
+                  onChange={(e) => {
+                    const advId = e.target.value;
+                    setSelectedAdvocateId(advId);
+                    if (!advId) {
+                      setFirstName("");
+                      setLastName("");
+                      setPhoneNumber("");
+                      setEmailAddress("");
+                      setUsername("");
+                      setTempPassword("");
+                      return;
+                    }
+                    const adv = advocates.find(a => a.id.toString() === advId);
+                    if (adv) {
+                      const nameParts = (adv.advocateName || adv.advocate_name || "").trim().split(" ");
+                      setFirstName(nameParts[0] || "");
+                      setLastName(nameParts.slice(1).join(" ") || "Clerk");
+                      setPhoneNumber(adv.phoneNumber || adv.phone_number || "");
+                      setEmailAddress(adv.emailAddress || adv.email_address || "");
+                      const baseUsername = (adv.advocateName || adv.advocate_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                      setUsername(baseUsername);
+                      setTempPassword(adv.tempPassword || "");
+                    }
+                  }}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium cursor-pointer"
+                  required
+                >
+                  <option value="">-- Select Clerk --</option>
+                  {(() => {
+                    const clerks = advocates.filter((adv) => (adv.role || "").toLowerCase().includes("clerk"));
+                    if (clerks.length === 0) {
+                      return <option value="" disabled>No Clerks added in Law Firm Management</option>;
+                    }
+                    return clerks.map((adv) => {
+                      const advName = adv.advocateName || adv.advocate_name || "Unknown Clerk";
+                      return (
+                        <option key={adv.id} value={adv.id}>
+                          {advName} ({adv.role || "Clerk"})
+                        </option>
+                      );
+                    });
+                  })()}
+                </select>
+              ) : (selectedRole || "").toUpperCase().includes("ADVOCATE") ? (
                 <select
                   value={selectedAdvocateId}
                   onChange={(e) => {
@@ -727,14 +773,22 @@ export default function UsersView() {
                   required
                 >
                   <option value="">-- Select Advocate --</option>
-                  {advocates.map((adv) => {
-                    const advName = adv.advocateName || adv.advocate_name || "Unknown Advocate";
-                    return (
-                      <option key={adv.id} value={adv.id}>
-                        {advName}
-                      </option>
-                    );
-                  })}
+                  {advocates
+                    .filter((adv) => {
+                      const r = (adv.role || "").toLowerCase();
+                      const selR = (selectedRole || "").toLowerCase();
+                      if (selR.includes("junior")) return r.includes("junior");
+                      if (selR.includes("senior")) return r.includes("senior");
+                      return !r.includes("clerk");
+                    })
+                    .map((adv) => {
+                      const advName = adv.advocateName || adv.advocate_name || "Unknown Advocate";
+                      return (
+                        <option key={adv.id} value={adv.id}>
+                          {advName} ({adv.role || "Advocate"})
+                        </option>
+                      );
+                    })}
                 </select>
               ) : (selectedRole || "").toUpperCase().includes("CLIENT") ? (
                 <select

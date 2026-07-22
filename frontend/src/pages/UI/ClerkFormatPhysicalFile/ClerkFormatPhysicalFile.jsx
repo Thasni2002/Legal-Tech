@@ -20,27 +20,7 @@ export default function ClerkFormatPhysicalFile() {
     }
   }, [router]);
 
-  // Mock initial physical files registry
-  const [files, setFiles] = useState([
-    {
-      id: 1,
-      fileNumber: "PF-2026-001",
-      caseTitle: "Joseph K. v. Jacob Matthew",
-      cabinet: "Cabinet A",
-      shelf: "Shelf 2",
-      dateFiled: "2026-07-10",
-      status: "Active"
-    },
-    {
-      id: 2,
-      fileNumber: "PF-2026-002",
-      caseTitle: "State of Kerala v. Sudheer Kumar",
-      cabinet: "Cabinet B",
-      shelf: "Shelf 4",
-      dateFiled: "2026-07-15",
-      status: "Active"
-    }
-  ]);
+  const [files, setFiles] = useState([]);
 
   const [formData, setFormData] = useState({
     fileNumber: "",
