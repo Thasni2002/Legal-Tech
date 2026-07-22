@@ -25,6 +25,8 @@ import {
 import { API_BASE_URL } from "@/utils/api";
 import { getLoggedInUser } from "@/utils/auth";
 import useModulePermission from "@/utils/useModulePermission";
+import { getTodayDateString } from "@/utils/dateUtils";
+import CustomDatePicker from "@/components/ui/CustomDatePicker";
 
 export default function LeaveManagementView({
   viewMode = "senior", // "senior" | "junior" | "clerk"
@@ -1001,19 +1003,11 @@ export default function LeaveManagementView({
                   <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "6px" }}>
                     From Date <span style={{ color: "#DC2626" }}>*</span>
                   </label>
-                  <input
-                    type="date"
-                    value={applyForm.from_date}
-                    onChange={(e) => setApplyForm({ ...applyForm, from_date: e.target.value })}
+                  <CustomDatePicker
+                    selected={applyForm.from_date}
+                    onChange={(dateStr) => setApplyForm({ ...applyForm, from_date: dateStr })}
+                    minDate={new Date()}
                     required
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid #CBD5E1",
-                      fontSize: "14px",
-                      outline: "none",
-                    }}
                   />
                 </div>
 
@@ -1021,19 +1015,11 @@ export default function LeaveManagementView({
                   <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "6px" }}>
                     To Date <span style={{ color: "#DC2626" }}>*</span>
                   </label>
-                  <input
-                    type="date"
-                    value={applyForm.to_date}
-                    onChange={(e) => setApplyForm({ ...applyForm, to_date: e.target.value })}
+                  <CustomDatePicker
+                    selected={applyForm.to_date}
+                    onChange={(dateStr) => setApplyForm({ ...applyForm, to_date: dateStr })}
+                    minDate={applyForm.from_date ? new Date(applyForm.from_date + "T00:00:00") : new Date()}
                     required
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid #CBD5E1",
-                      fontSize: "14px",
-                      outline: "none",
-                    }}
                   />
                 </div>
               </div>

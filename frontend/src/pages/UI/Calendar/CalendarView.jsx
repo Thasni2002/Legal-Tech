@@ -4,6 +4,8 @@ import { API_BASE_URL } from "@/utils/api";
 
 import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { getTodayDateString, getCurrentTimeString } from "@/utils/dateUtils";
+import CustomDatePicker from "@/components/ui/CustomDatePicker";
 import {
   Calendar as CalendarIcon,
   X,
@@ -1822,12 +1824,11 @@ export default function CalendarView() {
                     <label className="block mb-1.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">
                       Date *
                     </label>
-                    <input
-                      type="date"
+                    <CustomDatePicker
+                      selected={eventForm.date}
+                      onChange={(dateStr) => setEventForm({ ...eventForm, date: dateStr })}
+                      minDate={new Date()}
                       required
-                      value={eventForm.date}
-                      onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })}
-                      className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-2xl px-4 py-3 text-[#0F172A] outline-none focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
                     />
                   </div>
 
@@ -1837,6 +1838,7 @@ export default function CalendarView() {
                     </label>
                     <input
                       type="time"
+                      min={eventForm.date === getTodayDateString() ? getCurrentTimeString() : undefined}
                       required
                       value={eventForm.time}
                       onChange={(e) => setEventForm({ ...eventForm, time: e.target.value })}

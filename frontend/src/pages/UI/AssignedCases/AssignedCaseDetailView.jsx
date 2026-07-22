@@ -3,6 +3,8 @@
 import { API_BASE_URL } from "@/utils/api";
 import React, { useState, useRef } from "react";
 import { createPortal } from "react-dom";
+import { getTodayDateString } from "@/utils/dateUtils";
+import CustomDatePicker from "@/components/ui/CustomDatePicker";
 import {
   FileText,
   Calendar,
@@ -920,12 +922,11 @@ export default function AssignedCaseDetailView({
                   <label className="text-xs font-bold text-slate-700 block mb-1.5">
                     Appearance Date *
                   </label>
-                  <input
-                    type="date"
+                  <CustomDatePicker
+                    selected={appearanceForm.appearanceDate}
+                    onChange={(dateStr) => setAppearanceForm({ ...appearanceForm, appearanceDate: dateStr })}
+                    minDate={new Date()}
                     required
-                    value={appearanceForm.appearanceDate}
-                    onChange={(e) => setAppearanceForm({ ...appearanceForm, appearanceDate: e.target.value })}
-                    className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB]"
                   />
                 </div>
 
@@ -995,11 +996,10 @@ export default function AssignedCaseDetailView({
                 <label className="text-xs font-bold text-slate-700 block mb-1.5">
                   Next Hearing Date (Updates Case Hearing)
                 </label>
-                <input
-                  type="date"
-                  value={appearanceForm.nextDate}
-                  onChange={(e) => setAppearanceForm({ ...appearanceForm, nextDate: e.target.value })}
-                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB]"
+                <CustomDatePicker
+                  selected={appearanceForm.nextDate}
+                  onChange={(dateStr) => setAppearanceForm({ ...appearanceForm, nextDate: dateStr })}
+                  minDate={appearanceForm.appearanceDate ? new Date(appearanceForm.appearanceDate + "T00:00:00") : new Date()}
                 />
               </div>
 
