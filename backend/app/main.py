@@ -159,6 +159,8 @@ def health_check():
     return {"status": "ok"}
 
 
+from app.advocate.leave_management.routes import router as leave_router
+
 # Routers
 app.include_router(auth_router)
 app.include_router(consultations_router)
@@ -172,3 +174,4 @@ app.include_router(tasks_router)
 app.include_router(clerk_dashboard_router)
 app.include_router(clerk_document_draft_router)
 app.include_router(clerk_format_physical_file_router)
+app.include_router(leave_router, prefix="/leaves", tags=["Leave Management"])

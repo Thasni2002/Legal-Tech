@@ -137,6 +137,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         { name: "Billing", path: "/finance-management", icon: CreditCard, moduleKey: "Finance Management" },
         { name: "Calendar", path: "/calendar", icon: Calendar, moduleKey: "Calendar" },
         { name: "Assigned Tasks", path: "/assigned-tasks", icon: ClipboardList, moduleKey: "Assigned Tasks" },
+        { name: "Leave Management", path: "/leave-management", icon: Calendar, moduleKey: "Leave Management" },
       ],
     },
   ];
@@ -149,6 +150,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         { name: "Assigned Cases", path: "/assigned-cases", icon: Folder, moduleKey: "Assigned Cases" },
         { name: "Assigned Tasks", path: "/junior-assigned-tasks", icon: ClipboardList, moduleKey: "Junior Assigned Tasks" },
         { name: "Calendar", path: "/junior-calendar", icon: Calendar, moduleKey: "Junior Calendar" },
+        { name: "Leave", path: "/junior-leave", icon: Calendar, moduleKey: "Junior Leave" },
       ],
     },
   ];
@@ -175,6 +177,8 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         { name: "Dashboard", path: "/clerk/dashboard", icon: Home, moduleKey: "Clerk Dashboard" },
         { name: "Document Draft", path: "/clerk/document-draft", icon: FileText, moduleKey: "Document Draft" },
         { name: "Format Physical File", path: "/clerk/format-physical-file", icon: Folder, moduleKey: "Format Physical File" },
+        { name: "Case Number from Court", path: "/clerk/case-number", icon: Scale, moduleKey: "Case Number from Court" },
+        { name: "Leave", path: "/clerk/leave", icon: Calendar, moduleKey: "Clerk Leave" },
       ],
     },
   ];

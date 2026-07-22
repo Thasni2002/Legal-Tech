@@ -35,6 +35,9 @@ const ALL_MODULES = [
   "Document Draft",
   "Format Physical File",
   "Case Number from Court",
+  "Leave Management",
+  "Junior Leave",
+  "Clerk Leave",
 ];
 
 export default function UserEdit() {
