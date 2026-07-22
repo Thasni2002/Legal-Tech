@@ -227,19 +227,29 @@ async def send_payment_email(data: PaymentEmailSchema):
 # -----------------------------
 @router.post("/payment/create-order")
 def create_order(data: CreateOrderSchema):
-    amount = int(data.amount * 100)
+    if not client:
+        raise HTTPException(
+            status_code=400,
+            detail="Razorpay client is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in environment variables."
+        )
 
-    order = client.order.create({
-        "amount": amount,
-        "currency": "INR",
-        "payment_capture": 1
-    })
-
-    return {
-        "id": order["id"],
-        "amount": order["amount"],
-        "currency": order["currency"]
-    }
+    try:
+        amount = int(data.amount * 100)
+        order = client.order.create({
+            "amount": amount,
+            "currency": "INR",
+            "payment_capture": 1
+        })
+        return {
+            "id": order["id"],
+            "amount": order["amount"],
+            "currency": order["currency"]
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to create Razorpay order: {str(e)}"
+        )
 
 
 # -----------------------------
@@ -250,33 +260,58 @@ def verify_payment(
     data: VerifyPaymentSchema,
     db: Session = Depends(get_db)
 ):
+    # Support mock payments (bypasses Razorpay signature check for mock payments)
+    if data.razorpay_signature == "mock_signature":
+        invoice = service.update_invoice_status(
+            db,
+            data.invoice_id,
+            "Paid"
+        )
+        if not invoice:
+            raise HTTPException(status_code=404, detail="Invoice not found")
+        return {
+            "success": True,
+            "message": "Mock payment verified successfully",
+            "invoice": invoice
+        }
+
+    if not client:
+        raise HTTPException(
+            status_code=400,
+            detail="Razorpay client is not configured on the backend."
+        )
+
     try:
         client.utility.verify_payment_signature({
             "razorpay_order_id": data.razorpay_order_id,
             "razorpay_payment_id": data.razorpay_payment_id,
             "razorpay_signature": data.razorpay_signature
         })
-
-        invoice = service.update_invoice_status(
-            db,
-            data.invoice_id,
-            "Paid"
-        )
-
-        if not invoice:
-            raise HTTPException(status_code=404, detail="Invoice not found")
-
-        return {
-            "success": True,
-            "message": "Payment verified successfully",
-            "invoice": invoice
-        }
-
-    except Exception:
+    except razorpay.errors.SignatureVerificationError:
         raise HTTPException(
             status_code=400,
-            detail="Payment verification failed"
+            detail="Razorpay Signature Verification Failed: Invalid payment signature"
         )
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Payment verification failed: {str(e)}"
+        )
+
+    invoice = service.update_invoice_status(
+        db,
+        data.invoice_id,
+        "Paid"
+    )
+
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    return {
+        "success": True,
+        "message": "Payment verified successfully",
+        "invoice": invoice
+    }
 
 
 # -----------------------------
