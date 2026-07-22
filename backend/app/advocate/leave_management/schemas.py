@@ -5,7 +5,7 @@ from datetime import date, datetime
 
 class LeaveApplySchema(BaseModel):
     leave_type: str  # Emergency Leave, Sick Leave, Floater Leave
-    subject: str
+    subject: Optional[str] = None
     description: str
     from_date: date
     to_date: date
@@ -34,6 +34,8 @@ class LeaveOutSchema(BaseModel):
     approved_by_id: Optional[int] = None
     approver_name: Optional[str] = None
     rejection_reason: Optional[str] = None
+    reassigned_cases_count: Optional[int] = 0
+    reassigned_details: Optional[List[str]] = []
     created_at: datetime
     updated_at: datetime
 
