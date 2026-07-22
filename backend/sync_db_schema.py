@@ -12,6 +12,7 @@ import app.advocate.finance_management.models
 import app.advocate.consultations.models
 import app.advocate.case_management.models
 import app.advocate.client_management.models
+import app.advocate.leave_management.models
 
 
 def get_sql_type(column):

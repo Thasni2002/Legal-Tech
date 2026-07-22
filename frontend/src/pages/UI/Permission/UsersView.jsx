@@ -50,6 +50,9 @@ const ALL_MODULES = [
   "Document Draft",
   "Format Physical File",
   "Case Number from Court",
+  "Leave Management",
+  "Junior Leave",
+  "Clerk Leave",
 ];
 
 const SENIOR_JUNIOR_MODULES = [
@@ -64,7 +67,8 @@ const SENIOR_JUNIOR_MODULES = [
       { key: "Finance Management", label: "Finance Management" },
       { key: "Calendar", label: "Calendar" },
       { key: "Assigned Tasks", label: "Assigned Tasks" },
-      { key: "Profile", label: "Profile" }
+      { key: "Profile", label: "Profile" },
+      { key: "Leave Management", label: "Leave Management" },
     ]
   },
   {
@@ -73,7 +77,8 @@ const SENIOR_JUNIOR_MODULES = [
       { key: "Junior Dashboard", label: "Dashboard (Junior)" },
       { key: "Assigned Cases", label: "Assigned Cases" },
       { key: "Junior Assigned Tasks", label: "Assigned Tasks (Junior)" },
-      { key: "Junior Calendar", label: "Calendar (Junior)" }
+      { key: "Junior Calendar", label: "Calendar (Junior)" },
+      { key: "Junior Leave", label: "Junior Leave" },
     ]
   },
   {
@@ -102,7 +107,8 @@ const SENIOR_JUNIOR_MODULES = [
       { key: "Clerk Dashboard", label: "Dashboard (Clerk)" },
       { key: "Document Draft", label: "Document Draft" },
       { key: "Format Physical File", label: "Format Physical File" },
-      { key: "Case Number from Court", label: "Case Number from Court" }
+      { key: "Case Number from Court", label: "Case Number from Court" },
+      { key: "Clerk Leave", label: "Clerk Leave" },
     ]
   }
 ];

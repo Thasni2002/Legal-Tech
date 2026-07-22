@@ -1,0 +1,57 @@
+from pydantic import BaseModel
+from typing import Optional, List
+from datetime import date, datetime
+
+
+class LeaveApplySchema(BaseModel):
+    leave_type: str  # Emergency Leave, Sick Leave, Floater Leave
+    subject: str
+    description: str
+    from_date: date
+    to_date: date
+    total_days: Optional[float] = 1.0
+    is_half_day: Optional[str] = "None"
+
+
+class LeaveStatusUpdateSchema(BaseModel):
+    status: str  # Approved / Rejected
+    rejection_reason: Optional[str] = None
+
+
+class LeaveOutSchema(BaseModel):
+    id: int
+    user_id: int
+    applicant_name: str
+    applicant_role: str
+    leave_type: str
+    subject: Optional[str] = None
+    description: str
+    from_date: date
+    to_date: date
+    total_days: float
+    is_half_day: Optional[str] = None
+    status: str
+    approved_by_id: Optional[int] = None
+    approver_name: Optional[str] = None
+    rejection_reason: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class LeaveBalanceItem(BaseModel):
+    total: float
+    used: float
+    remaining: float
+
+
+class LeaveBalanceOutSchema(BaseModel):
+    financial_year: str
+    emergency_leave: LeaveBalanceItem
+    sick_leave: LeaveBalanceItem
+    floater_leave: LeaveBalanceItem
+
+    class Config:
+        from_attributes = True

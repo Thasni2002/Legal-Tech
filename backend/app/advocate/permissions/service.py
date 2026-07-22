@@ -38,6 +38,9 @@ BASE_MODULES = [
     "Document Draft",
     "Format Physical File",
     "Case Number from Court",
+    "Leave Management",
+    "Junior Leave",
+    "Clerk Leave",
 ]
 
 # Default permission matrix for seeding core roles
@@ -70,6 +73,9 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Document Draft": {"view": True, "add": True, "edit": True, "delete": True},
         "Format Physical File": {"view": True, "add": True, "edit": True, "delete": True},
         "Case Number from Court": {"view": True, "add": True, "edit": True, "delete": True},
+        "Leave Management": {"view": True, "add": True, "edit": True, "delete": True},
+        "Junior Leave": {"view": True, "add": True, "edit": True, "delete": True},
+        "Clerk Leave": {"view": True, "add": True, "edit": True, "delete": True},
     },
     "junioradvocate": {
         "Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
@@ -99,6 +105,9 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Document Draft": {"view": False, "add": False, "edit": False, "delete": False},
         "Format Physical File": {"view": False, "add": False, "edit": False, "delete": False},
         "Case Number from Court": {"view": False, "add": False, "edit": False, "delete": False},
+        "Leave Management": {"view": False, "add": False, "edit": False, "delete": False},
+        "Junior Leave": {"view": True, "add": True, "edit": True, "delete": False},
+        "Clerk Leave": {"view": False, "add": False, "edit": False, "delete": False},
     },
     "client": {
         "Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
@@ -127,6 +136,9 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Document Draft": {"view": False, "add": False, "edit": False, "delete": False},
         "Format Physical File": {"view": False, "add": False, "edit": False, "delete": False},
         "Case Number from Court": {"view": False, "add": False, "edit": False, "delete": False},
+        "Leave Management": {"view": False, "add": False, "edit": False, "delete": False},
+        "Junior Leave": {"view": False, "add": False, "edit": False, "delete": False},
+        "Clerk Leave": {"view": False, "add": False, "edit": False, "delete": False},
     },
     "clerk": {
         "Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
@@ -140,7 +152,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Finance Management": {"view": False, "add": False, "edit": False, "delete": False},
         "Calendar": {"view": False, "add": False, "edit": False, "delete": False},
         "Junior Calendar": {"view": False, "add": False, "edit": False, "delete": False},
-        "Profile": {"view": True, "add": True, "edit": True, "delete": False},
+        "Profile": {"view": True, "add": False, "edit": True, "delete": False},
         "Assigned Cases": {"view": False, "add": False, "edit": False, "delete": False},
         "Assigned Tasks": {"view": False, "add": False, "edit": False, "delete": False},
         "Junior Assigned Tasks": {"view": False, "add": False, "edit": False, "delete": False},
@@ -156,6 +168,9 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Document Draft": {"view": True, "add": True, "edit": True, "delete": True},
         "Format Physical File": {"view": True, "add": True, "edit": True, "delete": True},
         "Case Number from Court": {"view": True, "add": True, "edit": True, "delete": True},
+        "Leave Management": {"view": False, "add": False, "edit": False, "delete": False},
+        "Junior Leave": {"view": True, "add": False, "edit": True, "delete": False},
+        "Clerk Leave": {"view": True, "add": True, "edit": True, "delete": True},
     },
 }
 
