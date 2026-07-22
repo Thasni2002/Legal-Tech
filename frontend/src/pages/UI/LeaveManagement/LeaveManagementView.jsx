@@ -217,10 +217,18 @@ export default function LeaveManagementView({
       });
 
       if (res.ok) {
+        const resJson = await res.json();
         setShowActionModal(false);
         setSelectedLeave(null);
         setRejectionReason("");
         fetchData();
+
+        if (resJson.reassigned_cases_count && resJson.reassigned_cases_count > 0) {
+          alert(
+            `Leave Approved!\n\n${resJson.reassigned_cases_count} case hearing(s) falling on the approved leave dates were automatically transferred to Secondary Junior Advocates:\n\n` +
+              (resJson.reassigned_details || []).map((d) => `• ${d}`).join("\n")
+          );
+        }
       } else {
         const errJson = await res.json();
         alert(errJson.detail || "Failed to update leave status.");

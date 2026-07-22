@@ -123,6 +123,81 @@ def apply_leave(db: Session, current_user: User, data: LeaveApplySchema) -> Leav
     return new_request
 
 
+def auto_reassign_hearings_on_leave_approval(db: Session, leave_req: LeaveRequest):
+    from app.advocate.lawfirm_management.models import AssignedCase
+    from app.advocate.case_management.models import Case as MgmtCase
+    from app.advocate.client_management.models import Hearing
+
+    reassigned_details = []
+    reassigned_count = 0
+
+    applicant = db.query(User).filter(User.id == leave_req.user_id).first()
+    possible_names = set()
+    if applicant:
+        name = f"{applicant.first_name or ''} {applicant.last_name or ''}".strip()
+        if name:
+            possible_names.add(name.lower())
+        if applicant.username:
+            possible_names.add(applicant.username.lower())
+    if leave_req.applicant_name:
+        possible_names.add(leave_req.applicant_name.lower())
+
+    # 1. Check AssignedCase table
+    all_assigned = db.query(AssignedCase).all()
+    for ac in all_assigned:
+        adv_name = (ac.advocate_name or "").strip().lower()
+        if adv_name in possible_names or any(pn in adv_name for pn in possible_names if pn):
+            case_date = None
+            if ac.due_date:
+                try:
+                    case_date = datetime.strptime(ac.due_date.strip().split("T")[0], "%Y-%m-%d").date()
+                except Exception:
+                    pass
+            if case_date and leave_req.from_date <= case_date <= leave_req.to_date:
+                sec_name = (ac.secondary_advocate_name or "").strip()
+                if sec_name:
+                    ac.advocate_name = sec_name
+                    reassigned_count += 1
+                    msg = f"Assigned Case '{ac.case_name}' (Hearing: {case_date}) automatically transferred to Secondary Advocate: {sec_name}"
+                    reassigned_details.append(msg)
+
+    # 2. Check MgmtCase (case_management_cases)
+    all_cases = db.query(MgmtCase).all()
+    for mc in all_cases:
+        sel_adv = (mc.selected_advocate or "").strip().lower()
+        if sel_adv in possible_names or any(pn in sel_adv for pn in possible_names if pn):
+            case_date = None
+            if mc.next_hearing_date:
+                try:
+                    case_date = datetime.strptime(mc.next_hearing_date.strip().split("T")[0], "%Y-%m-%d").date()
+                except Exception:
+                    pass
+            if case_date and leave_req.from_date <= case_date <= leave_req.to_date:
+                matching_ac = db.query(AssignedCase).filter(
+                    (AssignedCase.case_id == mc.id) | (AssignedCase.case_number == mc.case_no)
+                ).first()
+                if matching_ac and matching_ac.secondary_advocate_name:
+                    mc.selected_advocate = matching_ac.secondary_advocate_name
+
+    # 3. Check Hearing table
+    all_hearings = db.query(Hearing).all()
+    for h in all_hearings:
+        if (h.advocate_id == leave_req.user_id) or (h.advocate_name and h.advocate_name.lower() in possible_names):
+            if h.date and leave_req.from_date <= h.date <= leave_req.to_date:
+                matching_ac = db.query(AssignedCase).filter(AssignedCase.case_number == h.case_no).first()
+                if matching_ac and matching_ac.secondary_advocate_name:
+                    h.advocate_name = matching_ac.secondary_advocate_name
+                    sec_user = db.query(User).filter(
+                        (User.username.ilike(matching_ac.secondary_advocate_name)) |
+                        ((User.first_name + " " + User.last_name).ilike(matching_ac.secondary_advocate_name))
+                    ).first()
+                    if sec_user:
+                        h.advocate_id = sec_user.id
+
+    db.commit()
+    return reassigned_count, reassigned_details
+
+
 def update_leave_status(
     db: Session,
     approver: User,
@@ -141,7 +216,10 @@ def update_leave_status(
     if data.rejection_reason:
         leave_req.rejection_reason = data.rejection_reason
 
-    # If status transitioned to Approved from non-Approved state, update leave balance
+    reassigned_count = 0
+    reassigned_details = []
+
+    # If status transitioned to Approved from non-Approved state, update leave balance and auto reassign hearings
     if data.status == "Approved" and old_status != "Approved":
         balance = get_or_create_user_balance(db, leave_req.user_id)
         lt_lower = (leave_req.leave_type or "").lower()
@@ -153,6 +231,9 @@ def update_leave_status(
             balance.floater_leave_used += leave_req.total_days
         else:
             balance.emergency_leave_used += leave_req.total_days
+
+        # Auto-reassign hearings scheduled on leave dates to Secondary Advocate
+        reassigned_count, reassigned_details = auto_reassign_hearings_on_leave_approval(db, leave_req)
 
     # If previously approved and now rejected/cancelled, revert balance deduction
     if old_status == "Approved" and data.status in ["Rejected", "Cancelled"]:
@@ -167,6 +248,10 @@ def update_leave_status(
 
     db.commit()
     db.refresh(leave_req)
+
+    # Attach transient properties for response schema
+    setattr(leave_req, "reassigned_cases_count", reassigned_count)
+    setattr(leave_req, "reassigned_details", reassigned_details)
     return leave_req
 
 
