@@ -21,6 +21,15 @@ from app.advocate.tasks import router as tasks_router
 from app.advocate.tasks.models import Task, TaskMessage
 from app.advocate.case_management.models import CaseDocumentWorkflow
 
+# Clerk models and routers
+from app.clerk.dashboard.models import ClerkTask
+from app.clerk.dashboard import router as clerk_dashboard_router
+from app.clerk.document_draft.models import ClerkDocumentDraft
+from app.clerk.document_draft import router as clerk_document_draft_router
+from app.clerk.format_physical_file.models import ClerkPhysicalFile
+from app.clerk.format_physical_file import router as clerk_format_physical_file_router
+
+
 
 app = FastAPI()
 
@@ -160,3 +169,6 @@ app.include_router(permissions_router)
 app.include_router(case_router)
 app.include_router(dashboard_router)
 app.include_router(tasks_router)
+app.include_router(clerk_dashboard_router)
+app.include_router(clerk_document_draft_router)
+app.include_router(clerk_format_physical_file_router)
