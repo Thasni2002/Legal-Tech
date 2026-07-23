@@ -413,41 +413,11 @@ export default function LeaveManagementView({
       t.toLowerCase().includes(leaveTypeSearch.toLowerCase())
     );
 
-    return (
-      <div style={{ padding: "32px", maxWidth: "900px", margin: "0 auto", fontFamily: "Inter, sans-serif" }}>
-        {/* Top Header with Back Button */}
-        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "28px" }}>
-          <button
-            type="button"
-            onClick={() => setIsApplying(false)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "42px",
-              height: "42px",
-              borderRadius: "50%",
-              border: "1px solid #E2E8F0",
-              background: "#ffffff",
-              color: "#0F172A",
-              cursor: "pointer",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-              transition: "all 0.2s",
-            }}
-          >
-            <ArrowLeft style={{ width: "20px", height: "20px" }} />
-          </button>
-          <div>
-            <h1 style={{ fontSize: "24px", fontWeight: "800", color: "#0F172A", margin: 0, tracking: "-0.02em" }}>
-              Apply for Leave
-            </h1>
-            <p style={{ fontSize: "14px", color: "#64748B", margin: "4px 0 0 0", fontWeight: "500" }}>
-              Submit a new leave application for approval
-            </p>
-          </div>
-        </div>
+    const userName = user?.full_name || user?.name || user?.username || user?.sub || "Current User";
 
-        {/* Form Container */}
+    return (
+      <div style={{ padding: "24px", width: "100%", boxSizing: "border-box", fontFamily: "Inter, sans-serif" }}>
+        {/* Form Container Card */}
         <form
           onSubmit={handleApplySubmit}
           style={{
@@ -455,162 +425,277 @@ export default function LeaveManagementView({
             borderRadius: "24px",
             border: "1px solid #E2E8F0",
             padding: "36px",
-            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.04)",
+            boxShadow: "0 10px 30px -5px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02)",
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
-            {/* Leave Type Selector (Searchable Dropdown matching Screenshot 4) */}
-            <div style={{ position: "relative" }}>
-              <label style={{ display: "block", fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "8px" }}>
-                Leave Type <span style={{ color: "#DC2626" }}>*</span>
-              </label>
-              <div style={{ position: "relative" }}>
-                <button
-                  type="button"
-                  onClick={() => setIsLeaveTypeDropdownOpen(!isLeaveTypeDropdownOpen)}
+          {/* Header Title & Subtitle inside Card */}
+          <div style={{ marginBottom: "16px" }}>
+            <h1 style={{ fontSize: "26px", fontWeight: "800", color: "#0F172A", margin: "0 0 4px 0", letterSpacing: "-0.02em" }}>
+              Apply Leave
+            </h1>
+            <p style={{ fontSize: "14px", color: "#64748B", margin: 0, fontWeight: "500" }}>
+              Submit a new leave request
+            </p>
+          </div>
+
+          {/* Back to Leaves Button inside Card */}
+          <div style={{ marginBottom: "28px" }}>
+            <button
+              type="button"
+              onClick={() => setIsApplying(false)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "9px 18px",
+                borderRadius: "12px",
+                border: "1px solid #CBD5E1",
+                background: "#ffffff",
+                color: "#334155",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "#94A3B8";
+                e.currentTarget.style.background = "#F8FAFC";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "#CBD5E1";
+                e.currentTarget.style.background = "#ffffff";
+              }}
+            >
+              <ArrowLeft style={{ width: "16px", height: "16px" }} />
+              Back to Leaves
+            </button>
+          </div>
+
+          {/* Inner Card Details Section */}
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "16px",
+              border: "1px solid #F1F5F9",
+              padding: "28px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "28px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+            }}
+          >
+            {/* Section Header */}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", paddingBottom: "12px", borderBottom: "1px solid #F1F5F9" }}>
+              <FileText style={{ width: "18px", height: "18px", color: "#2563EB" }} />
+              <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#0F172A", margin: 0 }}>
+                Leave Details
+              </h3>
+            </div>
+
+            {/* Grid 2 Cols: Employee & Leave Type */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "24px" }}>
+              {/* Employee (Read-only) */}
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "700", color: "#334155", marginBottom: "8px" }}>
+                  Employee
+                </label>
+                <div
                   style={{
                     width: "100%",
-                    padding: "14px 16px",
+                    padding: "13px 16px",
                     borderRadius: "12px",
-                    border: "1px solid #CBD5E1",
+                    border: "1px solid #E2E8F0",
                     background: "#F8FAFC",
-                    fontSize: "15px",
-                    color: applyForm.leave_type ? "#0F172A" : "#64748B",
-                    fontWeight: "500",
+                    fontSize: "14px",
+                    color: "#334155",
+                    fontWeight: "600",
+                    boxSizing: "border-box",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
-                    cursor: "pointer",
-                    outline: "none",
+                    gap: "10px",
                   }}
                 >
-                  <span>{applyForm.leave_type || "Select Leave Type"}</span>
-                  <ChevronDown style={{ width: "18px", height: "18px", color: "#64748B" }} />
-                </button>
+                  <UserCheck style={{ width: "16px", height: "16px", color: "#64748B" }} />
+                  {userName}
+                </div>
+              </div>
 
-                {isLeaveTypeDropdownOpen && (
-                  <div
+              {/* Leave Type Dropdown */}
+              <div style={{ position: "relative" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "700", color: "#334155", marginBottom: "8px" }}>
+                  Leave Type <span style={{ color: "#DC2626" }}>*</span>
+                </label>
+                <div style={{ position: "relative" }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsLeaveTypeDropdownOpen(!isLeaveTypeDropdownOpen)}
                     style={{
-                      position: "absolute",
-                      top: "100%",
-                      left: 0,
-                      right: 0,
-                      marginTop: "6px",
+                      width: "100%",
+                      padding: "13px 16px",
+                      borderRadius: "12px",
+                      border: "1px solid #CBD5E1",
                       background: "#ffffff",
-                      border: "1px solid #E2E8F0",
-                      borderRadius: "16px",
-                      boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
-                      zIndex: 50,
-                      overflow: "hidden",
-                      padding: "8px",
+                      fontSize: "14px",
+                      color: applyForm.leave_type ? "#0F172A" : "#64748B",
+                      fontWeight: "500",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      cursor: "pointer",
+                      outline: "none",
+                      boxSizing: "border-box",
+                      transition: "all 0.15s ease",
                     }}
                   >
-                    {/* Search inside dropdown */}
-                    <div style={{ position: "relative", marginBottom: "8px", padding: "4px" }}>
-                      <Search style={{ position: "absolute", left: "14px", top: "14px", width: "16px", height: "16px", color: "#94A3B8" }} />
-                      <input
-                        type="text"
-                        placeholder="Search..."
-                        value={leaveTypeSearch}
-                        onChange={(e) => setLeaveTypeSearch(e.target.value)}
-                        style={{
-                          width: "100%",
-                          paddingLeft: "36px",
-                          paddingRight: "12px",
-                          paddingTop: "10px",
-                          paddingBottom: "10px",
-                          borderRadius: "10px",
-                          border: "1px solid #E2E8F0",
-                          fontSize: "14px",
-                          outline: "none",
-                          boxSizing: "border-box",
-                        }}
-                      />
-                    </div>
+                    <span>{applyForm.leave_type || "Select Leave Type"}</span>
+                    <ChevronDown style={{ width: "18px", height: "18px", color: "#64748B" }} />
+                  </button>
 
-                    <div style={{ maxHeight: "200px", overflowY: "auto" }}>
-                      {filteredLeaveTypes.map((type) => (
-                        <div
-                          key={type}
-                          onClick={() => {
-                            if (type !== "Select Leave Type") {
-                              setApplyForm({ ...applyForm, leave_type: type });
-                            }
-                            setIsLeaveTypeDropdownOpen(false);
-                          }}
+                  {isLeaveTypeDropdownOpen && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "100%",
+                        left: 0,
+                        right: 0,
+                        marginTop: "6px",
+                        background: "#ffffff",
+                        border: "1px solid #E2E8F0",
+                        borderRadius: "16px",
+                        boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
+                        zIndex: 50,
+                        overflow: "hidden",
+                        padding: "8px",
+                      }}
+                    >
+                      {/* Search inside dropdown */}
+                      <div style={{ position: "relative", marginBottom: "8px", padding: "4px" }}>
+                        <Search style={{ position: "absolute", left: "14px", top: "14px", width: "16px", height: "16px", color: "#94A3B8" }} />
+                        <input
+                          type="text"
+                          placeholder="Search..."
+                          value={leaveTypeSearch}
+                          onChange={(e) => setLeaveTypeSearch(e.target.value)}
                           style={{
-                            padding: "12px 16px",
-                            borderRadius: "8px",
+                            width: "100%",
+                            paddingLeft: "36px",
+                            paddingRight: "12px",
+                            paddingTop: "10px",
+                            paddingBottom: "10px",
+                            borderRadius: "10px",
+                            border: "1px solid #E2E8F0",
                             fontSize: "14px",
-                            fontWeight: "500",
-                            color: type === "Select Leave Type" ? "#64748B" : "#0F172A",
-                            cursor: type === "Select Leave Type" ? "default" : "pointer",
-                            background: applyForm.leave_type === type ? "#EFF6FF" : "transparent",
-                            transition: "background 0.15s",
+                            outline: "none",
+                            boxSizing: "border-box",
                           }}
-                          onMouseEnter={(e) => {
-                            if (type !== "Select Leave Type") e.currentTarget.style.background = "#F1F5F9";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = applyForm.leave_type === type ? "#EFF6FF" : "transparent";
-                          }}
-                        >
-                          {type}
-                        </div>
-                      ))}
+                        />
+                      </div>
+
+                      <div style={{ maxHeight: "200px", overflowY: "auto" }}>
+                        {filteredLeaveTypes.map((type) => (
+                          <div
+                            key={type}
+                            onClick={() => {
+                              if (type !== "Select Leave Type") {
+                                setApplyForm({ ...applyForm, leave_type: type });
+                              }
+                              setIsLeaveTypeDropdownOpen(false);
+                            }}
+                            style={{
+                              padding: "12px 16px",
+                              borderRadius: "8px",
+                              fontSize: "14px",
+                              fontWeight: "500",
+                              color: type === "Select Leave Type" ? "#64748B" : "#0F172A",
+                              cursor: type === "Select Leave Type" ? "default" : "pointer",
+                              background: applyForm.leave_type === type ? "#EFF6FF" : "transparent",
+                              transition: "background 0.15s",
+                            }}
+                            onMouseEnter={(e) => {
+                              if (type !== "Select Leave Type") e.currentTarget.style.background = "#F1F5F9";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = applyForm.leave_type === type ? "#EFF6FF" : "transparent";
+                            }}
+                          >
+                            {type}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Duration Section (Radio Buttons matching Screenshots 1, 2, 3) */}
+            {/* Duration Section */}
             <div>
-              <label style={{ display: "block", fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "12px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: "700", color: "#334155", marginBottom: "12px" }}>
                 Duration
               </label>
-              <div style={{ display: "flex", alignItems: "center", gap: "32px", marginBottom: "20px" }}>
-                {["Single Day", "Half Day", "Multiple Days"].map((durOption) => (
-                  <label key={durOption} style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", fontSize: "15px", fontWeight: "600", color: "#0F172A" }}>
-                    <input
-                      type="radio"
-                      name="duration"
-                      value={durOption}
-                      checked={duration === durOption}
-                      onChange={(e) => {
-                        const newDur = e.target.value;
-                        setDuration(newDur);
-                        if (newDur === "Single Day") {
-                          setApplyForm((prev) => ({
-                            ...prev,
-                            to_date: prev.from_date,
-                            is_half_day: "None",
-                          }));
-                        } else if (newDur === "Half Day") {
-                          setApplyForm((prev) => ({
-                            ...prev,
-                            to_date: prev.from_date,
-                            is_half_day: halfDayPeriod,
-                          }));
-                        } else {
-                          setApplyForm((prev) => ({
-                            ...prev,
-                            is_half_day: "None",
-                          }));
-                        }
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "16px", marginBottom: "20px" }}>
+                {["Single Day", "Half Day", "Multiple Days"].map((durOption) => {
+                  const isSelected = duration === durOption;
+                  return (
+                    <label
+                      key={durOption}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        padding: "10px 18px",
+                        borderRadius: "12px",
+                        border: isSelected ? "1.5px solid #2563EB" : "1px solid #E2E8F0",
+                        background: isSelected ? "#F0F6FF" : "#ffffff",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        fontWeight: isSelected ? "700" : "500",
+                        color: isSelected ? "#1D4ED8" : "#334155",
+                        transition: "all 0.15s ease",
+                        boxShadow: isSelected ? "0 2px 4px rgba(37,99,235,0.08)" : "none",
                       }}
-                      style={{ width: "18px", height: "18px", accentColor: "#2563EB", cursor: "pointer" }}
-                    />
-                    {durOption}
-                  </label>
-                ))}
+                    >
+                      <input
+                        type="radio"
+                        name="duration"
+                        value={durOption}
+                        checked={isSelected}
+                        onChange={(e) => {
+                          const newDur = e.target.value;
+                          setDuration(newDur);
+                          if (newDur === "Single Day") {
+                            setApplyForm((prev) => ({
+                              ...prev,
+                              to_date: prev.from_date,
+                              is_half_day: "None",
+                            }));
+                          } else if (newDur === "Half Day") {
+                            setApplyForm((prev) => ({
+                              ...prev,
+                              to_date: prev.from_date,
+                              is_half_day: halfDayPeriod,
+                            }));
+                          } else {
+                            setApplyForm((prev) => ({
+                              ...prev,
+                              is_half_day: "None",
+                            }));
+                          }
+                        }}
+                        style={{ width: "16px", height: "16px", accentColor: "#2563EB", cursor: "pointer" }}
+                      />
+                      {durOption}
+                    </label>
+                  );
+                })}
               </div>
 
-              {/* Dynamic Date Inputs based on Duration */}
+              {/* Dynamic Date Inputs */}
               {duration === "Multiple Days" ? (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "20px" }}>
                   <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: "800", color: "#475569", textTransform: "uppercase", tracking: "0.05em", marginBottom: "6px" }}>
+                    <label style={{ display: "block", fontSize: "11px", fontWeight: "800", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>
                       Start Date <span style={{ color: "#DC2626" }}>*</span>
                     </label>
                     <CustomDatePicker
@@ -623,7 +708,7 @@ export default function LeaveManagementView({
                     />
                   </div>
                   <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: "800", color: "#475569", textTransform: "uppercase", tracking: "0.05em", marginBottom: "6px" }}>
+                    <label style={{ display: "block", fontSize: "11px", fontWeight: "800", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>
                       End Date <span style={{ color: "#DC2626" }}>*</span>
                     </label>
                     <CustomDatePicker
@@ -637,8 +722,8 @@ export default function LeaveManagementView({
                   </div>
                 </div>
               ) : (
-                <div style={{ maxWidth: "320px" }}>
-                  <label style={{ display: "block", fontSize: "12px", fontWeight: "800", color: "#475569", textTransform: "uppercase", tracking: "0.05em", marginBottom: "6px" }}>
+                <div style={{ maxWidth: "340px" }}>
+                  <label style={{ display: "block", fontSize: "11px", fontWeight: "800", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>
                     Date <span style={{ color: "#DC2626" }}>*</span>
                   </label>
                   <CustomDatePicker
@@ -657,42 +742,61 @@ export default function LeaveManagementView({
               )}
             </div>
 
-            {/* Half Day Period (When Half Day is selected matching Screenshot 3) */}
+            {/* Half Day Period */}
             {duration === "Half Day" && (
               <div>
-                <label style={{ display: "block", fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "10px" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "700", color: "#334155", marginBottom: "10px" }}>
                   Half Day Period
                 </label>
-                <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-                  {["First Half", "Second Half"].map((period) => (
-                    <label key={period} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "600", color: "#334155" }}>
-                      <input
-                        type="radio"
-                        name="halfDayPeriod"
-                        value={period}
-                        checked={halfDayPeriod === period}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setHalfDayPeriod(val);
-                          setApplyForm((prev) => ({ ...prev, is_half_day: val }));
+                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                  {["First Half", "Second Half"].map((period) => {
+                    const isSelected = halfDayPeriod === period;
+                    return (
+                      <label
+                        key={period}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          padding: "8px 16px",
+                          borderRadius: "10px",
+                          border: isSelected ? "1.5px solid #2563EB" : "1px solid #E2E8F0",
+                          background: isSelected ? "#F0F6FF" : "#ffffff",
+                          cursor: "pointer",
+                          fontSize: "14px",
+                          fontWeight: isSelected ? "600" : "500",
+                          color: isSelected ? "#1D4ED8" : "#334155",
+                          transition: "all 0.15s ease",
                         }}
-                        style={{ width: "16px", height: "16px", accentColor: "#2563EB", cursor: "pointer" }}
-                      />
-                      {period}
-                    </label>
-                  ))}
+                      >
+                        <input
+                          type="radio"
+                          name="halfDayPeriod"
+                          value={period}
+                          checked={isSelected}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setHalfDayPeriod(val);
+                            setApplyForm((prev) => ({ ...prev, is_half_day: val }));
+                          }}
+                          style={{ width: "15px", height: "15px", accentColor: "#2563EB", cursor: "pointer" }}
+                        />
+                        {period}
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
-            {/* Reason for Absence (Optional) matching Screenshot 3 */}
+            {/* Reason for Absence */}
             <div>
-              <label style={{ display: "block", fontSize: "12px", fontWeight: "800", color: "#475569", textTransform: "uppercase", tracking: "0.05em", marginBottom: "8px" }}>
+              <label style={{ display: "block", fontSize: "11px", fontWeight: "800", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>
                 Reason for Absence (Optional)
               </label>
               <textarea
                 rows={3}
-                placeholder="Provide a reason..."
+                placeholder="Provide a detailed reason..."
                 value={applyForm.description}
                 onChange={(e) => setApplyForm({ ...applyForm, description: e.target.value })}
                 style={{
@@ -706,17 +810,27 @@ export default function LeaveManagementView({
                   outline: "none",
                   resize: "vertical",
                   boxSizing: "border-box",
+                  fontFamily: "inherit",
+                  transition: "all 0.15s ease",
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = "#2563EB";
+                  e.currentTarget.style.background = "#ffffff";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "#CBD5E1";
+                  e.currentTarget.style.background = "#F8FAFC";
                 }}
               />
             </div>
 
             {/* Action Buttons */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "16px", paddingTop: "12px", borderTop: "1px solid #F1F5F9" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "14px", paddingTop: "16px", borderTop: "1px solid #F1F5F9" }}>
               <button
                 type="button"
                 onClick={() => setIsApplying(false)}
                 style={{
-                  padding: "12px 24px",
+                  padding: "11px 22px",
                   borderRadius: "12px",
                   border: "1px solid #CBD5E1",
                   background: "#ffffff",
@@ -724,7 +838,10 @@ export default function LeaveManagementView({
                   fontWeight: "700",
                   fontSize: "14px",
                   cursor: "pointer",
+                  transition: "all 0.15s ease",
                 }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#F8FAFC")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
               >
                 Cancel
               </button>
@@ -732,7 +849,7 @@ export default function LeaveManagementView({
                 type="submit"
                 disabled={submitting}
                 style={{
-                  padding: "12px 28px",
+                  padding: "11px 26px",
                   borderRadius: "12px",
                   border: "none",
                   background: "#0F172A",
@@ -742,6 +859,13 @@ export default function LeaveManagementView({
                   cursor: "pointer",
                   opacity: submitting ? 0.7 : 1,
                   boxShadow: "0 4px 12px rgba(15, 23, 42, 0.15)",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  if (!submitting) e.currentTarget.style.background = "#1E293B";
+                }}
+                onMouseLeave={(e) => {
+                  if (!submitting) e.currentTarget.style.background = "#0F172A";
                 }}
               >
                 {submitting ? "Submitting..." : "Submit Leave Request"}
@@ -842,65 +966,67 @@ export default function LeaveManagementView({
 
           {/* Controls: Search, Dates, Export, Apply */}
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "12px" }}>
-            {/* Search Input */}
-            <div style={{ position: "relative", minWidth: "180px" }}>
-              <Search style={{ position: "absolute", left: "10px", top: "10px", width: "16px", height: "16px", color: "#94A3B8" }} />
-              <input
-                type="text"
-                placeholder="Search..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                style={{
-                  paddingLeft: "32px",
-                  paddingRight: "12px",
-                  paddingTop: "8px",
-                  paddingBottom: "8px",
-                  borderRadius: "8px",
-                  border: "1px solid #CBD5E1",
-                  fontSize: "13px",
-                  outline: "none",
-                  width: "100%",
-                }}
-              />
-            </div>
+            {/* Search, From Date & To Date (Hidden for Senior Advocate view) */}
+            {viewMode !== "senior" && (
+              <>
+                <div style={{ position: "relative", minWidth: "180px" }}>
+                  <Search style={{ position: "absolute", left: "10px", top: "10px", width: "16px", height: "16px", color: "#94A3B8" }} />
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    style={{
+                      paddingLeft: "32px",
+                      paddingRight: "12px",
+                      paddingTop: "8px",
+                      paddingBottom: "8px",
+                      borderRadius: "8px",
+                      border: "1px solid #CBD5E1",
+                      fontSize: "13px",
+                      outline: "none",
+                      width: "100%",
+                    }}
+                  />
+                </div>
 
-            {/* From Date */}
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ fontSize: "10px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", marginBottom: "2px" }}>
-                From Date
-              </span>
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                style={{
-                  padding: "6px 10px",
-                  borderRadius: "8px",
-                  border: "1px solid #CBD5E1",
-                  fontSize: "13px",
-                  color: "#1E293B",
-                }}
-              />
-            </div>
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  <span style={{ fontSize: "10px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", marginBottom: "2px" }}>
+                    From Date
+                  </span>
+                  <input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => setFromDate(e.target.value)}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: "8px",
+                      border: "1px solid #CBD5E1",
+                      fontSize: "13px",
+                      color: "#1E293B",
+                    }}
+                  />
+                </div>
 
-            {/* To Date */}
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ fontSize: "10px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", marginBottom: "2px" }}>
-                To Date
-              </span>
-              <input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                style={{
-                  padding: "6px 10px",
-                  borderRadius: "8px",
-                  border: "1px solid #CBD5E1",
-                  fontSize: "13px",
-                  color: "#1E293B",
-                }}
-              />
-            </div>
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  <span style={{ fontSize: "10px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", marginBottom: "2px" }}>
+                    To Date
+                  </span>
+                  <input
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => setToDate(e.target.value)}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: "8px",
+                      border: "1px solid #CBD5E1",
+                      fontSize: "13px",
+                      color: "#1E293B",
+                    }}
+                  />
+                </div>
+              </>
+            )}
 
 
 
