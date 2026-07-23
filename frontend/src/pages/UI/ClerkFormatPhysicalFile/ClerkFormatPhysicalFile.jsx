@@ -1,26 +1,23 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Printer, Plus, Search, Folder, PrinterCheck } from "lucide-react";
+import { ArrowLeft, Printer, Plus, Search, Folder, PrinterCheck, Camera, Edit2, Trash2, Save, X, AlertTriangle } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
+import { API_BASE_URL } from "@/utils/api";
 import { getTodayDateString } from "@/utils/dateUtils";
 import CustomDatePicker from "@/components/ui/CustomDatePicker";
 
 export default function ClerkFormatPhysicalFile() {
   const router = useRouter();
   const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const loggedIn = getLoggedInUser();
-    if (!loggedIn) {
-      router.push("/login");
-    } else {
-      setUser(loggedIn);
-    }
-  }, [router]);
-
+  const [mounted, setMounted] = useState(false);
   const [files, setFiles] = useState([]);
+  const [search, setSearch] = useState("");
+  const [activeLabelFile, setActiveLabelFile] = useState(null);
+  const [editingFileId, setEditingFileId] = useState(null);
+  const [deleteConfirmFile, setDeleteConfirmFile] = useState(null);
 
   const [formData, setFormData] = useState({
     fileNumber: "",
@@ -31,30 +28,251 @@ export default function ClerkFormatPhysicalFile() {
     status: "Active"
   });
 
-  const [search, setSearch] = useState("");
-  const [activeLabelFile, setActiveLabelFile] = useState(null);
+  const fetchPhysicalFiles = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/clerk/format-physical-file/`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.length > 0) {
+          const mapped = data.map((b) => ({
+            id: b.id,
+            fileNumber: b.file_number,
+            caseTitle: b.notes || b.case_number || b.client_name || "Physical File",
+            cabinet: b.cabinet_location || "Cabinet A",
+            shelf: b.shelf_index || "Shelf 1",
+            dateFiled: b.created_at ? b.created_at.split("T")[0] : new Date().toISOString().split("T")[0]
+          }));
+          setFiles(mapped);
+          localStorage.setItem("clerk_physical_files", JSON.stringify(mapped));
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("Backend physical files fetch error, using local cache:", e);
+    }
 
-  const handleSubmit = (e) => {
+    // Fallback to localStorage
+    const saved = localStorage.getItem("clerk_physical_files");
+    if (saved) {
+      try {
+        setFiles(JSON.parse(saved));
+      } catch (e) {}
+    } else {
+      // Default seed sample
+      const initialSeed = [
+        { id: 1, fileNumber: "PF-2026-001", caseTitle: "Mary Joseph v. BSNL", cabinet: "Cabinet A", shelf: "Shelf 1", dateFiled: new Date().toISOString().split("T")[0] }
+      ];
+      setFiles(initialSeed);
+      localStorage.setItem("clerk_physical_files", JSON.stringify(initialSeed));
+    }
+  };
+
+  useEffect(() => {
+    setMounted(true);
+    const loggedIn = getLoggedInUser();
+    if (!loggedIn) {
+      router.push("/login");
+    } else {
+      setUser(loggedIn);
+      fetchPhysicalFiles();
+    }
+  }, [router]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.fileNumber || !formData.caseTitle) {
       alert("Please fill in File Number and Case Title.");
       return;
     }
-    const newFile = {
-      id: Date.now(),
-      ...formData
-    };
-    setFiles([newFile, ...files]);
-    // Reset file number
-    setFormData((prev) => ({
-      ...prev,
+
+    if (editingFileId) {
+      // Update record
+      try {
+        if (typeof editingFileId === "number" && editingFileId < 1000000) {
+          await fetch(`${API_BASE_URL}/clerk/format-physical-file/${editingFileId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              file_number: formData.fileNumber,
+              case_number: formData.fileNumber,
+              client_name: formData.caseTitle,
+              cabinet_location: formData.cabinet,
+              shelf_index: formData.shelf,
+              notes: formData.caseTitle
+            })
+          });
+        }
+      } catch (e) {}
+
+      setFiles((prev) => {
+        const updated = prev.map((f) => (f.id === editingFileId ? { ...f, ...formData } : f));
+        localStorage.setItem("clerk_physical_files", JSON.stringify(updated));
+        return updated;
+      });
+
+      setEditingFileId(null);
+    } else {
+      // Create new record
+      let newId = Date.now();
+      try {
+        const res = await fetch(`${API_BASE_URL}/clerk/format-physical-file/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            file_number: formData.fileNumber,
+            case_number: formData.fileNumber,
+            client_name: formData.caseTitle,
+            cabinet_location: formData.cabinet,
+            shelf_index: formData.shelf,
+            notes: formData.caseTitle
+          })
+        });
+        if (res.ok) {
+          const created = await res.json();
+          newId = created.id;
+        }
+      } catch (e) {}
+
+      const newFile = { id: newId, ...formData };
+      setFiles((prev) => {
+        const updated = [newFile, ...prev];
+        localStorage.setItem("clerk_physical_files", JSON.stringify(updated));
+        return updated;
+      });
+    }
+
+    setFormData({
       fileNumber: "",
-      caseTitle: ""
-    }));
+      caseTitle: "",
+      cabinet: "Cabinet A",
+      shelf: "Shelf 1",
+      dateFiled: new Date().toISOString().split("T")[0],
+      status: "Active"
+    });
   };
 
-  const handlePrintLabel = () => {
-    window.print();
+  const handleEdit = (file) => {
+    setEditingFileId(file.id);
+    setFormData({
+      fileNumber: file.fileNumber,
+      caseTitle: file.caseTitle,
+      cabinet: file.cabinet || "Cabinet A",
+      shelf: file.shelf || "Shelf 1",
+      dateFiled: file.dateFiled || new Date().toISOString().split("T")[0],
+      status: "Active"
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingFileId(null);
+    setFormData({
+      fileNumber: "",
+      caseTitle: "",
+      cabinet: "Cabinet A",
+      shelf: "Shelf 1",
+      dateFiled: new Date().toISOString().split("T")[0],
+      status: "Active"
+    });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmFile) return;
+    const id = deleteConfirmFile.id;
+
+    try {
+      if (typeof id === "number" && id < 1000000) {
+        await fetch(`${API_BASE_URL}/clerk/format-physical-file/${id}`, {
+          method: "DELETE"
+        });
+      }
+    } catch (e) {}
+
+    setFiles((prev) => {
+      const updated = prev.filter((f) => f.id !== id);
+      localStorage.setItem("clerk_physical_files", JSON.stringify(updated));
+      return updated;
+    });
+
+    if (editingFileId === id) {
+      handleCancelEdit();
+    }
+
+    setDeleteConfirmFile(null);
+  };
+
+  const handleScreenshot = () => {
+    if (!activeLabelFile) return;
+
+    try {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const width = 440;
+      const height = 680;
+      canvas.width = width;
+      canvas.height = height;
+
+      // Outer background
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+
+      // Card Container with rounded corners
+      ctx.strokeStyle = "#0f172a";
+      ctx.lineWidth = 10;
+      if (ctx.roundRect) {
+        ctx.roundRect(20, 20, width - 40, height - 40, 24);
+      } else {
+        ctx.rect(20, 20, width - 40, height - 40);
+      }
+      ctx.stroke();
+
+      // Top Icon Header
+      ctx.fillStyle = "#64748b";
+      ctx.font = "bold 16px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("PHYSICAL RECORD", width / 2, 85);
+
+      // File Number (Large bold header)
+      ctx.fillStyle = "#0f172a";
+      ctx.font = "900 42px sans-serif";
+      ctx.fillText(activeLabelFile.fileNumber || "PF-000", width / 2, 230);
+
+      // Case Title
+      ctx.fillStyle = "#334155";
+      ctx.font = "bold 20px sans-serif";
+      const titleText = activeLabelFile.caseTitle || "";
+      const truncatedTitle = titleText.length > 28 ? titleText.substring(0, 28) + "..." : titleText;
+      ctx.fillText(truncatedTitle, width / 2, 290);
+
+      // Horizontal Divider
+      ctx.strokeStyle = "#cbd5e1";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(60, 500);
+      ctx.lineTo(width - 60, 500);
+      ctx.stroke();
+
+      // Cabinet Location
+      ctx.fillStyle = "#475569";
+      ctx.font = "bold 20px sans-serif";
+      ctx.fillText(activeLabelFile.cabinet || "Cabinet A", width / 2, 550);
+
+      // Shelf Location (Emerald Accent)
+      ctx.fillStyle = "#10b981";
+      ctx.font = "bold 22px sans-serif";
+      ctx.fillText(activeLabelFile.shelf || "Shelf 1", width / 2, 595);
+
+      // Download PNG file
+      const dataUrl = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = `Spine_Label_${(activeLabelFile.fileNumber || "sticker").replace(/\s+/g, "_")}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Canvas screenshot error:", err);
+      alert("Could not generate screenshot.");
+    }
   };
 
   const filteredFiles = files.filter(
@@ -122,8 +340,19 @@ export default function ClerkFormatPhysicalFile() {
           onSubmit={handleSubmit}
           className="lg:col-span-4 bg-white rounded-3xl border border-[#E2E8F0] p-6 sm:p-8 shadow-sm space-y-5 h-fit"
         >
-          <h2 className="text-lg font-extrabold text-[#0F172A] border-b pb-3 flex items-center gap-2">
-            <span className="text-emerald-500">📁</span> Log Physical File
+          <h2 className="text-lg font-extrabold text-[#0F172A] border-b pb-3 flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <span className="text-emerald-500">📁</span> {editingFileId ? "Edit Physical File" : "Log Physical File"}
+            </span>
+            {editingFileId && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="text-xs text-slate-400 hover:text-slate-600 font-bold flex items-center gap-1"
+              >
+                <X size={14} /> Cancel
+              </button>
+            )}
           </h2>
 
           <div className="space-y-4">
@@ -157,10 +386,11 @@ export default function ClerkFormatPhysicalFile() {
                   onChange={(e) => setFormData({ ...formData, cabinet: e.target.value })}
                   className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] font-semibold outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition"
                 >
-                  <option value="Cabinet A">Cabinet A</option>
-                  <option value="Cabinet B">Cabinet B</option>
-                  <option value="Cabinet C">Cabinet C</option>
-                  <option value="Cabinet D">Cabinet D</option>
+                  {["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"].map((letter) => (
+                    <option key={letter} value={`Cabinet ${letter}`}>
+                      Cabinet {letter}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -171,10 +401,11 @@ export default function ClerkFormatPhysicalFile() {
                   onChange={(e) => setFormData({ ...formData, shelf: e.target.value })}
                   className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] font-semibold outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition"
                 >
-                  <option value="Shelf 1">Shelf 1</option>
-                  <option value="Shelf 2">Shelf 2</option>
-                  <option value="Shelf 3">Shelf 3</option>
-                  <option value="Shelf 4">Shelf 4</option>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                    <option key={num} value={`Shelf ${num}`}>
+                      Shelf {num}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -189,13 +420,17 @@ export default function ClerkFormatPhysicalFile() {
             </div>
           </div>
 
-          <button
-            type="submit"
-            className="w-full bg-[#0F172A] hover:bg-[#1E293B] text-white font-bold text-xs uppercase tracking-wider py-4 rounded-xl transition duration-200 shadow-md flex items-center justify-center gap-2"
-          >
-            <Plus size={16} />
-            Register File Record
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className={`w-full font-bold text-xs uppercase tracking-wider py-4 rounded-xl transition duration-200 shadow-md flex items-center justify-center gap-2 ${
+                editingFileId ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-[#0F172A] hover:bg-[#1E293B] text-white"
+              }`}
+            >
+              {editingFileId ? <Save size={16} /> : <Plus size={16} />}
+              {editingFileId ? "Update Record" : "Register File Record"}
+            </button>
+          </div>
         </form>
 
         {/* Index Table Pane */}
@@ -222,7 +457,7 @@ export default function ClerkFormatPhysicalFile() {
                   <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B]">File Number</th>
                   <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Case Title</th>
                   <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Location</th>
-                  <th className="px-6 py-4 text-center text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Labels</th>
+                  <th className="px-6 py-4 text-center text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F1F5F9]">
@@ -235,13 +470,29 @@ export default function ClerkFormatPhysicalFile() {
                       <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md">{file.shelf}</span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <button
-                        onClick={() => setActiveLabelFile(file)}
-                        className="bg-[#0F172A] hover:bg-[#1E293B] text-white p-2 rounded-lg transition"
-                        title="Print Spine Sticker Label"
-                      >
-                        <PrinterCheck size={16} />
-                      </button>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => setActiveLabelFile(file)}
+                          className="bg-[#0F172A] hover:bg-[#1E293B] text-white p-2 rounded-lg transition"
+                          title="View Spine Sticker Label & Location"
+                        >
+                          <PrinterCheck size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleEdit(file)}
+                          className="bg-amber-50 hover:bg-amber-100 text-amber-700 p-2 rounded-lg border border-amber-200 transition"
+                          title="Edit File Record"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirmFile(file)}
+                          className="bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-lg border border-red-200 transition"
+                          title="Delete File Record"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -256,10 +507,47 @@ export default function ClerkFormatPhysicalFile() {
         </div>
       </div>
 
-      {/* Spinal Label Print Modal */}
-      {activeLabelFile && (
-        <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-[#E2E8F0] p-6 max-w-2xl w-full shadow-2xl animate-in fade-in zoom-in-95">
+      {/* Delete Confirmation Custom Modal */}
+      {mounted && deleteConfirmFile && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-100 p-6 sm:p-8 max-w-md w-full shadow-2xl animate-in fade-in zoom-in-95 my-auto text-center space-y-5">
+            <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto shadow-inner border border-red-100">
+              <AlertTriangle size={32} />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-slate-900">Delete Physical File?</h3>
+              <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                Are you sure you want to remove <span className="font-bold text-slate-800">{deleteConfirmFile.fileNumber}</span> ({deleteConfirmFile.caseTitle})? This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmFile(null)}
+                className="flex-1 py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wider transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                className="flex-1 py-3.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-red-600/30 transition flex items-center justify-center gap-2"
+              >
+                <Trash2 size={16} />
+                Delete Record
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Spine Label Print Modal - Portal to document.body with top z-index covering sidebar & navbar */}
+      {mounted && activeLabelFile && createPortal(
+        <div className="fixed inset-0 bg-[#0F172A]/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div id="label-modal-content" className="bg-white rounded-3xl border border-[#E2E8F0] p-6 max-w-2xl w-full shadow-2xl animate-in fade-in zoom-in-95 my-auto">
             <h3 className="text-lg font-extrabold text-[#0F172A] mb-4 border-b pb-2">Spine Label & Location Layout</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center mb-6">
@@ -289,17 +577,18 @@ export default function ClerkFormatPhysicalFile() {
               </div>
 
               {/* Shelf Grid Map Visualizer */}
-              <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 h-full flex flex-col justify-center">
+              <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 h-full flex flex-col justify-center max-h-[340px]">
                 <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 text-center">
                   Cabinet Shelf Layout ({activeLabelFile.cabinet})
                 </h4>
-                <div className="space-y-2 max-w-[180px] mx-auto w-full">
-                  {["Shelf 4", "Shelf 3", "Shelf 2", "Shelf 1"].map((s) => {
+                <div className="space-y-1.5 max-w-[180px] mx-auto w-full overflow-y-auto max-h-[250px] pr-1">
+                  {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((num) => {
+                    const s = `Shelf ${num}`;
                     const isCurrent = activeLabelFile.shelf === s;
                     return (
                       <div
                         key={s}
-                        className={`py-2.5 px-4 rounded-xl border text-xs font-semibold text-center transition duration-200 ${
+                        className={`py-2 px-3 rounded-xl border text-xs font-semibold text-center transition duration-200 ${
                           isCurrent
                             ? "bg-emerald-600 text-white border-emerald-700 shadow-md font-bold scale-105"
                             : "bg-white text-slate-400 border-slate-200/80 opacity-60"
@@ -321,15 +610,16 @@ export default function ClerkFormatPhysicalFile() {
                 Cancel
               </button>
               <button
-                onClick={handlePrintLabel}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl transition shadow-md flex items-center justify-center gap-2"
+                onClick={handleScreenshot}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl transition shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2"
               >
-                <Printer size={16} />
-                Print Sticker
+                <Camera size={16} />
+                Screenshot
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
