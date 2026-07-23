@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import useModulePermission from "@/utils/useModulePermission";
 import { getLoggedInUser } from "@/utils/auth";
+import { isSensitiveCase } from "@/utils/caseSensitivity";
 import AssignedCaseDetailView from "./AssignedCaseDetailView";
 
 const getStatusSelectClass = (status) => {
@@ -85,6 +86,10 @@ export default function AssignedCasesView() {
   const [selectedCase, setSelectedCase] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const user = getLoggedInUser();
+  const isJuniorAdvocate =
+    user && user.role && user.role.toLowerCase().includes("junior");
 
   useEffect(() => {
     fetchAssignedCases();
@@ -347,7 +352,7 @@ export default function AssignedCasesView() {
                     </td>
 
                     <td className="px-5 py-4 text-sm text-[#475569] font-medium">
-                      {item.client}
+                      {isJuniorAdvocate && isSensitiveCase(item) ? "Confidential (Restricted)" : (item.client || "Not Specified")}
                     </td>
 
                     <td className="px-5 py-4 text-sm text-[#475569]">

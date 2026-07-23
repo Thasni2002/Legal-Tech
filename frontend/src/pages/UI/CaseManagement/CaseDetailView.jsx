@@ -25,6 +25,8 @@ import {
   Eye,
 } from "lucide-react";
 import { usePermissions } from "@/utils/usePermissions";
+import { getLoggedInUser } from "@/utils/auth";
+import { isSensitiveCase } from "@/utils/caseSensitivity";
 
 // Helper to get status badge styling and icon
 function getStatusBadgeStyle(status) {
@@ -115,6 +117,12 @@ function InfoRow({ icon, label, value }) {
 export default function CaseDetailView({ id }) {
   const router = useRouter();
   const { hasPermission } = usePermissions();
+
+  const loggedInUser = getLoggedInUser();
+  const isJuniorAdvocate =
+    loggedInUser &&
+    loggedInUser.role &&
+    loggedInUser.role.toLowerCase().includes("junior");
 
   const [selectedCase, setSelectedCase] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -561,9 +569,9 @@ export default function CaseDetailView({ id }) {
                 <div className="bg-[#F8FAFC] rounded-2xl p-5 border border-[#F1F5F9] space-y-4 sm:col-span-2">
                   <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Client Information</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <InfoRow icon={<User size={14} />} label="Client Name" value={selectedCase.client_name} />
-                    <InfoRow icon={<Phone size={14} />} label="Contact Number" value={selectedCase.contact_number} />
-                    <InfoRow icon={<Mail size={14} />} label="Email Address" value={selectedCase.email_id} />
+                    <InfoRow icon={<User size={14} />} label="Client Name" value={isJuniorAdvocate && isSensitiveCase(selectedCase) ? "Confidential (Restricted)" : selectedCase.client_name} />
+                    <InfoRow icon={<Phone size={14} />} label="Contact Number" value={isJuniorAdvocate && isSensitiveCase(selectedCase) ? "Confidential (Restricted)" : selectedCase.contact_number} />
+                    <InfoRow icon={<Mail size={14} />} label="Email Address" value={isJuniorAdvocate && isSensitiveCase(selectedCase) ? "Confidential (Restricted)" : selectedCase.email_id} />
                   </div>
                 </div>
               </div>

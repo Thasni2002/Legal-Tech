@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { getLoggedInUser } from "@/utils/auth";
+import { isSensitiveCase } from "@/utils/caseSensitivity";
 import { API_BASE_URL } from "@/utils/api";
 import {
   Briefcase,
@@ -148,7 +149,7 @@ export default function JunAdvDashView() {
               uploaded_by_role: role_label,
               case_title: item.case_title || item.case_name || "",
               case_no: item.case_number || item.case_no || "",
-              client_name: item.client_name || "",
+              client_name: isSensitiveCase(item) ? "Confidential (Restricted)" : (item.client_name || ""),
               timestamp_display: timestampDisplay,
               file_url: file_url,
             });
@@ -163,7 +164,7 @@ export default function JunAdvDashView() {
           title: item.case_title || item.case_name,
           hearing: item.due_date ? item.due_date.split("T")[0] : "No date",
           status: item.status || "Active",
-          clientName: item.client_name || "N/A",
+          clientName: isSensitiveCase(item) ? "Confidential (Restricted)" : (item.client_name || "N/A"),
           court: item.practice_court || item.practice_area || "Family Court",
           advocateName: item.advocate_name || "",
           secondaryAdvocateName: item.secondaryAdvocateName || item.secondary_advocate_name || "",
