@@ -24,6 +24,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
+import { isSensitiveCase } from "@/utils/caseSensitivity";
 import DocumentViewerModal from "@/components/common/DocumentViewerModal";
 
 export default function AssignedCaseDetailView({
@@ -487,7 +488,7 @@ export default function AssignedCaseDetailView({
                         <User size={16} />
                       </div>
                       <span className="text-sm font-bold text-[#0F172A] truncate">
-                        {selectedCase.client || "Not Specified"}
+                        {isJuniorAdvocate && isSensitiveCase(selectedCase) ? "Confidential (Restricted)" : (selectedCase.client || "Not Specified")}
                       </span>
                     </div>
                   </div>

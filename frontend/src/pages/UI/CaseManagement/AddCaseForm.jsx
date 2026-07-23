@@ -394,6 +394,45 @@ const getTypesForCourtName = (courtName) => {
   return ["Civil", "Criminal", "Appellate", "Original Jurisdiction", "Sessions", "Other"];
 };
 
+const categoryCourtKeywords = {
+  "Family Court Cases": ["Family Court"],
+  "Motor Accident Cases": ["MACT", "Accident"],
+  "Consumer Cases": ["Consumer"],
+  "Labour & Tribunal Cases": ["Labour", "KAT", "Industrial", "Tribunal"],
+  "Company & Commercial Cases": ["Commercial Court", "High Court", "Sub Court", "District & Sessions"],
+  "Rent Control Cases": ["Rent Control", "Munsiff Court", "Sub Court", "District & Sessions"],
+  "Revenue & Land Cases": ["Sub Court", "District & Sessions", "Munsiff Court", "High Court"],
+  "Cheque & Financial Cases": ["Judicial First Class Magistrate", "CJM", "Magistrate", "Sub Court", "Munsiff Court"],
+  "Criminal Cases": ["Sessions", "Magistrate", "CJM", "JFCM", "POCSO", "Vigilance", "CBI", "Sub Court", "District & Sessions", "High Court"],
+  "Civil Cases": ["Sub Court", "Munsiff Court", "District & Sessions", "High Court", "Commercial Court"]
+};
+
+const getCourtsForCategoryAndDistrict = (category, district, showAll = false) => {
+  let baseCourts = [];
+  if (district && DISTRICT_COURTS[district]) {
+    baseCourts = DISTRICT_COURTS[district];
+  } else {
+    baseCourts = Object.values(DISTRICT_COURTS).flat();
+  }
+
+  const keywords = category ? categoryCourtKeywords[category] : null;
+  if (!keywords) {
+    return { courts: baseCourts, canFilter: false };
+  }
+
+  const categoryFiltered = baseCourts.filter((court) =>
+    keywords.some((kw) => court.toLowerCase().includes(kw.toLowerCase()))
+  );
+
+  const canFilter = categoryFiltered.length > 0;
+
+  if (showAll || !canFilter) {
+    return { courts: baseCourts, canFilter };
+  }
+
+  return { courts: categoryFiltered, canFilter };
+};
+
 // Error message component
 function ErrorMsg({ message }) {
   if (!message) return null;
@@ -452,6 +491,13 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
   const [originalEmail, setOriginalEmail] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSubtype, setSelectedSubtype] = useState("");
+  const [showAllCourts, setShowAllCourts] = useState(false);
+
+  const { courts: availableCourts, canFilter: canFilterByCategory } = getCourtsForCategoryAndDistrict(
+    selectedCategory,
+    formData.clientDistrict,
+    showAllCourts
+  );
 
   // ─── Fetch case data for edit mode ───
   async function fetchCaseForEdit(id) {
@@ -801,10 +847,20 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
         lowerAddress.includes(dist.toLowerCase())
       );
       if (matchedDistrict) {
+        const { courts } = getCourtsForCategoryAndDistrict(selectedCategory, matchedDistrict, showAllCourts);
+        let newCourtName = formData.courtName;
+        if (courts && courts.length > 0 && (!newCourtName || !courts.includes(newCourtName))) {
+          newCourtName = courts[0];
+        }
+        const types = getTypesForCourtName(newCourtName);
+        const newCourtType = types && types.length > 0 ? types[0] : "Civil";
+
         setFormData((prev) => ({
           ...prev,
           clientAddress: val,
           clientDistrict: matchedDistrict,
+          courtName: newCourtName,
+          courtType: newCourtType,
         }));
       } else {
         setFormData((prev) => ({
@@ -812,6 +868,21 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
           clientAddress: val,
         }));
       }
+    } else if (name === "clientDistrict") {
+      const { courts } = getCourtsForCategoryAndDistrict(selectedCategory, val, showAllCourts);
+      let newCourtName = formData.courtName;
+      if (courts && courts.length > 0 && (!newCourtName || !courts.includes(newCourtName))) {
+        newCourtName = courts[0];
+      }
+      const types = getTypesForCourtName(newCourtName);
+      const newCourtType = types && types.length > 0 ? types[0] : "Civil";
+
+      setFormData((prev) => ({
+        ...prev,
+        clientDistrict: val,
+        courtName: newCourtName,
+        courtType: newCourtType,
+      }));
     } else if (name === "courtName") {
       const types = getTypesForCourtName(val);
       setFormData((prev) => ({
@@ -848,9 +919,22 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
     setSelectedSubtype("");
 
     const combinedType = cat ? `${cat}: ` : "";
+
+    const { courts } = getCourtsForCategoryAndDistrict(cat, formData.clientDistrict, showAllCourts);
+    let newCourtName = formData.courtName;
+    if (courts && courts.length > 0) {
+      if (!newCourtName || !courts.includes(newCourtName)) {
+        newCourtName = courts[0];
+      }
+    }
+    const newCourtTypes = getTypesForCourtName(newCourtName);
+    const newCourtType = newCourtTypes && newCourtTypes.length > 0 ? newCourtTypes[0] : "Civil";
+
     setFormData((prev) => ({
       ...prev,
       caseType: combinedType,
+      courtName: newCourtName,
+      courtType: newCourtType,
     }));
 
     setTouched((prev) => ({
@@ -862,6 +946,8 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
     setErrors((prev) => ({
       ...prev,
       caseType: error,
+      courtName: validateField("courtName", newCourtName),
+      courtType: validateField("courtType", newCourtType),
     }));
   };
 
@@ -1501,13 +1587,38 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
 
           {/* Court Information */}
           <div className="space-y-5 pt-4 border-t border-[#F1F5F9]">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">Court Details</h3>
-              {formData.clientDistrict && (
-                <span className="text-xs font-semibold text-[#2563EB] bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
-                  Filtered by Location: {formData.clientDistrict}
-                </span>
-              )}
+              <div className="flex flex-wrap items-center gap-2">
+                {formData.clientDistrict && (
+                  <span className="text-xs font-semibold text-[#2563EB] bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
+                    Location: {formData.clientDistrict}
+                  </span>
+                )}
+                {selectedCategory && (
+                  <span className="text-xs font-semibold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full border border-purple-100">
+                    Category: {selectedCategory}
+                  </span>
+                )}
+                {canFilterByCategory && !showAllCourts && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllCourts(true)}
+                    className="text-xs font-bold text-[#64748B] bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-full transition cursor-pointer border border-slate-200"
+                  >
+                    Show All Courts
+                  </button>
+                )}
+                {canFilterByCategory && showAllCourts && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllCourts(false)}
+                    className="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-full transition cursor-pointer border border-blue-200"
+                  >
+                    Filter by Category
+                  </button>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
@@ -1515,15 +1626,9 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                 <select name="courtName" value={formData.courtName} onChange={handleChange}
                   className={`${baseInputClass} ${getBorderClass("courtName")}`}>
                   <option value="">Select Court Name</option>
-                  {formData.clientDistrict && DISTRICT_COURTS[formData.clientDistrict] ? (
-                    DISTRICT_COURTS[formData.clientDistrict].map((court) => (
-                      <option key={court} value={court}>{court}</option>
-                    ))
-                  ) : (
-                    Object.values(DISTRICT_COURTS).flat().map((court, idx) => (
-                      <option key={idx} value={court}>{court}</option>
-                    ))
-                  )}
+                  {(availableCourts || []).map((court, idx) => (
+                    <option key={idx} value={court}>{court}</option>
+                  ))}
                 </select>
                 {touched.courtName && errors.courtName && <ErrorMsg message={errors.courtName} />}
               </div>
