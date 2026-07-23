@@ -135,13 +135,11 @@ export default function ClerkDashboard() {
   }
 
   const quickNav = [
-    { title: "Next Posting", path: "/clerk/next-posting", icon: CalendarIcon, color: "from-blue-600 to-indigo-600", desc: "Update hearing dates & notify counsel" },
     { title: "Court Visit", path: "/clerk/court-visit", icon: Building2, color: "from-emerald-600 to-teal-600", desc: "Daily cause list & check-in tracker" },
-    { title: "Physical Filing", path: "/clerk/physical-filing", icon: FolderCheck, color: "from-purple-600 to-indigo-600", desc: "Checklist, court fee & scrutiny status" },
     { title: "Online e-Filing", path: "/clerk/efiling", icon: Globe, color: "from-cyan-600 to-blue-600", desc: "Digital portal uploads & SR receipts" },
-    { title: "Court Order Collection", path: "/clerk/order-collection", icon: FileText, color: "from-amber-600 to-orange-600", desc: "Awaiting bench orders & CC tracker" },
-    { title: "Client Notice", path: "/clerk/client-notice", icon: Send, color: "from-teal-600 to-emerald-600", desc: "WhatsApp, SMS & Speed Post RPAD" },
-    { title: "Task Assignment", path: "/clerk/task-assignment", icon: ClipboardList, color: "from-indigo-600 to-blue-700", desc: "Delegate to typists & office staff" }
+    { title: "Task Assignment", path: "/clerk/task-assignment", icon: ClipboardList, color: "from-indigo-600 to-blue-700", desc: "Delegate to typists & office staff" },
+    { title: "Format Physical File", path: "/clerk/format-physical-file", icon: FolderCheck, color: "from-purple-600 to-indigo-600", desc: "Physical file shelf and cabinet indexing" },
+    { title: "Leave Management", path: "/clerk/leave", icon: CalendarIcon, color: "from-amber-600 to-orange-600", desc: "Apply and manage leave requests" }
   ];
 
   return (
@@ -156,45 +154,43 @@ export default function ClerkDashboard() {
             Welcome back, <span className="capitalize text-blue-300">{user.firstName || user.username || "Clerk"}</span>
           </h1>
           <p className="text-slate-300 text-sm max-w-xl font-medium">
-            Manage daily court hall movements, next hearing postings, physical/online filings, court orders, and office tasks.
+            Manage daily court visits, e-filing records, physical file formatting, task assignments, and leaves.
           </p>
         </div>
-
-
       </div>
 
       {/* Stats Summary Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
-          <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-3">
-            <CalendarIcon size={20} />
-          </div>
-          <p className="text-slate-400 text-xs font-bold uppercase">Upcoming Hearings</p>
-          <h3 className="text-2xl font-extrabold text-slate-900 mt-1">{stats.next_postings} Registered</h3>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
           <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-3">
             <Building2 size={20} />
           </div>
           <p className="text-slate-400 text-xs font-bold uppercase">Court Visits Logged</p>
-          <h3 className="text-2xl font-extrabold text-slate-900 mt-1">{stats.court_visits} Halls</h3>
+          <h3 className="text-2xl font-extrabold text-slate-900 mt-1">{stats.court_visits || 0} Halls</h3>
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
-          <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center mb-3">
-            <FileText size={20} />
+          <div className="w-10 h-10 bg-cyan-50 text-cyan-600 rounded-xl flex items-center justify-center mb-3">
+            <Globe size={20} />
           </div>
-          <p className="text-slate-400 text-xs font-bold uppercase">Awaiting Bench Orders</p>
-          <h3 className="text-2xl font-extrabold text-slate-900 mt-1">{stats.orders_awaiting} Cases</h3>
+          <p className="text-slate-400 text-xs font-bold uppercase">Online e-Filings</p>
+          <h3 className="text-2xl font-extrabold text-slate-900 mt-1">{stats.efilings || 0} Uploaded</h3>
+        </div>
+
+        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+          <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center mb-3">
+            <ClipboardList size={20} />
+          </div>
+          <p className="text-slate-400 text-xs font-bold uppercase">Assigned Tasks</p>
+          <h3 className="text-2xl font-extrabold text-slate-900 mt-1">{stats.assigned_tasks || 0} Active</h3>
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
           <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-3">
             <FolderCheck size={20} />
           </div>
-          <p className="text-slate-400 text-xs font-bold uppercase">Total Filings</p>
-          <h3 className="text-2xl font-extrabold text-slate-900 mt-1">{stats.physical_filings + stats.efilings} Filed</h3>
+          <p className="text-slate-400 text-xs font-bold uppercase">Cabinets Indexed</p>
+          <h3 className="text-2xl font-extrabold text-slate-900 mt-1">{stats.cabinets || 0} Cabinets</h3>
         </div>
       </div>
 
