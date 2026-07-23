@@ -175,9 +175,9 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Users": {"view": False, "add": False, "edit": False, "delete": False},
         "Permissions": {"view": False, "add": False, "edit": False, "delete": False},
         "Client Document Generate": {"view": False, "add": False, "edit": False, "delete": False},
-        "Next Posting": {"view": True, "add": True, "edit": True, "delete": True},
+        "Next Posting": {"view": False, "add": False, "edit": False, "delete": False},
         "Court Visit": {"view": True, "add": True, "edit": True, "delete": True},
-        "Physical Filing": {"view": True, "add": True, "edit": True, "delete": True},
+        "Physical Filing": {"view": False, "add": False, "edit": False, "delete": False},
         "Online e-Filing": {"view": True, "add": True, "edit": True, "delete": True},
         "Court Order Collection": {"view": True, "add": True, "edit": True, "delete": True},
         "Client Notice": {"view": True, "add": True, "edit": True, "delete": True},
@@ -362,11 +362,17 @@ def seed_roles_and_permissions(db: Session) -> None:
     Idempotent seeder: creates default roles and their permissions
     if they do not already exist. Called at application startup.
     """
+    # Remove obsolete Legal Specialist role if it exists in DB
+    obsolete_role = db.query(Role).filter((Role.id == "legalspecialist") | (Role.name == "Legal Specialist")).first()
+    if obsolete_role:
+        db.query(Permission).filter(Permission.role_id == obsolete_role.id).delete()
+        db.delete(obsolete_role)
+        db.commit()
+
     core_roles = [
         {"id": "senioradvocate", "name": "Senior Advocate", "description": "Full system access"},
         {"id": "junioradvocate", "name": "Junior Advocate", "description": "Limited access"},
         {"id": "client",         "name": "Client",          "description": "Client access"},
-        {"id": "legalspecialist", "name": "Legal Specialist", "description": "Handles document filing and scheduling"},
         {"id": "clerk",           "name": "Clerk",            "description": "Clerk access"},
     ]
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getLoggedInUser } from "@/utils/auth";
 import { API_BASE_URL } from "@/utils/api";
 
@@ -21,66 +21,90 @@ export default function useModulePermission(moduleKey) {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
 
-  useEffect(() => {
+  const resolve = useCallback(async () => {
     if (!moduleKey) {
       setLoading(false);
       return;
     }
 
-    const resolve = async () => {
-      const loggedIn = getLoggedInUser();
-      setUser(loggedIn);
+    const loggedIn = getLoggedInUser();
+    setUser(loggedIn);
 
-      if (!loggedIn) {
-        setLoading(false);
-        return;
-      }
-
-      // 1. Fetch role defaults first
-      let roleDefaults = {};
-      try {
-        const resRole = await fetch(`${API_BASE_URL}/permissions`);
-        if (resRole.ok) {
-          const allPerms = await resRole.json();
-          roleDefaults = (allPerms[loggedIn.role] || {})[moduleKey] || {};
-        }
-      } catch (_) {}
-
-      // 2. Fetch user's custom overrides
-      let customOverrides = {};
-      try {
-        const resUser = await fetch(`${API_BASE_URL}/permissions/users/${loggedIn.id}`);
-        if (resUser.ok) {
-          const data = await resUser.json();
-          const custom = data.customPermissions || {};
-          customOverrides = custom[moduleKey] || {};
-          setUser({ ...loggedIn, ...data });
-        }
-      } catch (_) {}
-
-      // 3. Merge: DEFAULT_PERMS (all true) <- roleDefaults <- customOverrides
-      // Wait, if no config exists, we allow everything (DEFAULT_PERMS).
-      // But if roleDefaults OR customOverrides exist for this module, we assume explicit configuration.
-      // Usually, if a module is defined in the role matrix, it has {view, add, edit, delete} explicitly set.
-      
-      const hasRoleConfig = Object.keys(roleDefaults).length > 0;
-      const hasCustomConfig = Object.keys(customOverrides).length > 0;
-
-      if (hasRoleConfig || hasCustomConfig) {
-        // Start with all false if there's any explicit config, then layer role, then layer custom
-        const base = { view: false, add: false, edit: false, delete: false };
-        setPerms({ ...base, ...roleDefaults, ...customOverrides });
-      } else {
-        // Fallback to allow all
-        setPerms(DEFAULT_PERMS);
-      }
-      
+    if (!loggedIn) {
       setLoading(false);
+      return;
+    }
 
+    const roleNorm = (loggedIn.role || "").toLowerCase().replace(/\s+/g, "");
+
+    // 1. Fetch role defaults first
+    let roleDefaults = {};
+    try {
+      const resRole = await fetch(`${API_BASE_URL}/permissions`);
+      if (resRole.ok) {
+        const allPerms = await resRole.json();
+        const roleKey = Object.keys(allPerms).find(
+          (k) => k.toLowerCase().replace(/\s+/g, "") === roleNorm
+        );
+        if (roleKey) {
+          roleDefaults = (allPerms[roleKey] || {})[moduleKey] || {};
+        }
+      }
+    } catch (_) {}
+
+    // 2. Fetch user's custom overrides (direct permissions)
+    let customOverrides = {};
+    try {
+      const resUser = await fetch(`${API_BASE_URL}/permissions/users/${loggedIn.id}`);
+      if (resUser.ok) {
+        const data = await resUser.json();
+        const custom = data.customPermissions || {};
+        customOverrides = custom[moduleKey] || {};
+        setUser({ ...loggedIn, ...data });
+      }
+    } catch (_) {}
+
+    // 3. Layer permissions per action: Custom Direct Override > Role Matrix Default > True
+    const effectivePerms = {
+      view:
+        customOverrides.view !== undefined
+          ? !!customOverrides.view
+          : roleDefaults.view !== undefined
+          ? !!roleDefaults.view
+          : true,
+      add:
+        customOverrides.add !== undefined
+          ? !!customOverrides.add
+          : roleDefaults.add !== undefined
+          ? !!roleDefaults.add
+          : true,
+      edit:
+        customOverrides.edit !== undefined
+          ? !!customOverrides.edit
+          : roleDefaults.edit !== undefined
+          ? !!roleDefaults.edit
+          : true,
+      delete:
+        customOverrides.delete !== undefined
+          ? !!customOverrides.delete
+          : roleDefaults.delete !== undefined
+          ? !!roleDefaults.delete
+          : true,
     };
 
-    resolve();
+    setPerms(effectivePerms);
+    setLoading(false);
   }, [moduleKey]);
+
+  useEffect(() => {
+    resolve();
+  }, [resolve]);
+
+  useEffect(() => {
+    const handleUpdate = () => resolve();
+    window.addEventListener("permissions_updated", handleUpdate);
+    return () => window.removeEventListener("permissions_updated", handleUpdate);
+  }, [resolve]);
 
   return { perms, loading, user };
 }

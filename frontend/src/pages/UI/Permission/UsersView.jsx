@@ -47,7 +47,9 @@ const ALL_MODULES = [
   "Users",
   "Permissions",
   "Clerk Dashboard",
-  "Document Draft",
+  "Court Visit",
+  "Online e-Filing",
+  "Task Assignment",
   "Format Physical File",
   "Leave Management",
   "Junior Leave",
@@ -104,7 +106,9 @@ const SENIOR_JUNIOR_MODULES = [
     category: "Clerk Features",
     modules: [
       { key: "Clerk Dashboard", label: "Dashboard (Clerk)" },
-      { key: "Document Draft", label: "Document Draft" },
+      { key: "Court Visit", label: "Court Visit" },
+      { key: "Online e-Filing", label: "Online e-Filing" },
+      { key: "Task Assignment", label: "Task Assignment" },
       { key: "Format Physical File", label: "Format Physical File" },
       { key: "Clerk Leave", label: "Clerk Leave" },
     ]
@@ -194,6 +198,8 @@ export default function UsersView() {
   const [editUsername, setEditUsername] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editPassword, setEditPassword] = useState("");
+  const [showEditPassword, setShowEditPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [editCustomPerms, setEditCustomPerms] = useState({});
   const [editDocAccess, setEditDocAccess] = useState([]);
 
@@ -1235,16 +1241,26 @@ export default function UsersView() {
                             New Password (Optional)
                           </label>
 
-                          <input
-                            type="password"
-                            value={editPassword}
-                            onChange={(e) => setEditPassword(e.target.value)}
-                            placeholder="Leave blank to keep current password"
-                            className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5"
-                          />
+                          <div className="relative">
+                            <input
+                              type={showEditPassword ? "text" : "password"}
+                              value={editPassword}
+                              onChange={(e) => setEditPassword(e.target.value)}
+                              placeholder="Leave blank to keep current password"
+                              className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 pr-12 text-[#0F172A] placeholder:text-[#94A3B8] focus:bg-white focus:ring-4 focus:ring-blue-50 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowEditPassword(!showEditPassword)}
+                              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1 flex items-center justify-center"
+                              title={showEditPassword ? "Hide password" : "Show password"}
+                            >
+                              {showEditPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                          </div>
                           {activeUser?.tempPassword && (
                             <p className="mt-1.5 text-xs text-slate-500 font-medium">
-                              Current Temporary Password: <code className="bg-slate-100 text-indigo-600 px-1.5 py-0.5 rounded font-bold select-all">{activeUser.tempPassword}</code>
+                              Current Password: <code className="bg-slate-100 text-indigo-600 px-1.5 py-0.5 rounded font-bold select-all">{activeUser.tempPassword}</code>
                             </p>
                           )}
                         </div>
@@ -1255,13 +1271,23 @@ export default function UsersView() {
                             Confirm Password
                           </label>
 
-                          <input
-                            type="password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="Confirm new password"
-                            className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5"
-                          />
+                          <div className="relative">
+                            <input
+                              type={showConfirmPassword ? "text" : "password"}
+                              value={confirmPassword}
+                              onChange={(e) => setConfirmPassword(e.target.value)}
+                              placeholder="Confirm new password"
+                              className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 pr-12 text-[#0F172A] placeholder:text-[#94A3B8] focus:bg-white focus:ring-4 focus:ring-blue-50 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1 flex items-center justify-center"
+                              title={showConfirmPassword ? "Hide password" : "Show password"}
+                            >
+                              {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                          </div>
                         </div>
 
                       </div>
