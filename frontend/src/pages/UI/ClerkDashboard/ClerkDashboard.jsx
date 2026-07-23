@@ -160,15 +160,7 @@ export default function ClerkDashboard() {
           </p>
         </div>
 
-        <div className="relative z-10 flex gap-3">
-          <button
-            onClick={() => router.push("/clerk/next-posting")}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm px-6 py-3.5 rounded-2xl shadow-lg shadow-blue-600/30 transition duration-200 hover:scale-105"
-          >
-            <CalendarIcon size={18} />
-            Record Next Posting
-          </button>
-        </div>
+
       </div>
 
       {/* Stats Summary Grid */}
@@ -206,102 +198,9 @@ export default function ClerkDashboard() {
         </div>
       </div>
 
-      {/* Quick Launchpad to All 7 Clerk Hubs */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-            <Sparkles className="text-blue-600" size={20} />
-            Clerk Operational Modules
-          </h2>
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">7 Active Modules</span>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {quickNav.map((module) => {
-            const IconComp = module.icon;
-            return (
-              <div
-                key={module.path}
-                onClick={() => router.push(module.path)}
-                className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group flex flex-col justify-between space-y-4"
-              >
-                <div className="space-y-3">
-                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-r ${module.color} text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
-                    <IconComp size={24} />
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                    {module.title}
-                  </h3>
-                  <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                    {module.desc}
-                  </p>
-                </div>
 
-                <div className="flex items-center text-xs font-extrabold text-blue-600 group-hover:translate-x-1 transition-transform">
-                  Open Hub <ArrowRight size={14} className="ml-1" />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
 
-      {/* Personal Checklist / Quick Tasks */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-extrabold text-slate-900">Clerk Personal Checklist</h2>
-            <p className="text-xs font-medium text-slate-500">Keep track of personal daily errands and registry followups</p>
-          </div>
-          <span className="text-xs font-bold bg-slate-100 text-slate-700 px-3 py-1 rounded-full">
-            {tasks.filter(t => t.completed).length}/{tasks.length} Completed
-          </span>
-        </div>
-
-        <form onSubmit={handleAddTask} className="flex gap-3">
-          <input
-            type="text"
-            placeholder="Add new task (e.g. Check scrutiny defect on WP 1024)..."
-            value={newTaskText}
-            onChange={(e) => setNewTaskText(e.target.value)}
-            className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-          />
-          <button
-            type="submit"
-            className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm px-6 py-3 rounded-xl transition duration-200 flex items-center gap-1"
-          >
-            <Plus size={16} /> Add Task
-          </button>
-        </form>
-
-        <div className="space-y-2">
-          {tasks.length === 0 ? (
-            <p className="text-xs text-slate-400 text-center py-6">No personal tasks added yet.</p>
-          ) : (
-            tasks.map((task) => (
-              <div
-                key={task.id}
-                className="flex items-center justify-between p-3.5 bg-slate-50 hover:bg-slate-100/80 rounded-2xl border border-slate-100 transition duration-150"
-              >
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={task.completed}
-                    onChange={() => toggleTask(task.id, task.completed)}
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className={`text-sm font-medium ${task.completed ? 'line-through text-slate-400' : 'text-slate-800'}`}>
-                    {task.text}
-                  </span>
-                </label>
-                <button onClick={() => deleteTask(task.id)} className="text-slate-400 hover:text-red-600 transition-colors">
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
     </div>
   );
 }
