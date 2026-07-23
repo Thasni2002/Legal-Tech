@@ -8,7 +8,6 @@ from .service import get_clerk_tasks, create_clerk_task, update_clerk_task, dele
 from app.clerk.format_physical_file.models import ClerkPhysicalFile
 from app.clerk.court_visit.models import ClerkCourtVisit
 from app.clerk.efiling.models import ClerkEFilingRecord
-from app.clerk.task_assignment.models import ClerkTaskAssignmentRecord
 
 router = APIRouter(
     prefix="/clerk/dashboard",
@@ -42,13 +41,11 @@ def get_stats(db: Session = Depends(get_db)):
     cabinets_count = db.query(ClerkPhysicalFile.cabinet_location).distinct().count()
     court_visits_count = db.query(ClerkCourtVisit).count()
     efilings_count = db.query(ClerkEFilingRecord).count()
-    assigned_tasks_count = db.query(ClerkTaskAssignmentRecord).filter(ClerkTaskAssignmentRecord.status != "Completed").count()
-    urgent_tasks_count = db.query(ClerkTaskAssignmentRecord).filter(ClerkTaskAssignmentRecord.priority == "Urgent").count()
 
     return {
         "cabinets": cabinets_count,
         "court_visits": court_visits_count,
         "efilings": efilings_count,
-        "assigned_tasks": assigned_tasks_count,
-        "urgent_tasks": urgent_tasks_count
+        "assigned_tasks": 0,
+        "urgent_tasks": 0
     }

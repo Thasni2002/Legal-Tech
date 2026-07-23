@@ -30,8 +30,6 @@ from app.clerk.court_visit.models import ClerkCourtVisit
 from app.clerk.court_visit import router as clerk_court_visit_router
 from app.clerk.efiling.models import ClerkEFilingRecord
 from app.clerk.efiling import router as clerk_efiling_router
-from app.clerk.task_assignment.models import ClerkTaskAssignmentRecord
-from app.clerk.task_assignment import router as clerk_task_assignment_router
 
 
 
@@ -181,5 +179,4 @@ app.include_router(clerk_dashboard_router)
 app.include_router(clerk_format_physical_file_router)
 app.include_router(clerk_court_visit_router)
 app.include_router(clerk_efiling_router)
-app.include_router(clerk_task_assignment_router)
 app.include_router(leave_router, prefix="/leaves", tags=["Leave Management"])

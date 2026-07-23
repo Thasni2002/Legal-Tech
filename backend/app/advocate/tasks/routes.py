@@ -109,19 +109,20 @@ async def create_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Create a task. Only Senior Advocate or Superadmin can create tasks."""
-    allowed = current_user.role in ("Senior Advocate", "Superadmin", "admin", "Admin")
-    if not allowed:
-        raise HTTPException(status_code=403, detail="Only Senior Advocates can create tasks")
+    """Create a task. Senior Advocates, Admins, and Clerks can create tasks."""
+    role = (current_user.role or "").lower()
+    is_junior = "junior" in role
+    if is_junior:
+        raise HTTPException(status_code=403, detail="Only Senior Advocates, Admins, and Clerks can create tasks")
 
     if current_user.first_name or current_user.last_name:
         senior_name = f"{current_user.first_name or ''} {current_user.last_name or ''}".strip()
     else:
-        senior_name = current_user.username or "Senior Advocate"
+        senior_name = current_user.username or "Assigner"
     task = svc.create_task(db, data, current_user.id, senior_name)
     task_dict = svc.task_to_dict(task)
 
-    # Send email notification to junior
+    # Send email notification to junior / assignee
     junior = db.query(User).filter(User.id == data.junior_advocate_id).first()
     if junior and junior.email:
         await _notify_task_assigned(task_dict, junior.email)

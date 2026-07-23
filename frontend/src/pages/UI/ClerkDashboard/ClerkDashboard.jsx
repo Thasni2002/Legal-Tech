@@ -137,7 +137,6 @@ export default function ClerkDashboard() {
   const quickNav = [
     { title: "Court Visit", path: "/clerk/court-visit", icon: Building2, color: "from-emerald-600 to-teal-600", desc: "Daily cause list & check-in tracker" },
     { title: "Online e-Filing", path: "/clerk/efiling", icon: Globe, color: "from-cyan-600 to-blue-600", desc: "Digital portal uploads & SR receipts" },
-    { title: "Task Assignment", path: "/clerk/task-assignment", icon: ClipboardList, color: "from-indigo-600 to-blue-700", desc: "Delegate to typists & office staff" },
     { title: "Format Physical File", path: "/clerk/format-physical-file", icon: FolderCheck, color: "from-purple-600 to-indigo-600", desc: "Physical file shelf and cabinet indexing" },
     { title: "Leave Management", path: "/clerk/leave", icon: CalendarIcon, color: "from-amber-600 to-orange-600", desc: "Apply and manage leave requests" }
   ];
@@ -154,7 +153,7 @@ export default function ClerkDashboard() {
             Welcome back, <span className="capitalize text-blue-300">{user.firstName || user.username || "Clerk"}</span>
           </h1>
           <p className="text-slate-300 text-sm max-w-xl font-medium">
-            Manage daily court visits, e-filing records, physical file formatting, task assignments, and leaves.
+            Manage daily court visits, e-filing records, physical file formatting, and leaves.
           </p>
         </div>
       </div>
