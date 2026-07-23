@@ -48,8 +48,6 @@ const ALL_MODULES = [
   "Permissions",
   "Clerk Dashboard",
   "Court Visit",
-  "Online e-Filing",
-  "Task Assignment",
   "Format Physical File",
   "Leave Management",
   "Junior Leave",
@@ -107,8 +105,6 @@ const SENIOR_JUNIOR_MODULES = [
     modules: [
       { key: "Clerk Dashboard", label: "Dashboard (Clerk)" },
       { key: "Court Visit", label: "Court Visit" },
-      { key: "Online e-Filing", label: "Online e-Filing" },
-      { key: "Task Assignment", label: "Task Assignment" },
       { key: "Format Physical File", label: "Format Physical File" },
       { key: "Clerk Leave", label: "Clerk Leave" },
     ]

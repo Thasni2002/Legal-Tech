@@ -136,7 +136,6 @@ export default function ClerkDashboard() {
 
   const quickNav = [
     { title: "Court Visit", path: "/clerk/court-visit", icon: Building2, color: "from-emerald-600 to-teal-600", desc: "Daily cause list & check-in tracker" },
-    { title: "Online e-Filing", path: "/clerk/efiling", icon: Globe, color: "from-cyan-600 to-blue-600", desc: "Digital portal uploads & SR receipts" },
     { title: "Format Physical File", path: "/clerk/format-physical-file", icon: FolderCheck, color: "from-purple-600 to-indigo-600", desc: "Physical file shelf and cabinet indexing" },
     { title: "Leave Management", path: "/clerk/leave", icon: CalendarIcon, color: "from-amber-600 to-orange-600", desc: "Apply and manage leave requests" }
   ];
@@ -144,36 +143,28 @@ export default function ClerkDashboard() {
   return (
     <div className="w-full min-h-screen bg-[#F8FAFC] p-4 sm:p-8 space-y-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-900 text-white rounded-3xl p-6 sm:p-10 shadow-xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="bg-gradient-to-r from-[#FAF6F0] via-[#F4EFE6] to-[#EFE8DC] border border-[#E6DFD5] text-[#2C221E] rounded-3xl p-6 sm:p-10 shadow-lg shadow-amber-900/5 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="relative z-10 space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/20 border border-blue-400/30 rounded-full text-blue-300 text-xs font-bold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-[#8C6D53]/15 border border-[#8C6D53]/30 rounded-full text-[#6B4E38] text-xs font-bold uppercase tracking-wider">
             🏛️ Advocate Clerk Command Center
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-            Welcome back, <span className="capitalize text-blue-300">{user.firstName || user.username || "Clerk"}</span>
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#2C221E]">
+            Welcome back, <span className="capitalize text-[#8C5E34]">{user.firstName || user.username || "Clerk"}</span>
           </h1>
-          <p className="text-slate-300 text-sm max-w-xl font-medium">
-            Manage daily court visits, e-filing records, physical file formatting, and leaves.
+          <p className="text-[#5A4D46] text-sm max-w-xl font-medium">
+            Manage daily court visits, physical file formatting, and leaves.
           </p>
         </div>
       </div>
 
       {/* Stats Summary Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
           <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-3">
             <Building2 size={20} />
           </div>
           <p className="text-slate-400 text-xs font-bold uppercase">Court Visits Logged</p>
           <h3 className="text-2xl font-extrabold text-slate-900 mt-1">{stats.court_visits || 0} Halls</h3>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
-          <div className="w-10 h-10 bg-cyan-50 text-cyan-600 rounded-xl flex items-center justify-center mb-3">
-            <Globe size={20} />
-          </div>
-          <p className="text-slate-400 text-xs font-bold uppercase">Online e-Filings</p>
-          <h3 className="text-2xl font-extrabold text-slate-900 mt-1">{stats.efilings || 0} Uploaded</h3>
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">

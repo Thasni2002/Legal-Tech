@@ -38,10 +38,8 @@ BASE_MODULES = [
     "Next Posting",
     "Court Visit",
     "Physical Filing",
-    "Online e-Filing",
     "Court Order Collection",
     "Client Notice",
-    "Task Assignment",
     "Document Draft",
     "Format Physical File",
     "Leave Management",
@@ -79,10 +77,8 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Next Posting": {"view": True, "add": True, "edit": True, "delete": True},
         "Court Visit": {"view": True, "add": True, "edit": True, "delete": True},
         "Physical Filing": {"view": True, "add": True, "edit": True, "delete": True},
-        "Online e-Filing": {"view": True, "add": True, "edit": True, "delete": True},
         "Court Order Collection": {"view": True, "add": True, "edit": True, "delete": True},
         "Client Notice": {"view": True, "add": True, "edit": True, "delete": True},
-        "Task Assignment": {"view": True, "add": True, "edit": True, "delete": True},
         "Document Draft": {"view": True, "add": True, "edit": True, "delete": True},
         "Format Physical File": {"view": True, "add": True, "edit": True, "delete": True},
         "Leave Management": {"view": True, "add": True, "edit": True, "delete": True},
@@ -178,10 +174,8 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Next Posting": {"view": False, "add": False, "edit": False, "delete": False},
         "Court Visit": {"view": True, "add": True, "edit": True, "delete": True},
         "Physical Filing": {"view": False, "add": False, "edit": False, "delete": False},
-        "Online e-Filing": {"view": True, "add": True, "edit": True, "delete": True},
         "Court Order Collection": {"view": True, "add": True, "edit": True, "delete": True},
         "Client Notice": {"view": True, "add": True, "edit": True, "delete": True},
-        "Task Assignment": {"view": False, "add": False, "edit": False, "delete": False},
         "Document Draft": {"view": True, "add": True, "edit": True, "delete": True},
         "Format Physical File": {"view": True, "add": True, "edit": True, "delete": True},
         "Leave Management": {"view": False, "add": False, "edit": False, "delete": False},
@@ -368,6 +362,10 @@ def seed_roles_and_permissions(db: Session) -> None:
         db.query(Permission).filter(Permission.role_id == obsolete_role.id).delete()
         db.delete(obsolete_role)
         db.commit()
+
+    # Remove obsolete Online e-Filing & Task Assignment module permissions if existing in DB
+    db.query(Permission).filter(Permission.module.in_(["Online e-Filing", "Task Assignment"])).delete(synchronize_session=False)
+    db.commit()
 
     core_roles = [
         {"id": "senioradvocate", "name": "Senior Advocate", "description": "Full system access"},
