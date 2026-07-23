@@ -207,15 +207,15 @@ export default function ClerkCourtVisit() {
   return (
     <div className="w-full min-h-screen bg-[#F8FAFC] p-4 sm:p-8 space-y-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="bg-gradient-to-r from-[#FAF6F0] via-[#F4EFE6] to-[#EFE8DC] border border-[#E6DFD5] text-[#2C221E] rounded-3xl p-6 sm:p-8 shadow-lg shadow-amber-900/5 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/20 border border-emerald-400/30 rounded-full text-emerald-300 text-xs font-bold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-[#8C6D53]/15 border border-[#8C6D53]/30 rounded-full text-[#6B4E38] text-xs font-bold uppercase tracking-wider">
             🏛️ Daily Movement & Cause List Tracker
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#2C221E]">
             Court Visit Tracker
           </h1>
-          <p className="text-emerald-100 text-sm max-w-2xl font-medium">
+          <p className="text-[#5A4D46] text-sm max-w-2xl font-medium">
             All system cases are automatically tracked here. Record check-in/out timestamps and monitor daily cause list progress.
           </p>
         </div>

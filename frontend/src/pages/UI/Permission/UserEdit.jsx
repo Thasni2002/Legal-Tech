@@ -33,8 +33,6 @@ const ALL_MODULES = [
   "Permissions",
   "Clerk Dashboard",
   "Court Visit",
-  "Online e-Filing",
-  "Task Assignment",
   "Format Physical File",
   "Leave Management",
   "Junior Leave",
