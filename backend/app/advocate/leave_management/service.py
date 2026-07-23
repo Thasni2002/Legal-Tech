@@ -73,7 +73,10 @@ def get_leave_requests(
 
     role_norm = (current_user.role or "").lower().replace(" ", "")
 
-    if view_mode == "junior" or role_norm not in ["senioradvocate", "clerk", "admin"]:
+    if view_mode == "senior" or scope == "all":
+        # Allow viewing all firm leave requests for task assignment and senior overview
+        pass
+    elif view_mode == "junior" or role_norm not in ["senioradvocate", "clerk", "admin"]:
         query = query.filter(LeaveRequest.user_id == current_user.id)
     elif view_mode == "clerk":
         if scope == "own":
