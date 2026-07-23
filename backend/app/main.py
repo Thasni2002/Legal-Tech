@@ -28,10 +28,26 @@ from app.clerk.document_draft.models import ClerkDocumentDraft
 from app.clerk.document_draft import router as clerk_document_draft_router
 from app.clerk.format_physical_file.models import ClerkPhysicalFile
 from app.clerk.format_physical_file import router as clerk_format_physical_file_router
+from app.clerk.next_posting.models import ClerkNextPosting
+from app.clerk.next_posting import router as clerk_next_posting_router
+from app.clerk.court_visit.models import ClerkCourtVisit
+from app.clerk.court_visit import router as clerk_court_visit_router
+from app.clerk.physical_filing.models import ClerkPhysicalFilingRecord
+from app.clerk.physical_filing import router as clerk_physical_filing_router
+from app.clerk.efiling.models import ClerkEFilingRecord
+from app.clerk.efiling import router as clerk_efiling_router
+from app.clerk.order_collection.models import ClerkOrderCollectionRecord
+from app.clerk.order_collection import router as clerk_order_collection_router
+from app.clerk.client_notice.models import ClerkClientNoticeRecord
+from app.clerk.client_notice import router as clerk_client_notice_router
+from app.clerk.task_assignment.models import ClerkTaskAssignmentRecord
+from app.clerk.task_assignment import router as clerk_task_assignment_router
+
 
 
 
 app = FastAPI()
+# Application startup triggers seed_roles_and_permissions
 
 from fastapi.staticfiles import StaticFiles
 # Mount uploads directory to serve files statically
@@ -174,4 +190,11 @@ app.include_router(tasks_router)
 app.include_router(clerk_dashboard_router)
 app.include_router(clerk_document_draft_router)
 app.include_router(clerk_format_physical_file_router)
+app.include_router(clerk_next_posting_router)
+app.include_router(clerk_court_visit_router)
+app.include_router(clerk_physical_filing_router)
+app.include_router(clerk_efiling_router)
+app.include_router(clerk_order_collection_router)
+app.include_router(clerk_client_notice_router)
+app.include_router(clerk_task_assignment_router)
 app.include_router(leave_router, prefix="/leaves", tags=["Leave Management"])

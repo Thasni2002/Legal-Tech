@@ -35,6 +35,13 @@ BASE_MODULES = [
     "Permissions",
     "Client Document Generate",
     "Clerk Dashboard",
+    "Next Posting",
+    "Court Visit",
+    "Physical Filing",
+    "Online e-Filing",
+    "Court Order Collection",
+    "Client Notice",
+    "Task Assignment",
     "Document Draft",
     "Format Physical File",
     "Leave Management",
@@ -69,6 +76,13 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Permissions": {"view": True, "add": True, "edit": True, "delete": True},
         "Client Document Generate": {"view": True, "add": True, "edit": True, "delete": True},
         "Clerk Dashboard": {"view": True, "add": True, "edit": True, "delete": True},
+        "Next Posting": {"view": True, "add": True, "edit": True, "delete": True},
+        "Court Visit": {"view": True, "add": True, "edit": True, "delete": True},
+        "Physical Filing": {"view": True, "add": True, "edit": True, "delete": True},
+        "Online e-Filing": {"view": True, "add": True, "edit": True, "delete": True},
+        "Court Order Collection": {"view": True, "add": True, "edit": True, "delete": True},
+        "Client Notice": {"view": True, "add": True, "edit": True, "delete": True},
+        "Task Assignment": {"view": True, "add": True, "edit": True, "delete": True},
         "Document Draft": {"view": True, "add": True, "edit": True, "delete": True},
         "Format Physical File": {"view": True, "add": True, "edit": True, "delete": True},
         "Leave Management": {"view": True, "add": True, "edit": True, "delete": True},
@@ -161,6 +175,13 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Users": {"view": False, "add": False, "edit": False, "delete": False},
         "Permissions": {"view": False, "add": False, "edit": False, "delete": False},
         "Client Document Generate": {"view": False, "add": False, "edit": False, "delete": False},
+        "Next Posting": {"view": True, "add": True, "edit": True, "delete": True},
+        "Court Visit": {"view": True, "add": True, "edit": True, "delete": True},
+        "Physical Filing": {"view": True, "add": True, "edit": True, "delete": True},
+        "Online e-Filing": {"view": True, "add": True, "edit": True, "delete": True},
+        "Court Order Collection": {"view": True, "add": True, "edit": True, "delete": True},
+        "Client Notice": {"view": True, "add": True, "edit": True, "delete": True},
+        "Task Assignment": {"view": True, "add": True, "edit": True, "delete": True},
         "Document Draft": {"view": True, "add": True, "edit": True, "delete": True},
         "Format Physical File": {"view": True, "add": True, "edit": True, "delete": True},
         "Leave Management": {"view": False, "add": False, "edit": False, "delete": False},
@@ -370,11 +391,11 @@ def seed_roles_and_permissions(db: Session) -> None:
                 Permission.role_id == db_role.id,
                 Permission.module == module
             ).first()
+            actions = default_perms.get(
+                module,
+                {"view": False, "add": False, "edit": False, "delete": False}
+            )
             if not exists:
-                actions = default_perms.get(
-                    module,
-                    {"view": False, "add": False, "edit": False, "delete": False}
-                )
                 db_perm = Permission(
                     role_id=db_role.id,
                     module=module,
@@ -384,6 +405,11 @@ def seed_roles_and_permissions(db: Session) -> None:
                     delete=actions["delete"]
                 )
                 db.add(db_perm)
+            elif role_data["id"] in ["clerk", "senioradvocate"] and actions.get("view"):
+                exists.view = True
+                exists.add = actions.get("add", True)
+                exists.edit = actions.get("edit", True)
+                exists.delete = actions.get("delete", True)
 
     # Clean up any obsolete permissions not in BASE_MODULES
     db.query(Permission).filter(~Permission.module.in_(BASE_MODULES)).delete(synchronize_session=False)

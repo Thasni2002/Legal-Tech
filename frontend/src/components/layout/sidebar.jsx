@@ -121,6 +121,12 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
       return !!rolePermissions[moduleKey].view;
     }
 
+    // Default fallback for Clerk and Senior Advocate roles so new modules are visible by default
+    const userRoleStr = (user?.role || "").toLowerCase().replace(/\s+/g, "");
+    if (userRoleStr.includes("clerk") || userRoleStr.includes("senior")) {
+      return true;
+    }
+
     return false; // fallback — hide item if no permission rule is found
   };
 
@@ -175,6 +181,13 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
       title: "Clerk Section",
       items: [
         { name: "Dashboard", path: "/clerk/dashboard", icon: Home, moduleKey: "Clerk Dashboard" },
+        { name: "Next Posting", path: "/clerk/next-posting", icon: Calendar, moduleKey: "Next Posting" },
+        { name: "Court Visit", path: "/clerk/court-visit", icon: Scale, moduleKey: "Court Visit" },
+        { name: "Physical Filing", path: "/clerk/physical-filing", icon: Folder, moduleKey: "Physical Filing" },
+        { name: "Online e-Filing", path: "/clerk/efiling", icon: FileText, moduleKey: "Online e-Filing" },
+        { name: "Court Order Collection", path: "/clerk/order-collection", icon: BookOpen, moduleKey: "Court Order Collection" },
+        { name: "Client Notice", path: "/clerk/client-notice", icon: Users, moduleKey: "Client Notice" },
+        { name: "Task Assignment", path: "/clerk/task-assignment", icon: ClipboardList, moduleKey: "Task Assignment" },
         { name: "Document Draft", path: "/clerk/document-draft", icon: FileText, moduleKey: "Document Draft" },
         { name: "Format Physical File", path: "/clerk/format-physical-file", icon: Folder, moduleKey: "Format Physical File" },
         { name: "Leave", path: "/clerk/leave", icon: Calendar, moduleKey: "Clerk Leave" },
@@ -190,8 +203,8 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
     return [
       ...seniorMenu,
       ...juniorMenu,
-      ...clientMenu,
       ...clerkMenu,
+      ...clientMenu,
       {
         title: "User Roles",
         items: [
