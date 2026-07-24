@@ -162,37 +162,18 @@ def start_instant_consultation(db: Session, data: ConsultationStart, background_
     if data.client_email:
         subject = "Action Required: Consultation Scheduled"
         
-        # We assume frontend runs on localhost:3000 for development. You can change this using env vars later.
         frontend_url = "http://localhost:3000"
-        
-        html_body = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #2563EB;">Consultation Scheduled</h2>
-                <p>Hello <strong>{data.client_name}</strong>,</p>
-                <p>A new consultation has been scheduled for you.</p>
+        from app.utils.email_templates import build_consultation_email
 
-                <div style="background-color: #F8FAFC; padding: 15px; border-radius: 8px; border: 1px solid #E2E8F0; margin: 20px 0;">
-                    <p style="margin: 5px 0;"><strong>Date:</strong> {data.date}</p>
-                    <p style="margin: 5px 0;"><strong>Time:</strong> {data.time}</p>
-                    <p style="margin: 5px 0;"><strong>Type:</strong> {data.type}</p>
-                       <p style="margin: 5px 0;"><strong>Google Meet:</strong> 
-                       <a href="{data.meeting_link}">{data.meeting_link}</a></p>
-                </div>
-                
-                <p>Please confirm your availability by clicking one of the buttons below:</p>
-                
-                <div style="margin-top: 30px; display: flex; gap: 15px;">
-                    <a href="{frontend_url}/client-action?id={new_consultation.id}&action=approve" style="background-color: #16A34A; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Approve</a>
-                    <a href="{frontend_url}/client-action?id={new_consultation.id}&action=reschedule" style="background-color: #D97706; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; margin-left: 10px;">Reschedule</a>
-                </div>
-
-                
-                
-                <p style="margin-top: 40px; font-size: 12px; color: #64748B;">This is an automated message. Please do not reply directly to this email.</p>
-            </body>
-        </html>
-        """
+        html_body = build_consultation_email(
+            client_name=data.client_name,
+            advocate_name="Legal Advocate",
+            date_str=str(data.date),
+            time_str=str(data.time),
+            meeting_link=data.meeting_link or "",
+            consultation_id=new_consultation.id,
+            frontend_url=frontend_url
+        )
         
         # fastapi-mail async functions must be awaited in a sync block or wrapped properly.
         # Since we are adding it to BackgroundTasks, we can just pass the async function directly.

@@ -136,6 +136,7 @@ export default function AssignedCasesView() {
       const formattedCases = casesToShow.map((item) => ({
         id: item.id,
         caseId: item.case_id,
+        caseIdCode: item.case_id_code || item.case_number || (item.case_id ? `CASE-#${item.case_id}` : `#${item.id}`),
         title: item.case_title,
         caseNo: item.case_number,
         client: item.client_name || "N/A",
@@ -348,7 +349,7 @@ export default function AssignedCasesView() {
                     className="hover:bg-[#F8FAFC] transition-colors duration-150 group"
                   >
                     <td className="px-5 py-4 text-sm font-semibold text-[#0F172A]">
-                      #{item.id}
+                      {item.caseIdCode}
                     </td>
 
                     <td className="px-5 py-4 text-sm text-[#475569] font-medium">

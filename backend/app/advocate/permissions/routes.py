@@ -125,23 +125,15 @@ async def provision_new_user(data: UserProvision, db: Session = Depends(get_db))
         # Send onboarding email to the client or user
         try:
             from app.utils.email import send_email
-            subject = "Your Legal Tech Account Credentials"
-            body = f"""
-            <html>
-                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                    <h2>Welcome to Legal-Tech</h2>
-                    <p>Dear {data.firstName or data.role},</p>
-                    <p>Your {data.role} account has been successfully provisioned{" and linked to your case file" if data.role.lower() == 'client' else ""}. Below are your login credentials:</p>
-                    <div style="background-color: #f5f5f5; padding: 15px; border-left: 4px solid #2563EB; margin: 15px 0;">
-                        <p style="margin: 5px 0;"><strong>Login URL:</strong> <a href="http://localhost:3000/">http://localhost:3000/</a></p>
-                        <p style="margin: 5px 0;"><strong>Username / Email:</strong> {data.email}</p>
-                        <p style="margin: 5px 0;"><strong>Temporary Password:</strong> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px;">{data.tempPassword}</code></p>
-                    </div>
-                    <p>Please log in and update your password under your profile settings.</p>
-                    <p>Best regards,<br/>The Legal-Tech Team</p>
-                </body>
-            </html>
-            """
+            from app.utils.email_templates import build_credentials_email
+            subject = f"Your Legal-Tech {data.role} Credentials"
+            body = build_credentials_email(
+                name=data.firstName or data.role,
+                role=data.role,
+                login_url="http://localhost:3000/login",
+                email=data.email,
+                password=data.tempPassword
+            )
             await send_email(data.email, subject, body)
         except Exception as email_err:
             print(f"Failed to send email to user {data.email}: {email_err}")

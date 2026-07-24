@@ -520,7 +520,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
       setSelectedSubtype(subtype);
       setFormData({
         cnrNumber: data.cnr_number || "",
-        caseId: data.case_id || "",
+        caseId: data.case_id || (data.id ? `case-${new Date(data.created_at || Date.now()).getFullYear()}-${String(data.id).padStart(3, "0")}` : ""),
         caseTitle: data.case_title || "",
         caseNo: data.case_no || "",
         caseType: data.case_type || "",
@@ -628,14 +628,15 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
         const currentYear = new Date().getFullYear();
         let maxSeq = 0;
         casesArray.forEach(c => {
-          if (c.case_id && c.case_id.startsWith(`case-${currentYear}-`)) {
+          if (c.case_id && typeof c.case_id === 'string') {
             const parts = c.case_id.split("-");
-            if (parts.length === 3) {
-              const seqNum = parseInt(parts[2], 10);
-              if (!isNaN(seqNum) && seqNum > maxSeq) {
-                maxSeq = seqNum;
-              }
+            const lastNum = parseInt(parts[parts.length - 1], 10);
+            if (!isNaN(lastNum) && lastNum > maxSeq) {
+              maxSeq = lastNum;
             }
+          }
+          if (c.id && typeof c.id === 'number' && c.id > maxSeq) {
+            maxSeq = c.id;
           }
         });
         const nextSeq = String(maxSeq + 1).padStart(3, "0");
@@ -659,16 +660,6 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
       console.error("Failed to fetch users:", err);
     }
   };
-
-  // ─── Auto-generate Case ID for new cases ───
-  useEffect(() => {
-    if (!isEditMode && !formData.caseId) {
-      const year = new Date().getFullYear();
-      const seq = "001";
-      const generated = `case-${year}-${seq}`;
-      setFormData(prev => ({ ...prev, caseId: generated }));
-    }
-  }, [isEditMode]);
 
   useEffect(() => {
     fetchClients();
