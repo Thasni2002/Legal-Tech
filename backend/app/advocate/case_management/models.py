@@ -3,6 +3,7 @@ from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.mysql import LONGTEXT, LONGBLOB
 from app.database import Base
+from app.authapp.models import User
 from datetime import datetime
 
 
@@ -82,8 +83,8 @@ class AIDocumentHistory(Base):
     case_title = Column(String(255), nullable=True)
     prompt = Column(Text, nullable=False)
     content = Column(LONGTEXT, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     case = relationship("app.advocate.case_management.models.Case", backref="ai_document_histories")
 

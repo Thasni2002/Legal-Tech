@@ -308,13 +308,13 @@ export default function CaseView() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="min-w-[900px] w-full">
+        {/* Desktop / Tablet Table View (md and above) */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-left">
             <thead>
               <tr className="bg-[#F8FAFC] border-b border-[#F1F5F9]">
                 {["Case Name", "Case ID", "Client", "Court", "Status", "Actions"].map((h) => (
-                  <th key={h} className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">
+                  <th key={h} className="px-5 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">
                     {h}
                   </th>
                 ))}
@@ -328,7 +328,7 @@ export default function CaseView() {
                     className="hover:bg-[#F8FAFC] transition-colors duration-150 group"
                   >
                     <td className="px-5 py-4">
-                      <p className="text-sm font-semibold text-[#0F172A] max-w-[200px] truncate">{item.case_title}</p>
+                      <p className="text-sm font-semibold text-[#0F172A] max-w-[220px] truncate">{item.case_title}</p>
                       <p className="text-xs text-[#94A3B8] mt-0.5">
                         {item.case_type && item.case_type.includes(": ")
                           ? item.case_type.replace(": ", " · ")
@@ -361,7 +361,6 @@ export default function CaseView() {
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
-                        {/* View */}
                         <button
                           onClick={() => router.push(`/case-management/view/${item.id}`)}
                           title="View Case"
@@ -369,11 +368,6 @@ export default function CaseView() {
                         >
                           <Eye size={15} />
                         </button>
-
-
-
-
-                        {/* Delete */}
                         {hasPermission("Case Management", "delete") && (
                           <button
                             onClick={() => setDeleteConfirm(item.id)}
@@ -389,7 +383,7 @@ export default function CaseView() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="px-5 py-16 text-center">
+                  <td colSpan="6" className="px-5 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-14 h-14 rounded-2xl bg-[#F1F5F9] flex items-center justify-center">
                         <Scale size={24} className="text-[#CBD5E1]" />
@@ -404,26 +398,99 @@ export default function CaseView() {
           </table>
         </div>
 
+        {/* Mobile Card List View (sm and below) */}
+        <div className="block md:hidden divide-y divide-[#F1F5F9]">
+          {filteredCases.length > 0 ? (
+            filteredCases.slice(casesPage * 5, (casesPage + 1) * 5).map((item) => (
+              <div key={item.id} className="p-4 flex flex-col gap-3 hover:bg-slate-50/60 transition">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-bold text-sm text-[#0F172A] line-clamp-1">{item.case_title}</h3>
+                    <p className="text-xs text-[#94A3B8] mt-0.5">
+                      {item.case_type && item.case_type.includes(": ")
+                        ? item.case_type.replace(": ", " · ")
+                        : item.case_type}
+                    </p>
+                  </div>
+                  <StatusBadge status={item.status} />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="font-mono font-bold text-[#2563EB] bg-blue-50 px-2 py-0.5 rounded-md">
+                    {item.case_id}
+                  </span>
+                  {item.case_no && (
+                    <span className="font-semibold text-[#334155] bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                      {item.case_no}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 text-xs">
+                  <div>
+                    <span className="text-[#94A3B8] block text-[10px] uppercase font-bold">Client</span>
+                    <span className="font-semibold text-[#0F172A]">{item.client_name || "—"}</span>
+                    {item.client_role && (
+                      <span className="ml-1 text-[10px] font-bold text-[#2563EB]">({item.client_role})</span>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-[#94A3B8] block text-[10px] uppercase font-bold">Court</span>
+                    <span className="font-medium text-[#475569] line-clamp-1">{item.court_name || "—"}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    onClick={() => router.push(`/case-management/view/${item.id}`)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-blue-50 text-[#2563EB] font-semibold text-xs hover:bg-blue-100 transition"
+                  >
+                    <Eye size={14} /> View Case
+                  </button>
+                  {hasPermission("Case Management", "delete") && (
+                    <button
+                      onClick={() => setDeleteConfirm(item.id)}
+                      className="py-2 px-3 rounded-lg bg-red-50 text-red-500 font-semibold text-xs hover:bg-red-100 transition"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="p-8 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-[#F1F5F9] flex items-center justify-center mx-auto mb-3">
+                <Scale size={20} className="text-[#CBD5E1]" />
+              </div>
+              <p className="text-[#64748B] font-medium text-sm">No cases found</p>
+              <p className="text-[#94A3B8] text-xs mt-1">Try adding a new case or adjusting your search</p>
+            </div>
+          )}
+        </div>
+
         {/* Pagination Controls */}
         {filteredCases.length > 5 && (
-          <div className="flex items-center justify-center gap-2 py-4 border-t border-[#F1F5F9] bg-[#F8FAFC]/50">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-[#F1F5F9] bg-[#F8FAFC]/50">
             <span className="text-xs text-[#64748B] font-semibold">
               Page {casesPage + 1} of {Math.ceil(filteredCases.length / 5)}
             </span>
-            <button
-              onClick={() => setCasesPage(p => Math.max(0, p - 1))}
-              disabled={casesPage === 0}
-              className="flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
-            >
-              &lt;
-            </button>
-            <button
-              onClick={() => setCasesPage(p => Math.min(Math.ceil(filteredCases.length / 5) - 1, p + 1))}
-              disabled={(casesPage + 1) * 5 >= filteredCases.length}
-              className="flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
-            >
-              &gt;
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCasesPage(p => Math.max(0, p - 1))}
+                disabled={casesPage === 0}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 transition cursor-pointer select-none font-bold text-xs"
+              >
+                &lt;
+              </button>
+              <button
+                onClick={() => setCasesPage(p => Math.min(Math.ceil(filteredCases.length / 5) - 1, p + 1))}
+                disabled={(casesPage + 1) * 5 >= filteredCases.length}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 transition cursor-pointer select-none font-bold text-xs"
+              >
+                &gt;
+              </button>
+            </div>
           </div>
         )}
       </div>

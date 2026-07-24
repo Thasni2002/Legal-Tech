@@ -84,7 +84,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
     const loggedIn = getLoggedInUser();
     setUser(loggedIn);
     setIsOpen(false);
-    
+
     const savedProfile = localStorage.getItem("advocate_profile");
     if (savedProfile) {
       try {
@@ -92,7 +92,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         if (parsed.profileImage) {
           setProfileImage(parsed.profileImage);
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     if (pathname?.startsWith("/permissions")) {
       setUserRolesOpen(true);
@@ -342,8 +342,8 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
                                   <Link
                                     href={sub.path}
                                     className={`block px-3 py-2 rounded-lg text-sm transition-colors duration-200 ${pathname === sub.path
-                                        ? "text-[#0F172A] bg-slate-100/80 font-semibold border-l-4 border-slate-900"
-                                        : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-50"
+                                      ? "text-[#0F172A] bg-slate-100/80 font-semibold border-l-4 border-slate-900"
+                                      : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-50"
                                       }`}
                                   >
                                     {sub.name}
@@ -364,8 +364,8 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
                           href={item.path}
                           title={isCollapsed ? item.name : undefined}
                           className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 ${active
-                              ? "bg-slate-100/80 border-l-4 border-slate-900 text-[#0F172A] font-semibold"
-                              : "text-[#64748B] hover:bg-slate-50 hover:text-[#0F172A]"
+                            ? "bg-slate-100/80 border-l-4 border-slate-900 text-[#0F172A] font-semibold"
+                            : "text-[#64748B] hover:bg-slate-50 hover:text-[#0F172A]"
                             }`}
                         >
                           <IconComponent size={17} className="flex-shrink-0" />

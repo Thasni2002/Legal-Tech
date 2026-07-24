@@ -65,16 +65,35 @@ async def add_advocate(
 ):
     # Check if a user with this email or username already exists in the users table
     from app.authapp.models import User
+    from .models import Advocate
     username = (advocate.advocate_name or "").lower().replace(" ", "")
-    existing_user = db.query(User).filter(
+    existing_users = db.query(User).filter(
         (User.email == advocate.email_address) |
         (User.username == username)
-    ).first()
-    if existing_user:
-        raise HTTPException(
-            status_code=400,
-            detail="A user with this Email or Username already exists."
-        )
+    ).all()
+    if existing_users:
+        # Check if there is an active advocate associated with any of these users
+        all_advs = db.query(Advocate).all()
+        adv_emails = {a.email_address for a in all_advs if a.email_address}
+        adv_usernames = {(a.advocate_name or "").lower().replace(" ", "") for a in all_advs if a.advocate_name}
+        
+        has_active_adv = False
+        for user in existing_users:
+            u_name = (user.username or "").lower().replace(" ", "")
+            if user.email in adv_emails or u_name in adv_usernames:
+                has_active_adv = True
+                break
+            else:
+                # Orphaned user record from a previously deleted advocate, remove it
+                db.delete(user)
+        
+        if has_active_adv:
+            raise HTTPException(
+                status_code=400,
+                detail="A user with this Email or Username already exists."
+            )
+        else:
+            db.commit()
 
     new_adv = create_advocate(db, advocate)
 

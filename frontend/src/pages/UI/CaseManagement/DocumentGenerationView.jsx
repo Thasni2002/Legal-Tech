@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { API_BASE_URL } from "@/utils/api";
 import { 
     Bot, 
@@ -19,7 +20,9 @@ import {
     Search,
     Save,
     Eye,
-    RefreshCw
+    RefreshCw,
+    ChevronLeft,
+    ChevronRight
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from 'react-markdown';
@@ -51,6 +54,18 @@ export default function DocumentGenerationView() {
     const [history, setHistory] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [historySearch, setHistorySearch] = useState("");
+
+    // Pagination state (6 items per page)
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 6;
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [historySearch]);
+
+    // Custom Modal State
+    const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
 
     useEffect(() => {
         fetchCases();
@@ -174,18 +189,23 @@ export default function DocumentGenerationView() {
         }
     };
 
-    const handleDeleteHistoryItem = async (e, id) => {
-        e.stopPropagation();
-        if (!confirm("Are you sure you want to delete this document from history?")) return;
+    const triggerDeleteHistoryItem = (e, id) => {
+        if (e && e.stopPropagation) e.stopPropagation();
+        setDeleteConfirmId(id);
+    };
+
+    const confirmDeleteHistoryItem = async () => {
+        if (!deleteConfirmId) return;
+        setDeleteLoading(true);
 
         try {
-            const response = await fetch(`${API_BASE_URL}/case-management/ai-documents/history/${id}`, {
+            const response = await fetch(`${API_BASE_URL}/case-management/ai-documents/history/${deleteConfirmId}`, {
                 method: "DELETE"
             });
 
             if (response.ok) {
-                setHistory(prev => prev.filter(h => h.id !== id));
-                if (activeHistoryId === id) {
+                setHistory(prev => prev.filter(h => h.id !== deleteConfirmId));
+                if (activeHistoryId === deleteConfirmId) {
                     setGeneratedDoc("");
                     setEditedContent("");
                     setActiveHistoryId(null);
@@ -194,11 +214,14 @@ export default function DocumentGenerationView() {
                         setActiveTab("history");
                     }
                 }
+                setDeleteConfirmId(null);
             } else {
-                alert("Failed to delete history item");
+                setError("Failed to delete history item");
             }
         } catch (err) {
             console.error("Delete history item error:", err);
+        } finally {
+            setDeleteLoading(false);
         }
     };
 
@@ -304,10 +327,14 @@ export default function DocumentGenerationView() {
         );
     });
 
+    const totalPages = Math.ceil(filteredHistory.length / itemsPerPage) || 1;
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedHistory = filteredHistory.slice(startIndex, startIndex + itemsPerPage);
+
     return (
         <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500 pb-12">
             {/* Top Header */}
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <button 
                         onClick={() => {
@@ -317,47 +344,56 @@ export default function DocumentGenerationView() {
                                 router.back();
                             }
                         }} 
-                        className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
+                        className="p-2.5 bg-slate-50 hover:bg-slate-100 rounded-2xl border border-slate-200/80 text-slate-600 transition-colors cursor-pointer"
                         title="Back"
                     >
-                        <ArrowLeft className="w-6 h-6 text-slate-600" />
+                        <ArrowLeft className="w-5 h-5 text-slate-600" />
                     </button>
+
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#4F46E5] via-[#6366F1] to-[#7C3AED] text-white flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
+                        <Bot className="w-6 h-6" />
+                    </div>
+
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 flex items-center gap-3">
-                            <Bot className="w-8 h-8 text-blue-600" />
-                            AI Document Generation
-                        </h1>
-                        <p className="text-slate-500 mt-1 font-medium text-sm md:text-base">
+                        <div className="flex items-center gap-2.5">
+                            <h1 className="text-2xl md:text-3xl font-black text-[#0F172A] tracking-tight">
+                                AI Document Generation
+                            </h1>
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-gradient-to-r from-indigo-500/10 to-purple-500/10 text-indigo-700 border border-indigo-200/60 hidden sm:inline-block">
+                                Gemini AI Engine
+                            </span>
+                        </div>
+                        <p className="text-slate-500 mt-0.5 font-medium text-xs md:text-sm">
                             Draft legal documents instantly, save history, edit content, and export as PDF or Word.
                         </p>
                     </div>
                 </div>
 
                 {/* Tab switcher */}
-                <div className="flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200 self-stretch md:self-auto">
+                <div className="flex items-center bg-[#F8FAFC] p-1.5 rounded-2xl border border-[#E2E8F0] self-stretch md:self-auto">
                     <button
                         onClick={() => setActiveTab("generate")}
-                        className={`flex-1 md:flex-initial px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                        className={`flex-1 md:flex-initial px-5 py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
                             activeTab === "generate"
-                                ? "bg-white text-blue-600 shadow-sm"
+                                ? "bg-white text-indigo-600 shadow-sm border border-[#E2E8F0]"
                                 : "text-slate-600 hover:text-slate-900"
                         }`}
                     >
-                        <Sparkles className="w-4 h-4" />
+                        <Sparkles className="w-4 h-4 text-indigo-500" />
                         Generate New
                     </button>
                     <button
                         onClick={() => setActiveTab("history")}
-                        className={`flex-1 md:flex-initial px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer relative ${
+                        className={`flex-1 md:flex-initial px-5 py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer relative ${
                             activeTab === "history" || activeTab === "view_detail"
-                                ? "bg-white text-blue-600 shadow-sm"
+                                ? "bg-white text-indigo-600 shadow-sm border border-[#E2E8F0]"
                                 : "text-slate-600 hover:text-slate-900"
                         }`}
                     >
-                        <History className="w-4 h-4" />
+                        <History className="w-4 h-4 text-indigo-500" />
                         Document History
                         {history.length > 0 && (
-                            <span className="bg-blue-100 text-blue-700 text-xs font-extrabold px-2 py-0.5 rounded-full">
+                            <span className="bg-indigo-100 text-indigo-700 text-xs font-extrabold px-2 py-0.5 rounded-full">
                                 {history.length}
                             </span>
                         )}
@@ -369,17 +405,21 @@ export default function DocumentGenerationView() {
             {activeTab === "generate" && (
                 <div className="grid lg:grid-cols-12 gap-6">
                     {/* Left Column: Form */}
-                    <div className="lg:col-span-4 bg-white rounded-3xl shadow-sm border border-slate-200 p-6 flex flex-col h-[700px]">
-                        <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                            <FileText className="w-5 h-5 text-indigo-600" />
-                            Instructions
+                    <div className="lg:col-span-4 bg-white rounded-3xl shadow-sm border border-slate-200/80 p-6 flex flex-col min-h-[550px] lg:h-[720px]">
+                        <h2 className="text-base font-extrabold text-[#0F172A] mb-4 flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                                <FileText className="w-4 h-4" />
+                            </div>
+                            Instructions & Case Setup
                         </h2>
                         
-                        <form onSubmit={handleGenerate} className="space-y-5 flex-1 flex flex-col">
+                        <form onSubmit={handleGenerate} className="space-y-4 flex-1 flex flex-col">
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Select Case</label>
+                                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                                    Select Case
+                                </label>
                                 <select
-                                    className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-3 font-medium outline-none transition-all"
+                                    className="w-full bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A] text-xs font-semibold rounded-2xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 block p-3.5 outline-none transition-all cursor-pointer"
                                     value={selectedCase}
                                     onChange={(e) => setSelectedCase(e.target.value)}
                                 >
@@ -393,18 +433,18 @@ export default function DocumentGenerationView() {
                             </div>
 
                             <div className="flex-1 flex flex-col">
-                                <label className="block text-sm font-bold text-slate-700 mb-2">
+                                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                                     Prompt / Instructions
                                 </label>
                                 <textarea
-                                    className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-3 font-medium outline-none transition-all flex-1 min-h-[160px]"
+                                    className="w-full bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A] text-xs font-medium rounded-2xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 block p-3.5 outline-none transition-all flex-1 min-h-[140px] resize-none leading-relaxed placeholder:text-slate-400"
                                     placeholder="e.g. Draft a bail petition for this case focusing on the client's medical condition..."
                                     value={prompt}
                                     onChange={(e) => setPrompt(e.target.value)}
                                 />
                                 
-                                <div className="mt-3">
-                                    <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Quick Examples:</p>
+                                <div className="mt-4">
+                                    <p className="text-[11px] font-bold text-slate-500 mb-2 uppercase tracking-wider">Quick Examples:</p>
                                     <div className="flex flex-wrap gap-2">
                                         {[
                                             "Draft a standard Bail Petition.",
@@ -416,9 +456,10 @@ export default function DocumentGenerationView() {
                                                 key={idx}
                                                 type="button"
                                                 onClick={() => setPrompt(example)}
-                                                className="text-xs bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 font-medium px-2.5 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer text-left"
+                                                className="text-xs bg-[#F8FAFC] hover:bg-indigo-50/80 text-slate-700 hover:text-indigo-700 font-semibold px-3 py-1.5 rounded-xl border border-[#E2E8F0] hover:border-indigo-200 transition-all cursor-pointer text-left flex items-center gap-1.5 shadow-2xs"
                                             >
-                                                {example}
+                                                <Sparkles size={12} className="text-indigo-500 flex-shrink-0" />
+                                                <span>{example}</span>
                                             </button>
                                         ))}
                                     </div>
@@ -426,7 +467,7 @@ export default function DocumentGenerationView() {
                             </div>
 
                             {error && (
-                                <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-medium rounded-xl">
+                                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-2xl animate-shake">
                                     {error}
                                 </div>
                             )}
@@ -434,10 +475,13 @@ export default function DocumentGenerationView() {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer mt-4"
+                                className="w-full bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] hover:from-[#4338CA] hover:to-[#6D28D9] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 px-4 rounded-2xl shadow-md shadow-indigo-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2 text-sm"
                             >
                                 {loading ? (
-                                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                                    <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                                        <span>Drafting Legal Document...</span>
+                                    </>
                                 ) : (
                                     <>
                                         <Send className="w-4 h-4" />
@@ -449,15 +493,17 @@ export default function DocumentGenerationView() {
                     </div>
 
                     {/* Right Column: Live Output Viewer */}
-                    <div className="lg:col-span-8 bg-white rounded-3xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-[700px]">
-                        <div className="bg-slate-50 border-b border-slate-200 p-4 flex flex-wrap justify-between items-center gap-3">
+                    <div className="lg:col-span-8 bg-white rounded-3xl shadow-sm border border-slate-200/80 flex flex-col overflow-hidden min-h-[550px] lg:h-[720px]">
+                        <div className="bg-[#F8FAFC] border-b border-[#E2E8F0] p-4 flex flex-wrap justify-between items-center gap-3">
                             <div className="flex items-center gap-2">
-                                <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
-                                    <FileText className="w-4 h-4 text-blue-600" />
+                                <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                    <FileText className="w-3.5 h-3.5" />
+                                </div>
+                                <h2 className="text-xs font-extrabold text-[#0F172A] uppercase tracking-wider">
                                     Generated Output
                                 </h2>
                                 {activeCaseTitle && (
-                                    <span className="text-xs bg-slate-200 text-slate-800 font-semibold px-2.5 py-1 rounded-full">
+                                    <span className="text-xs bg-indigo-100/80 text-indigo-800 font-bold px-3 py-0.5 rounded-full border border-indigo-200/60">
                                         {activeCaseTitle} {activeCaseNo ? `(${activeCaseNo})` : ''}
                                     </span>
                                 )}
@@ -469,7 +515,7 @@ export default function DocumentGenerationView() {
                                         <button 
                                             onClick={handleSaveEdit}
                                             disabled={isSavingEdit}
-                                            className="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-sm"
+                                            className="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 shadow-sm"
                                         >
                                             <Save className="w-3.5 h-3.5" />
                                             {isSavingEdit ? "Saving..." : "Save Changes"}
@@ -477,9 +523,9 @@ export default function DocumentGenerationView() {
                                     ) : (
                                         <button 
                                             onClick={() => setIsEditing(true)}
-                                            className="text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                                            className="text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
                                         >
-                                            <Edit3 className="w-3.5 h-3.5 text-blue-600" />
+                                            <Edit3 className="w-3.5 h-3.5 text-indigo-600" />
                                             Edit Content
                                         </button>
                                     )}
@@ -490,7 +536,7 @@ export default function DocumentGenerationView() {
                                                 setEditedContent(generatedDoc);
                                                 setIsEditing(false);
                                             }}
-                                            className="text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                                            className="text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1"
                                         >
                                             <X className="w-3.5 h-3.5" />
                                             Cancel
@@ -499,7 +545,7 @@ export default function DocumentGenerationView() {
 
                                     <button 
                                         onClick={() => handleDownloadPdf(generatedDoc, activeCaseTitle)}
-                                        className="text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1 border border-blue-200"
+                                        className="text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 border border-blue-200"
                                     >
                                         <Download className="w-3.5 h-3.5" />
                                         Download PDF
@@ -507,7 +553,7 @@ export default function DocumentGenerationView() {
 
                                     <button 
                                         onClick={() => handleDownloadWord(generatedDoc, activeCaseTitle, activeCaseNo)}
-                                        className="text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1 border border-indigo-200"
+                                        className="text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 border border-indigo-200"
                                     >
                                         <FileType className="w-3.5 h-3.5" />
                                         Download Word (.docx)
@@ -516,11 +562,17 @@ export default function DocumentGenerationView() {
                             )}
                         </div>
                         
-                        <div className="p-6 flex-1 overflow-y-auto bg-slate-50/50">
+                        <div className="p-6 flex-1 overflow-y-auto bg-[#F8FAFC]/50">
                             {loading ? (
-                                <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4">
-                                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
-                                    <p className="font-medium animate-pulse">AI is drafting the document...</p>
+                                <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4 py-16">
+                                    <div className="relative w-16 h-16 flex items-center justify-center">
+                                        <div className="absolute inset-0 rounded-full border-4 border-indigo-100 animate-ping opacity-75" />
+                                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600" />
+                                    </div>
+                                    <div className="text-center space-y-1">
+                                        <p className="font-bold text-slate-800 text-sm animate-pulse">AI is drafting your legal document...</p>
+                                        <p className="text-xs text-slate-400">Formatting clause structures, legal arguments & case details.</p>
+                                    </div>
                                 </div>
                             ) : generatedDoc ? (
                                 isEditing ? (
@@ -532,18 +584,25 @@ export default function DocumentGenerationView() {
                                         <textarea
                                             value={editedContent}
                                             onChange={(e) => setEditedContent(e.target.value)}
-                                            className="w-full flex-1 p-4 bg-white border border-blue-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm text-slate-800 leading-relaxed resize-none shadow-inner"
+                                            className="w-full flex-1 p-4 bg-white border border-indigo-300 rounded-2xl focus:ring-2 focus:ring-indigo-500/20 outline-none font-mono text-xs text-slate-800 leading-relaxed resize-none shadow-inner"
                                         />
                                     </div>
                                 ) : (
-                                    <div ref={documentRef} className="prose prose-slate max-w-none text-slate-800 p-6 bg-white rounded-2xl border border-slate-200 shadow-sm min-h-full">
+                                    <div ref={documentRef} className="prose prose-slate max-w-none text-slate-800 p-6 md:p-8 bg-white rounded-2xl border border border-slate-200/80 shadow-xs min-h-full">
                                         <ReactMarkdown>{generatedDoc}</ReactMarkdown>
                                     </div>
                                 )
                             ) : (
-                                <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-3">
-                                    <FileText className="w-16 h-16 opacity-20" />
-                                    <p className="font-medium">Select a case and enter instructions to see the output here.</p>
+                                <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4 py-16 text-center">
+                                    <div className="w-16 h-16 rounded-3xl bg-slate-100 border border-slate-200/80 flex items-center justify-center text-slate-400 shadow-inner">
+                                        <FileText className="w-8 h-8 opacity-40" />
+                                    </div>
+                                    <div className="max-w-xs space-y-1">
+                                        <h3 className="font-bold text-slate-700 text-sm">No Document Drafted Yet</h3>
+                                        <p className="text-xs text-slate-400 font-medium leading-relaxed">
+                                            Select a case from the left panel and provide prompt instructions to generate a legal document.
+                                        </p>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -590,8 +649,98 @@ export default function DocumentGenerationView() {
                         />
                     </div>
 
-                    {/* Table View */}
-                    <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                    {/* Mobile Card List View (< 768px) */}
+                    <div className="block md:hidden space-y-3">
+                        {loadingHistory ? (
+                            <div className="py-12 text-center text-slate-400">
+                                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600 mx-auto mb-2" />
+                                <span className="font-medium text-xs">Loading document history...</span>
+                            </div>
+                        ) : filteredHistory.length === 0 ? (
+                            <div className="py-12 text-center text-slate-400 bg-slate-50/50 rounded-2xl border border-slate-200">
+                                <Clock className="w-10 h-10 opacity-20 mx-auto mb-2" />
+                                <p className="font-semibold text-slate-600 text-sm">No saved documents found</p>
+                                <span className="text-xs text-slate-400">
+                                    {historySearch ? "Try clearing your search query." : "Generate a new document to start building your history."}
+                                </span>
+                            </div>
+                        ) : (
+                            paginatedHistory.map((item, index) => (
+                                <div 
+                                    key={item.id} 
+                                    onClick={() => handleSelectHistoryItem(item)}
+                                    className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs space-y-3 active:scale-[0.99] transition cursor-pointer"
+                                >
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div>
+                                            <h3 className="font-bold text-slate-900 text-sm leading-snug">
+                                                {item.case_title || "Untitled Case"}
+                                            </h3>
+                                            {item.case_no && (
+                                                <span className="inline-block text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono font-semibold mt-1">
+                                                    {item.case_no}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                            #{startIndex + index + 1}
+                                        </span>
+                                    </div>
+
+                                    {item.prompt && (
+                                        <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100 line-clamp-2 italic font-medium">
+                                            "{item.prompt}"
+                                        </p>
+                                    )}
+
+                                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-500 gap-2 flex-wrap">
+                                        <span className="text-[11px] font-medium text-slate-400">
+                                            {item.created_at ? new Date(item.created_at).toLocaleString('en-IN', {
+                                                day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true
+                                            }) : '-'}
+                                        </span>
+
+                                        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                            <button
+                                                onClick={() => handleSelectHistoryItem(item)}
+                                                className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition font-bold text-xs flex items-center gap-1"
+                                                title="View & Edit"
+                                            >
+                                                <Eye className="w-3.5 h-3.5" /> View
+                                            </button>
+
+                                            <button
+                                                onClick={() => handleDownloadPdf(item.content, item.case_title)}
+                                                className="p-1.5 bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition"
+                                                title="PDF"
+                                            >
+                                                <Download className="w-3.5 h-3.5" />
+                                            </button>
+
+                                            <button
+                                                onClick={() => handleDownloadWord(item.content, item.case_title, item.case_no)}
+                                                className="p-1.5 bg-slate-100 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg transition"
+                                                title="Word"
+                                            >
+                                                <FileType className="w-3.5 h-3.5" />
+                                            </button>
+
+                                            <button
+                                                onClick={(e) => triggerDeleteHistoryItem(e, item.id)}
+                                                className="p-1.5 bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-600 rounded-lg transition"
+                                                title="Delete"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {/* Desktop/Tablet Table View (≥ 768px) */}
+                    <div className="hidden md:block overflow-x-auto rounded-2xl border border-slate-200">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-extrabold tracking-wider">
@@ -625,14 +774,14 @@ export default function DocumentGenerationView() {
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredHistory.map((item, index) => (
+                                    paginatedHistory.map((item, index) => (
                                         <tr 
                                             key={item.id} 
                                             className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
                                             onClick={() => handleSelectHistoryItem(item)}
                                         >
                                             <td className="py-4 px-4 text-center font-bold text-slate-400 text-xs">
-                                                {index + 1}
+                                                {startIndex + index + 1}
                                             </td>
 
                                             <td className="py-4 px-6">
@@ -658,7 +807,8 @@ export default function DocumentGenerationView() {
                                                     month: 'short',
                                                     year: 'numeric',
                                                     hour: '2-digit',
-                                                    minute: '2-digit'
+                                                    minute: '2-digit',
+                                                    hour12: true
                                                 }) : '-'}
                                             </td>
 
@@ -694,7 +844,7 @@ export default function DocumentGenerationView() {
 
                                                     {/* Delete */}
                                                     <button
-                                                        onClick={(e) => handleDeleteHistoryItem(e, item.id)}
+                                                        onClick={(e) => triggerDeleteHistoryItem(e, item.id)}
                                                         className="p-2 bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all cursor-pointer"
                                                         title="Delete Document"
                                                     >
@@ -708,6 +858,43 @@ export default function DocumentGenerationView() {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination Footer */}
+                    {filteredHistory.length > 0 && (
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100 text-xs text-slate-500 font-medium">
+                            <div>
+                                Showing <span className="font-bold text-slate-900">{startIndex + 1}</span> to{" "}
+                                <span className="font-bold text-slate-900">
+                                    {Math.min(startIndex + itemsPerPage, filteredHistory.length)}
+                                </span>{" "}
+                                of <span className="font-bold text-slate-900">{filteredHistory.length}</span> documents
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                    disabled={currentPage === 1}
+                                    className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer flex items-center gap-1"
+                                >
+                                    <ChevronLeft className="w-3.5 h-3.5" />
+                                    Previous
+                                </button>
+                                
+                                <span className="px-3 py-1.5 font-bold text-slate-800 bg-slate-100 rounded-xl">
+                                    Page {currentPage} of {totalPages}
+                                </span>
+
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                    disabled={currentPage === totalPages}
+                                    className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer flex items-center gap-1"
+                                >
+                                    Next
+                                    <ChevronRight className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -789,7 +976,7 @@ export default function DocumentGenerationView() {
 
                             {activeHistoryId && (
                                 <button 
-                                    onClick={(e) => handleDeleteHistoryItem(e, activeHistoryId)}
+                                    onClick={(e) => triggerDeleteHistoryItem(e, activeHistoryId)}
                                     className="text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-xl transition-colors cursor-pointer flex items-center gap-1 border border-red-200"
                                     title="Delete from History"
                                 >
@@ -828,6 +1015,38 @@ export default function DocumentGenerationView() {
                         )}
                     </div>
                 </div>
+            )}
+
+            {/* Custom Delete Confirmation Modal */}
+            {deleteConfirmId && typeof document !== "undefined" && createPortal(
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm animate-fade-in" onClick={() => setDeleteConfirmId(null)} />
+                    <div className="relative bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl z-10 text-center animate-in zoom-in-95 duration-200 border border-slate-100">
+                        <div className="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto mb-4 text-rose-600 shadow-xs">
+                            <Trash2 size={24} />
+                        </div>
+                        <h3 className="text-lg font-bold text-[#0F172A] mb-1.5">Delete Document?</h3>
+                        <p className="text-xs text-[#64748B] leading-relaxed mb-6">
+                            Are you sure you want to delete this document from history? This action cannot be undone.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setDeleteConfirmId(null)}
+                                className="flex-1 py-2.5 rounded-xl border border-[#E2E8F0] text-[#64748B] font-semibold text-xs hover:bg-[#F8FAFC] transition cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDeleteHistoryItem}
+                                disabled={deleteLoading}
+                                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white font-semibold text-xs transition shadow-md shadow-rose-500/20 disabled:opacity-70 cursor-pointer flex items-center justify-center gap-1.5"
+                            >
+                                {deleteLoading ? "Deleting..." : "Yes, Delete"}
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
             )}
         </div>
     );

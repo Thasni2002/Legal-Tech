@@ -130,6 +130,16 @@ def delete_advocate(
     if not advocate:
         return None
 
+    # Clean up corresponding user record in `users` table if present
+    if advocate.email_address or advocate.advocate_name:
+        username = (advocate.advocate_name or "").lower().replace(" ", "")
+        user_query = db.query(User).filter(
+            (User.email == advocate.email_address) |
+            (User.username == username)
+        )
+        for u in user_query.all():
+            db.delete(u)
+
     db.delete(advocate)
     db.commit()
 

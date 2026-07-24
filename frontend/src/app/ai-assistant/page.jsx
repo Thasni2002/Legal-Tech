@@ -99,8 +99,9 @@ function AIAssistantContent() {
 
   const generalSuggestions = [
     "What hearings do I have tomorrow?",
+    "Which advocates are handling which cases?",
+    "Who is currently on leave or scheduled for leave?",
     "List the documents for my active cases",
-    "Update the status of case cr/1234 to Closed",
     "Draft a legal notice based on my latest case"
   ];
 
@@ -114,156 +115,163 @@ function AIAssistantContent() {
   const suggestions = clientName ? clientSuggestions : generalSuggestions;
 
   return (
-    <div className="flex flex-col h-screen bg-[#F8FAFC]">
-      {/* HEADER */}
-      <div className="flex items-center gap-4 bg-white px-6 py-4 border-b border-[#E2E8F0] shadow-sm shrink-0">
-        <button
-          onClick={() => router.back()}
-          className="p-2 rounded-xl bg-[#F1F5F9] hover:bg-[#E2E8F0] text-[#64748B] transition shrink-0"
-        >
-          <ArrowLeft size={18} />
-        </button>
+    <div className="flex flex-col h-[calc(100vh-85px)] max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
+      
+      {/* ──── MODERN GLASS HEADER ──── */}
+      <div className="bg-white/90 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-[#E2E8F0] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0 mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#6d28d9] flex items-center justify-center">
-            <Bot size={20} className="text-white" />
+          <button
+            onClick={() => router.back()}
+            className="p-2.5 rounded-xl bg-[#F8FAFC] hover:bg-[#F1F5F9] border border-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] transition-all shrink-0 cursor-pointer shadow-xs"
+            title="Go Back"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#7C3AED] via-[#6366F1] to-[#4F46E5] flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
+            <Sparkles size={22} className="text-white animate-pulse" />
           </div>
           <div>
-            <h1 className="text-[#0F172A] font-bold text-lg">
-              {clientName ? (
-                <>
-                  AI Client Assistant: <span className="text-[#4F46E5] font-extrabold">{clientName}</span>
-                </>
-              ) : (
-                "AI Legal Assistant"
-              )}
-            </h1>
-            <p className="text-[#64748B] text-xs">
-              {clientName 
-                ? `Ask questions about cases, invoices, and consultations for ${clientName}`
-                : "Ask questions about cases, clients, and documents"
-              }
+            <div className="flex items-center gap-2">
+              <h1 className="text-[#0F172A] font-extrabold text-base sm:text-lg tracking-tight">
+                {clientName ? (
+                  <>
+                    AI Assistant <span className="text-indigo-600 font-bold">· {clientName}</span>
+                  </>
+                ) : (
+                  "AI Legal Assistant"
+                )}
+              </h1>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                Live Engine
+              </span>
+            </div>
+            <p className="text-[#64748B] text-xs mt-0.5">
+              {clientName
+                ? `Intelligent assistant scoped to cases, billing & consultations for ${clientName}`
+                : "Ask questions about court cases, legal documents, hearings & clients"}
             </p>
           </div>
         </div>
-      </div>
 
-      {/* CONTEXT BANNER */}
-      {clientName && (
-        <div className="bg-[#EEF2FF] border-b border-[#C7D2FE] px-6 py-2.5 flex items-center justify-between text-xs text-[#4F46E5] font-semibold animate-fade-in shrink-0">
-          <div className="flex items-center gap-2">
-            <Sparkles size={14} className="text-[#6366F1] animate-pulse" />
-            <span>AI assistant is scoped to cases, invoices, and consultations for client: <strong className="text-[#3730A3] font-bold">{clientName}</strong></span>
-          </div>
-          <button 
-            onClick={handleClearContext}
-            className="flex items-center gap-1 bg-[#E0E7FF] hover:bg-[#C7D2FE] text-[#3730A3] px-2.5 py-1 rounded-lg transition-colors font-bold cursor-pointer"
-          >
-            <X size={12} /> Clear Context
-          </button>
-        </div>
-      )}
-
-      {/* CHAT AREA */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-in slide-in-from-bottom-2 fade-in duration-300`}
-          >
-            <div
-              className={`flex max-w-[80%] gap-3 ${
-                msg.role === "user" ? "flex-row-reverse" : "flex-row"
-              }`}
-            >
-              <div
-                className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center mt-1 ${
-                  msg.role === "user"
-                    ? "bg-[#2563EB] text-white"
-                    : "bg-gradient-to-br from-[#7C3AED] to-[#6d28d9] text-white"
-                }`}
-              >
-                {msg.role === "user" ? <User size={14} /> : <Bot size={14} />}
-              </div>
-              <div
-                className={`p-4 rounded-2xl text-sm leading-relaxed ${
-                  msg.role === "user"
-                    ? "bg-[#2563EB] text-white rounded-tr-sm"
-                    : "bg-white border border-[#E2E8F0] text-[#0F172A] rounded-tl-sm shadow-sm"
-                }`}
-              >
-                <div className="whitespace-pre-wrap">{msg.text}</div>
-              </div>
-            </div>
-          </div>
-        ))}
-        
-        {loading && (
-          <div className="flex justify-start">
-            <div className="flex max-w-[80%] gap-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#6d28d9] text-white flex items-center justify-center mt-1">
-                <Bot size={14} />
-              </div>
-              <div className="p-4 rounded-2xl bg-white border border-[#E2E8F0] text-[#64748B] rounded-tl-sm shadow-sm flex items-center gap-2">
-                <Loader2 size={16} className="animate-spin text-[#7C3AED]" />
-                Thinking...
-              </div>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* INPUT AREA */}
-      <div className="bg-white p-4 border-t border-[#E2E8F0] shrink-0">
-        {/* SUGGESTIONS */}
-        <div className="max-w-4xl mx-auto mb-3 flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-          {suggestions.map((prompt, i) => (
-            <button
-              key={i}
-              onClick={() => setInput(prompt)}
-              className={`whitespace-nowrap text-[11px] font-semibold px-3 py-1.5 rounded-full transition-all border cursor-pointer flex items-center gap-1.5 ${
-                clientName
-                  ? "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 hover:text-indigo-900 shadow-xs"
-                  : "bg-[#F1F5F9] border-[#E2E8F0] text-[#64748B] hover:bg-[#E2E8F0] hover:text-[#0F172A]"
-              }`}
-            >
-              {clientName && <Sparkles size={11} className="text-indigo-500 animate-pulse" />}
-              {prompt}
-            </button>
-          ))}
-        </div>
-        
-        <div className="max-w-4xl mx-auto flex items-end gap-3 bg-[#F8FAFC] p-2 rounded-2xl border border-[#E2E8F0] focus-within:border-[#7C3AED] focus-within:ring-2 focus-within:ring-[#7C3AED]/20 transition-all">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={clientName ? `Ask about cases for ${clientName}...` : "Ask about a case (e.g. 'What is the phone number of the client for case cr/1234/2028?')"}
-            className="flex-1 bg-transparent border-none focus:ring-0 resize-none max-h-32 min-h-[44px] py-3 px-3 text-sm text-[#0F172A] focus:outline-none"
-            rows={1}
-          />
+        {clientName && (
           <button
-            onClick={handleSend}
-            disabled={!input.trim() || loading}
-            className="p-3 mb-0.5 rounded-xl bg-[#7C3AED] hover:bg-[#6d28d9] disabled:opacity-50 text-white transition-colors"
+            onClick={handleClearContext}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-bold text-xs transition cursor-pointer self-start sm:self-auto"
           >
-            <Send size={18} />
+            <X size={13} /> Clear Client Context
           </button>
-        </div>
-        <p className="text-center text-[10px] text-[#94A3B8] mt-3">
-          AI Legal Assistant can make mistakes. Verify important information.
-        </p>
+        )}
       </div>
+
+      {/* ──── MAIN CHAT CONTAINER ──── */}
+      <div className="flex-1 bg-white rounded-2xl border border-[#E2E8F0] shadow-sm flex flex-col overflow-hidden min-h-0">
+        
+        {/* Messages Scroll Area */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-gradient-to-b from-[#F8FAFC] to-white">
+          {messages.map((msg, idx) => (
+            <div
+              key={idx}
+              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-in slide-in-from-bottom-2 fade-in duration-300`}
+            >
+              <div
+                className={`flex max-w-[90%] sm:max-w-[80%] gap-3 ${
+                  msg.role === "user" ? "flex-row-reverse" : "flex-row"
+                }`}
+              >
+                <div
+                  className={`w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center shadow-sm ${
+                    msg.role === "user"
+                      ? "bg-[#0F172A] text-white"
+                      : "bg-gradient-to-br from-[#7C3AED] to-[#4F46E5] text-white"
+                  }`}
+                >
+                  {msg.role === "user" ? <User size={16} /> : <Bot size={16} />}
+                </div>
+
+                <div
+                  className={`p-4 sm:p-5 rounded-2xl text-sm leading-relaxed ${
+                    msg.role === "user"
+                      ? "bg-gradient-to-r from-[#4F46E5] to-[#4338CA] text-white font-medium rounded-tr-xs shadow-md shadow-indigo-500/10"
+                      : "bg-white border border-[#E2E8F0] text-[#0F172A] rounded-tl-xs shadow-sm"
+                  }`}
+                >
+                  <div className="whitespace-pre-wrap">{msg.text}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {loading && (
+            <div className="flex justify-start animate-fade-in">
+              <div className="flex max-w-[80%] gap-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#4F46E5] text-white flex items-center justify-center shadow-sm">
+                  <Bot size={16} />
+                </div>
+                <div className="p-4 rounded-2xl bg-white border border-[#E2E8F0] text-[#64748B] rounded-tl-xs shadow-sm flex items-center gap-2 text-xs font-semibold">
+                  <Loader2 size={16} className="animate-spin text-[#7C3AED]" />
+                  Analyzing legal context...
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Prompts & Input Area */}
+        <div className="p-3 sm:p-4 bg-white border-t border-[#E2E8F0] space-y-3 shrink-0">
+          
+          {/* Suggestion Chips */}
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((prompt, i) => (
+              <button
+                key={i}
+                onClick={() => setInput(prompt)}
+                className="text-xs font-semibold px-3 py-1.5 rounded-xl transition-all border cursor-pointer bg-[#F8FAFC] hover:bg-indigo-50 border-[#E2E8F0] hover:border-indigo-200 text-[#475569] hover:text-indigo-700 shadow-2xs flex items-center gap-1.5"
+              >
+                <Sparkles size={12} className="text-indigo-500 flex-shrink-0" />
+                <span>{prompt}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Text Input Box */}
+          <div className="flex items-center gap-2 bg-[#F8FAFC] p-2 rounded-2xl border border-[#E2E8F0] focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all shadow-xs">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={
+                clientName
+                  ? `Ask about cases or billing for ${clientName}...`
+                  : "Ask a question (e.g., 'What hearings do I have tomorrow?')..."
+              }
+              className="flex-1 bg-transparent border-none focus:ring-0 resize-none max-h-28 min-h-[40px] py-2 px-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none"
+              rows={1}
+            />
+            <button
+              onClick={handleSend}
+              disabled={!input.trim() || loading}
+              className="p-3 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#4F46E5] hover:from-[#6d28d9] hover:to-[#4338CA] disabled:opacity-40 text-white shadow-md shadow-indigo-500/20 transition-all cursor-pointer flex-shrink-0"
+              title="Send Message"
+            >
+              <Send size={16} />
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
     </div>
   );
 }
 
-export default function AIAssistantView() {
+export default function AIAssistantPage() {
   return (
     <Suspense fallback={
-      <div className="flex flex-col h-screen items-center justify-center bg-[#F8FAFC] text-slate-500">
-        <Loader2 size={32} className="animate-spin text-[#7C3AED] mb-2" />
-        <span className="text-sm font-semibold">Loading AI Assistant...</span>
+      <div className="flex items-center justify-center h-screen text-slate-500 text-sm gap-2">
+        <Loader2 size={18} className="animate-spin text-indigo-600" /> Loading AI Legal Assistant...
       </div>
     }>
       <AIAssistantContent />

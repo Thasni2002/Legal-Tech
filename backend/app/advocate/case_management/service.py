@@ -9,6 +9,11 @@ from .schemas import CaseCreate, CaseUpdate
 
 
 def create_case(db: Session, data: CaseCreate):
+    if data.cnrNumber and data.cnrNumber.strip():
+        existing = db.query(Case).filter(Case.cnr_number == data.cnrNumber.strip()).first()
+        if existing:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail="A case with this CNR Number already exists.")
 
     new_case = Case(
         case_id=data.caseId,
@@ -42,7 +47,11 @@ def create_case(db: Session, data: CaseCreate):
     db.refresh(new_case)
 
     if isinstance(new_case.documents, str):
-        new_case.documents = json.loads(new_case.documents or "[]")
+        db.expunge(new_case)
+        try:
+            new_case.documents = json.loads(new_case.documents or "[]")
+        except Exception:
+            new_case.documents = []
 
     return new_case
 
@@ -51,8 +60,12 @@ def get_all_cases(db: Session):
     cases = db.query(Case).all()
 
     for case in cases:
+        db.expunge(case)
         if isinstance(case.documents, str):
-            case.documents = json.loads(case.documents or "[]")
+            try:
+                case.documents = json.loads(case.documents or "[]")
+            except Exception:
+                case.documents = []
 
     return cases
 
@@ -61,8 +74,12 @@ def get_case(db: Session, case_id: int):
     case = db.query(Case).filter(Case.id == case_id).first()
 
     if case:
+        db.expunge(case)
         if isinstance(case.documents, str):
-            case.documents = json.loads(case.documents or "[]")
+            try:
+                case.documents = json.loads(case.documents or "[]")
+            except Exception:
+                case.documents = []
 
     return case
 
@@ -160,6 +177,12 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
     if data.nextHearingDate is not None:
         case.next_hearing_date = data.nextHearingDate
     if data.cnrNumber is not None:
+        cnr_val = data.cnrNumber.strip() if isinstance(data.cnrNumber, str) else ""
+        if cnr_val:
+            existing = db.query(Case).filter(Case.cnr_number == cnr_val, Case.id != case_id).first()
+            if existing:
+                from fastapi import HTTPException
+                raise HTTPException(status_code=400, detail="A case with this CNR Number already exists.")
         case.cnr_number = data.cnrNumber
 
     case.updated_at = datetime.utcnow()
@@ -367,6 +390,37 @@ def ask_ai_assistant(db: Session, user_query: str, user_role: str = None, advoca
         except Exception as e:
             consultations_context = f"Error fetching consultations: {str(e)}"
 
+    # Fetch advocate assignments and leave info
+    advocates_context = ""
+    try:
+        from app.advocate.lawfirm_management.models import Advocate, AssignedCase
+        advocates = db.query(Advocate).all()
+        assigned_cases_list = db.query(AssignedCase).all()
+        adv_lines = []
+        for a in advocates:
+            name = a.advocate_name or ""
+            a_name = name.strip().lower()
+            handling = [ac.case_number or ac.case_name or str(ac.case_id) for ac in assigned_cases_list if ac.advocate_name and ac.advocate_name.strip().lower() == a_name]
+            # Also check Cases table for selected_advocate
+            primary_handling = [c.case_no or c.case_title for c in cases if c.selected_advocate and c.selected_advocate.strip().lower() == a_name]
+            all_handling = list(set(handling + primary_handling))
+            cases_str = ", ".join(all_handling) if all_handling else "None"
+            adv_lines.append(f"- Advocate: {a.advocate_name} ({a.role or 'Advocate'}) | Contact: {a.phone_number or 'N/A'}, Email: {a.email_address or 'N/A'} | Handling Cases: {cases_str}")
+        advocates_context = "\n".join(adv_lines) if adv_lines else "No advocate records."
+    except Exception as e:
+        advocates_context = f"Error: {str(e)}"
+
+    leave_context = ""
+    try:
+        from app.advocate.leave_management.models import LeaveRequest
+        leaves = db.query(LeaveRequest).all()
+        leave_lines = []
+        for l in leaves:
+            leave_lines.append(f"- Staff/Advocate: {l.applicant_name} ({l.applicant_role}) | Leave Type: {l.leave_type} | Dates: {l.from_date} to {l.to_date} ({l.total_days} days) | Status: {l.status} | Reason: {l.description or 'N/A'}")
+        leave_context = "\n".join(leave_lines) if leave_lines else "No leave records."
+    except Exception as e:
+        leave_context = f"Error: {str(e)}"
+
     client_info_block = ""
     if client_name:
         client_info_block = f"""
@@ -380,7 +434,7 @@ Context (Client Specific Consultations & Discussions):
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     full_prompt = f"""
-You are an expert AI Legal Assistant for an advocate. You have access to the following context about the law firm's cases, clients, and documents.
+You are an expert AI Legal Assistant for an advocate. You have access to the following context about the law firm's cases, advocates, staff leave records, clients, and documents.
 Answer the user's question accurately based ONLY on this context. 
 
 Current Date and Time: {current_time}
@@ -400,6 +454,12 @@ DO NOT return JSON unless an action is requested. If no action is requested, ans
 
 Context (Cases):
 {context_block}
+
+Context (Advocates & Assigned Cases):
+{advocates_context}
+
+Context (Staff & Advocate Leave Records):
+{leave_context}
 {client_info_block}
 
 User Question:

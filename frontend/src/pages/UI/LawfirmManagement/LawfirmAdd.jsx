@@ -4,7 +4,7 @@ import { API_BASE_URL } from "@/utils/api";
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import InputField from "@/components/InputField/InputField";
 import SelectField from "@/components/SelectField/SelectField";
@@ -103,7 +103,16 @@ export default function LawfirmAdd({ onCancel, initialData }) {
         const generatedUsername = value.trim().toLowerCase().replace(/\s+/g, "");
         const isNameNew = !formData.id;
         const isNameChanged = initialData && initialData.advocateName !== value.trim();
-        if ((isNameNew || isNameChanged) && existingUsers.some(u => u.username?.toLowerCase() === generatedUsername)) {
+        const activeAdvUsernames = existingAdvocates.map(a => (a.advocateName || a.advocate_name || "").toLowerCase().replace(/\s+/g, ""));
+        const activeAdvEmails = existingAdvocates.map(a => (a.emailAddress || a.email_address || "").toLowerCase().trim());
+        if (
+          (isNameNew || isNameChanged) &&
+          existingUsers.some(u => {
+            const uName = u.username?.toLowerCase();
+            const uEmail = u.email?.toLowerCase();
+            return uName === generatedUsername && (activeAdvUsernames.includes(uName) || activeAdvEmails.includes(uEmail));
+          })
+        ) {
           return "This name/username is already in use.";
         }
         return "";
@@ -145,7 +154,16 @@ export default function LawfirmAdd({ onCancel, initialData }) {
         
         const isEmailNew = !formData.id;
         const isEmailChanged = initialData && initialData.emailAddress !== value.trim();
-        if ((isEmailNew || isEmailChanged) && existingUsers.some(u => u.email?.toLowerCase() === value.trim().toLowerCase())) {
+        const activeEmails = existingAdvocates.map(a => (a.emailAddress || a.email_address || "").toLowerCase().trim());
+        const activeUsernames = existingAdvocates.map(a => (a.advocateName || a.advocate_name || "").toLowerCase().replace(/\s+/g, ""));
+        if (
+          (isEmailNew || isEmailChanged) &&
+          existingUsers.some(u => {
+            const uEmail = u.email?.toLowerCase();
+            const uName = u.username?.toLowerCase();
+            return uEmail === value.trim().toLowerCase() && (activeEmails.includes(uEmail) || activeUsernames.includes(uName));
+          })
+        ) {
           return "This email address is already in use.";
         }
         return "";
@@ -722,30 +740,34 @@ export default function LawfirmAdd({ onCancel, initialData }) {
         </div>
       </form>
       {showSuccessModal && mounted && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 w-[90%] max-w-md text-center">
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
-                <span className="text-green-600 text-3xl">✓</span>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-all duration-300 animate-in fade-in">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-8 w-full max-w-sm text-center transform transition-all duration-300 scale-100 animate-in zoom-in-95">
+            {/* Icon Container */}
+            <div className="relative mx-auto w-20 h-20 mb-5 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full bg-emerald-100/60 animate-ping opacity-25" />
+              <div className="relative w-20 h-20 rounded-full bg-emerald-50 border-4 border-emerald-100/80 flex items-center justify-center shadow-inner">
+                <CheckCircle2 className="w-10 h-10 text-emerald-600 stroke-[2.2]" />
               </div>
             </div>
 
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">
-              Success
+            {/* Title & Message */}
+            <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+              Success!
             </h2>
 
-            <p className="text-gray-600 mb-6">
-              {successMessage}
+            <p className="text-sm font-medium text-slate-500 mt-2 mb-7 leading-relaxed">
+              {successMessage || "Profile saved successfully!"}
             </p>
 
+            {/* Action Button */}
             <button
               onClick={() => {
                 setShowSuccessModal(false);
                 router.push("/lawfirm-management");
               }}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg cursor-pointer"
+              className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold py-3 px-6 rounded-2xl shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/35 hover:scale-[1.01] active:scale-[0.98] transition-all duration-200 text-sm tracking-wide cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
             >
-              OK
+              OK, Continue
             </button>
           </div>
         </div>,
