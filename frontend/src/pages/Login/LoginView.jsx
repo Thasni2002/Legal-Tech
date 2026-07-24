@@ -4,68 +4,68 @@ import { API_BASE_URL } from "@/utils/api";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Scale,
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  AlertCircle,
-  Sparkles,
-  FileText,
-  Calendar,
-  ShieldCheck,
-  ArrowRight,
-  Bot,
-  Zap,
-  Briefcase,
-  Users,
-  X,
-  ChevronRight,
-  TrendingUp,
-  Clock,
-  ExternalLink,
-  Cpu,
-  CheckCircle2,
+  Scale, Mail, Lock, Eye, EyeOff, AlertCircle, Sparkles,
+  FileText, Calendar, ShieldCheck, ArrowRight, Bot, Zap,
+  Briefcase, Users, X, ChevronRight, TrendingUp, Clock,
+  ExternalLink, Cpu, CheckCircle2,
 } from "lucide-react";
 
-/* ─── Palette ─────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────
+   IVORY PALETTE
+───────────────────────────────────────────────────────────── */
 const C = {
-  navy:    "#030c14",
-  crimson: "#731d20",
-  ash:     "#ffffff",
-  slate:   "#8fa3b8",
+  ivory:    "#faf7f2",   /* page background — warm cream        */
+  surface:  "#f0f4fb",   /* input & secondary surface — cool    */
+  white:    "#ffffff",   /* cards                               */
+  border:   "#d8e2f0",   /* cool blue-tinted border             */
+  ink:      "#0d1b2e",   /* deep navy heading text              */
+  muted:    "#4a6080",   /* blue-grey secondary text            */
+  faint:    "#8fa8c8",   /* placeholder / very muted blue       */
+  blue:     "#1d4ed8",   /* primary royal blue accent           */
+  blueL:    "#eff6ff",   /* blue tint background                */
+  blueD:    "#1e3a8a",   /* deep navy for gradients             */
+  gold:     "#a07828",   /* legal gold — badge eyebrows         */
+  goldL:    "#fdf8ee",   /* gold tint                           */
 };
 
-function validate(formData) {
-  const errors = {};
-  if (!formData.email) {
-    errors.email = "Email is required.";
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-    errors.email = "Enter a valid email address.";
-  }
-  if (!formData.password) {
-    errors.password = "Password is required.";
-  } else if (formData.password.length < 6) {
-    errors.password = "Password must be at least 6 characters.";
-  }
-  return errors;
+/* convenience aliases so existing references still resolve */
+const crimson  = "#1d4ed8";   /* mapped → blue  */
+const crimsonL = "#eff6ff";   /* mapped → blueL */
+
+
+/* ─────────────────────────────────────────────────────────────
+   FONTS — Times New Roman throughout
+───────────────────────────────────────────────────────────── */
+const fontHeading = { fontFamily: "'Times New Roman', Times, Georgia, serif" };
+const fontBody    = { fontFamily: "'Times New Roman', Times, Georgia, serif" };
+
+/* ── Validation ─────────────────────────────────────────── */
+function validate(fd) {
+  const e = {};
+  if (!fd.email) e.email = "Email is required.";
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fd.email))
+    e.email = "Enter a valid email.";
+  if (!fd.password) e.password = "Password is required.";
+  else if (fd.password.length < 6)
+    e.password = "Min. 6 characters.";
+  return e;
 }
 
 export default function Login() {
   const router = useRouter();
-  const [formData, setFormData] = useState({ email: "", password: "" });
-  const [errors, setErrors] = useState({});
-  const [touched, setTouched] = useState({});
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [isOverviewOpen, setIsOverviewOpen] = useState(false);
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-  const [activeAiTab, setActiveAiTab] = useState(0);
+  const [formData, setFormData]   = useState({ email: "", password: "" });
+  const [errors, setErrors]       = useState({});
+  const [touched, setTouched]     = useState({});
+  const [showPass, setShowPass]   = useState(false);
+  const [loading, setLoading]     = useState(false);
+  const [overviewOpen, setOverviewOpen] = useState(false);
+  const [aiOpen, setAiOpen]       = useState(false);
+  const [aiTab, setAiTab]         = useState(0);
 
   const handleChange = (e) => {
-    const updated = { ...formData, [e.target.name]: e.target.value };
-    setFormData(updated);
-    if (touched[e.target.name]) setErrors(validate(updated));
+    const d = { ...formData, [e.target.name]: e.target.value };
+    setFormData(d);
+    if (touched[e.target.name]) setErrors(validate(d));
   };
   const handleBlur = (e) => {
     setTouched({ ...touched, [e.target.name]: true });
@@ -76,233 +76,292 @@ export default function Login() {
     setTouched({ email: true, password: true });
     const ve = validate(formData);
     setErrors(ve);
-    if (Object.keys(ve).length > 0) return;
+    if (Object.keys(ve).length) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
+      const res  = await fetch(`${API_BASE_URL}/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(formData) });
       const data = await res.json();
       if (res.ok) { localStorage.setItem("token", data.access_token); router.push("/"); }
       else setErrors({ api: data.detail || "Invalid credentials." });
-    } catch { setErrors({ api: "Unable to connect. Please try again." }); }
+    } catch { setErrors({ api: "Connection error. Please retry." }); }
     finally { setLoading(false); }
   };
 
-  /* AI Features */
+  /* ── Content ─────────────────────────────────────────── */
   const aiFeatures = [
-    { id: "analyzer", title: "AI Case & Precedent Analyzer", icon: <Bot className="w-4 h-4" />, tag: "Research", description: "Automatically matches Supreme Court & High Court precedents with relevant citation numbers from your petitions.", samplePrompt: "Extract constitutional precedents under Article 21 for bail petition.", sampleOutput: { summary: "3 SC precedents identified:", bullets: ["Hussainara Khatoon v. State of Bihar (1980) — Right to speedy trial.", "Abdul Rehman Antulay v. R.S. Nayak (1992) — Delay evaluation guidelines.", "Satender Kumar Antil v. CBI (2022) — Statutory bail directives."] } },
-    { id: "drafter", title: "Smart Petition Drafter", icon: <FileText className="w-4 h-4" />, tag: "Drafting", description: "Generates bail applications, Sec 138 NI Act notices, and writ petitions in court-specific formats.", samplePrompt: "Draft Section 138 NI Act notice for dishonoured cheque of ₹15,00,000.", sampleOutput: { summary: "Court-compliant notice generated:", bullets: ["PARTIES: M/s Apex Tech vs M/s Horizon Infrastructure.", "DEMAND: ₹15,00,000 with 15-day statutory payment window.", "DEFAULT: Prosecution under Sec 138/141 NI Act & Sec 420 IPC."] } },
-    { id: "hearings", title: "Cause List & Hearing Monitor", icon: <Calendar className="w-4 h-4" />, tag: "Live Sync", description: "Real-time e-Courts API integration. Auto-scrapes daily cause lists and alerts you via notifications.", samplePrompt: "Show tomorrow's High Court Bench 4 cause list.", sampleOutput: { summary: "Hearing alerts dispatched:", bullets: ["Item #14: Sharma vs State — HC Bench 4 — 10:30 AM.", "Item #28: Apex vs Union — Courtroom 12 — Post-lunch.", "Client WhatsApp notifications queued."] } },
-    { id: "summarizer", title: "Judgment Summarizer", icon: <Zap className="w-4 h-4" />, tag: "Research", description: "Converts lengthy judgments into concise executive briefs with Ratio Decidendi and key holdings.", samplePrompt: "Summarize 2026 SC judgment on arbitration enforcement.", sampleOutput: { summary: "Executive brief generated:", bullets: ["RATIO: Unstamped arbitration agreements valid pre-impounding.", "REASONING: Sec 11(6A) prioritises minimal judicial intervention.", "IMPACT: Interim relief expedited by ~45 days on average."] } },
+    { id: "analyzer", icon: <Bot className="w-4 h-4" />, tag: "Research",
+      title: "AI Case & Precedent Analyzer",
+      description: "Matches SC & HC precedents with citation numbers from your petitions automatically.",
+      prompt: "Constitutional precedents under Article 21 for bail petition.",
+      output: { summary: "3 SC precedents identified:", bullets: ["Hussainara Khatoon v. State of Bihar (1980) — Speedy trial.", "Abdul Rehman Antulay v. R.S. Nayak (1992) — Delay guidelines.", "Satender Kumar Antil v. CBI (2022) — Statutory bail."] } },
+    { id: "drafter", icon: <FileText className="w-4 h-4" />, tag: "Drafting",
+      title: "Smart Petition & Notice Drafter",
+      description: "Generates bail applications, Sec 138 NI Act notices, and writs in court-specific formats.",
+      prompt: "Draft Sec 138 NI Act notice — dishonoured cheque ₹15,00,000.",
+      output: { summary: "Court-compliant notice generated:", bullets: ["Parties: M/s Apex Tech vs M/s Horizon.", "Demand: ₹15,00,000 within 15-day statutory window.", "Default: Prosecution u/s 138/141 NI Act & 420 IPC."] } },
+    { id: "hearings", icon: <Calendar className="w-4 h-4" />, tag: "Live Sync",
+      title: "Cause List & Hearing Monitor",
+      description: "Real-time e-Courts API integration auto-scrapes daily cause lists and sends alerts.",
+      prompt: "Tomorrow's HC Bench 4 cause list.",
+      output: { summary: "Hearing alerts dispatched:", bullets: ["Item #14: Sharma vs State — HC Bench 4 — 10:30 AM.", "Item #28: Apex vs Union — Courtroom 12 — Post-lunch.", "Client WhatsApp notifications queued."] } },
+    { id: "summarizer", icon: <Zap className="w-4 h-4" />, tag: "Research",
+      title: "Judgment Summarizer",
+      description: "Converts lengthy judgments into concise executive briefs with ratio decidendi.",
+      prompt: "Summarize 2026 SC judgment on arbitration enforcement.",
+      output: { summary: "Executive brief generated:", bullets: ["Ratio: Unstamped agreements valid pre-impounding.", "Reasoning: Sec 11(6A) prioritises minimal intervention.", "Impact: Interim relief expedited by ~45 days avg."] } },
   ];
 
-  /* Core Features */
   const coreFeatures = [
-    { icon: <Scale className="w-5 h-5" />, title: "e-Courts Sync", desc: "Live cause list, case status, and order tracking via national e-Courts API." },
-    { icon: <Briefcase className="w-5 h-5" />, title: "Case Management", desc: "Digital case binders with FIRs, evidence, vakalatnamas, and client files." },
-    { icon: <Bot className="w-5 h-5" />, title: "Legal AI Engine", desc: "AI trained on Indian jurisprudence, bare acts, and SC precedent digests." },
-    { icon: <Users className="w-5 h-5" />, title: "Team Delegation", desc: "Role-based access for junior advocates, clerks, and client portals." },
-    { icon: <TrendingUp className="w-5 h-5" />, title: "Billing & Retainers", desc: "GST-compliant invoices, retainer tracking, and Razorpay integration." },
-    { icon: <ShieldCheck className="w-5 h-5" />, title: "Bank-Grade Security", desc: "ISO 27001 certified. 256-bit encryption. Zero-trust architecture." },
+    { icon: <Scale className="w-5 h-5" />,     title: "e-Courts Sync",     desc: "Live cause list & case status via national e-Courts API." },
+    { icon: <Briefcase className="w-5 h-5" />, title: "Case Management",    desc: "Digital case binders — FIRs, evidence, vakalatnamas." },
+    { icon: <Bot className="w-5 h-5" />,        title: "Legal AI Engine",   desc: "AI trained on Indian jurisprudence & SC precedent digests." },
+    { icon: <Users className="w-5 h-5" />,      title: "Team Delegation",   desc: "Role-based access for advocates, clerks & client portals." },
+    { icon: <TrendingUp className="w-5 h-5" />, title: "Billing & Retainers", desc: "GST-compliant invoices & Razorpay integration." },
+    { icon: <ShieldCheck className="w-5 h-5" />, title: "Bank-Grade Security", desc: "ISO 27001 · 256-bit encryption · Zero-trust." },
   ];
 
-  /* Inline styles for the palette */
-  const bg      = { backgroundColor: C.navy };
-  const bgCard  = { backgroundColor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" };
-  const textAsh = { color: C.ash };
-  const textSl  = { color: C.slate };
-  const textCr  = { color: C.crimson };
-  const crimsonBg = { backgroundColor: C.crimson };
+  /* ── Shared input focus handlers ─────────────────────── */
+  const inputFocus = (e) => {
+    e.target.style.borderColor = C.blue;
+    e.target.style.boxShadow   = `0 0 0 3px ${C.blueL}`;
+    e.target.style.backgroundColor = C.white;
+  };
+  const inputBlurStyle = (field) => (e) => {
+    const hasError = errors[field] && touched[field];
+    e.target.style.borderColor     = hasError ? C.blue : C.border;
+    e.target.style.boxShadow       = hasError ? `0 0 0 3px ${C.blueL}` : "none";
+    e.target.style.backgroundColor = C.surface;
+  };
+  const inputStyle = (field) => ({
+    backgroundColor: C.surface,
+    border:          `1.5px solid ${errors[field] && touched[field] ? C.blue : C.border}`,
+    color:           C.ink,
+    boxShadow:       errors[field] && touched[field] ? `0 0 0 3px ${C.blueL}` : "none",
+    transition:      "all 0.2s ease",
+    ...fontBody,
+  });
+
+  /* ── Modal wrapper ──────────────────────────────────── */
+  const Modal = ({ open, onClose, children }) =>
+    open ? (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ backgroundColor: "rgba(28,20,9,0.45)", backdropFilter: "blur(8px)" }}
+        onClick={(e) => e.target === e.currentTarget && onClose()}>
+        <div className="rounded-2xl max-w-2xl w-full max-h-[88vh] overflow-y-auto relative"
+          style={{ backgroundColor: C.white, border: `1px solid ${C.border}`, boxShadow: "0 32px 64px rgba(28,20,9,0.18)" }}>
+          <button onClick={onClose}
+            className="absolute top-5 right-5 w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-colors hover:opacity-70"
+            style={{ backgroundColor: C.surface, color: C.muted }}>
+            <X className="w-4 h-4" />
+          </button>
+          {children}
+        </div>
+      </div>
+    ) : null;
 
   return (
-    <div className="min-h-screen font-sans relative overflow-x-hidden" style={bg}>
+    <div className="min-h-screen relative overflow-x-hidden" style={{ backgroundColor: C.ivory, ...fontBody }}>
 
-      {/* ── Advocate overlay watermark ── */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        {/* Large translucent scales of justice SVG */}
-        <svg
-          className="absolute opacity-[0.04]"
-          style={{ top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: "900px", height: "900px" }}
-          viewBox="0 0 24 24" fill={C.ash}
-        >
-          <path d="M12 3L2 7l2 4.5A5 5 0 0 0 9 16H7v1h10v-1h-2a5 5 0 0 0 5-4.5L22 7 12 3zm0 2.2L19.5 8 18 11.5A3 3 0 0 1 15 14H9a3 3 0 0 1-3-2.5L4.5 8 12 5.2zM11 17h2v3h-2v-3z"/>
+      {/* ════════════════════════════════════════════════
+          ADVOCATE WATERMARK OVERLAY
+      ════════════════════════════════════════════════ */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden select-none">
+        {/* Scales of Justice — very faint */}
+        <svg className="absolute" viewBox="0 0 120 120" fill="none"
+          style={{ top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: "min(700px,90vw)", opacity: 0.035, color: C.ink }}>
+          <line x1="60" y1="8" x2="60" y2="105" stroke="currentColor" strokeWidth="1.5" />
+          <line x1="20" y1="22" x2="100" y2="22" stroke="currentColor" strokeWidth="1.5" />
+          <line x1="20" y1="22" x2="8" y2="52" stroke="currentColor" strokeWidth="1" />
+          <line x1="20" y1="22" x2="32" y2="52" stroke="currentColor" strokeWidth="1" />
+          <path d="M6 52 Q20 62 34 52" stroke="currentColor" strokeWidth="1.2" fill="none" />
+          <line x1="100" y1="22" x2="88" y2="52" stroke="currentColor" strokeWidth="1" />
+          <line x1="100" y1="22" x2="112" y2="52" stroke="currentColor" strokeWidth="1" />
+          <path d="M86 52 Q100 62 114 52" stroke="currentColor" strokeWidth="1.2" fill="none" />
+          <rect x="48" y="104" width="24" height="4" rx="1" stroke="currentColor" strokeWidth="1" />
         </svg>
-        {/* Crimson top-left accent orb */}
-        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full opacity-20 blur-[120px]" style={{ backgroundColor: C.crimson }} />
-        {/* Navy-lighter bottom-right orb */}
-        <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] rounded-full opacity-10 blur-[120px]" style={{ backgroundColor: C.slate }} />
-        {/* Subtle dot grid */}
-        <div
-          className="absolute inset-0 opacity-[0.06]"
-          style={{ backgroundImage: `radial-gradient(${C.ash} 1px, transparent 1px)`, backgroundSize: "32px 32px" }}
-        />
-        {/* Horizontal rule lines — legal document feel */}
-        {[15, 30, 45, 60, 75].map((p) => (
-          <div key={p} className="absolute w-full h-px" style={{ top: `${p}%`, backgroundColor: C.ash, opacity: 0.03 }} />
-        ))}
+        {/* Warm ivory gradient vignettes */}
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full opacity-50"
+          style={{ background: `radial-gradient(circle, ${C.goldL} 0%, transparent 70%)`, transform: "translate(30%,-30%)" }} />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full opacity-40"
+          style={{ background: `radial-gradient(circle, ${C.blueL} 0%, transparent 70%)`, transform: "translate(-30%,30%)" }} />
+        {/* Fine diagonal lines — legal document texture */}
+        <div className="absolute inset-0 opacity-[0.03]"
+          style={{ backgroundImage: `repeating-linear-gradient(90deg, ${C.ink} 0px, ${C.ink} 1px, transparent 1px, transparent 48px)` }} />
       </div>
 
-      {/* ── Fixed Navbar ── */}
-      <header
-        className="fixed top-0 inset-x-0 z-50"
-        style={{ backgroundColor: "rgba(8,20,30,0.88)", backdropFilter: "blur(16px)", borderBottom: `1px solid rgba(255,255,255,0.06)` }}
-      >
+      {/* ════════════════════════════════════════════════
+          FIXED NAVBAR
+      ════════════════════════════════════════════════ */}
+      <header className="fixed top-0 inset-x-0 z-50"
+        style={{ backgroundColor: "rgba(250,247,242,0.92)", backdropFilter: "blur(20px)", borderBottom: `1px solid ${C.border}` }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
 
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: C.crimson, boxShadow: `0 0 20px rgba(115,29,32,0.5)` }}
-            >
-              <Scale className="w-5 h-5 text-white" />
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: C.blue, boxShadow: `0 4px 12px rgba(29,78,216,0.2)` }}>
+              <Scale className="w-4.5 h-4.5 text-white" style={{ width: 18, height: 18 }} />
             </div>
             <div>
-              <span className="font-extrabold text-base tracking-tight" style={textAsh}>Legal-Tech</span>
-              <p className="text-[10px] font-medium -mt-0.5" style={textSl}>Advocate Workspace</p>
+              <span className="font-semibold text-base tracking-tight" style={{ color: C.ink, ...fontBody }}>
+                Legal-Tech
+              </span>
+              <p className="text-[10px] font-normal -mt-0.5 tracking-wide" style={{ color: C.muted, ...fontBody }}>
+                Advocate Workspace
+              </p>
             </div>
           </div>
 
           {/* Nav links */}
-          <nav className="hidden md:flex items-center gap-1 rounded-full px-2 py-1.5" style={{ backgroundColor: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
+          <nav className="hidden md:flex items-center gap-1 px-2 py-1.5 rounded-full"
+            style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
             {[
-              { label: "Overview", icon: <Cpu className="w-3.5 h-3.5" />, action: () => setIsOverviewOpen(true), href: null },
-              { label: "Features", icon: <Sparkles className="w-3.5 h-3.5" />, action: null, href: "#features" },
-              { label: "AI Features", icon: <Bot className="w-3.5 h-3.5" />, action: null, href: "#ai-features" },
-            ].map((item) =>
-              item.href ? (
-                <a key={item.label} href={item.href}
-                  className="flex items-center gap-1.5 text-xs font-medium px-3.5 py-1.5 rounded-full transition-all duration-200 hover:bg-white/10"
-                  style={{ color: `${C.ash}99` }}
-                  onMouseOver={e => { e.currentTarget.style.color = C.ash; }}
-                  onMouseOut={e => { e.currentTarget.style.color = `${C.ash}99`; }}
-                >
-                  {item.icon}{item.label}
-                </a>
-              ) : (
-                <button key={item.label} onClick={item.action}
-                  className="flex items-center gap-1.5 text-xs font-medium px-3.5 py-1.5 rounded-full transition-all duration-200 hover:bg-white/10 cursor-pointer"
-                  style={{ color: `${C.ash}99` }}
-                  onMouseOver={e => { e.currentTarget.style.color = C.ash; }}
-                  onMouseOut={e => { e.currentTarget.style.color = `${C.ash}99`; }}
-                >
-                  {item.icon}{item.label}
-                </button>
-              )
-            )}
+              { label: "Overview",    icon: <Cpu className="w-3.5 h-3.5" />,      action: () => setOverviewOpen(true), href: null },
+              { label: "Features",    icon: <Sparkles className="w-3.5 h-3.5" />, action: null, href: "#features" },
+              { label: "AI Features", icon: <Bot className="w-3.5 h-3.5" />,      action: null, href: "#ai-features" },
+            ].map((item) => {
+              const cls = "flex items-center gap-1.5 text-[12px] font-medium px-3.5 py-1.5 rounded-full transition-all duration-200 cursor-pointer";
+              const s   = { color: C.muted, ...fontBody };
+              const hover = (e, on) => {
+                e.currentTarget.style.color           = on ? C.ink : C.muted;
+                e.currentTarget.style.backgroundColor = on ? C.white : "transparent";
+                e.currentTarget.style.boxShadow       = on ? `0 1px 4px rgba(28,20,9,0.08)` : "none";
+              };
+              return item.href
+                ? <a key={item.label} href={item.href} className={cls} style={s}
+                    onMouseOver={(e) => hover(e, true)} onMouseOut={(e) => hover(e, false)}>
+                    {item.icon}{item.label}
+                  </a>
+                : <button key={item.label} onClick={item.action} className={cls} style={s}
+                    onMouseOver={(e) => hover(e, true)} onMouseOut={(e) => hover(e, false)}>
+                    {item.icon}{item.label}
+                  </button>;
+            })}
           </nav>
 
-          {/* Status pill */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium" style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(217,220,226,0.1)", color: "#6ee7b7" }}>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+          {/* Status */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-medium"
+            style={{ backgroundColor: "#f0faf5", border: "1px solid #bbf0d8", color: "#2d7a54", ...fontBody }}>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
             <span className="hidden sm:inline">All Systems Live</span>
           </div>
+
         </div>
       </header>
 
-      {/* ── HERO SECTION ── */}
+      {/* ════════════════════════════════════════════════
+          HERO SECTION
+      ════════════════════════════════════════════════ */}
       <section className="relative z-10 min-h-screen flex items-center pt-16">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 w-full py-16">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 w-full py-16 lg:py-20">
           <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
 
-            {/* LEFT — Minimal Hero */}
-            <div className="lg:col-span-7 space-y-8">
+            {/* ── LEFT: Minimal Hero ───────────────────── */}
+            <div className="lg:col-span-7 space-y-9">
 
               {/* Eyebrow */}
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold"
-                style={{ border: `1px solid rgba(115,29,32,0.5)`, backgroundColor: "rgba(115,29,32,0.15)", color: "#f9a8a8" }}>
-                <span className="w-1.5 h-1.5 rounded-full" style={crimsonBg} />
-                India&apos;s AI-Powered Legal Workspace
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-medium tracking-wide"
+                style={{ backgroundColor: C.goldL, border: `1px solid #e8d49a`, color: C.gold, ...fontBody }}>
+                <Scale className="w-3 h-3" />
+                India&apos;s AI-Powered Advocate Workspace
               </div>
 
-              {/* Headline */}
+              {/* Headline — Cormorant Garamond */}
               <div className="space-y-3">
-                <h1 className="font-extrabold tracking-tight leading-[1.1]" style={{ fontSize: "clamp(36px, 5vw, 58px)", color: C.ash }}>
+                <h1 className="tracking-tight leading-[1.08]"
+                  style={{ ...fontHeading, fontSize: "clamp(40px, 5vw, 62px)", fontWeight: 600, color: C.ink }}>
                   Your Legal Practice,
                   <br />
-                  <span style={{ color: C.crimson }}>Supercharged.</span>
+                  <em style={{ color: C.blue, fontStyle: "italic" }}>Supercharged.</em>
                 </h1>
-                <p className="text-sm leading-relaxed max-w-md" style={{ color: C.slate }}>
+                <p className="text-sm leading-relaxed max-w-sm"
+                  style={{ color: C.muted, fontWeight: 400, ...fontBody }}>
                   Cause-list sync, AI petition drafting, and client management — built for Indian advocates.
                 </p>
               </div>
 
-              {/* Stats — inline separator */}
-              <div className="flex items-center gap-8 pt-2">
+              {/* Stats — clean inline */}
+              <div className="flex items-center gap-8">
                 {[
-                  { value: "50k+", label: "Cases tracked", color: C.ash },
-                  { value: "99.4%", label: "Draft accuracy", color: "#f9a8a8" },
-                  { value: "Live", label: "e-Courts API", color: "#6ee7b7" },
+                  { value: "50k+",  label: "Cases tracked",  color: C.ink },
+                  { value: "99.4%", label: "Draft accuracy", color: C.blue },
+                  { value: "Live",  label: "e-Courts API",   color: "#2d7a54" },
                 ].map((s, i, arr) => (
                   <div key={i} className="flex items-center gap-8">
                     <div>
-                      <p className="text-2xl font-extrabold" style={{ color: s.color }}>{s.value}</p>
-                      <p className="text-[11px] mt-0.5" style={{ color: C.slate }}>{s.label}</p>
+                      <p className="font-semibold text-2xl leading-tight"
+                        style={{ color: s.color, ...fontHeading }}>{s.value}</p>
+                      <p className="text-[11px] mt-0.5 font-normal tracking-wide uppercase"
+                        style={{ color: C.faint, ...fontBody, letterSpacing: "0.06em" }}>{s.label}</p>
                     </div>
-                    {i < arr.length - 1 && <div className="w-px h-10" style={{ backgroundColor: "rgba(217,220,226,0.12)" }} />}
+                    {i < arr.length - 1 && (
+                      <div className="w-px h-10" style={{ backgroundColor: C.border }} />
+                    )}
                   </div>
                 ))}
               </div>
 
-              {/* Canvas Mockup */}
-              <div
-                className="rounded-2xl overflow-hidden"
-                style={{ border: `1px solid rgba(217,220,226,0.10)`, backgroundColor: "rgba(255,255,255,0.03)", boxShadow: "0 24px 48px rgba(0,0,0,0.4)" }}
-              >
+              {/* Workspace Canvas */}
+              <div className="rounded-2xl overflow-hidden"
+                style={{ backgroundColor: C.white, border: `1px solid ${C.border}`, boxShadow: "0 12px 40px rgba(28,20,9,0.10)" }}>
+
                 {/* Title bar */}
-                <div className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: "1px solid rgba(217,220,226,0.08)", backgroundColor: "rgba(255,255,255,0.03)" }}>
+                <div className="flex items-center justify-between px-5 py-3"
+                  style={{ backgroundColor: C.surface, borderBottom: `1px solid ${C.border}` }}>
                   <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500/70" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400/70" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/70" />
-                    <span className="ml-3 text-[10px] font-semibold uppercase tracking-widest" style={{ color: C.slate }}>Advocate Workspace</span>
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#e57373" }} />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#ffb74d" }} />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#66bb6a" }} />
+                    <span className="ml-3 text-[10px] font-medium uppercase tracking-widest" style={{ color: C.faint, ...fontBody }}>
+                      Advocate Workspace
+                    </span>
                   </div>
-                  <span className="flex items-center gap-1.5 text-[10px] font-semibold" style={{ color: "#6ee7b7" }}>
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                    Live
+                  <span className="flex items-center gap-1.5 text-[10px] font-semibold" style={{ color: "#2d7a54", ...fontBody }}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />Live
                   </span>
                 </div>
 
-                {/* Cards */}
-                <div className="grid sm:grid-cols-2 gap-3 p-3">
+                {/* Inner cards */}
+                <div className="grid sm:grid-cols-2 gap-3 p-4">
                   {/* Cause list */}
-                  <div className="p-4 rounded-xl space-y-2" style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(217,220,226,0.08)" }}>
+                  <div className="p-4 rounded-xl space-y-2"
+                    style={{ backgroundColor: C.ivory, border: `1px solid ${C.border}` }}>
                     <div className="flex justify-between items-center">
-                      <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase" style={{ color: "#fbbf24" }}>
+                      <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: C.gold, ...fontBody }}>
                         <Clock className="w-3 h-3" /> Cause List
                       </span>
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(110,231,183,0.15)", color: "#6ee7b7" }}>LISTED</span>
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
+                        style={{ backgroundColor: "#f0faf5", color: "#2d7a54", border: "1px solid #bbf0d8", ...fontBody }}>LISTED</span>
                     </div>
-                    <p className="text-xs font-semibold" style={textAsh}>Sharma vs. State of Delhi</p>
-                    <p className="text-[10px]" style={textSl}>HC Bench 4 · Item #14 · 10:30 AM</p>
+                    <p className="text-sm font-semibold" style={{ color: C.ink, ...fontBody }}>Sharma vs. State of Delhi</p>
+                    <p className="text-[10px]" style={{ color: C.muted, ...fontBody }}>HC Bench 4 · Item #14 · 10:30 AM</p>
                   </div>
 
                   {/* AI card */}
-                  <div className="p-4 rounded-xl space-y-2" style={{ backgroundColor: "rgba(115,29,32,0.15)", border: "1px solid rgba(115,29,32,0.25)" }}>
+                  <div className="p-4 rounded-xl space-y-2"
+                    style={{ backgroundColor: C.blueL, border: `1px solid #bfdbfe` }}>
                     <div className="flex justify-between items-center">
-                      <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase" style={{ color: "#f9a8a8" }}>
+                      <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: C.blue, ...fontBody }}>
                         <Bot className="w-3 h-3" /> AI Match
                       </span>
-                      <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(115,29,32,0.3)", color: "#f9a8a8" }}>98.2%</span>
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
+                        style={{ backgroundColor: "#dbeafe", color: C.blue, ...fontBody }}>98.2%</span>
                     </div>
-                    <p className="text-xs font-semibold leading-tight" style={textAsh}>Article 21 — speedy trial precedent</p>
-                    <p className="text-[10px]" style={textSl}>Satender Kumar Antil v. CBI (2022)</p>
+                    <p className="text-sm font-semibold leading-tight" style={{ color: C.ink, ...fontBody }}>Article 21 — speedy trial precedent</p>
+                    <p className="text-[10px]" style={{ color: C.muted, ...fontBody }}>Satender Kumar Antil v. CBI (2022)</p>
                   </div>
                 </div>
 
-                {/* Footer bar */}
-                <div className="px-4 py-2.5 flex items-center justify-between" style={{ borderTop: "1px solid rgba(217,220,226,0.07)", backgroundColor: "rgba(255,255,255,0.02)" }}>
-                  <span className="flex items-center gap-1.5 text-[11px]" style={{ color: C.slate }}>
-                    <Sparkles className="w-3 h-3" style={{ color: C.crimson }} />
+                {/* Footer */}
+                <div className="px-5 py-3 flex items-center justify-between"
+                  style={{ borderTop: `1px solid ${C.border}`, backgroundColor: C.surface }}>
+                  <span className="flex items-center gap-1.5 text-[11px]" style={{ color: C.muted, ...fontBody }}>
+                    <Sparkles className="w-3 h-3" style={{ color: C.gold }} />
                     AI ready to draft petitions
                   </span>
-                  <button onClick={() => setIsAiModalOpen(true)}
-                    className="flex items-center gap-0.5 text-[11px] font-bold cursor-pointer transition-opacity hover:opacity-80"
-                    style={{ color: "#f9a8a8" }}
-                  >
+                  <button onClick={() => setAiOpen(true)}
+                    className="flex items-center gap-0.5 text-[11px] font-semibold cursor-pointer hover:underline"
+                    style={{ color: C.blue, ...fontBody }}>
                     Explore <ChevronRight className="w-3 h-3" />
                   </button>
                 </div>
@@ -310,89 +369,72 @@ export default function Login() {
 
             </div>
 
-            {/* RIGHT — Sign In Card */}
+            {/* ── RIGHT: Sign-In Card ───────────────────── */}
             <div id="signin" className="lg:col-span-5 scroll-mt-24">
-              <div
-                className="rounded-2xl relative overflow-hidden"
-                style={{
-                  backgroundColor: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(217,220,226,0.10)",
-                  boxShadow: "0 32px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04) inset",
-                  backdropFilter: "blur(24px)",
-                }}
-              >
-                {/* Crimson top edge */}
-                <div className="absolute top-0 inset-x-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${C.crimson}, transparent)` }} />
+              <div className="rounded-2xl overflow-hidden"
+                style={{ backgroundColor: C.white, border: `1px solid ${C.border}`, boxShadow: "0 24px 60px rgba(28,20,9,0.13)" }}>
+
+                {/* Crimson top accent line */}
+                <div className="h-[3px]"
+                  style={{ background: `linear-gradient(90deg, ${C.blue} 0%, #2563eb 50%, ${C.gold} 100%)` }} />
 
                 <div className="p-8 sm:p-9">
 
-                  {/* Logo mark */}
+                  {/* Brand */}
                   <div className="flex items-center gap-3 mb-8">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: "rgba(115,29,32,0.25)", border: `1px solid rgba(115,29,32,0.4)` }}>
-                      <Scale className="w-5 h-5" style={{ color: "#f9a8a8" }} />
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                      style={{ backgroundColor: C.blueL, border: `1.5px solid #bfdbfe` }}>
+                      <Scale className="w-5 h-5" style={{ color: C.blue }} />
                     </div>
                     <div>
-                      <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "#f9a8a8" }}>Legal-Tech AI</p>
-                      <p className="text-[10px] -mt-0.5" style={textSl}>Secure Advocate Portal</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: C.blue, ...fontBody }}>Legal-Tech AI</p>
+                      <p className="text-[10px] font-normal -mt-0.5" style={{ color: C.faint, ...fontBody }}>Secure Advocate Portal</p>
                     </div>
                   </div>
 
                   {/* Heading */}
-                  <div className="mb-7">
-                    <h2 className="text-2xl font-extrabold tracking-tight" style={textAsh}>
-                      Welcome back,<br />
-                      <span style={{ color: C.crimson }}>Counsel.</span>
+                  <div className="mb-8">
+                    <h2 className="tracking-tight leading-tight"
+                      style={{ ...fontHeading, fontSize: 32, fontWeight: 600, color: C.ink }}>
+                      Welcome back,{" "}
+                      <em style={{ color: C.blue, fontStyle: "italic" }}>Counsel.</em>
                     </h2>
-                    <p className="text-xs mt-2 leading-relaxed" style={textSl}>
+                    <p className="text-[13px] mt-2 leading-relaxed" style={{ color: C.muted, ...fontBody }}>
                       Access your workspace, AI tools, and live court data.
                     </p>
                   </div>
 
                   {/* API Error */}
                   {errors.api && (
-                    <div className="mb-5 flex items-start gap-2 text-xs px-4 py-3 rounded-xl" style={{ backgroundColor: "rgba(115,29,32,0.2)", border: `1px solid rgba(115,29,32,0.4)`, color: "#f9a8a8" }}>
+                    <div className="mb-5 flex items-start gap-2.5 text-[12px] px-4 py-3 rounded-xl"
+                      style={{ backgroundColor: C.blueL, border: `1px solid #bfdbfe`, color: C.blue, ...fontBody }}>
                       <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                       <span>{errors.api}</span>
                     </div>
                   )}
 
                   {/* Form */}
-                  <form onSubmit={handleSubmit} noValidate className="space-y-4">
+                  <form onSubmit={handleSubmit} noValidate className="space-y-5">
 
                     {/* Email */}
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold uppercase tracking-widest block" style={{ color: C.slate }}>
-                        Email address
-                      </label>
+                      <label className="block text-[11px] font-semibold uppercase tracking-widest"
+                        style={{ color: C.muted, ...fontBody }}>Email address</label>
                       <div className="relative">
-                        <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: C.slate }} />
-                        <input
-                          type="email" name="email"
+                        <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: C.faint }} />
+                        <input type="email" name="email"
                           placeholder="advocate@lawfirm.com"
                           value={formData.email}
                           onChange={handleChange} onBlur={handleBlur}
+                          onFocus={inputFocus}
+                          onBlurCapture={inputBlurStyle("email")}
                           suppressHydrationWarning
-                          className="w-full pl-10 pr-4 py-3 rounded-xl text-sm outline-none transition-all duration-300 placeholder:text-[#4b5c6e] focus:ring-2"
-                          style={{
-                            backgroundColor: "rgba(255,255,255,0.05)",
-                            border: errors.email && touched.email ? `1px solid rgba(115,29,32,0.7)` : `1px solid rgba(217,220,226,0.12)`,
-                            color: C.ash,
-                            boxShadow: errors.email && touched.email ? `0 0 0 3px rgba(115,29,32,0.15)` : undefined,
-                          }}
-                          onFocus={e => {
-                            e.target.style.border = `1px solid rgba(115,29,32,0.6)`;
-                            e.target.style.boxShadow = `0 0 0 3px rgba(115,29,32,0.12)`;
-                          }}
-                          onBlurCapture={e => {
-                            if (!(errors.email && touched.email)) {
-                              e.target.style.border = `1px solid rgba(217,220,226,0.12)`;
-                              e.target.style.boxShadow = "none";
-                            }
-                          }}
+                          className="w-full pl-10 pr-4 py-3 rounded-xl text-[13px] outline-none"
+                          style={{ ...inputStyle("email"), "::placeholder": { color: C.faint } }}
                         />
                       </div>
                       {errors.email && touched.email && (
-                        <p className="text-[11px] flex items-center gap-1" style={{ color: "#f9a8a8" }}>
+                        <p className="text-[11px] flex items-center gap-1" style={{ color: C.blue, ...fontBody }}>
                           <AlertCircle className="w-3 h-3" /> {errors.email}
                         </p>
                       )}
@@ -400,73 +442,51 @@ export default function Login() {
 
                     {/* Password */}
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold uppercase tracking-widest block" style={{ color: C.slate }}>
-                        Password
-                      </label>
+                      <label className="block text-[11px] font-semibold uppercase tracking-widest"
+                        style={{ color: C.muted, ...fontBody }}>Password</label>
                       <div className="relative">
-                        <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: C.slate }} />
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          name="password"
+                        <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: C.faint }} />
+                        <input type={showPass ? "text" : "password"} name="password"
                           placeholder="Enter your password"
                           value={formData.password}
                           onChange={handleChange} onBlur={handleBlur}
+                          onFocus={inputFocus}
+                          onBlurCapture={inputBlurStyle("password")}
                           suppressHydrationWarning
-                          className="w-full pl-10 pr-11 py-3 rounded-xl text-sm outline-none transition-all duration-300 placeholder:text-[#4b5c6e]"
-                          style={{
-                            backgroundColor: "rgba(255,255,255,0.05)",
-                            border: errors.password && touched.password ? `1px solid rgba(115,29,32,0.7)` : `1px solid rgba(217,220,226,0.12)`,
-                            color: C.ash,
-                          }}
-                          onFocus={e => {
-                            e.target.style.border = `1px solid rgba(115,29,32,0.6)`;
-                            e.target.style.boxShadow = `0 0 0 3px rgba(115,29,32,0.12)`;
-                          }}
-                          onBlurCapture={e => {
-                            if (!(errors.password && touched.password)) {
-                              e.target.style.border = `1px solid rgba(217,220,226,0.12)`;
-                              e.target.style.boxShadow = "none";
-                            }
-                          }}
+                          className="w-full pl-10 pr-11 py-3 rounded-xl text-[13px] outline-none"
+                          style={inputStyle("password")}
                         />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-opacity hover:opacity-70 cursor-pointer"
-                          style={{ color: C.slate }} suppressHydrationWarning>
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        <button type="button" onClick={() => setShowPass(!showPass)}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 cursor-pointer hover:opacity-60 transition-opacity"
+                          style={{ color: C.faint }} suppressHydrationWarning>
+                          {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
                       {errors.password && touched.password && (
-                        <p className="text-[11px] flex items-center gap-1" style={{ color: "#f9a8a8" }}>
+                        <p className="text-[11px] flex items-center gap-1" style={{ color: C.blue, ...fontBody }}>
                           <AlertCircle className="w-3 h-3" /> {errors.password}
                         </p>
                       )}
                     </div>
 
-                    {/* Remember me */}
-                    <label className="flex items-center gap-2.5 cursor-pointer pt-1">
-                      <input type="checkbox" className="sr-only peer" defaultChecked />
-                      <div className="w-4 h-4 rounded border flex items-center justify-center transition-all" style={{ borderColor: "rgba(217,220,226,0.3)", backgroundColor: "rgba(115,29,32,0.35)" }}>
+                    {/* Remember */}
+                    <label className="flex items-center gap-2.5 cursor-pointer">
+                      <div className="w-4 h-4 rounded flex items-center justify-center"
+                        style={{ backgroundColor: C.blue, border: `1.5px solid ${C.blue}` }}>
                         <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
                       </div>
-                      <span className="text-xs" style={{ color: C.slate }}>Keep me signed in</span>
+                      <span className="text-[12px]" style={{ color: C.muted, ...fontBody }}>Keep me signed in</span>
                     </label>
 
-                    {/* CTA Button */}
-                    <button
-                      type="submit" disabled={loading}
-                      className="w-full py-3.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2.5 group cursor-pointer relative overflow-hidden transition-all duration-300 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{
-                        background: loading ? C.slate : `linear-gradient(135deg, #5c1618 0%, ${C.crimson} 50%, #8b2224 100%)`,
-                        boxShadow: loading ? "none" : `0 8px 32px rgba(115,29,32,0.45), 0 2px 8px rgba(115,29,32,0.3), inset 0 1px 0 rgba(255,255,255,0.1)`,
-                      }}
-                      suppressHydrationWarning
-                    >
-                      {!loading && (
-                        <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                          style={{ background: "linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.06) 50%, transparent 70%)" }} />
-                      )}
+                    {/* CTA */}
+                    <button type="submit" disabled={loading}
+                      className="w-full py-3.5 rounded-xl font-semibold text-[13px] text-white flex items-center justify-center gap-2.5 group cursor-pointer relative overflow-hidden transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed mt-1"
+                      style={{ background: `linear-gradient(135deg, #1e3a8a 0%, ${C.blue} 60%, #2563eb 100%)`, boxShadow: `0 6px 24px rgba(29,78,216,0.2), inset 0 1px 0 rgba(255,255,255,0.12)`, ...fontBody }}
+                      suppressHydrationWarning>
+                      <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl"
+                        style={{ background: "linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.06) 50%, transparent 70%)" }} />
                       {loading ? (
                         <span className="flex items-center gap-2">
                           <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -477,24 +497,26 @@ export default function Login() {
                         </span>
                       ) : (
                         <>
-                          <span>Continue to Workspace</span>
-                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
+                          Continue to Workspace
+                          <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-200" />
                         </>
                       )}
                     </button>
 
                   </form>
 
-                  {/* Trust footer */}
-                  <div className="mt-8 pt-6 grid grid-cols-3 gap-2 text-center" style={{ borderTop: "1px solid rgba(217,220,226,0.08)" }}>
+                  {/* Trust badges */}
+                  <div className="mt-8 pt-6 grid grid-cols-3 gap-2 text-center"
+                    style={{ borderTop: `1px solid ${C.border}` }}>
                     {[
                       { icon: <ShieldCheck className="w-4 h-4" />, label: "256-Bit\nEncrypted" },
-                      { icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>, label: "ISO 27001\nCertified" },
+                      { icon: <CheckCircle2 className="w-4 h-4" />, label: "ISO 27001\nCertified" },
                       { icon: <Scale className="w-4 h-4" />, label: "Bar Council\nCompliant" },
                     ].map((t, i) => (
                       <div key={i} className="flex flex-col items-center gap-1.5">
-                        <span style={{ color: C.slate }}>{t.icon}</span>
-                        <span className="text-[10px] font-medium leading-tight whitespace-pre-line" style={{ color: `${C.slate}` }}>{t.label}</span>
+                        <span style={{ color: C.faint }}>{t.icon}</span>
+                        <span className="text-[10px] font-medium leading-tight whitespace-pre-line"
+                          style={{ color: C.faint, ...fontBody }}>{t.label}</span>
                       </div>
                     ))}
                   </div>
@@ -507,90 +529,107 @@ export default function Login() {
         </div>
       </section>
 
-      {/* ── AI FEATURES SECTION ── */}
-      <section id="ai-features" className="relative z-10 py-24 scroll-mt-16" style={{ borderTop: "1px solid rgba(217,220,226,0.07)" }}>
+      {/* ════════════════════════════════════════════════
+          AI FEATURES SECTION
+      ════════════════════════════════════════════════ */}
+      <section id="ai-features" className="relative z-10 py-24 scroll-mt-16"
+        style={{ borderTop: `1px solid ${C.border}` }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
 
-          <div className="text-center max-w-2xl mx-auto mb-14 space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold"
-              style={{ border: `1px solid rgba(115,29,32,0.4)`, backgroundColor: "rgba(115,29,32,0.12)", color: "#f9a8a8" }}>
-              <Bot className="w-3.5 h-3.5" />
-              Our Project AI Features
+          <div className="text-center max-w-xl mx-auto mb-14 space-y-3">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-medium"
+              style={{ backgroundColor: C.blueL, border: `1px solid #bfdbfe`, color: C.blue, ...fontBody }}>
+              <Bot className="w-3.5 h-3.5" /> AI Features
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight" style={textAsh}>
+            <h2 className="tracking-tight" style={{ ...fontHeading, fontSize: 36, fontWeight: 600, color: C.ink }}>
               AI Built for Indian Legal Practice
             </h2>
-            <p className="text-sm leading-relaxed" style={textSl}>
+            <p className="text-sm leading-relaxed" style={{ color: C.muted, ...fontBody }}>
               From precedent research to petition drafting — powered by Indian jurisprudence.
             </p>
           </div>
 
           <div className="grid lg:grid-cols-12 gap-6 items-start">
 
-            {/* Tabs */}
+            {/* Tab list */}
             <div className="lg:col-span-5 space-y-2">
               {aiFeatures.map((f, idx) => (
-                <div key={f.id} onClick={() => setActiveAiTab(idx)} className="p-4 rounded-xl transition-all duration-300 cursor-pointer"
+                <div key={f.id} onClick={() => setAiTab(idx)}
+                  className="p-4 rounded-xl cursor-pointer transition-all duration-200"
                   style={{
-                    backgroundColor: activeAiTab === idx ? "rgba(115,29,32,0.2)" : "rgba(255,255,255,0.03)",
-                    border: activeAiTab === idx ? `1px solid rgba(115,29,32,0.4)` : "1px solid rgba(217,220,226,0.07)",
-                    transform: activeAiTab === idx ? "scale(1.01)" : "scale(1)",
+                    backgroundColor: aiTab === idx ? C.white : "transparent",
+                    border: aiTab === idx ? `1.5px solid ${C.border}` : `1.5px solid transparent`,
+                    boxShadow: aiTab === idx ? "0 4px 16px rgba(28,20,9,0.08)" : "none",
                   }}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-2.5">
-                      <span style={{ color: activeAiTab === idx ? "#f9a8a8" : C.slate }}>{f.icon}</span>
-                      <span className="font-bold text-sm" style={{ color: activeAiTab === idx ? C.ash : C.slate }}>{f.title}</span>
-                    </div>
-                    <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full"
-                      style={{ backgroundColor: "rgba(115,29,32,0.2)", color: "#f9a8a8" }}>{f.tag}</span>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="flex items-center gap-2 font-semibold text-sm"
+                      style={{ color: aiTab === idx ? C.ink : C.muted, ...fontBody }}>
+                      <span style={{ color: aiTab === idx ? C.blue : C.faint }}>{f.icon}</span>
+                      {f.title}
+                    </span>
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+                      style={{ backgroundColor: aiTab === idx ? C.blueL : C.surface, color: aiTab === idx ? C.blue : C.faint, ...fontBody }}>
+                      {f.tag}
+                    </span>
                   </div>
-                  <p className="text-xs leading-relaxed line-clamp-2" style={{ color: activeAiTab === idx ? `${C.ash}99` : `${C.slate}` }}>
-                    {f.description}
-                  </p>
+                  <p className="text-[12px] leading-relaxed line-clamp-2"
+                    style={{ color: aiTab === idx ? C.muted : C.faint, ...fontBody }}>{f.description}</p>
                 </div>
               ))}
             </div>
 
-            {/* Preview */}
-            <div className="lg:col-span-7 rounded-2xl p-6 sm:p-7 relative overflow-hidden"
-              style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(217,220,226,0.08)", boxShadow: "0 24px 48px rgba(0,0,0,0.3)" }}>
-              <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-20 pointer-events-none" style={{ backgroundColor: C.crimson }} />
-
-              <div className="flex items-center justify-between border-b pb-3 mb-5" style={{ borderColor: "rgba(217,220,226,0.08)" }}>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-rose-500" /><div className="w-2 h-2 rounded-full bg-amber-400" /><div className="w-2 h-2 rounded-full bg-emerald-400" />
-                  <span className="ml-2 text-[11px] font-mono" style={textSl}>ai_engine.py</span>
+            {/* Preview panel */}
+            <div className="lg:col-span-7 rounded-2xl overflow-hidden"
+              style={{ backgroundColor: C.white, border: `1px solid ${C.border}`, boxShadow: "0 12px 40px rgba(28,20,9,0.10)" }}>
+              <div className="px-6 py-4 flex items-center justify-between"
+                style={{ borderBottom: `1px solid ${C.border}`, backgroundColor: C.surface }}>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: "#e57373" }} />
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: "#ffb74d" }} />
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: "#66bb6a" }} />
+                  <span className="ml-3 text-[11px] font-mono" style={{ color: C.muted }}>ai_engine.log</span>
                 </div>
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase" style={{ backgroundColor: "rgba(115,29,32,0.2)", color: "#f9a8a8" }}>
-                  {aiFeatures[activeAiTab].tag}
+                <span className="text-[9px] font-bold px-2.5 py-1 rounded-full"
+                  style={{ backgroundColor: C.blueL, color: C.blue, ...fontBody }}>
+                  {aiFeatures[aiTab].tag}
                 </span>
               </div>
 
-              <div className="space-y-5">
+              <div className="p-6 space-y-5">
                 <div>
-                  <h4 className="text-lg font-bold mb-1.5" style={textAsh}>{aiFeatures[activeAiTab].title}</h4>
-                  <p className="text-xs leading-relaxed" style={textSl}>{aiFeatures[activeAiTab].description}</p>
+                  <h3 className="font-semibold text-xl mb-1.5" style={{ ...fontHeading, color: C.ink }}>
+                    {aiFeatures[aiTab].title}
+                  </h3>
+                  <p className="text-[13px] leading-relaxed" style={{ color: C.muted, ...fontBody }}>
+                    {aiFeatures[aiTab].description}
+                  </p>
                 </div>
 
-                <div className="p-3.5 rounded-xl text-xs space-y-1.5" style={{ backgroundColor: "rgba(0,0,0,0.3)", border: "1px solid rgba(217,220,226,0.08)" }}>
-                  <span className="text-[10px] font-bold uppercase flex items-center gap-1.5" style={{ color: "#fbbf24" }}>
-                    <Sparkles className="w-3 h-3" /> Prompt:
-                  </span>
-                  <p className="font-mono italic" style={textAsh}>&quot;{aiFeatures[activeAiTab].samplePrompt}&quot;</p>
+                {/* Prompt */}
+                <div className="p-4 rounded-xl space-y-1.5"
+                  style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: C.gold, ...fontBody }}>Prompt</span>
+                  <p className="text-[13px] italic" style={{ color: C.ink, fontFamily: "Georgia, serif" }}>
+                    &quot;{aiFeatures[aiTab].prompt}&quot;
+                  </p>
                 </div>
 
-                <div className="p-4 rounded-xl space-y-3" style={{ backgroundColor: "rgba(115,29,32,0.12)", border: "1px solid rgba(115,29,32,0.25)" }}>
+                {/* Output */}
+                <div className="p-4 rounded-xl space-y-3"
+                  style={{ backgroundColor: C.blueL, border: `1px solid #bfdbfe` }}>
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold flex items-center gap-1.5" style={{ color: "#6ee7b7" }}>
+                    <span className="text-[11px] font-semibold flex items-center gap-1.5" style={{ color: "#2d7a54", ...fontBody }}>
                       <CheckCircle2 className="w-3.5 h-3.5" /> AI Response
                     </span>
-                    <span className="text-[9px] font-mono" style={textSl}>0.42s</span>
+                    <span className="text-[10px] font-mono" style={{ color: C.faint }}>0.42s</span>
                   </div>
-                  <p className="text-xs font-semibold" style={textAsh}>{aiFeatures[activeAiTab].sampleOutput.summary}</p>
+                  <p className="text-[13px] font-semibold" style={{ color: C.ink, ...fontBody }}>
+                    {aiFeatures[aiTab].output.summary}
+                  </p>
                   <ul className="space-y-1.5">
-                    {aiFeatures[activeAiTab].sampleOutput.bullets.map((b, i) => (
-                      <li key={i} className="text-xs flex gap-2 leading-relaxed" style={textSl}>
-                        <span style={{ color: C.crimson }}>•</span><span>{b}</span>
+                    {aiFeatures[aiTab].output.bullets.map((b, i) => (
+                      <li key={i} className="flex gap-2 text-[12px] leading-relaxed" style={{ color: C.muted, ...fontBody }}>
+                        <span style={{ color: C.blue, flexShrink: 0 }}>·</span>{b}
                       </li>
                     ))}
                   </ul>
@@ -601,194 +640,195 @@ export default function Login() {
         </div>
       </section>
 
-      {/* ── FEATURES SECTION ── */}
-      <section id="features" className="relative z-10 py-24 scroll-mt-16" style={{ borderTop: "1px solid rgba(217,220,226,0.07)" }}>
+      {/* ════════════════════════════════════════════════
+          FEATURES SECTION
+      ════════════════════════════════════════════════ */}
+      <section id="features" className="relative z-10 py-24 scroll-mt-16"
+        style={{ borderTop: `1px solid ${C.border}` }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
 
-          <div className="text-center max-w-2xl mx-auto mb-14 space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold"
-              style={{ border: `1px solid rgba(75,92,110,0.4)`, backgroundColor: "rgba(75,92,110,0.12)", color: C.ash }}>
-              <Briefcase className="w-3.5 h-3.5" />
-              About Our Features
+          <div className="text-center max-w-xl mx-auto mb-14 space-y-3">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-medium"
+              style={{ backgroundColor: C.goldL, border: `1px solid #e8d49a`, color: C.gold, ...fontBody }}>
+              <Briefcase className="w-3.5 h-3.5" /> About Our Features
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight" style={textAsh}>
+            <h2 className="tracking-tight" style={{ ...fontHeading, fontSize: 36, fontWeight: 600, color: C.ink }}>
               Everything a Law Practice Needs
             </h2>
-            <p className="text-sm leading-relaxed" style={textSl}>
+            <p className="text-sm leading-relaxed" style={{ color: C.muted, ...fontBody }}>
               Unified platform for advocates, senior counsels, and legal teams.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {coreFeatures.map((f, i) => (
-              <div key={i} className="p-6 rounded-2xl transition-all duration-300 group cursor-default"
-                style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(217,220,226,0.07)" }}
-                onMouseOver={e => { e.currentTarget.style.border = `1px solid rgba(115,29,32,0.3)`; e.currentTarget.style.backgroundColor = "rgba(115,29,32,0.08)"; }}
-                onMouseOut={e => { e.currentTarget.style.border = "1px solid rgba(217,220,226,0.07)"; e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.03)"; }}
-              >
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: "rgba(115,29,32,0.2)", border: `1px solid rgba(115,29,32,0.3)` }}>
-                  <span style={{ color: "#f9a8a8" }}>{f.icon}</span>
+              <div key={i} className="p-6 rounded-2xl cursor-default transition-all duration-200 group"
+                style={{ backgroundColor: C.white, border: `1px solid ${C.border}` }}
+                onMouseOver={(e) => { e.currentTarget.style.borderColor = "#bfdbfe"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(29,78,216,0.2)"; }}
+                onMouseOut={(e)  => { e.currentTarget.style.borderColor = C.border;   e.currentTarget.style.boxShadow = "none"; }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                  style={{ backgroundColor: C.blueL, border: `1px solid #bfdbfe` }}>
+                  <span style={{ color: C.blue }}>{f.icon}</span>
                 </div>
-                <h3 className="font-bold text-base mb-2" style={textAsh}>{f.title}</h3>
-                <p className="text-xs leading-relaxed" style={textSl}>{f.desc}</p>
+                <h3 className="font-semibold text-base mb-1.5" style={{ ...fontHeading, color: C.ink, fontSize: 18 }}>{f.title}</h3>
+                <p className="text-[12px] leading-relaxed" style={{ color: C.muted, ...fontBody }}>{f.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── OVERVIEW CTA ── */}
-      <section className="relative z-10 py-20" style={{ borderTop: "1px solid rgba(217,220,226,0.07)" }}>
-        <div className="max-w-3xl mx-auto px-6 text-center space-y-6">
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight" style={textAsh}>How It All Works</h2>
-          <p className="text-sm leading-relaxed" style={textSl}>
+      {/* ════════════════════════════════════════════════
+          OVERVIEW CTA
+      ════════════════════════════════════════════════ */}
+      <section className="relative z-10 py-20" style={{ borderTop: `1px solid ${C.border}` }}>
+        <div className="max-w-2xl mx-auto px-6 text-center space-y-6">
+          <h2 className="tracking-tight" style={{ ...fontHeading, fontSize: 34, fontWeight: 600, color: C.ink }}>
+            How It All Works
+          </h2>
+          <p className="text-sm leading-relaxed" style={{ color: C.muted, ...fontBody }}>
             Client onboarding → AI research & drafting → e-Courts hearing sync → Retainer settlement.
           </p>
-          <div className="flex items-center justify-center gap-4 pt-2">
-            <button onClick={() => setIsOverviewOpen(true)}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm cursor-pointer transition-all duration-200 hover:opacity-90"
-              style={{ backgroundColor: C.crimson, color: "white", boxShadow: `0 8px 24px rgba(115,29,32,0.4)` }}
-            >
-              View Project Overview <ExternalLink className="w-4 h-4" />
-            </button>
-          </div>
+          <button onClick={() => setOverviewOpen(true)}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-medium text-sm cursor-pointer transition-all hover:opacity-90"
+            style={{ backgroundColor: C.blue, color: "white", boxShadow: `0 6px 20px rgba(29,78,216,0.2)`, ...fontBody }}>
+            View Project Overview <ExternalLink className="w-4 h-4" />
+          </button>
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
-      <footer className="relative z-10 py-10" style={{ borderTop: "1px solid rgba(217,220,226,0.07)" }}>
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6 text-xs">
+      {/* ════════════════════════════════════════════════
+          FOOTER
+      ════════════════════════════════════════════════ */}
+      <footer className="relative z-10 py-10" style={{ borderTop: `1px solid ${C.border}` }}>
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px]">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={crimsonBg}>
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: C.blue }}>
               <Scale className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="font-extrabold text-sm" style={textAsh}>Legal-Tech AI</span>
-            <span style={textSl}>| Advocate OS 2026</span>
+            <span className="font-semibold text-sm" style={{ color: C.ink, ...fontBody }}>Legal-Tech AI</span>
+            <span style={{ color: C.faint }}>&nbsp;· Advocate OS 2026</span>
           </div>
-          <div className="flex items-center gap-5" style={textSl}>
-            <button onClick={() => setIsOverviewOpen(true)} className="hover:opacity-70 transition-opacity cursor-pointer">Overview</button>
-            <a href="#features" className="hover:opacity-70 transition-opacity">Features</a>
-            <a href="#ai-features" className="hover:opacity-70 transition-opacity">AI Features</a>
+          <div className="flex items-center gap-5" style={{ color: C.muted, ...fontBody }}>
+            <button onClick={() => setOverviewOpen(true)} className="hover:opacity-70 cursor-pointer">Overview</button>
+            <a href="#features"    className="hover:opacity-70">Features</a>
+            <a href="#ai-features" className="hover:opacity-70">AI Features</a>
           </div>
-          <p style={textSl}>© 2026 Legal-Tech Inc. · ISO 27001 · Bar Council</p>
+          <p style={{ color: C.faint, ...fontBody }}>© 2026 Legal-Tech Inc. · ISO 27001 · Bar Council</p>
         </div>
       </footer>
 
-      {/* ── OVERVIEW MODAL ── */}
-      {isOverviewOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(8,31,45,0.85)", backdropFilter: "blur(12px)" }}>
-          <div className="rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto relative p-6 sm:p-8"
-            style={{ backgroundColor: "#0d2838", border: "1px solid rgba(217,220,226,0.1)", boxShadow: "0 32px 64px rgba(0,0,0,0.6)" }}>
-            <button onClick={() => setIsOverviewOpen(false)}
-              className="absolute top-5 right-5 p-2 rounded-full cursor-pointer transition-opacity hover:opacity-70"
-              style={{ backgroundColor: "rgba(255,255,255,0.06)", color: C.ash }}>
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: "rgba(115,29,32,0.25)", border: `1px solid rgba(115,29,32,0.4)` }}>
-                <Cpu className="w-5 h-5" style={{ color: "#f9a8a8" }} />
-              </div>
-              <div>
-                <h3 className="text-xl font-extrabold" style={textAsh}>Project Overview</h3>
-                <p className="text-xs" style={textSl}>Legal-Tech Architecture & System Specs</p>
-              </div>
+      {/* ════════════════════════════════════════════════
+          OVERVIEW MODAL
+      ════════════════════════════════════════════════ */}
+      <Modal open={overviewOpen} onClose={() => setOverviewOpen(false)}>
+        <div className="p-7 sm:p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: C.blueL, border: `1px solid #bfdbfe` }}>
+              <Cpu className="w-5 h-5" style={{ color: C.blue }} />
             </div>
-
-            <div className="space-y-5 text-xs">
-              <div className="p-4 rounded-xl" style={{ backgroundColor: "rgba(115,29,32,0.12)", border: `1px solid rgba(115,29,32,0.25)` }}>
-                <h4 className="font-bold mb-1.5 flex items-center gap-2" style={{ color: "#f9a8a8" }}><ShieldCheck className="w-4 h-4" /> Platform Mission</h4>
-                <p className="leading-relaxed" style={textSl}>Legal-Tech unifies case files, e-Courts cause list syncing, AI-assisted research, and client billing into a single high-security workspace for Indian advocates.</p>
-              </div>
-
-              <div className="grid sm:grid-cols-2 gap-3">
-                {[
-                  { label: "Core Framework", value: "Next.js 16 + React 19", sub: "Tailwind CSS v4, Lucide Icons" },
-                  { label: "Backend Engine", value: "Python FastAPI + PostgreSQL", sub: "OAuth2 JWT + e-Courts Scraper" },
-                ].map((item, i) => (
-                  <div key={i} className="p-3.5 rounded-xl space-y-1" style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(217,220,226,0.08)" }}>
-                    <span className="text-[10px] font-bold uppercase tracking-wider" style={textSl}>{item.label}</span>
-                    <p className="font-bold text-sm" style={textAsh}>{item.value}</p>
-                    <p style={textSl}>{item.sub}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-2">
-                <h4 className="font-bold text-sm" style={textAsh}>Key Modules</h4>
-                {[
-                  { label: "e-Courts National Portal Integration", tag: "AUTOMATED" },
-                  { label: "AI Precedent Vector Search (SC & High Courts)", tag: "SEMANTIC" },
-                  { label: "Multi-Role Permissions (Advocate, Junior, Clerk, Client)", tag: "ROLE-BASED" },
-                  { label: "Razorpay Legal Retainer & Fee Gateway", tag: "SECURE" },
-                ].map((m, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-xl" style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(217,220,226,0.07)" }}>
-                    <span className="font-semibold" style={textAsh}>{m.label}</span>
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded" style={{ backgroundColor: "rgba(115,29,32,0.25)", color: "#f9a8a8" }}>{m.tag}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex justify-end pt-2">
-                <button onClick={() => setIsOverviewOpen(false)}
-                  className="px-5 py-2.5 rounded-xl font-bold cursor-pointer transition-opacity hover:opacity-80"
-                  style={{ backgroundColor: C.crimson, color: "white" }}>
-                  Close
-                </button>
-              </div>
+            <div>
+              <h3 className="font-semibold text-xl" style={{ ...fontHeading, color: C.ink }}>Project Overview</h3>
+              <p className="text-[11px]" style={{ color: C.muted, ...fontBody }}>Architecture & System Specs</p>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* ── AI FEATURES MODAL ── */}
-      {isAiModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(8,31,45,0.85)", backdropFilter: "blur(12px)" }}>
-          <div className="rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto relative p-6 sm:p-8"
-            style={{ backgroundColor: "#0d2838", border: "1px solid rgba(217,220,226,0.1)", boxShadow: "0 32px 64px rgba(0,0,0,0.6)" }}>
-            <button onClick={() => setIsAiModalOpen(false)}
-              className="absolute top-5 right-5 p-2 rounded-full cursor-pointer transition-opacity hover:opacity-70"
-              style={{ backgroundColor: "rgba(255,255,255,0.06)", color: C.ash }}>
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: "rgba(115,29,32,0.25)", border: `1px solid rgba(115,29,32,0.4)` }}>
-                <Bot className="w-5 h-5" style={{ color: "#f9a8a8" }} />
-              </div>
-              <div>
-                <h3 className="text-xl font-extrabold" style={textAsh}>AI Features</h3>
-                <p className="text-xs" style={textSl}>How AI Powers Legal-Tech</p>
-              </div>
+          <div className="space-y-4 text-[12px]">
+            <div className="p-4 rounded-xl" style={{ backgroundColor: C.blueL, border: `1px solid #bfdbfe` }}>
+              <h4 className="font-semibold mb-1.5 flex items-center gap-2" style={{ color: C.blue, ...fontBody }}>
+                <ShieldCheck className="w-4 h-4" /> Platform Mission
+              </h4>
+              <p className="leading-relaxed" style={{ color: C.muted, ...fontBody }}>
+                Legal-Tech unifies case files, e-Courts cause-list syncing, AI-assisted research, and client billing into a high-security workspace for Indian advocates.
+              </p>
             </div>
 
-            <div className="space-y-4 text-xs">
-              {aiFeatures.map((f, i) => (
-                <div key={i} className="p-4 rounded-xl space-y-2" style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(217,220,226,0.08)" }}>
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 font-bold text-sm" style={textAsh}>
-                      <span style={{ color: "#f9a8a8" }}>{f.icon}</span>{f.title}
-                    </span>
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded" style={{ backgroundColor: "rgba(115,29,32,0.2)", color: "#f9a8a8" }}>{f.tag}</span>
-                  </div>
-                  <p className="leading-relaxed" style={textSl}>{f.description}</p>
-                  <div className="p-3 rounded-lg space-y-1" style={{ backgroundColor: "rgba(0,0,0,0.3)", border: "1px solid rgba(217,220,226,0.07)" }}>
-                    <span className="text-[10px] font-bold uppercase" style={{ color: "#fbbf24" }}>Example prompt:</span>
-                    <p className="font-mono italic" style={textAsh}>&quot;{f.samplePrompt}&quot;</p>
-                  </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {[
+                { label: "Core Framework", value: "Next.js 16 + React 19", sub: "Tailwind CSS v4 · Lucide Icons" },
+                { label: "Backend Engine", value: "Python FastAPI + PostgreSQL", sub: "OAuth2 JWT · e-Courts Scraper" },
+              ].map((item, i) => (
+                <div key={i} className="p-4 rounded-xl space-y-1"
+                  style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: C.faint, ...fontBody }}>{item.label}</span>
+                  <p className="font-semibold text-sm" style={{ color: C.ink, ...fontBody }}>{item.value}</p>
+                  <p style={{ color: C.muted, ...fontBody }}>{item.sub}</p>
                 </div>
               ))}
-              <div className="flex justify-end pt-2">
-                <button onClick={() => setIsAiModalOpen(false)}
-                  className="px-5 py-2.5 rounded-xl font-bold cursor-pointer transition-opacity hover:opacity-80"
-                  style={{ backgroundColor: C.crimson, color: "white" }}>
-                  Got It
-                </button>
-              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-semibold text-sm" style={{ color: C.ink, ...fontBody }}>Key Modules</h4>
+              {[
+                ["e-Courts National Portal Integration",                     "AUTOMATED"],
+                ["AI Precedent Vector Search (SC & High Courts)",            "SEMANTIC"],
+                ["Multi-Role Permissions (Advocate, Junior, Clerk, Client)", "ROLE-BASED"],
+                ["Razorpay Legal Retainer & Fee Gateway",                    "SECURE"],
+              ].map(([label, tag], i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-xl"
+                  style={{ backgroundColor: C.ivory, border: `1px solid ${C.border}` }}>
+                  <span className="font-medium" style={{ color: C.ink, ...fontBody }}>{label}</span>
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded"
+                    style={{ backgroundColor: C.blueL, color: C.blue, ...fontBody }}>{tag}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <button onClick={() => setOverviewOpen(false)}
+                className="px-5 py-2.5 rounded-xl font-medium cursor-pointer transition-opacity hover:opacity-80 text-white text-sm"
+                style={{ backgroundColor: C.blue, ...fontBody }}>Close</button>
             </div>
           </div>
         </div>
-      )}
+      </Modal>
+
+      {/* ════════════════════════════════════════════════
+          AI MODAL
+      ════════════════════════════════════════════════ */}
+      <Modal open={aiOpen} onClose={() => setAiOpen(false)}>
+        <div className="p-7 sm:p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: C.blueL, border: `1px solid #bfdbfe` }}>
+              <Bot className="w-5 h-5" style={{ color: C.blue }} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-xl" style={{ ...fontHeading, color: C.ink }}>AI Features</h3>
+              <p className="text-[11px]" style={{ color: C.muted, ...fontBody }}>How AI Powers Legal-Tech</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {aiFeatures.map((f, i) => (
+              <div key={i} className="p-4 rounded-xl space-y-2"
+                style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2 font-semibold text-sm" style={{ color: C.ink, ...fontBody }}>
+                    <span style={{ color: C.blue }}>{f.icon}</span>{f.title}
+                  </span>
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded"
+                    style={{ backgroundColor: C.blueL, color: C.blue, ...fontBody }}>{f.tag}</span>
+                </div>
+                <p className="text-[12px] leading-relaxed" style={{ color: C.muted, ...fontBody }}>{f.description}</p>
+                <div className="p-3 rounded-lg"
+                  style={{ backgroundColor: C.ivory, border: `1px solid ${C.border}` }}>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider block mb-1" style={{ color: C.gold, ...fontBody }}>Example</span>
+                  <p className="text-[12px] italic" style={{ color: C.ink, fontFamily: "Georgia, serif" }}>
+                    &quot;{f.prompt}&quot;
+                  </p>
+                </div>
+              </div>
+            ))}
+            <div className="flex justify-end pt-1">
+              <button onClick={() => setAiOpen(false)}
+                className="px-5 py-2.5 rounded-xl font-medium cursor-pointer transition-opacity hover:opacity-80 text-white text-sm"
+                style={{ backgroundColor: C.blue, ...fontBody }}>Got It</button>
+            </div>
+          </div>
+        </div>
+      </Modal>
 
     </div>
   );
