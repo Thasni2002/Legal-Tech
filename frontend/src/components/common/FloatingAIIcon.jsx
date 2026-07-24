@@ -5,8 +5,10 @@ import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 import { FileText, Bot } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
+import { usePathname } from "next/navigation";
 
 export default function FloatingAIIcon() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isClientUser, setIsClientUser] = useState(false);
   const [aiAssistantHref, setAiAssistantHref] = useState("/ai-assistant");
@@ -51,7 +53,7 @@ export default function FloatingAIIcon() {
     };
   }, []);
 
-  if (isClientUser) {
+  if (isClientUser || pathname === "/ai-assistant") {
     return null;
   }
 

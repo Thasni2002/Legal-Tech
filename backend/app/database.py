@@ -9,9 +9,14 @@ load_dotenv()
 # Get database URL from .env file
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+connect_args = {}
+if DATABASE_URL and "sqlite" in DATABASE_URL:
+    connect_args = {"check_same_thread": False, "timeout": 30}
+
 # Create database engine
 engine = create_engine(
-    DATABASE_URL
+    DATABASE_URL,
+    connect_args=connect_args
 )
 
 # Create session
@@ -35,7 +40,11 @@ def export_database_state():
         data = {}
         with engine.connect() as conn:
             for table_name in metadata.tables:
-                if table_name.startswith("alembic") or table_name.startswith("sqlite_"):
+                if (
+                    table_name.startswith("alembic") or
+                    table_name.startswith("sqlite_") or
+                    table_name == "uploaded_files"
+                ):
                     continue
                 table = metadata.tables[table_name]
                 result = conn.execute(table.select())
@@ -47,7 +56,7 @@ def export_database_state():
                         elif hasattr(v, "to_eng_string"):
                             row[k] = float(v)
                         elif isinstance(v, bytes):
-                            row[k] = v.hex()
+                            row[k] = None
                 data[table_name] = rows
                 
         root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

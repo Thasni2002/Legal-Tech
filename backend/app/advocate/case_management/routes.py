@@ -121,12 +121,12 @@ from fastapi import UploadFile, File, Response
 from .models import UploadedFile
 
 @router.post("/upload")
-def upload_case_document(
+async def upload_case_document(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
     try:
-        content = file.file.read()
+        content = await file.read()
         db_file = UploadedFile(
             filename=file.filename,
             content_type=file.content_type,

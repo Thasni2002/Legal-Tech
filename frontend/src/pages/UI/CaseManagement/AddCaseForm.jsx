@@ -488,6 +488,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
   const [clientMode, setClientMode] = useState(""); // "" | "new" | "existing"
   const [existingClients, setExistingClients] = useState([]);
   const [existingUsers, setExistingUsers] = useState([]);
+  const [existingCases, setExistingCases] = useState([]);
   const [originalEmail, setOriginalEmail] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSubtype, setSelectedSubtype] = useState("");
@@ -606,6 +607,8 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
         ? data.data
         : [];
       
+      setExistingCases(casesArray);
+
       const uniqueClients = [];
       const seen = new Set();
       casesArray.forEach(c => {
@@ -645,6 +648,10 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
       }
     } catch (err) {
       console.error("Failed to fetch clients:", err);
+      if (!isEditMode) {
+        const currentYear = new Date().getFullYear();
+        setFormData(prev => (prev.caseId ? prev : { ...prev, caseId: `case-${currentYear}-001` }));
+      }
     }
   };
 
@@ -662,6 +669,10 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
   };
 
   useEffect(() => {
+    if (!isEditMode) {
+      const currentYear = new Date().getFullYear();
+      setFormData(prev => (prev.caseId ? prev : { ...prev, caseId: `case-${currentYear}-001` }));
+    }
     fetchClients();
     fetchUsers();
     if (isEditMode) {
@@ -672,15 +683,27 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
   // ─── Validate a single field ───
   function validateField(name, value) {
     switch (name) {
-      case "cnrNumber":
-        if (!value.trim()) return "CNR Number is required";
-        if (value.trim().length !== 16) {
+      case "cnrNumber": {
+        const val = value.trim();
+        if (!val) return "CNR Number is required";
+        if (val.length !== 16) {
           return "CNR Number must be exactly 16 characters (e.g., KLAL010012342026)";
         }
-        if (!/^[a-zA-Z]{4}[a-zA-Z0-9]{2}\d{10}$/.test(value.trim())) {
+        if (!/^[a-zA-Z]{4}[a-zA-Z0-9]{2}\d{10}$/.test(val)) {
           return "Invalid format. Expected State(2L) + District(2L) + Est(2AN) + CaseNo(6D) + Year(4D) (e.g., KLAL010012342026)";
         }
+        const valUpper = val.toUpperCase();
+        const duplicate = (existingCases || []).some(
+          (c) =>
+            c.cnr_number &&
+            c.cnr_number.trim().toUpperCase() === valUpper &&
+            (!isEditMode || String(c.id) !== String(editId))
+        );
+        if (duplicate) {
+          return "This CNR Number is already registered with another case.";
+        }
         return "";
+      }
       case "caseId":
         // Auto-generated — no validation needed
         return "";
@@ -984,6 +1007,18 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
 
     if (!validateAll()) return;
 
+    const cnrUpper = (formData.cnrNumber || "").trim().toUpperCase();
+    const cnrExists = (existingCases || []).some(
+      (c) =>
+        c.cnr_number &&
+        c.cnr_number.trim().toUpperCase() === cnrUpper &&
+        (!isEditMode || String(c.id) !== String(editId))
+    );
+    if (cnrExists) {
+      alert("This CNR Number is already registered with another case.");
+      return;
+    }
+
     if (!isEditMode && clientMode === "new") {
       const emailLower = (formData.emailId || "").trim().toLowerCase();
       const emailExists = (existingClients || []).some(
@@ -1011,41 +1046,40 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
     }
 
     try {
-      // 1. Process and upload any new files using FormData
-      const processedDocs = await Promise.all(
-        documents.map(async (doc) => {
-          const combinedType = doc.documentCategory && doc.documentType
-            ? `${doc.documentCategory}: ${doc.documentType}`
-            : doc.documentType || "";
+      // 1. Process and upload any new files using FormData sequentially
+      const processedDocs = [];
+      for (const doc of documents) {
+        const combinedType = doc.documentCategory && doc.documentType
+          ? `${doc.documentCategory}: ${doc.documentType}`
+          : doc.documentType || "";
 
-          // If doc.file is an actual File object, we need to upload it
-          if (doc.file && doc.file instanceof File) {
-            const formDataObj = new FormData();
-            formDataObj.append("file", doc.file);
+        // If doc.file is an actual File object, we need to upload it
+        if (doc.file && doc.file instanceof File) {
+          const formDataObj = new FormData();
+          formDataObj.append("file", doc.file);
 
-            const uploadRes = await fetch(`${API_BASE_URL}/case-management/upload`, {
-              method: "POST",
-              body: formDataObj,
-            });
+          const uploadRes = await fetch(`${API_BASE_URL}/case-management/upload`, {
+            method: "POST",
+            body: formDataObj,
+          });
 
-            if (!uploadRes.ok) {
-              throw new Error(`Failed to upload document: ${doc.file.name}`);
-            }
-
-            const uploadData = await uploadRes.json();
-            return {
-              documentType: combinedType,
-              advocate: selectedAdvocate || "",
-              file: doc.file.name,
-              url: uploadData.url,
-              password: doc.password || "",
-              uploadedAt: doc.uploadedAt || doc.uploaded_at || new Date().toISOString(),
-              uploaded_at: doc.uploadedAt || doc.uploaded_at || new Date().toISOString(),
-            };
+          if (!uploadRes.ok) {
+            throw new Error(`Failed to upload document: ${doc.file.name}`);
           }
 
+          const uploadData = await uploadRes.json();
+          processedDocs.push({
+            documentType: combinedType,
+            advocate: selectedAdvocate || "",
+            file: doc.file.name,
+            url: uploadData.url,
+            password: doc.password || "",
+            uploadedAt: doc.uploadedAt || doc.uploaded_at || new Date().toISOString(),
+            uploaded_at: doc.uploadedAt || doc.uploaded_at || new Date().toISOString(),
+          });
+        } else {
           // If doc.file is already uploaded previously (it won't be an instance of File), keep as-is
-          return {
+          processedDocs.push({
             documentType: combinedType,
             advocate: selectedAdvocate || "",
             file: doc.file ? doc.file.name : null,
@@ -1053,9 +1087,9 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
             password: doc.password || "",
             uploadedAt: doc.uploadedAt || doc.uploaded_at || new Date().toISOString(),
             uploaded_at: doc.uploadedAt || doc.uploaded_at || new Date().toISOString(),
-          };
-        })
-      );
+          });
+        }
+      }
 
       const payload = {
         cnrNumber: formData.cnrNumber || null,
