@@ -42,22 +42,21 @@ def get_current_user(authorization: Optional[str] = Header(None), db: Session = 
 # Email helpers
 # ─────────────────────────────────────────────────────────────
 
+from app.utils.email_templates import (
+    build_task_assignment_email,
+    build_task_status_email,
+    build_task_message_email
+)
+
 async def _notify_task_assigned(task, junior_email: str):
     subject = f"📋 New Task Assigned: {task['title']}"
-    body = f"""
-    <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:24px;background:#f8fafc;border-radius:12px;">
-      <h2 style="color:#2563eb;">New Task Assigned</h2>
-      <p>Hello,</p>
-      <p>A new task has been assigned to you by <strong>{task['senior_name']}</strong>.</p>
-      <table style="width:100%;border-collapse:collapse;margin-top:16px;">
-        <tr><td style="padding:8px;color:#64748b;font-weight:600;">Task</td><td style="padding:8px;">{task['title']}</td></tr>
-        <tr style="background:#fff;"><td style="padding:8px;color:#64748b;font-weight:600;">Priority</td><td style="padding:8px;">{task['priority']}</td></tr>
-        <tr><td style="padding:8px;color:#64748b;font-weight:600;">Due Date</td><td style="padding:8px;">{task['due_date'] or 'N/A'}</td></tr>
-        {'<tr style="background:#fff;"><td style="padding:8px;color:#64748b;font-weight:600;">Linked Case</td><td style="padding:8px;">' + task['case_title'] + '</td></tr>' if task.get('case_title') else ''}
-      </table>
-      <p style="margin-top:16px;color:#64748b;">Please log in to Legal-Tech to view your task board.</p>
-    </div>
-    """
+    body = build_task_assignment_email(
+        senior_name=task.get('senior_name', 'Senior Advocate'),
+        task_title=task['title'],
+        priority=task.get('priority', 'Medium'),
+        due_date=str(task.get('due_date', 'N/A')),
+        case_title=task.get('case_title', '')
+    )
     try:
         await send_email(junior_email, subject, body)
     except Exception as e:
@@ -68,13 +67,11 @@ async def _notify_status_change(task, recipient_email: str, new_status: str, cha
     label_map = {"todo": "To Do", "progress": "In Progress", "review": "Review", "completed": "Completed"}
     label = label_map.get(new_status, new_status.title())
     subject = f"🔄 Task Status Updated: {task['title']} → {label}"
-    body = f"""
-    <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:24px;background:#f8fafc;border-radius:12px;">
-      <h2 style="color:#2563eb;">Task Status Changed</h2>
-      <p><strong>{changed_by}</strong> updated the status of task <strong>"{task['title']}"</strong> to <strong>{label}</strong>.</p>
-      <p style="margin-top:16px;color:#64748b;">Log in to Legal-Tech to view the full task board.</p>
-    </div>
-    """
+    body = build_task_status_email(
+        task_title=task['title'],
+        changed_by=changed_by,
+        new_status_label=label
+    )
     try:
         await send_email(recipient_email, subject, body)
     except Exception as e:
@@ -83,16 +80,11 @@ async def _notify_status_change(task, recipient_email: str, new_status: str, cha
 
 async def _notify_new_message(task, recipient_email: str, sender_name: str, message_text: str):
     subject = f"💬 New Message on Task: {task['title']}"
-    body = f"""
-    <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:24px;background:#f8fafc;border-radius:12px;">
-      <h2 style="color:#2563eb;">New Task Message</h2>
-      <p><strong>{sender_name}</strong> posted a message on task <strong>"{task['title']}"</strong>:</p>
-      <blockquote style="border-left:4px solid #2563eb;margin:16px 0;padding:12px 16px;background:#fff;border-radius:6px;color:#1e293b;">
-        {message_text}
-      </blockquote>
-      <p style="color:#64748b;">Log in to Legal-Tech to reply or view the full task.</p>
-    </div>
-    """
+    body = build_task_message_email(
+        task_title=task['title'],
+        sender_name=sender_name,
+        message_text=message_text
+    )
     try:
         await send_email(recipient_email, subject, body)
     except Exception as e:

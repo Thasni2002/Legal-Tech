@@ -24,19 +24,26 @@ export default function LawfirmAdd({ onCancel, initialData }) {
   }, []);
 
   const [existingUsers, setExistingUsers] = useState([]);
+  const [existingAdvocates, setExistingAdvocates] = useState([]);
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/permissions/users`);
-        if (res.ok) {
-          setExistingUsers(await res.json());
+        const [usersRes, advRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/permissions/users`),
+          fetch(`${API_BASE_URL}/lawfirm-management/`),
+        ]);
+        if (usersRes.ok) {
+          setExistingUsers(await usersRes.json());
+        }
+        if (advRes.ok) {
+          setExistingAdvocates(await advRes.json());
         }
       } catch (err) {
-        console.error("Failed to load existing users for validation:", err);
+        console.error("Failed to load existing users/advocates for validation:", err);
       }
     };
-    fetchUsers();
+    fetchData();
   }, []);
 
   // Convert null values in initialData to empty strings to avoid controlled input warnings
@@ -107,7 +114,20 @@ export default function LawfirmAdd({ onCancel, initialData }) {
       case "barCouncilId":
         if (formData.role === "Clerk") return "";
         if (!value.trim()) return "Bar Council ID is required";
-        if (!/^K\/\d{1,5}\/\d{4}$/i.test(value.trim())) return "Must be Kerala format (e.g., K/1234/2023)";
+        if (!/^[A-Z]{1,5}\/\d{1,6}\/\d{4}$/i.test(value.trim())) {
+          return "Invalid Bar Council ID format (e.g., K/1234/2023)";
+        }
+        const cleanBarId = value.trim().toLowerCase();
+        const isBarIdNew = !formData.id;
+        const isBarIdChanged = initialData && initialData.barCouncilId?.trim().toLowerCase() !== cleanBarId;
+        if (
+          (isBarIdNew || isBarIdChanged) &&
+          existingAdvocates.some(
+            (a) => String(a.id) !== String(formData.id) && a.barCouncilId?.trim().toLowerCase() === cleanBarId
+          )
+        ) {
+          return "This Bar Council ID is already registered.";
+        }
         return "";
 
       case "phoneNumber":
@@ -154,6 +174,11 @@ export default function LawfirmAdd({ onCancel, initialData }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
+    let val = value;
+    if (name === "barCouncilId") {
+      val = value.toUpperCase();
+    }
+
     const numberFields = [
       "phoneNumber",
       "pincode",
@@ -161,14 +186,14 @@ export default function LawfirmAdd({ onCancel, initialData }) {
     ];
 
     if (numberFields.includes(name)) {
-      if (!/^\d*$/.test(value)) return;
+      if (!/^\d*$/.test(val)) return;
     }
     setFormData((prev) => ({
-    ...prev,
-    [name]: value,
-  }));
+      ...prev,
+      [name]: val,
+    }));
 
-    const error = validateField(name, value);
+    const error = validateField(name, val);
 
     setTouched((prev) => ({
       ...prev,
@@ -289,7 +314,19 @@ export default function LawfirmAdd({ onCancel, initialData }) {
         const errorData = await response.json().catch(() => ({}));
         const errMsg = errorData.detail || "";
         
-        if (errMsg.toLowerCase().includes("email")) {
+        if (
+          errMsg.toLowerCase().includes("bar council id") ||
+          errMsg.toLowerCase().includes("already registered")
+        ) {
+          setErrors((prev) => ({
+            ...prev,
+            barCouncilId: "This Bar Council ID is already registered.",
+          }));
+          setTouched((prev) => ({
+            ...prev,
+            barCouncilId: true,
+          }));
+        } else if (errMsg.toLowerCase().includes("email")) {
           setErrors((prev) => ({
             ...prev,
             emailAddress: "This email address is already in use.",
@@ -399,9 +436,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
               name="role"
               value={formData.role}
               onChange={handleChange}
-            />
-
-            {/* Name */}
+            />            {/* Name */}
             <div>
               <InputField
                 label={formData.role === "Clerk" ? "Clerk Name" : "Advocate Name"}
@@ -409,10 +444,8 @@ export default function LawfirmAdd({ onCancel, initialData }) {
                 placeholder={formData.role === "Clerk" ? "e.g. John" : "e.g. Adv. John"}
                 value={formData.advocateName}
                 onChange={handleChange}
+                error={touched.advocateName ? errors.advocateName : ""}
               />
-              {touched.advocateName && errors.advocateName && (
-                <p className="text-red-500 text-sm mt-1">{errors.advocateName}</p>
-              )}
             </div>
 
             {/* Bar Council ID */}
@@ -424,10 +457,8 @@ export default function LawfirmAdd({ onCancel, initialData }) {
                   placeholder="e.g. K/1234/2023"
                   value={formData.barCouncilId}
                   onChange={handleChange}
+                  error={touched.barCouncilId ? errors.barCouncilId : ""}
                 />
-                {touched.barCouncilId && errors.barCouncilId && (
-                  <p className="text-red-500 text-sm mt-1">{errors.barCouncilId}</p>
-                )}
               </div>
             )}
 
@@ -440,12 +471,8 @@ export default function LawfirmAdd({ onCancel, initialData }) {
                 placeholder="Enter Experience"
                 value={formData.yearsOfExperience}
                 onChange={handleChange}
+                error={touched.yearsOfExperience ? errors.yearsOfExperience : ""}
               />
-              {touched.yearsOfExperience && errors.yearsOfExperience && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.yearsOfExperience}
-                </p>
-              )}
             </div>
 
             {/* Phone Number */}
@@ -457,10 +484,8 @@ export default function LawfirmAdd({ onCancel, initialData }) {
                 value={formData.phoneNumber}
                 onChange={handleChange}
                 maxLength={10}
+                error={touched.phoneNumber ? errors.phoneNumber : ""}
               />
-              {touched.phoneNumber && errors.phoneNumber && (
-                <p className="text-red-500 text-sm mt-1">{errors.phoneNumber}</p>
-              )}
             </div>
 
             {/* Email */}
@@ -472,10 +497,8 @@ export default function LawfirmAdd({ onCancel, initialData }) {
                 name="emailAddress"
                 value={formData.emailAddress}
                 onChange={handleChange}
+                error={touched.emailAddress ? errors.emailAddress : ""}
               />
-              {touched.emailAddress && errors.emailAddress && (
-                <p className="text-red-500 text-sm mt-1">{errors.emailAddress}</p>
-              )}
             </div>
 
 

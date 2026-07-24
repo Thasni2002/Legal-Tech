@@ -181,40 +181,16 @@ def get_registered_clients(db: Session = Depends(get_db)):
 @router.post("/send-payment-email")
 async def send_payment_email(data: PaymentEmailSchema):
 
-    html_content = f"""
-    <h2>Legal Service Payment Request</h2>
+    from app.utils.email_templates import build_payment_request_email
 
-    <p>Dear {data.client_name},</p>
-
-    <p>
-        Your invoice has been generated successfully.
-        Please complete the payment using the link below.
-    </p>
-
-    <p><strong>Total Amount:</strong> ₹{data.amount}</p>
-
-    <br>
-
-    <a href="{data.payment_link}"
-       style="
-         background:#2563EB;
-         color:white;
-         padding:12px 20px;
-         text-decoration:none;
-         border-radius:8px;
-       ">
-       Open Payment
-    </a>
-
-    <br><br>
-
-    <p>Thank you for choosing our legal services.</p>
-    <p>Senior Advocate Team</p>
-    """
+    html_content = build_payment_request_email(
+        client_name=data.client_name,
+        payment_url=data.payment_link
+    )
 
     await send_email(
         to_email=data.email,
-        subject="Legal Payment Request",
+        subject="Legal Payment Request & Invoice",
         body=html_content,
         attachment_path=data.invoice_pdf_path
     )

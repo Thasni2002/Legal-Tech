@@ -6,6 +6,7 @@ import InputField from "@/components/InputField/InputField";
 import SelectField from "@/components/SelectField/SelectField";
 import { getLoggedInUser } from "@/utils/auth";
 import { DISTRICT_COURTS } from "@/utils/districtCourts";
+import { API_BASE_URL } from "@/utils/api";
 import ResetPasswordModal from "./ResetPasswordModal";
 
 
@@ -64,18 +65,50 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
 
   const [user, setUser] = useState(null);
   const isClient = user?.role?.toLowerCase() === "client";
+  const [existingAdvocates, setExistingAdvocates] = useState([]);
 
   useEffect(() => {
     setTimeout(() => {
       setUser(getLoggedInUser());
     }, 0);
+
+    const fetchAdvocates = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/lawfirm-management/`);
+        if (res.ok) {
+          setExistingAdvocates(await res.json());
+        }
+      } catch (err) {
+        console.error("Failed to load existing advocates for validation:", err);
+      }
+    };
+    fetchAdvocates();
   }, []);
 
   /* ── Profile validation ── */
   function validateField(name, value) {
     switch (name) {
       case "advocateName": if (!value.trim()) return isClient ? "Full Name is required" : "Advocate Name is required"; return "";
-      case "barCouncilId": if (!isClient) { if (!value.trim()) return "Bar Council ID is required"; if (!/^K\/\d{1,5}\/\d{4}$/i.test(value.trim())) return "Must be Kerala format (e.g., K/1234/2023)"; } return "";
+      case "barCouncilId":
+        if (!isClient) {
+          if (!value.trim()) return "Bar Council ID is required";
+          if (!/^[A-Z]{1,5}\/\d{1,6}\/\d{4}$/i.test(value.trim())) {
+            return "Invalid Bar Council ID format (e.g., K/1234/2023)";
+          }
+          const cleanBarId = value.trim().toLowerCase();
+          const currentId = formData.id || cleanInitialData.id;
+          const isBarIdNew = !currentId;
+          const isBarIdChanged = cleanInitialData && cleanInitialData.barCouncilId?.trim().toLowerCase() !== cleanBarId;
+          if (
+            (isBarIdNew || isBarIdChanged) &&
+            existingAdvocates.some(
+              (a) => String(a.id) !== String(currentId) && a.barCouncilId?.trim().toLowerCase() === cleanBarId
+            )
+          ) {
+            return "This Bar Council ID is already registered.";
+          }
+        }
+        return "";
       case "phoneNumber": if (value && !/^\d{10}$/.test(value)) return "Phone Number must be 10 digits"; return "";
       case "emailAddress": if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Invalid email address"; return "";
       case "practiceCourt": if (!isClient && !value.trim()) return "Practice Court is required"; return "";

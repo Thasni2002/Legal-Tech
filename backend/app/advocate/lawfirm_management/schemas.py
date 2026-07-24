@@ -81,6 +81,8 @@ class AssignedCaseOut(AssignedCaseCreate):
 
     id: int
     profile_image: Optional[str] = Field(None, alias="profileImage")
+    case_id_code: Optional[str] = Field(None, alias="caseIdCode")
+
 
 
     class Config:

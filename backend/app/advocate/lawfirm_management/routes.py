@@ -108,24 +108,16 @@ async def add_advocate(
         # Send onboarding credentials email
         try:
             from app.utils.email import send_email
+            from app.utils.email_templates import build_credentials_email
             role_label = new_adv.role or "Junior Advocate"
             subject = f"Your {role_label} Credentials"
-            body = f"""
-            <html>
-                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                    <h2>Welcome to Legal-Tech</h2>
-                    <p>Dear {new_adv.advocate_name},</p>
-                    <p>Your {role_label} account has been successfully created. Below are your login credentials:</p>
-                    <div style="background-color: #f5f5f5; padding: 15px; border-left: 4px solid #2563EB; margin: 15px 0;">
-                        <p style="margin: 5px 0;"><strong>Login URL:</strong> <a href="http://localhost:3000/login">http://localhost:3000/login</a></p>
-                        <p style="margin: 5px 0;"><strong>Username / Email:</strong> {new_adv.email_address}</p>
-                        <p style="margin: 5px 0;"><strong>Temporary Password:</strong> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px;">{advocate.password}</code></p>
-                    </div>
-                    <p>Please log in and update your password under your profile settings.</p>
-                    <p>Best regards,<br/>The Legal-Tech Team</p>
-                </body>
-            </html>
-            """
+            body = build_credentials_email(
+                name=new_adv.advocate_name,
+                role=role_label,
+                login_url="http://localhost:3000/login",
+                email=new_adv.email_address,
+                password=advocate.password
+            )
             await send_email(new_adv.email_address, subject, body)
         except Exception as email_err:
             print(f"Failed to send email to advocate {new_adv.email_address}: {email_err}")

@@ -330,23 +330,15 @@ async def review_workflow_document(
     junior = db.query(User).filter(User.id == doc.junior_id).first()
     if junior and junior.email:
         try:
+            from app.utils.email_templates import build_document_review_email
             subject = f"Document '{doc.title}' Review Updated: {doc.status}"
-            feedback_section = f"<p><strong>Feedback from Senior Advocate:</strong> {doc.senior_feedback}</p>" if doc.senior_feedback else ""
-            body = f"""
-            <html>
-                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                    <h3>Document Review Update</h3>
-                    <p>Dear {junior.first_name or junior.username},</p>
-                    <p>Your document draft <strong>"{doc.title}"</strong> for Case <strong>"{doc.case_title}"</strong> has been reviewed.</p>
-                    <div style="background-color: #f5f5f5; padding: 15px; border-left: 4px solid #2563EB; margin: 15px 0;">
-                        <p style="margin: 5px 0;"><strong>Status:</strong> {doc.status}</p>
-                        {feedback_section}
-                    </div>
-                    <p>Please log in to your dashboard to view the details.</p>
-                    <p>Best regards,<br/>Legal Tech Team</p>
-                </body>
-            </html>
-            """
+            body = build_document_review_email(
+                junior_name=junior.first_name or junior.username,
+                doc_title=doc.title,
+                case_title=doc.case_title,
+                status=doc.status,
+                feedback=doc.senior_feedback or ""
+            )
             await send_email(junior.email, subject, body)
         except Exception as e:
             print(f"Failed to send review email to junior: {e}")

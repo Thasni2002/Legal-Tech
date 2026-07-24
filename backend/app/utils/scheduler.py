@@ -40,62 +40,15 @@ def check_hearing_reminders():
             # Send reminders exactly 5, 2, or 1 day before the hearing
             if days_left in [5, 2, 1]:
                 subject = f"🔔 Hearing Reminder: {case.case_title}"
-
-                # Professional, premium styled HTML email
-                body = f"""
-                <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #F8FAFC; padding: 40px 20px; color: #1E293B;">
-                    <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #E2E8F0;">
-                        <!-- Header Banner -->
-                        <div style="background: linear-gradient(135deg, #1E1B4B 0%, #4F46E5 100%); padding: 30px; text-align: center; color: #FFFFFF;">
-                            <h2 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">Upcoming Court Hearing</h2>
-                            <p style="margin: 5px 0 0 0; opacity: 0.85; font-size: 14px;">Case Reminder Alert</p>
-                        </div>
-                        
-                        <!-- Content Body -->
-                        <div style="padding: 30px 40px;">
-                            <p style="font-size: 16px; line-height: 24px; color: #475569; margin-top: 0;">
-                                Dear {case.client_name or 'Client'},
-                            </p>
-                            <p style="font-size: 16px; line-height: 24px; color: #475569;">
-                                This is an automated reminder that your case has an upcoming hearing scheduled in <strong>{days_left} day(s)</strong>.
-                            </p>
-                            
-                            <!-- Case Details Card -->
-                            <div style="background-color: #F1F5F9; border-radius: 8px; padding: 20px; margin: 25px 0; border-left: 4px solid #4F46E5;">
-                                <table style="width: 100%; border-collapse: collapse;">
-                                    <tr>
-                                        <td style="padding: 6px 0; font-size: 14px; font-weight: 600; color: #64748B; width: 130px; vertical-align: top;">Case Title:</td>
-                                        <td style="padding: 6px 0; font-size: 14px; color: #1E293B; font-weight: 500;">{case.case_title}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 6px 0; font-size: 14px; font-weight: 600; color: #64748B; vertical-align: top;">Case Number:</td>
-                                        <td style="padding: 6px 0; font-size: 14px; color: #1E293B; font-weight: 500;">{case.case_no}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 6px 0; font-size: 14px; font-weight: 600; color: #64748B; vertical-align: top;">Court Name:</td>
-                                        <td style="padding: 6px 0; font-size: 14px; color: #1E293B; font-weight: 500;">{case.court_name}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 6px 0; font-size: 14px; font-weight: 600; color: #64748B; vertical-align: top;">Hearing Date:</td>
-                                        <td style="padding: 6px 0; font-size: 14px; color: #E11D48; font-weight: 700;">{hearing_date.strftime("%B %d, %Y")}</td>
-                                    </tr>
-                                </table>
-                            </div>
-                            
-                            <p style="font-size: 14px; line-height: 20px; color: #64748B; margin-bottom: 0;">
-                                Please ensure you have coordinated with your advocate beforehand and prepared all necessary documents. If you have any questions, please contact our office directly.
-                            </p>
-                        </div>
-                        
-                        <!-- Footer -->
-                        <div style="background-color: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 20px; text-align: center;">
-                            <p style="margin: 0; font-size: 12px; color: #94A3B8;">
-                                This is an automated email notification from Legal Tech lawfirm management. Please do not reply directly to this email.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                """
+                from app.utils.email_templates import build_hearing_reminder_email
+                body = build_hearing_reminder_email(
+                    client_name=case.client_name or "Client",
+                    days_left=days_left,
+                    case_title=case.case_title,
+                    case_no=case.case_no,
+                    court_name=case.court_name,
+                    hearing_date_str=hearing_date.strftime("%B %d, %Y")
+                )
 
                 # Send client email
                 if case.email_id:

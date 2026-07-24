@@ -81,10 +81,12 @@ const Page = () => {
         localStorage.setItem("advocate_profile", JSON.stringify(savedData));
         setIsSubmitted(true);
       } else {
-        console.error("Failed to save profile to backend.");
+        const errorData = await response.json().catch(() => ({}));
+        alert(errorData.detail || "Failed to save profile to backend.");
       }
     } catch (error) {
       console.error("Error saving profile:", error);
+      alert("Error saving profile.");
     }
   };
 

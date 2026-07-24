@@ -62,16 +62,16 @@ async def forgot_password_send_otp(
 
     try:
         from app.utils.email import send_email
+        from app.utils.email_templates import build_otp_email
+        body = build_otp_email(
+            username=user.username,
+            otp=otp,
+            expire_minutes=OTP_EXPIRE_MINUTES
+        )
         await send_email(
             to_email=data.email,
-            subject="Your Password Reset OTP",
-            body=(
-                f"<p>Hi <strong>{user.username}</strong>,</p>"
-                f"<p>Your one-time password (OTP) for resetting your password is:</p>"
-                f"<h2 style='letter-spacing:8px;color:#2563EB;'>{otp}</h2>"
-                f"<p>This OTP is valid for <strong>{OTP_EXPIRE_MINUTES} minutes</strong>. Do not share it with anyone.</p>"
-                f"<p>If you did not request a password reset, please ignore this email.</p>"
-            ),
+            subject="Your Password Reset OTP Code",
+            body=body,
         )
     except Exception as e:
         # If email is misconfigured in dev, still respond but log the OTP

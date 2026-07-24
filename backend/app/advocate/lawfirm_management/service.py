@@ -1,7 +1,13 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func
+import re
 import json
 from fastapi import HTTPException
 from .models import Advocate, AssignedCase
+from app.advocate.case_management.models import Case
+from app.authapp.models import User
+
+
 from .schemas import (
     AdvocateCreate,
     AdvocateUpdate,
@@ -33,9 +39,20 @@ def create_advocate(
     advocate: AdvocateCreate
 ):
     advocate_data = advocate.model_dump(
-    by_alias=False,
-    exclude={"confirm_password"}
-)
+        by_alias=False,
+        exclude={"confirm_password"}
+    )
+
+    bar_id = advocate_data.get("bar_council_id")
+    if advocate_data.get("role") != "Clerk" and bar_id and bar_id.strip():
+        clean_bar_id = bar_id.strip()
+        if not re.match(r"^[A-Za-z]{1,5}/\d{1,6}/\d{4}$", clean_bar_id):
+            raise HTTPException(status_code=400, detail="Invalid Bar Council ID format (e.g., K/1234/2023)")
+        existing_bar = db.query(Advocate).filter(
+            func.lower(Advocate.bar_council_id) == clean_bar_id.lower()
+        ).first()
+        if existing_bar:
+            raise HTTPException(status_code=400, detail="This Bar Council ID is already registered.")
 
     password = advocate_data.pop("password", None)
 
@@ -67,12 +84,25 @@ def update_advocate(
         return None
 
     update_data = advocate_data.model_dump(
-    exclude_unset=True,
-    by_alias=False,
-    exclude={"confirm_password"}
-)
+        exclude_unset=True,
+        by_alias=False,
+        exclude={"confirm_password"}
+    )
+
+    bar_id = update_data.get("bar_council_id")
+    if update_data.get("role") != "Clerk" and bar_id and bar_id.strip():
+        clean_bar_id = bar_id.strip()
+        if not re.match(r"^[A-Za-z]{1,5}/\d{1,6}/\d{4}$", clean_bar_id):
+            raise HTTPException(status_code=400, detail="Invalid Bar Council ID format (e.g., K/1234/2023)")
+        existing_bar = db.query(Advocate).filter(
+            func.lower(Advocate.bar_council_id) == clean_bar_id.lower(),
+            Advocate.id != advocate_id
+        ).first()
+        if existing_bar:
+            raise HTTPException(status_code=400, detail="This Bar Council ID is already registered.")
 
     password = update_data.pop("password", None)
+
 
     if password:
         advocate.hashed_password = pwd_context.hash(password)
@@ -221,17 +251,21 @@ def create_assigned_case(
 # Get all assigned cases
 def get_assigned_cases(db: Session):
     results = (
-        db.query(AssignedCase, Advocate.profile_image)
+        db.query(AssignedCase, Advocate.profile_image, Case.case_id, Case.case_no)
         .outerjoin(
             Advocate,
             AssignedCase.advocate_name == Advocate.advocate_name
+        )
+        .outerjoin(
+            Case,
+            AssignedCase.case_id == Case.id
         )
         .all()
     )
 
     assigned_cases = []
 
-    for case, profile_image in results:
+    for case, profile_image, case_id_code, case_no in results:
         case.assigned_documents = json.loads(
             case.assigned_documents or "[]"
         )
@@ -239,8 +273,11 @@ def get_assigned_cases(db: Session):
             case.appearances or "[]"
         )
 
-        # Add profile image dynamically
+        # Add profile image and case_id_code dynamically
         case.profile_image = profile_image
+        case.case_id_code = case_id_code or (f"CASE-#{case.case_id}" if case.case_id else None)
+        if not case.case_number and case_no:
+            case.case_number = case_no
 
         assigned_cases.append(case)
 
@@ -251,21 +288,30 @@ def get_assigned_case_by_id(
     db: Session,
     case_id: int
 ):
-    assigned_case = db.query(
-        AssignedCase
-    ).filter(
-        AssignedCase.id == case_id
-    ).first()
+    result = (
+        db.query(AssignedCase, Advocate.profile_image, Case.case_id, Case.case_no)
+        .outerjoin(Advocate, AssignedCase.advocate_name == Advocate.advocate_name)
+        .outerjoin(Case, AssignedCase.case_id == Case.id)
+        .filter(AssignedCase.id == case_id)
+        .first()
+    )
 
-    if assigned_case:
-        assigned_case.assigned_documents = json.loads(
-            assigned_case.assigned_documents or "[]"
+    if result:
+        case, profile_image, case_id_code, case_no = result
+        case.assigned_documents = json.loads(
+            case.assigned_documents or "[]"
         )
-        assigned_case.appearances = json.loads(
-            assigned_case.appearances or "[]"
+        case.appearances = json.loads(
+            case.appearances or "[]"
         )
+        case.profile_image = profile_image
+        case.case_id_code = case_id_code or (f"CASE-#{case.case_id}" if case.case_id else None)
+        if not case.case_number and case_no:
+            case.case_number = case_no
+        return case
 
-    return assigned_case
+    return None
+
 
 
 # Delete assigned case
