@@ -131,7 +131,7 @@ export default function Navbar() {
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
-    <nav className="bg-white border-b border-[#E2E8F0] px-6 py-3 flex justify-end items-center">
+    <nav className="bg-white border-b border-[#E2E8F0] px-4 md:px-6 pl-14 md:pl-6 py-3 flex justify-end items-center">
 
       {/* Right Side */}
       <div className="flex items-end gap-3">
