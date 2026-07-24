@@ -90,7 +90,7 @@ export default function LayoutWrapper({ children }) {
       <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
       <div className={`flex-1 flex flex-col transition-[padding] duration-300 ease-in-out ${isCollapsed ? "md:pl-[72px]" : "md:pl-[280px]"} min-h-screen`}>
         <Navbar />
-        <main className="flex-1 p-4 md:p-6 lg:p-12">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 overflow-x-hidden">{children}</main>
       </div>
       <FloatingAIIcon />
     </div>

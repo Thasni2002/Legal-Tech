@@ -13,6 +13,8 @@ import {
   ChevronDown,
   ChevronUp,
   Users,
+  Building,
+  Search
 } from "lucide-react";
 import { API_BASE_URL } from "@/utils/api";
 import DocumentViewerModal from "@/components/common/DocumentViewerModal";
@@ -115,13 +117,21 @@ export default function CaseTracking() {
     return Object.values(map);
   }, [cases]);
 
-  // ── search filter — matches only on client name ──────────────
+  // ── search filter — matches on client name or case title/id ──
   const filteredClients = useMemo(() => {
     if (!searchTerm.trim()) return clients;
     const q = searchTerm.toLowerCase();
-    return clients.filter((cl) => cl.name.toLowerCase().includes(q));
+    return clients.filter((cl) => {
+      const matchesName = cl.name.toLowerCase().includes(q) || cl.id.toLowerCase().includes(q);
+      const matchesCases = cl.cases.some(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.id.toLowerCase().includes(q) ||
+          (c.court && c.court.toLowerCase().includes(q))
+      );
+      return matchesName || matchesCases;
+    });
   }, [clients, searchTerm]);
-
 
   // ── status update ────────────────────────────────────────────
   async function handleStatusChange(caseDbId, newStatus) {
@@ -133,13 +143,11 @@ export default function CaseTracking() {
         body: JSON.stringify({ status: newStatus }),
       });
       if (res.ok) {
-        // Update only the specific case in the raw cases list
         setCases((prev) =>
           prev.map((c) =>
             c.id === caseDbId ? { ...c, status: newStatus } : c
           )
         );
-        // Also keep the modal in sync
         if (selectedCase && selectedCase.dbId === caseDbId) {
           setSelectedCase((prev) => ({ ...prev, status: newStatus }));
         }
@@ -167,58 +175,61 @@ export default function CaseTracking() {
   }
 
   return (
-    <div className="relative w-full space-y-6 md:space-y-8">
-      {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+    <div className="relative w-full space-y-6 md:space-y-8 pb-16 md:pb-10">
+      {/* ── Header & Search Toolbar (Responsive) ── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <Link
             href="/client-management"
-            className="flex items-center justify-center w-9 h-9 bg-white border border-[#E2E8F0] rounded-lg shadow-sm text-[#64748B] hover:text-[#2563EB] hover:border-[#2563EB] transition-colors"
+            className="flex items-center justify-center w-9 h-9 bg-white border border-[#E2E8F0] rounded-xl shadow-xs text-[#64748B] hover:text-[#2563EB] hover:border-[#2563EB] transition-colors shrink-0 cursor-pointer"
+            title="Back to Client Management"
           >
             <ArrowLeft size={18} />
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] tracking-tight truncate">
               Case Tracking
             </h1>
-            <p className="text-xs text-[#64748B] mt-0.5">
+            <p className="text-xs text-[#64748B] mt-0.5 truncate">
               Monitor litigation milestones, document trails, and schedules.
             </p>
           </div>
         </div>
 
-        {/* Search */}
-        <div className="relative w-full sm:w-80">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <svg
-              className="w-4 h-4 text-[#94A3B8]"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-          </span>
+        {/* Search Input */}
+        <div className="relative w-full md:w-80 shrink-0">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
           <input
             type="text"
             placeholder="Search Client / Case…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-lg border border-[#E2E8F0] bg-white text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all shadow-sm"
+            className="w-full pl-9 pr-8 py-2 sm:py-2.5 text-xs sm:text-sm rounded-xl border border-[#E2E8F0] bg-white text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all shadow-xs"
           />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#0F172A]"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* ── Client cards ── */}
+      {/* ── Client Accordion List ── */}
       {filteredClients.length === 0 ? (
-        <div className="text-center bg-white py-16 rounded-xl border border-[#E2E8F0] text-sm text-[#64748B]">
+        <div className="text-center bg-white py-16 px-4 rounded-2xl border border-[#E2E8F0] text-sm text-[#64748B] shadow-xs">
           <Users size={32} className="mx-auto mb-3 text-slate-300" />
-          No matching client or case found.
+          <p className="font-semibold text-slate-700">No matching client or case found.</p>
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              className="mt-3 px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition"
+            >
+              Clear Search Filter
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-4">
@@ -227,55 +238,56 @@ export default function CaseTracking() {
             return (
               <div
                 key={client.id}
-                className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm overflow-hidden transition-shadow hover:shadow-md"
+                className="bg-white border border-[#E2E8F0] rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:shadow-md"
               >
-                {/* Card header — click to expand/collapse cases table */}
+                {/* Accordion Header */}
                 <button
                   onClick={() =>
                     setExpandedClient(isExpanded ? null : client.id)
                   }
-                  className="w-full flex items-center justify-between p-5 text-left group"
+                  className="w-full flex items-center justify-between p-4 sm:p-5 text-left group cursor-pointer"
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                     {/* Avatar */}
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm shadow-sm flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] flex items-center justify-center text-white font-bold text-sm shadow-xs shrink-0 select-none">
                       {client.name.charAt(0).toUpperCase()}
                     </div>
-                    <div>
-                      <h2 className="font-bold text-base text-[#0F172A] group-hover:text-[#2563EB] transition-colors">
+                    <div className="min-w-0">
+                      <h2 className="font-bold text-sm sm:text-base text-[#0F172A] group-hover:text-[#2563EB] transition-colors truncate">
                         {client.name}
                       </h2>
-                      <span className="text-[10px] text-[#64748B] font-mono">
+                      <span className="text-[11px] text-[#64748B] font-mono block mt-0.5 truncate">
                         ID: {client.id}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    {/* Case count badge */}
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+                    {/* Case Count Badge */}
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-[#2563EB] border border-indigo-100 shadow-2xs">
                       <Briefcase size={12} />
-                      {client.cases.length}{" "}
-                      {client.cases.length === 1 ? "Case" : "Cases"}
+                      <span>{client.cases.length}</span>
+                      <span className="hidden sm:inline">{client.cases.length === 1 ? "Case" : "Cases"}</span>
                     </span>
                     {isExpanded ? (
                       <ChevronUp
                         size={18}
-                        className="text-[#64748B] flex-shrink-0"
+                        className="text-[#64748B] shrink-0"
                       />
                     ) : (
                       <ChevronDown
                         size={18}
-                        className="text-[#64748B] flex-shrink-0"
+                        className="text-[#64748B] shrink-0"
                       />
                     )}
                   </div>
                 </button>
 
-                {/* Inline cases table — shown when expanded */}
+                {/* Inline cases content — Desktop Table vs Mobile Cards */}
                 {isExpanded && (
-                  <div className="border-t border-[#F1F5F9]">
-                    <div className="overflow-x-auto">
+                  <div className="border-t border-[#F1F5F9] bg-[#F8FAFC]/50">
+                    {/* Desktop Table View (>= md screens) */}
+                    <div className="hidden md:block overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider bg-[#F8FAFC] border-b border-[#E2E8F0]">
@@ -287,46 +299,91 @@ export default function CaseTracking() {
                             <th className="px-5 py-3 text-right">Action</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#F1F5F9]">
+                        <tbody className="divide-y divide-[#F1F5F9] bg-white">
                           {client.cases.map((item, idx) => (
                             <tr
                               key={item.dbId || `${item.id}-${idx}`}
                               className="hover:bg-[#F8FAFC] transition-colors"
                             >
-                              <td className="px-5 py-3 text-xs text-[#94A3B8] font-bold">
+                              <td className="px-5 py-3.5 text-xs text-[#94A3B8] font-bold">
                                 {idx + 1}
                               </td>
-                              <td className="px-5 py-3 text-xs font-mono font-semibold text-[#1E293B]">
+                              <td className="px-5 py-3.5 text-xs font-mono font-semibold text-[#1E293B]">
                                 {item.id}
                               </td>
-                              <td className="px-5 py-3 text-sm text-[#1E293B] max-w-[200px]">
-                                <span className="line-clamp-2">{item.name}</span>
+                              <td className="px-5 py-3.5 text-sm text-[#1E293B] max-w-[220px]">
+                                <span className="font-semibold block leading-tight">{item.name}</span>
                               </td>
-                              <td className="px-5 py-3 text-xs text-[#64748B]">
+                              <td className="px-5 py-3.5 text-xs text-[#64748B]">
                                 {item.court || "—"}
                               </td>
-                              <td className="px-5 py-3">
+                              <td className="px-5 py-3.5">
                                 <span
-                                  className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold border ${statusBadge(
+                                  className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${statusBadge(
                                     item.status
                                   )}`}
                                 >
                                   {item.status}
                                 </span>
                               </td>
-                              <td className="px-5 py-3 text-right">
+                              <td className="px-5 py-3.5 text-right">
                                 <button
                                   onClick={() => setSelectedCase(item)}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded-xl shadow-2xs transition-all cursor-pointer"
                                 >
                                   <Eye size={13} />
-                                  View
+                                  <span>View</span>
                                 </button>
                               </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
+                    </div>
+
+                    {/* Mobile & Tablet Card View (< md screens) */}
+                    <div className="block md:hidden p-3.5 space-y-3">
+                      {client.cases.map((item, idx) => (
+                        <div
+                          key={item.dbId || `${item.id}-${idx}`}
+                          className="bg-white rounded-xl border border-[#E2E8F0] p-3.5 space-y-2.5 shadow-2xs"
+                        >
+                          <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                            <span className="text-xs font-mono font-bold text-slate-800">
+                              #{idx + 1} &bull; {item.id}
+                            </span>
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusBadge(
+                                item.status
+                              )}`}
+                            >
+                              {item.status}
+                            </span>
+                          </div>
+
+                          <div>
+                            <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm leading-snug">
+                              {item.name}
+                            </h4>
+                            {item.court && (
+                              <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-1 font-medium">
+                                <Building size={12} className="text-slate-400 shrink-0" />
+                                <span className="truncate">{item.court}</span>
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="pt-1 border-t border-slate-100">
+                            <button
+                              onClick={() => setSelectedCase(item)}
+                              className="w-full py-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded-xl shadow-2xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                            >
+                              <Eye size={13} />
+                              <span>View Details</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -339,30 +396,34 @@ export default function CaseTracking() {
       {/* ── Case Detail Modal (portal) ── */}
       {mounted && selectedCase && typeof document !== "undefined"
         ? createPortal(
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-              <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-3 sm:p-6 animate-fade-in">
+              <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl relative max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
                 {/* Modal Header */}
-                <div className="flex items-center justify-between px-6 py-5 border-b border-[#F1F5F9]">
+                <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 bg-slate-50/70 shrink-0">
                   <div>
-                    <h2 className="text-xl font-bold text-[#0F172A]">
+                    <h2 className="text-lg sm:text-xl font-extrabold text-[#0F172A] tracking-tight">
                       Case Details Log
                     </h2>
-                    <p className="text-xs text-[#64748B] mt-0.5">
+                    <p className="text-xs text-[#64748B] mt-0.5 font-medium">
                       {selectedCase.name}
                     </p>
                   </div>
                   <button
                     onClick={() => setSelectedCase(null)}
-                    className="text-gray-400 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full p-2 transition-colors"
+                    className="text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-full p-2 transition-colors cursor-pointer shadow-xs"
+                    title="Close"
                   >
                     <X size={18} />
                   </button>
                 </div>
 
-                <div className="p-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="p-4 sm:p-6 overflow-y-auto space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
                     {/* Left — case info */}
-                    <div className="space-y-3 text-sm text-[#64748B]">
+                    <div className="bg-slate-50/60 rounded-xl border border-slate-200/80 p-4 space-y-2.5 shadow-2xs">
+                      <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200/60 pb-2 mb-3">
+                        Case Parameters
+                      </h3>
                       {[
                         ["Case ID", selectedCase.id],
                         ["Case Title", selectedCase.name],
@@ -372,25 +433,25 @@ export default function CaseTracking() {
                       ].map(([label, val]) => (
                         <div
                           key={label}
-                          className="grid grid-cols-3 gap-2 border-b border-[#F1F5F9] pb-2 last:border-0"
+                          className="grid grid-cols-3 gap-2 border-b border-slate-200/40 pb-2 last:border-0 items-center text-xs"
                         >
-                          <span className="font-semibold text-[#1E293B] text-xs uppercase tracking-wide">
+                          <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">
                             {label}
                           </span>
-                          <span className="col-span-2 text-[#0F172A] font-medium">
+                          <span className="col-span-2 text-[#0F172A] font-semibold text-xs sm:text-sm break-words">
                             {val}
                           </span>
                         </div>
                       ))}
 
                       {/* Status row */}
-                      <div className="grid grid-cols-3 gap-2 border-b border-[#F1F5F9] pb-2">
-                        <span className="font-semibold text-[#1E293B] text-xs uppercase tracking-wide">
+                      <div className="grid grid-cols-3 gap-2 pt-1 items-center">
+                        <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">
                           Status
                         </span>
                         <span className="col-span-2">
                           <span
-                            className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold border ${statusBadge(
+                            className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${statusBadge(
                               selectedCase.status
                             )}`}
                           >
@@ -400,28 +461,35 @@ export default function CaseTracking() {
                       </div>
                     </div>
 
-                    {/* Right — docs + timeline */}
+                    {/* Right — docs */}
                     <div className="space-y-4">
-                      {/* Documents */}
-                      <div className="border border-[#E2E8F0] rounded-xl p-4 bg-[#F8FAFC]">
-                        <div className="flex items-center gap-2 font-bold text-sm text-[#0F172A] mb-3">
-                          <Briefcase size={16} className="text-[#2563EB]" />
-                          Documents
+                      {/* Documents Box with Scrollbar for >4 items */}
+                      <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/80 shadow-2xs flex flex-col">
+                        <div className="flex items-center justify-between gap-2 font-bold text-sm text-[#0F172A] mb-3 pb-2 border-b border-slate-200/60">
+                          <div className="flex items-center gap-2">
+                            <Briefcase size={16} className="text-[#2563EB]" />
+                            <span>Documents</span>
+                          </div>
+                          <span className="text-[11px] text-[#2563EB] font-bold bg-white px-2.5 py-0.5 rounded-full border border-indigo-100 shadow-2xs">
+                            {selectedCase.documents ? selectedCase.documents.length : 0} Files
+                          </span>
                         </div>
-                        <ul className="text-xs space-y-2">
+
+                        {/* Scroll container if > 4 docs */}
+                        <div className="max-h-[210px] overflow-y-auto pr-1 space-y-2 scrollbar-thin scrollbar-thumb-slate-300">
                           {selectedCase.documents &&
                           selectedCase.documents.length > 0 ? (
                             selectedCase.documents.map((doc, idx) => (
-                              <li
+                              <div
                                 key={idx}
-                                className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200/50 shadow-xs"
+                                className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200/80 hover:border-indigo-200 shadow-2xs transition-colors gap-2"
                               >
-                                <span className="text-slate-700 flex items-center gap-1.5 font-medium truncate pr-2">
+                                <span className="text-slate-800 flex items-center gap-2 font-semibold text-xs truncate min-w-0 flex-1">
                                   <FileText
-                                    size={14}
-                                    className="text-slate-400 shrink-0"
+                                    size={15}
+                                    className="text-indigo-500 shrink-0"
                                   />
-                                  <span className="truncate">
+                                  <span className="truncate" title={doc.file}>
                                     {doc.file || "Unnamed Document"}
                                   </span>
                                 </span>
@@ -435,38 +503,37 @@ export default function CaseTracking() {
                                           doc.documentType || "Document",
                                       })
                                     }
-                                    className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1.5 rounded-lg transition cursor-pointer shrink-0"
+                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2563EB] hover:text-white bg-indigo-50 hover:bg-[#2563EB] border border-indigo-200/80 px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer shrink-0 shadow-2xs"
                                   >
-                                    <Eye size={11} /> View
+                                    <Eye size={12} />
+                                    <span>View</span>
                                   </button>
                                 )}
-                              </li>
+                              </div>
                             ))
                           ) : (
-                            <li className="text-gray-500 italic">
-                              No documents uploaded
-                            </li>
+                            <div className="py-6 text-center text-slate-400 italic text-xs">
+                              No documents uploaded for this case
+                            </div>
                           )}
-                        </ul>
+                        </div>
                       </div>
-
-
                     </div>
                   </div>
 
                   {/* ── Update Status ── */}
-                  <div className="mt-6 border-t border-[#F1F5F9] pt-5">
-                    <h3 className="text-sm font-bold text-[#0F172A] mb-3">
+                  <div className="border-t border-slate-100 pt-4">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
                       Update Case Status
                     </h3>
                     <div className="flex items-center gap-3 flex-wrap">
                       <div className="relative flex-1 min-w-[200px]">
                         <CheckCircle
                           size={16}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                         />
                         <select
-                          className="w-full border border-[#E2E8F0] rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none cursor-pointer bg-white disabled:opacity-60"
+                          className="w-full border border-slate-200 rounded-xl pl-9 pr-8 py-2.5 text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none cursor-pointer bg-white shadow-2xs disabled:opacity-60"
                           value={selectedCase.status || ""}
                           disabled={updatingStatus}
                           onChange={(e) =>
@@ -482,7 +549,7 @@ export default function CaseTracking() {
                             </option>
                           ))}
                         </select>
-                        <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-[#64748B]">
+                        <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
                           <svg
                             className="w-4 h-4"
                             fill="none"
@@ -499,8 +566,8 @@ export default function CaseTracking() {
                         </div>
                       </div>
                       {updatingStatus && (
-                        <span className="text-xs text-[#64748B] animate-pulse">
-                          Saving…
+                        <span className="text-xs text-indigo-600 font-semibold animate-pulse">
+                          Saving status…
                         </span>
                       )}
                     </div>

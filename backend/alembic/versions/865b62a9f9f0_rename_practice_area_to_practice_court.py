@@ -16,32 +16,54 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.alter_column(
-        "advocates",
-        "practice_area",
-        new_column_name="practice_court",
-        existing_type=sa.String(length=255),
-    )
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
 
-    op.alter_column(
-        "assigned_cases",
-        "practice_area",
-        new_column_name="practice_court",
-        existing_type=sa.String(length=255),
-    )
+    if inspector.has_table("advocates"):
+        columns = [c["name"] for c in inspector.get_columns("advocates")]
+        if "practice_area" in columns and "practice_court" not in columns:
+            op.alter_column(
+                "advocates",
+                "practice_area",
+                new_column_name="practice_court",
+                existing_type=sa.String(length=255),
+            )
+        elif "practice_court" not in columns:
+            op.add_column("advocates", sa.Column("practice_court", sa.String(length=255), nullable=True))
+
+    if inspector.has_table("assigned_cases"):
+        columns = [c["name"] for c in inspector.get_columns("assigned_cases")]
+        if "practice_area" in columns and "practice_court" not in columns:
+            op.alter_column(
+                "assigned_cases",
+                "practice_area",
+                new_column_name="practice_court",
+                existing_type=sa.String(length=255),
+            )
+        elif "practice_court" not in columns:
+            op.add_column("assigned_cases", sa.Column("practice_court", sa.String(length=255), nullable=True))
 
 
 def downgrade() -> None:
-    op.alter_column(
-        "advocates",
-        "practice_court",
-        new_column_name="practice_area",
-        existing_type=sa.String(length=255),
-    )
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
 
-    op.alter_column(
-        "assigned_cases",
-        "practice_court",
-        new_column_name="practice_area",
-        existing_type=sa.String(length=255),
-    )
+    if inspector.has_table("advocates"):
+        columns = [c["name"] for c in inspector.get_columns("advocates")]
+        if "practice_court" in columns and "practice_area" not in columns:
+            op.alter_column(
+                "advocates",
+                "practice_court",
+                new_column_name="practice_area",
+                existing_type=sa.String(length=255),
+            )
+
+    if inspector.has_table("assigned_cases"):
+        columns = [c["name"] for c in inspector.get_columns("assigned_cases")]
+        if "practice_court" in columns and "practice_area" not in columns:
+            op.alter_column(
+                "assigned_cases",
+                "practice_court",
+                new_column_name="practice_area",
+                existing_type=sa.String(length=255),
+            )
