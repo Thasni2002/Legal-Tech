@@ -63,38 +63,58 @@ async def add_advocate(
     advocate: AdvocateCreate,
     db: Session = Depends(get_db)
 ):
-    # Check if a user with this email or username already exists in the users table
     from app.authapp.models import User
     from .models import Advocate
-    username = (advocate.advocate_name or "").lower().replace(" ", "")
-    existing_users = db.query(User).filter(
-        (User.email == advocate.email_address) |
-        (User.username == username)
-    ).all()
-    if existing_users:
-        # Check if there is an active advocate associated with any of these users
-        all_advs = db.query(Advocate).all()
-        adv_emails = {a.email_address for a in all_advs if a.email_address}
-        adv_usernames = {(a.advocate_name or "").lower().replace(" ", "") for a in all_advs if a.advocate_name}
-        
-        has_active_adv = False
-        for user in existing_users:
-            u_name = (user.username or "").lower().replace(" ", "")
-            if user.email in adv_emails or u_name in adv_usernames:
-                has_active_adv = True
-                break
-            else:
-                # Orphaned user record from a previously deleted advocate, remove it
-                db.delete(user)
-        
-        if has_active_adv:
-            raise HTTPException(
-                status_code=400,
-                detail="A user with this Email or Username already exists."
-            )
-        else:
-            db.commit()
+    from sqlalchemy import func
 
+    # Check if an advocate with this email address or advocate name already exists
+    existing_adv = None
+    if advocate.email_address and advocate.email_address.strip():
+        existing_adv = db.query(Advocate).filter(
+            func.lower(Advocate.email_address) == advocate.email_address.strip().lower()
+        ).first()
+
+    if not existing_adv and advocate.advocate_name and advocate.advocate_name.strip():
+        u_name = advocate.advocate_name.strip().lower()
+        existing_adv = db.query(Advocate).filter(
+            func.lower(Advocate.advocate_name) == u_name
+        ).first()
+
+    if existing_adv:
+        # Update existing advocate record instead of erroring or creating duplicate
+        adv_data = advocate.model_dump(exclude_unset=True, by_alias=False, exclude={"confirm_password"})
+        password = adv_data.pop("password", None)
+        if password:
+            existing_adv.hashed_password = pwd_context.hash(password)
+            existing_adv.temp_password = password
+        for k, v in adv_data.items():
+            if v is not None:
+                setattr(existing_adv, k, v)
+        db.commit()
+        db.refresh(existing_adv)
+
+        # Sync user record in users table if matching user exists
+        try:
+            u_rec = db.query(User).filter(
+                (User.email == existing_adv.email_address) |
+                (User.username == (existing_adv.advocate_name or "").lower().replace(" ", ""))
+            ).first()
+            if u_rec:
+                if existing_adv.email_address:
+                    u_rec.email = existing_adv.email_address
+                if existing_adv.phone_number:
+                    u_rec.phone = existing_adv.phone_number
+                if existing_adv.advocate_name:
+                    parts = existing_adv.advocate_name.strip().split(" ")
+                    u_rec.first_name = parts[0] if parts else u_rec.first_name
+                    u_rec.last_name = " ".join(parts[1:]) if len(parts) > 1 else u_rec.last_name
+                db.commit()
+        except Exception:
+            pass
+
+        return existing_adv
+
+    # Otherwise create a new advocate record
     new_adv = create_advocate(db, advocate)
 
     if advocate.password:

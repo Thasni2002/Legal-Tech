@@ -7,7 +7,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   UserPlus, Key, Eye, EyeOff, RefreshCw, AlertTriangle,
-  ShieldCheck, Mail, Phone, User, Check, X, FileText, Settings, Shield, Plus
+  ShieldCheck, Mail, Phone, User, Check, X, FileText, Settings, Shield, Plus, Copy
 } from "lucide-react";
 
 const DEFAULT_ROLES = [
@@ -196,6 +196,7 @@ export default function UsersView() {
   const [editPassword, setEditPassword] = useState("");
   const [showEditPassword, setShowEditPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [copiedPassword, setCopiedPassword] = useState(false);
   const [editCustomPerms, setEditCustomPerms] = useState({});
   const [editDocAccess, setEditDocAccess] = useState([]);
 
@@ -219,6 +220,48 @@ export default function UsersView() {
       .split(" ")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
+  };
+
+  // Helper to resolve profile photo for any user (Client, Junior, Clerk, Senior)
+  const getUserProfilePhoto = (u) => {
+    if (!u) return null;
+    if (u.profileImage) return u.profileImage;
+
+    if (advocates && advocates.length > 0) {
+      const uEmail = (u.email || "").toLowerCase().trim();
+      const uName = (u.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const uFull = `${u.firstName || ""} ${u.lastName || ""}`.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+      const found = advocates.find((a) => {
+        const aEmail = (a.emailAddress || a.email_address || "").toLowerCase().trim();
+        const aName = (a.advocateName || a.advocate_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        return (
+          (uEmail && aEmail && uEmail === aEmail) ||
+          (uName && aName && (uName === aName || aName.includes(uName))) ||
+          (uFull && aName && (uFull === aName || aName.includes(uFull)))
+        );
+      });
+
+      if (found && (found.profileImage || found.profile_image)) {
+        return found.profileImage || found.profile_image;
+      }
+    }
+
+    try {
+      const saved = typeof window !== "undefined" && localStorage.getItem("advocate_profile");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (
+          parsed.profileImage &&
+          (parsed.emailAddress?.toLowerCase().trim() === u.email?.toLowerCase().trim() ||
+           parsed.advocateName?.toLowerCase().replace(/[^a-z0-9]/g, "") === u.username?.toLowerCase().replace(/[^a-z0-9]/g, ""))
+        ) {
+          return parsed.profileImage;
+        }
+      }
+    } catch (e) {}
+
+    return null;
   };
 
   // Generate random password helper
@@ -336,11 +379,7 @@ export default function UsersView() {
       return;
     }
     if (!firstName.trim()) {
-      showToast("First name is required", "error");
-      return;
-    }
-    if (!lastName.trim()) {
-      showToast("Last name is required", "error");
+      showToast("Full name is required", "error");
       return;
     }
     if (!phoneNumber.trim()) {
@@ -370,7 +409,7 @@ export default function UsersView() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           firstName: firstName.trim(),
-          lastName: lastName.trim(),
+          lastName: "",
           phone: phoneNumber.trim(),
           username: username.trim(),
           email: emailAddress.trim(),
@@ -696,7 +735,7 @@ export default function UsersView() {
             {/* First Name (Dynamic based on Role) */}
             <div className="flex flex-col">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                First Name *
+                Full Name *
               </label>
               {(selectedRole || "").toUpperCase().includes("CLERK") ? (
                 <select
@@ -841,43 +880,38 @@ export default function UsersView() {
               )}
             </div>
 
-            {/* Last Name */}
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                Last Name *
-              </label>
-              <input
-                type="text"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                required
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
-              />
-            </div>
+
 
             {/* Phone Number */}
             <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                Phone Number *
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Phone Number *
+                </label>
+                {Boolean(selectedAdvocateId || selectedClientId) && (
+                  <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 uppercase">
+                    Auto-Fetched
+                  </span>
+                )}
+              </div>
 
               <input
                 type="tel"
                 value={phoneNumber}
                 onChange={(e) => {
+                  if (selectedAdvocateId || selectedClientId) return;
                   const value = e.target.value.replace(/\D/g, "");
-
-                  if (value.length <= 10) {
-                    setPhoneNumber(value);
-                  }
+                  if (value.length <= 10) setPhoneNumber(value);
                 }}
+                readOnly={Boolean(selectedAdvocateId || selectedClientId)}
                 maxLength={10}
                 required
-                className={`w-full rounded-xl border px-4 py-3 text-slate-800 placeholder:text-slate-700 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all text-sm font-medium ${phoneNumber &&
-                  !/^[6-9][0-9]{9}$/.test(phoneNumber)
-                  ? "border-red-400 focus:border-red-500"
-                  : "border-slate-200 focus:border-[#2563EB]"
-                  }`}
+                placeholder={selectedAdvocateId || selectedClientId ? "Auto-fetched phone number" : "Enter phone number"}
+                className={`w-full rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
+                  (selectedAdvocateId || selectedClientId)
+                    ? "bg-[#F1F5F9] text-[#475569] border-[#E2E8F0] cursor-not-allowed select-none font-bold"
+                    : "bg-slate-50/50 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB]"
+                }`}
               />
 
               {phoneNumber &&
@@ -890,29 +924,61 @@ export default function UsersView() {
 
             {/* Username */}
             <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                Username *
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Username *
+                </label>
+                {Boolean(selectedAdvocateId || selectedClientId) && (
+                  <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 uppercase">
+                    Auto-Fetched
+                  </span>
+                )}
+              </div>
               <input
                 type="text"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => {
+                  if (selectedAdvocateId || selectedClientId) return;
+                  setUsername(e.target.value);
+                }}
+                readOnly={Boolean(selectedAdvocateId || selectedClientId)}
                 required
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+                placeholder={selectedAdvocateId || selectedClientId ? "Auto-fetched username" : "Enter username"}
+                className={`w-full rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
+                  (selectedAdvocateId || selectedClientId)
+                    ? "bg-[#F1F5F9] text-[#475569] border-[#E2E8F0] cursor-not-allowed select-none font-bold"
+                    : "bg-slate-50/50 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB]"
+                }`}
               />
             </div>
 
             {/* Email Address */}
             <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                Email Address *
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Email Address *
+                </label>
+                {Boolean(selectedAdvocateId || selectedClientId) && (
+                  <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 uppercase">
+                    Auto-Fetched
+                  </span>
+                )}
+              </div>
               <input
                 type="email"
                 value={emailAddress}
-                onChange={(e) => setEmailAddress(e.target.value)}
+                onChange={(e) => {
+                  if (selectedAdvocateId || selectedClientId) return;
+                  setEmailAddress(e.target.value);
+                }}
+                readOnly={Boolean(selectedAdvocateId || selectedClientId)}
                 required
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-800 placeholder:text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+                placeholder={selectedAdvocateId || selectedClientId ? "Auto-fetched email address" : "Enter email address"}
+                className={`w-full rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
+                  (selectedAdvocateId || selectedClientId)
+                    ? "bg-[#F1F5F9] text-[#475569] border-[#E2E8F0] cursor-not-allowed select-none font-bold"
+                    : "bg-slate-50/50 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB]"
+                }`}
               />
             </div>
 
@@ -1054,19 +1120,31 @@ export default function UsersView() {
                           {/* Profile */}
                           <td className="py-4 px-6">
                             <div className="flex items-center gap-3">
-                              <div
-                                className={`w-10 h-10 rounded-full ${avatarBg} text-white flex items-center justify-center font-bold`}
-                              >
-                                {(user.firstName || user.username || "?")
-                                  .charAt(0)
-                                  .toUpperCase()}
-                              </div>
+                              {(() => {
+                                const photo = getUserProfilePhoto(user);
+                                if (photo) {
+                                  return (
+                                    <img
+                                      src={photo}
+                                      alt={user.username}
+                                      className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-100 shadow-sm shrink-0"
+                                    />
+                                  );
+                                }
+                                return (
+                                  <div
+                                    className={`w-10 h-10 rounded-full ${avatarBg} text-white flex items-center justify-center font-bold shrink-0`}
+                                  >
+                                    {(user.firstName || user.username || "?")
+                                      .charAt(0)
+                                      .toUpperCase()}
+                                  </div>
+                                );
+                              })()}
 
                               <div>
                                 <p className="font-bold text-slate-900 text-sm">
-                                  {(user.firstName || user.lastName)
-                                    ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
-                                    : user.username}
+                                  {user.firstName || user.username}
                                 </p>
                                 <p className="text-xs text-slate-400">@{user.username}</p>
                                 <p className="text-xs font-semibold text-blue-600 mt-0.5">{user.role}</p>
@@ -1130,15 +1208,29 @@ export default function UsersView() {
                   <div className="relative bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-8 py-6">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white text-xl font-bold">
-                          {(editFirstName || editUsername || "?")
-                            .charAt(0)
-                            .toUpperCase()}
-                        </div>
+                        {(() => {
+                          const photo = getUserProfilePhoto(activeUser);
+                          if (photo) {
+                            return (
+                              <img
+                                src={photo}
+                                alt={editUsername}
+                                className="w-14 h-14 rounded-2xl object-cover ring-2 ring-white/20 shadow-md shrink-0"
+                              />
+                            );
+                          }
+                          return (
+                            <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white text-xl font-bold shrink-0">
+                              {(editFirstName || editUsername || "?")
+                                .charAt(0)
+                                .toUpperCase()}
+                            </div>
+                          );
+                        })()}
 
                         <div>
                           <h3 className="text-white font-bold text-2xl">
-                            {editFirstName} {editLastName}
+                            {editFirstName || editUsername}
                           </h3>
                           <p className="text-slate-400 text-sm">@{editUsername}</p>
 
@@ -1214,21 +1306,26 @@ export default function UsersView() {
                     {modalTab === "profile" && (
                       <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
                         {[
-                          ["First Name", editFirstName, setEditFirstName],
-                          ["Last Name", editLastName, setEditLastName],
+                          ["Full Name", editFirstName, setEditFirstName],
                           ["Phone Number", editPhone, setEditPhone],
                           ["Username", editUsername, setEditUsername],
                           ["Email Address", editEmail, setEditEmail],
                         ].map(([label, value, setter]) => (
 
                           <div key={label}>
-                            <label className="text-[11px] font-bold text-[#64748B] uppercase tracking-widest mb-2 block">
-                              {label}
-                            </label>
+                            <div className="flex items-center justify-between mb-2">
+                              <label className="text-[11px] font-bold text-[#64748B] uppercase tracking-widest block">
+                                {label}
+                              </label>
+                              <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 uppercase">
+                                Auto-Fetched
+                              </span>
+                            </div>
                             <input
                               value={value}
-                              onChange={(e) => setter(e.target.value)}
-                              className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3.5 text-[#0F172A] placeholder:text-[#94A3B8] focus:bg-white focus:ring-4 focus:ring-blue-50 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+                              readOnly
+                              title="Auto-fetched system detail — non-editable"
+                              className="w-full rounded-xl border border-[#E2E8F0] bg-[#F1F5F9] px-4 py-3.5 text-[#475569] font-bold outline-none cursor-not-allowed select-none text-sm"
                             />
                           </div>
                         ))}
@@ -1255,9 +1352,37 @@ export default function UsersView() {
                             </button>
                           </div>
                           {activeUser?.tempPassword && (
-                            <p className="mt-1.5 text-xs text-slate-500 font-medium">
-                              Current Password: <code className="bg-slate-100 text-indigo-600 px-1.5 py-0.5 rounded font-bold select-all">{activeUser.tempPassword}</code>
-                            </p>
+                            <div className="mt-2 flex items-center gap-2">
+                              <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5">
+                                <span>Current Password:</span>
+                                <code className="bg-slate-100 text-indigo-600 px-2 py-0.5 rounded font-bold select-all border border-slate-200">
+                                  {activeUser.tempPassword}
+                                </code>
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(activeUser.tempPassword);
+                                  setCopiedPassword(true);
+                                  showToast("Current password copied to clipboard!");
+                                  setTimeout(() => setCopiedPassword(false), 2000);
+                                }}
+                                className="flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg border border-blue-200 transition-all active:scale-95 cursor-pointer"
+                                title="Copy password to clipboard"
+                              >
+                                {copiedPassword ? (
+                                  <>
+                                    <Check size={13} className="text-emerald-600 stroke-[2.5]" />
+                                    <span className="text-emerald-600 font-extrabold">Copied</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy size={13} className="text-blue-600" />
+                                    <span>Copy</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
                           )}
                         </div>
 

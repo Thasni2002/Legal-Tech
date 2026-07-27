@@ -53,9 +53,40 @@ export default function ClientView() {
   const fetchClients = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/case-management/`);
-      if (res.ok) {
-        const casesData = await res.json();
+      const [casesRes, advRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/case-management/`),
+        fetch(`${API_BASE_URL}/lawfirm-management/`).catch(() => null),
+      ]);
+
+      let profilesMap = {};
+      if (advRes && advRes.ok) {
+        const advList = await advRes.json();
+        advList.forEach((adv) => {
+          if (adv.emailAddress) {
+            profilesMap[adv.emailAddress.toLowerCase().trim()] = adv;
+          }
+          if (adv.advocateName) {
+            profilesMap[adv.advocateName.toLowerCase().trim()] = adv;
+          }
+        });
+      }
+
+      // Check local cache if client saved profile locally
+      try {
+        const saved = localStorage.getItem("advocate_profile");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.emailAddress) {
+            profilesMap[parsed.emailAddress.toLowerCase().trim()] = parsed;
+          }
+          if (parsed.advocateName) {
+            profilesMap[parsed.advocateName.toLowerCase().trim()] = parsed;
+          }
+        }
+      } catch (e) {}
+
+      if (casesRes.ok) {
+        const casesData = await casesRes.json();
         const clientMap = {};
         let idCounter = 1;
 
@@ -63,12 +94,17 @@ export default function ClientView() {
           const name = c.client_name;
           if (!name) return;
 
+          const emailKey = (c.email_id || "").toLowerCase().trim();
+          const nameKey = name.toLowerCase().trim();
+          const matchedProfile = profilesMap[emailKey] || profilesMap[nameKey] || {};
+
           if (!clientMap[name]) {
             clientMap[name] = {
               clientId: `CUST-${String(idCounter).padStart(4, '0')}`,
-              clientName: name,
-              contactNumber: c.contact_number || "N/A",
-              emailId: c.email_id || "N/A",
+              clientName: matchedProfile.advocateName || name,
+              contactNumber: matchedProfile.phoneNumber || c.contact_number || "N/A",
+              emailId: matchedProfile.emailAddress || c.email_id || "N/A",
+              profileImage: matchedProfile.profileImage || null,
               activeCases: 1,
               courtName: c.court_name || "N/A",
               status: c.status || "N/A",
@@ -76,6 +112,9 @@ export default function ClientView() {
             idCounter++;
           } else {
             clientMap[name].activeCases += 1;
+            if (!clientMap[name].profileImage && matchedProfile.profileImage) {
+              clientMap[name].profileImage = matchedProfile.profileImage;
+            }
           }
         });
 
@@ -333,9 +372,17 @@ export default function ClientView() {
                     >
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] text-white flex items-center justify-center font-bold text-xs select-none shadow-xs shrink-0">
-                            {initials}
-                          </div>
+                          {client.profileImage ? (
+                            <img
+                              src={client.profileImage}
+                              alt={client.clientName}
+                              className="w-8 h-8 rounded-full object-cover ring-2 ring-blue-100 shadow-xs shrink-0"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] text-white flex items-center justify-center font-bold text-xs select-none shadow-xs shrink-0">
+                              {initials}
+                            </div>
+                          )}
                           <div>
                             <span className="font-semibold text-[#0F172A] text-xs block leading-tight">
                               {client.clientName}
@@ -417,6 +464,7 @@ export default function ClientView() {
                                 emailId: client.emailId,
                                 phone: client.contactNumber,
                                 contactNumber: client.contactNumber,
+                                profileImage: client.profileImage || null,
                                 caseStatus: client.status,
                                 status: client.status,
                               }));
@@ -490,9 +538,17 @@ export default function ClientView() {
                 >
                   <div className="flex items-start justify-between gap-3 border-b border-[#F1F5F9] pb-2.5">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] text-white flex items-center justify-center font-bold text-xs shrink-0">
-                        {initials}
-                      </div>
+                      {client.profileImage ? (
+                        <img
+                          src={client.profileImage}
+                          alt={client.clientName}
+                          className="w-8 h-8 rounded-full object-cover ring-2 ring-blue-100 shadow-xs shrink-0"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] text-white flex items-center justify-center font-bold text-xs shrink-0">
+                          {initials}
+                        </div>
+                      )}
                       <div>
                         <h3 className="font-bold text-[#0F172A] text-xs leading-tight">
                           {client.clientName}
