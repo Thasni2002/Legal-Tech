@@ -15,28 +15,74 @@ const Page = () => {
     const fetchProfile = async () => {
       try {
         const user = getLoggedInUser();
-        if (!user || !user.email) {
+        if (!user || (!user.email && !user.username)) {
           setIsLoading(false);
           return;
         }
 
-        const res = await fetch(`${API_BASE_URL}/lawfirm-management/`);
-        if (res.ok) {
+        const userKey = (user.email || user.username || "").toLowerCase().trim();
+        const savedUserLocal = localStorage.getItem(`advocate_profile_${userKey}`);
+        let initialLocal = null;
+
+        if (savedUserLocal) {
+          try {
+            initialLocal = JSON.parse(savedUserLocal);
+          } catch (e) {}
+        } else {
+          // Check global key ONLY if it matches the current user's email or name
+          const savedGlobal = localStorage.getItem("advocate_profile");
+          if (savedGlobal) {
+            try {
+              const parsed = JSON.parse(savedGlobal);
+              const pEmail = (parsed.emailAddress || "").toLowerCase().trim();
+              const pName = (parsed.advocateName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+              const uEmail = (user.email || "").toLowerCase().trim();
+              const uName = (user.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+              if ((uEmail && pEmail && pEmail === uEmail) || (uName && pName && pName === uName)) {
+                initialLocal = parsed;
+              }
+            } catch (e) {}
+          }
+        }
+
+        const res = await fetch(`${API_BASE_URL}/lawfirm-management/`).catch(() => null);
+        if (res && res.ok) {
           const advocates = await res.json();
-          const myAdvocate = advocates.find(
-            (adv) => adv.emailAddress === user.email
-          );
+          const uEmail = (user.email || "").toLowerCase().trim();
+          const uName = (user.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+          const uFull = `${user.firstName || ""} ${user.lastName || ""}`.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+          const myAdvocate = advocates.find((adv) => {
+            const advEmail = (adv.emailAddress || adv.email_address || "").toLowerCase().trim();
+            const advName = (adv.advocateName || adv.advocate_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            return (
+              (uEmail && advEmail && advEmail === uEmail) ||
+              (uName && advName && (advName === uName || advName.includes(uName))) ||
+              (uFull && advName && (uFull === advName || advName.includes(uFull)))
+            );
+          });
+
           if (myAdvocate) {
             setProfile(myAdvocate);
+            localStorage.setItem(`advocate_profile_${userKey}`, JSON.stringify(myAdvocate));
             localStorage.setItem("advocate_profile", JSON.stringify(myAdvocate));
             setIsSubmitted(true);
-          } else {
-            // Profile not found in advocates table, pre-fill with user details
-            setProfile({
-              advocateName: user.username,
-              emailAddress: user.email,
-            });
+            return;
           }
+        }
+
+        if (initialLocal) {
+          setProfile(initialLocal);
+          setIsSubmitted(true);
+        } else {
+          const defaultName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.username || "User";
+          setProfile({
+            advocateName: defaultName,
+            emailAddress: user.email || "",
+            phoneNumber: user.phone || "",
+            role: user.role || "Client",
+          });
         }
       } catch (e) {
         console.error("Error fetching profile from backend:", e);
@@ -50,40 +96,70 @@ const Page = () => {
 
   const handleSave = async (updatedProfile) => {
     try {
-      const payload = { ...updatedProfile };
-      
+      const user = getLoggedInUser();
+      const userKey = (user?.email || user?.username || "").toLowerCase().trim();
+      const userEmail = user?.email || updatedProfile.emailAddress || "";
+      const defaultName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || user?.username || "User";
+
+      const payload = {
+        ...updatedProfile,
+        role: updatedProfile.role || user?.role || "Client",
+        emailAddress: userEmail,
+        advocateName: updatedProfile.advocateName || defaultName,
+      };
+
       // Clean empty strings for Pydantic validation
       if (payload.dateOfBirth === "") {
         payload.dateOfBirth = null;
       }
-      if (payload.yearsOfExperience === "") {
+      if (payload.yearsOfExperience === "" || payload.yearsOfExperience === undefined) {
         payload.yearsOfExperience = null;
       }
 
-      let response;
-      if (payload.id) {
-        response = await fetch(`${API_BASE_URL}/lawfirm-management/${payload.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      } else {
-        response = await fetch(`${API_BASE_URL}/lawfirm-management/`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+      // Safety check: verify payload.id belongs to this user profile before PUTing
+      if (payload.id && profile?.id && String(payload.id) !== String(profile.id)) {
+        delete payload.id;
       }
 
-      if (response.ok) {
-        const savedData = await response.json();
-        setProfile(savedData);
-        localStorage.setItem("advocate_profile", JSON.stringify(savedData));
-        setIsSubmitted(true);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        alert(errorData.detail || "Failed to save profile to backend.");
+      let savedData = null;
+      try {
+        let response;
+        if (payload.id) {
+          response = await fetch(`${API_BASE_URL}/lawfirm-management/${payload.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        } else {
+          response = await fetch(`${API_BASE_URL}/lawfirm-management/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        }
+
+        if (response && response.ok) {
+          savedData = await response.json();
+        } else if (response) {
+          const errBody = await response.json().catch(() => ({}));
+          console.warn("Backend profile save returned:", response.status, errBody);
+        }
+      } catch (fetchErr) {
+        console.warn("Backend fetch failed, saving to local storage fallback:", fetchErr.message);
       }
+
+      const finalProfile = savedData || payload;
+      setProfile(finalProfile);
+      try {
+        if (userKey) {
+          localStorage.setItem(`advocate_profile_${userKey}`, JSON.stringify(finalProfile));
+        }
+        localStorage.setItem("advocate_profile", JSON.stringify(finalProfile));
+        window.dispatchEvent(new Event("permissions_updated"));
+      } catch (e) {
+        console.warn("localStorage quota or write error:", e);
+      }
+      setIsSubmitted(true);
     } catch (error) {
       console.error("Error saving profile:", error);
       alert("Error saving profile.");
@@ -118,7 +194,7 @@ const Page = () => {
         />
       )}
     </div>
-  )
-}
+  );
+};
 
-export default Page
+export default Page;

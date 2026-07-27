@@ -452,6 +452,13 @@ export default function ClientHistory() {
             >
               <ArrowLeft size={18} />
             </Link>
+            {client?.profileImage && (
+              <img
+                src={client.profileImage}
+                alt={client.fullName || client.clientName}
+                className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-100 shadow-xs shrink-0"
+              />
+            )}
             <div>
               <h3 className="font-extrabold text-[#0F172A] text-lg sm:text-xl tracking-tight">
                 Activity History - {client ? (client.fullName || client.clientName) : "All Clients"}
