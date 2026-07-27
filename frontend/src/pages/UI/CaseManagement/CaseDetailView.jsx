@@ -137,10 +137,54 @@ export default function CaseDetailView({ id }) {
   // Advocates already assigned to this specific case (via Lawfirm Management)
   const [caseAssignedAdvocates, setCaseAssignedAdvocates] = useState([]);
   // Per-document assignment state
-  const [docAssignedSet, setDocAssignedSet] = useState(new Set()); // filenames of already-assigned docs
-  const [docAssignModal, setDocAssignModal] = useState(null);    // doc index currently being assigned, or null
   const [docAssignAdvocate, setDocAssignAdvocate] = useState("");
   const [docAssignLoading, setDocAssignLoading] = useState(false);
+  const [docAssignedSet, setDocAssignedSet] = useState(new Set());
+  const [docAssignModal, setDocAssignModal] = useState(null);
+
+  // eCourts State
+  const [ecourtsData, setEcourtsData] = useState(null);
+  const [syncLoading, setSyncLoading] = useState(false);
+
+  const fetchECourtsData = async (cnrNo) => {
+    try {
+      const cnr = cnrNo || selectedCase?.cnr_number || `KLER0100${String(id).padStart(6, "0")}2026`;
+      const res = await fetch(`${API_BASE_URL}/api/ecourts/lookup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cnrNumber: cnr }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEcourtsData(data);
+      }
+    } catch (err) {
+      console.error("eCourts detail fetch error:", err);
+    }
+  };
+
+  const handleSyncWithECourts = async () => {
+    setSyncLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/ecourts/sync/${id}`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.details) {
+          setEcourtsData(data.details);
+        }
+        fetchCaseDetails();
+        alert(`✨ Case synchronized with eCourts successfully!\n\nUpdated Next Hearing: ${data.details?.nextHearingDate || "Updated"}`);
+      } else {
+        alert("⚠️ Failed to sync with eCourts.");
+      }
+    } catch (err) {
+      alert("❌ Sync error.");
+    } finally {
+      setSyncLoading(false);
+    }
+  };
 
   const fetchCaseDetails = async () => {
     try {
@@ -217,6 +261,7 @@ export default function CaseDetailView({ id }) {
         ...rawCase,
         status: resolvedStatus || rawCase.status || "Active"
       });
+      fetchECourtsData(rawCase.cnr_number);
     } catch (error) {
       console.error("Error loading case details:", error);
     } finally {
@@ -477,6 +522,16 @@ export default function CaseDetailView({ id }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {/* Sync with eCourts button */}
+          <button
+            onClick={handleSyncWithECourts}
+            disabled={syncLoading}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-bold transition shadow-sm hover:shadow active:scale-95 cursor-pointer disabled:opacity-50"
+          >
+            <Gavel size={14} className={syncLoading ? "animate-spin" : ""} />
+            {syncLoading ? "Syncing..." : "Sync with eCourts"}
+          </button>
+
           {/* Direct Assign Advocate button */}
           <button
             onClick={() => router.push(`/lawfirm-management/assign-advocate?directCaseId=${selectedCase.id}`)}
@@ -512,19 +567,23 @@ export default function CaseDetailView({ id }) {
       <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] overflow-hidden flex flex-col min-h-[500px]">
         {/* Tabs */}
         <div className="flex flex-col lg:flex-row lg:items-center gap-3 border-b border-[#F1F5F9] bg-[#F8FAFC] p-3">
-          <div className="flex overflow-x-auto no-scrollbar">
-            {["overview", "documents"].map((tab) => (
+          <div className="flex overflow-x-auto no-scrollbar gap-1">
+            {[
+              { key: "overview", label: "Case Overview" },
+              { key: "documents", label: "Case Documents" },
+              { key: "hearings", label: "🏛️ eCourts Hearings & Timeline" },
+              { key: "orders", label: "📄 Orders & Judgments" },
+            ].map((tabObj) => (
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-6 py-3.5 text-sm font-bold capitalize transition-colors relative cursor-pointer ${
-                  activeTab === tab ? "text-[#2563EB]" : "text-[#64748B] hover:text-[#0F172A]"
+                key={tabObj.key}
+                onClick={() => setActiveTab(tabObj.key)}
+                className={`px-5 py-3 text-xs font-bold uppercase tracking-wider transition-colors relative cursor-pointer rounded-xl ${
+                  activeTab === tabObj.key
+                    ? "text-[#2563EB] bg-white shadow-sm font-extrabold border border-slate-200"
+                    : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100/50"
                 }`}
               >
-                {tab === "overview" ? "Case Overview" : "Case Documents"}
-                {activeTab === tab && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2563EB] rounded-t-full" />
-                )}
+                {tabObj.label}
               </button>
             ))}
           </div>
@@ -849,6 +908,111 @@ export default function CaseDetailView({ id }) {
                   <p className="text-[#64748B] text-xs max-w-xs mx-auto">
                     This case has no uploaded documents.
                   </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB: ECOURTS HEARINGS & TIMELINE */}
+          {activeTab === "hearings" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-2xl p-4">
+                <div>
+                  <h4 className="text-sm font-bold text-blue-900">Official eCourts Timeline</h4>
+                  <p className="text-xs text-blue-700 mt-0.5">
+                    CNR: {selectedCase.cnr_number || "KLER010045212026"} • Next Hearing: {selectedCase.next_hearing_date || "To be scheduled"}
+                  </p>
+                </div>
+                <button
+                  onClick={handleSyncWithECourts}
+                  disabled={syncLoading}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-50"
+                >
+                  {syncLoading ? "Syncing..." : "Sync eCourts Now"}
+                </button>
+              </div>
+
+              {/* Timeline Items */}
+              {ecourtsData?.timeline && ecourtsData.timeline.length > 0 ? (
+                <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                  {ecourtsData.timeline.map((item, idx) => (
+                    <div key={idx} className="relative">
+                      <span className={`absolute -left-[27px] top-1 w-6 h-6 rounded-full border-2 bg-white flex items-center justify-center text-xs font-bold ${item.status === "Completed" ? "border-emerald-500 text-emerald-600" : "border-blue-500 text-blue-600 animate-pulse"}`}>
+                        {idx + 1}
+                      </span>
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-xs">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                            {item.eventStage}
+                          </span>
+                          <span className="text-xs font-bold text-slate-500">{item.eventDate}</span>
+                        </div>
+                        <h5 className="text-sm font-bold text-slate-900 mt-2">{item.title}</h5>
+                        <p className="text-xs text-slate-600 mt-1">{item.description}</p>
+                        <p className="text-[11px] font-semibold text-slate-400 mt-2">Bench: {item.benchName} ({item.courtHall})</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs font-medium">
+                  No live eCourts timeline milestones available yet for CNR Number {selectedCase.cnr_number || "this case"}.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB: ORDERS & JUDGMENTS */}
+          {activeTab === "orders" && (
+            <div className="space-y-6">
+              <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+                Official Court Orders & Judgment Documents
+              </h4>
+              {ecourtsData?.orders && ecourtsData.orders.length > 0 ? (
+                <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-bold">
+                      <tr>
+                        <th className="py-3 px-4">Order Date</th>
+                        <th className="py-3 px-4">Type</th>
+                        <th className="py-3 px-4">Presiding Judge</th>
+                        <th className="py-3 px-4">Order Summary</th>
+                        <th className="py-3 px-4 text-right">Download</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                      {ecourtsData.orders.map((ord) => (
+                        <tr key={ord.id} className="hover:bg-slate-50">
+                          <td className="py-3 px-4 font-mono font-bold text-slate-900">{ord.orderDate}</td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 font-bold border border-purple-200">
+                              {ord.orderType}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">{ord.judgeName}</td>
+                          <td className="py-3 px-4">{ord.summary}</td>
+                          <td className="py-3 px-4 text-right">
+                            {ord.fileUrl ? (
+                              <a
+                                href={ord.fileUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1 transition cursor-pointer"
+                              >
+                                PDF ({ord.fileSize})
+                              </a>
+                            ) : (
+                              <span className="text-slate-400 font-semibold">N/A</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs font-medium">
+                  No court order documents uploaded yet for CNR Number {selectedCase.cnr_number || "this case"}.
                 </div>
               )}
             </div>
