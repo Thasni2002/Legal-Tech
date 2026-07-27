@@ -486,7 +486,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
     }
     setEcourtsLoading(true);
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/ecourts/lookup", {
+      const res = await fetch(`${API_BASE_URL}/api/ecourts/lookup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cnrNumber: cnr }),
@@ -496,33 +496,57 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
         throw new Error(err.detail || "Failed to fetch from eCourts");
       }
       const data = await res.json();
-      
-      // Determine matching category & subtype
-      let category = "Family Court Cases";
-      let subtype = "OP – Original Petition (Family Court)";
 
-      if (data.caseType?.includes("OS") || data.courtType?.includes("Civil")) {
-        category = "Civil Cases";
-        subtype = "OS – Original Suit";
+      // Smart category & subtype matching from live eCourts payload
+      let category = "Cheque & Financial Cases";
+      let subtype = "NI Act Case (Section 138)";
+
+      if (data.caseType) {
+        const typeLower = data.caseType.toLowerCase();
+        if (typeLower.includes("ni act") || typeLower.includes("138") || typeLower.includes("cheque")) {
+          category = "Cheque & Financial Cases";
+          subtype = "NI Act Case (Section 138)";
+        } else if (typeLower.includes("sessions") || typeLower.includes("special trial") || typeLower.includes("st")) {
+          category = "Cheque & Financial Cases";
+          subtype = "NI Act Case (Section 138)";
+        } else if (typeLower.includes("criminal") || typeLower.includes("crl")) {
+          category = "Criminal Cases";
+          subtype = "CC – Calendar Case";
+        } else if (typeLower.includes("civil") || typeLower.includes("suit") || typeLower.includes("os")) {
+          category = "Civil Cases";
+          subtype = "OS – Original Suit";
+        } else if (typeLower.includes("family") || typeLower.includes("divorce") || typeLower.includes("op")) {
+          category = "Family Court Cases";
+          subtype = "OP – Original Petition";
+        }
       }
 
       setSelectedCategory(category);
       setSelectedSubtype(subtype);
+
+      const districtFetched = data.district || "Kollam";
 
       setFormData((prev) => ({
         ...prev,
         cnrNumber: data.cnrNumber || cnr,
         caseTitle: data.caseTitle || prev.caseTitle,
         courtName: data.courtName || prev.courtName,
-        courtType: data.courtType || prev.courtType,
+        courtType: data.courtType || prev.courtType || "Magistrate Court",
         caseType: `${category}: ${subtype}`,
         caseNo: data.caseNo || prev.caseNo,
         nextHearingDate: data.nextHearingDate || prev.nextHearingDate,
         clientName: data.petitioner || prev.clientName,
-        clientDistrict: data.district || prev.clientDistrict || "Ernakulam",
+        clientDistrict: districtFetched,
+        facts: data.caseStage
+          ? `Stage: ${data.caseStage}\nPetitioner: ${data.petitioner || "N/A"}\nRespondent: ${data.respondent || "N/A"}\nJudge: ${data.presidingJudge || "N/A"}`
+          : prev.facts,
       }));
 
-      alert(`✨ eCourts Data Fetched Successfully!\n\nCase Name: ${data.caseTitle}\nCourt: ${data.courtName}\nCase No: ${data.caseNo}\nNext Hearing: ${data.nextHearingDate || "N/A"}`);
+      if (data.petitioner && !formData.clientName) {
+        setClientMode("new");
+      }
+
+      alert(`✨ Real eCourts Data Fetched Successfully!\n\nCase Title: ${data.caseTitle}\nCourt: ${data.courtName}\nCase No: ${data.caseNo}\nNext Hearing: ${data.nextHearingDate || "N/A"}`);
     } catch (err) {
       alert(`⚠️ eCourts Fetch Error: ${err.message}`);
     } finally {
