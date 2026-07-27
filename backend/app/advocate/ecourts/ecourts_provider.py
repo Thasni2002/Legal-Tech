@@ -34,8 +34,19 @@ class LiveeCourtsProvider(BaseeCourtsProvider):
     """
 
     def __init__(self):
+        try:
+            from dotenv import load_dotenv
+            backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+            env_file = os.path.join(backend_dir, ".env")
+            if os.path.exists(env_file):
+                load_dotenv(env_file, override=True)
+            else:
+                load_dotenv(override=True)
+        except Exception as e:
+            print(f"[eCourts] Note loading env: {e}")
+
         self.api_url = os.getenv("ECOURTS_API_URL", "https://webapi.ecourtsindia.com").rstrip("/")
-        self.api_key = os.getenv("ECOURTS_API_KEY", "")
+        self.api_key = os.getenv("ECOURTS_API_KEY", "").strip()
 
     def lookup_by_cnr(self, cnr_number: str) -> Optional[eCourtsCaseDetails]:
         if not self.api_key:
@@ -48,7 +59,9 @@ class LiveeCourtsProvider(BaseeCourtsProvider):
             import requests
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "application/json",
             }
             
             # Endpoints to attempt (official eCourtsIndia REST API v4 spec)
@@ -68,7 +81,7 @@ class LiveeCourtsProvider(BaseeCourtsProvider):
                     else:
                         r = requests.post(url, json=body, headers=headers, timeout=12)
                     
-                    print(f"[eCourts] {method} {url} → HTTP {r.status_code}")
+                    print(f"[eCourts] {method} {url} -> HTTP {r.status_code}")
                     if r.status_code == 200:
                         resp = r
                         break
@@ -84,13 +97,14 @@ class LiveeCourtsProvider(BaseeCourtsProvider):
                 return None
 
             payload = resp.json()
-            raw_data = payload.get("data") or payload.get("result") or payload.get("case") or payload
-            
-            if isinstance(raw_data, dict) and "courtCaseData" in raw_data:
-                raw_data = raw_data["courtCaseData"]
+            data_container = payload.get("data") or {}
+            raw_data = data_container.get("courtCaseData") or payload.get("data") or payload.get("result") or payload.get("case") or payload
 
             if not isinstance(raw_data, dict):
                 return None
+
+            descriptions = data_container.get("descriptions") or {}
+            enum_lookup = descriptions.get("enumLookup") or {}
 
             def _to_str(val):
                 if isinstance(val, list):
@@ -111,6 +125,26 @@ class LiveeCourtsProvider(BaseeCourtsProvider):
 
             pet_adv = _to_str(raw_data.get("petitionerAdvocates") or raw_data.get("petitionerAdvocate") or raw_data.get("petitioner_advocate") or raw_data.get("pet_adv"))
             res_adv = _to_str(raw_data.get("respondentAdvocates") or raw_data.get("respondentAdvocate") or raw_data.get("respondent_advocate") or raw_data.get("res_adv"))
+
+            # Derive case type description
+            case_type_code = raw_data.get("caseType") or raw_data.get("caseTypeRaw") or ""
+            case_type_desc = enum_lookup.get("caseType", {}).get(case_type_code) or case_type_code
+            if raw_data.get("caseTypeSub"):
+                case_type_desc = f"{case_type_desc} - {raw_data.get('caseTypeSub')}" if case_type_desc else raw_data.get("caseTypeSub")
+
+            # Derive court name description
+            district_name = raw_data.get("district") or raw_data.get("district_name") or ""
+            court_code_str = str(raw_data.get("cnrCourtCode") or raw_data.get("courtCode") or "")
+            court_name_lookup = enum_lookup.get("courtCode", {}).get(court_code_str)
+            if court_name_lookup and court_name_lookup.lower() == "unknown court":
+                court_name_lookup = None
+
+            court_name = (
+                raw_data.get("courtName")
+                or raw_data.get("court_name")
+                or court_name_lookup
+                or (f"{district_name} District Court" if district_name else "District Court")
+            )
 
             timeline_items = []
             hearings = raw_data.get("historyOfCaseHearings") or raw_data.get("timeline") or raw_data.get("history") or []
@@ -149,34 +183,42 @@ class LiveeCourtsProvider(BaseeCourtsProvider):
             if court_hall_val and not court_hall_val.lower().startswith("court"):
                 court_hall_val = f"Court {court_hall_val}"
 
+            case_number_val = (
+                raw_data.get("registrationNumber")
+                or raw_data.get("filingNumber")
+                or raw_data.get("caseNumber")
+                or raw_data.get("case_no")
+                or ""
+            )
+
+            status_val = raw_data.get("caseStatus") or raw_data.get("status") or "PENDING"
+
             return eCourtsCaseDetails(
                 cnrNumber=raw_data.get("cnr") or raw_data.get("cnrNumber") or raw_data.get("cnr_number") or clean_cnr,
                 caseTitle=case_title,
-                caseType=raw_data.get("caseType") or raw_data.get("caseTypeSub") or raw_data.get("case_type") or "",
-                caseNo=raw_data.get("registrationNumber") or raw_data.get("filingNumber") or raw_data.get("caseNumber") or raw_data.get("case_no") or "",
+                caseType=case_type_desc,
+                caseNo=case_number_val,
                 filingDate=raw_data.get("filingDate") or raw_data.get("filing_date") or "",
                 registrationDate=raw_data.get("registrationDate") or raw_data.get("registration_date") or "",
                 petitioner=petitioner_str,
                 respondent=respondent_str,
                 petitionerAdvocate=pet_adv,
                 respondentAdvocate=res_adv,
-                courtName=raw_data.get("courtName") or raw_data.get("court_name") or raw_data.get("court") or "",
-                courtType=raw_data.get("courtType") or raw_data.get("court_type") or "Magistrate",
-                district=raw_data.get("district") or raw_data.get("district_name") or "",
+                courtName=court_name,
+                courtType=raw_data.get("courtType") or raw_data.get("court_type") or "Magistrate Court",
+                district=district_name,
                 state=raw_data.get("state") or raw_data.get("state_name") or "",
                 presidingJudge=_to_str(raw_data.get("judges") or raw_data.get("presidingJudge") or raw_data.get("judge")),
                 courtHall=court_hall_val,
                 caseStage=raw_data.get("purpose") or raw_data.get("stageOfCaseRaw") or raw_data.get("caseStage") or raw_data.get("stage") or "",
-                status=raw_data.get("caseStatus") or raw_data.get("status") or "",
+                status=status_val,
                 nextHearingDate=raw_data.get("nextHearingDate") or raw_data.get("next_hearing_date") or raw_data.get("next_date") or "",
                 timeline=timeline_items,
                 orders=order_items,
             )
         except Exception as err:
             print(f"[eCourts] Live API call error: {err}")
-            
-        return None
-            
+
         return None
 
     def search_cases(self, params: CaseSearchRequest) -> List[eCourtsCaseDetails]:
