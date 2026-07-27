@@ -8,7 +8,20 @@ import { getTodayDateString } from "@/utils/dateUtils";
 import CustomDatePicker from "@/components/ui/CustomDatePicker";
 import Link from "next/link";
 import { createPortal } from "react-dom";
-import { ArrowLeft } from "lucide-react";
+import {
+  BookOpen,
+  CalendarPlus,
+  History,
+  CheckCircle2,
+  Clock,
+  Check,
+  X,
+  Lock,
+  Gavel,
+  Calendar,
+  ArrowLeft,
+  Video,
+} from "lucide-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -71,10 +84,9 @@ export default function ClientConsultationView() {
   const fetchConsultations = async (currentUser) => {
     try {
       let url = `${API_BASE_URL}/consultations`;
-      if (currentUser) {
-        if (currentUser.role && currentUser.role.toLowerCase() === "client") {
-          url += `?client_id=${currentUser.id}`;
-        } 
+      const clientId = currentUser?.id || currentUser?.user_id || currentUser?.sub;
+      if (clientId && !isNaN(Number(clientId))) {
+        url += `?client_id=${clientId}`;
       }
       const res = await fetch(url);
       if (res.ok) {
@@ -102,7 +114,9 @@ export default function ClientConsultationView() {
         setHistory(hist);
       }
     } catch (err) {
-      console.error("Failed to fetch consultations:", err);
+      if (err.name !== "AbortError") {
+        console.warn("Could not fetch consultations:", err.message);
+      }
     }
   };
 
@@ -215,16 +229,16 @@ fetchHearings(loggedIn, []);
 }, []);
 
 
-  const triggerSuccess = (message) => {
-    setSuccessToast({ show: true, message });
+  const triggerSuccess = (message, type = "success") => {
+    setSuccessToast({ show: true, message, type });
     setTimeout(() => {
-      setSuccessToast({ show: false, message: "" });
+      setSuccessToast({ show: false, message: "", type: "success" });
     }, 4000);
   };
 
   const handleBookAppointment = async () => {
     if (!canAddConsultation) {
-      alert("You do not have permission to book a consultation.");
+      triggerSuccess("You do not have permission to book a consultation.", "warning");
       return;
     }
     if (
@@ -233,7 +247,7 @@ fetchHearings(loggedIn, []);
       !formData.time ||
       !formData.type
     ) {
-      alert("Please fill all fields");
+      triggerSuccess("Please fill all required fields.", "warning");
       return;
     }
 
@@ -255,7 +269,7 @@ fetchHearings(loggedIn, []);
       });
 
       if (res.ok) {
-        triggerSuccess("booking successfully");
+        triggerSuccess("Booking submitted successfully!");
         setShowModal(false);
         fetchConsultations(user);
         setFormData({
@@ -266,17 +280,17 @@ fetchHearings(loggedIn, []);
         });
         setSelectedTimeDate(null);
       } else {
-        alert("Failed to book appointment");
+        triggerSuccess("Failed to book appointment.", "error");
       }
     } catch (err) {
       console.error("Error booking consultation:", err);
-      alert("Error connecting to server");
+      triggerSuccess("Error connecting to server.", "error");
     }
   };
 
   const handleReschedule = async () => {
     if (!formData.date || !formData.time) {
-      alert("Please fill Date and Time");
+      triggerSuccess("Please select Date and Time.", "warning");
       return;
     }
 
@@ -298,7 +312,7 @@ fetchHearings(loggedIn, []);
       );
 
       if (res.ok) {
-        triggerSuccess("Reschedule request sent successfully");
+        triggerSuccess("Reschedule request sent successfully!");
         setRescheduleId(null);
         setShowModal(false);
         fetchConsultations(user);
@@ -310,11 +324,11 @@ fetchHearings(loggedIn, []);
         });
         setSelectedTimeDate(null);
       } else {
-        alert("Failed to reschedule consultation");
+        triggerSuccess("Failed to reschedule consultation.", "error");
       }
     } catch (err) {
       console.error("Error rescheduling:", err);
-      alert("Error connecting to server");
+      triggerSuccess("Error connecting to server.", "error");
     }
   };
 
@@ -327,14 +341,14 @@ fetchHearings(loggedIn, []);
       });
 
       if (res.ok) {
-        triggerSuccess("Approved successfully");
+        triggerSuccess("Approved successfully!");
         fetchConsultations(user);
       } else {
-        alert("Failed to approve appointment");
+        triggerSuccess("Failed to approve appointment.", "error");
       }
     } catch (err) {
       console.error("Error approving:", err);
-      alert("Error connecting to server");
+      triggerSuccess("Error connecting to server.", "error");
     }
   };
 
@@ -348,25 +362,30 @@ fetchHearings(loggedIn, []);
       });
 
       if (res.ok) {
-        triggerSuccess("deleted successfully");
+        triggerSuccess("Deleted successfully!");
         fetchConsultations(user);
       } else {
-        alert("Failed to delete consultation");
+        triggerSuccess("Failed to delete consultation.", "error");
       }
     } catch (err) {
       console.error("Error deleting:", err);
-      alert("Error connecting to server");
+      triggerSuccess("Error connecting to server.", "error");
     }
   };
 
   return (
-    <div className="w-full space-y-8 max-w-7xl mx-auto">
-      {/* Page Header */}
-      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 mb-8">
-        <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
-          Case Discussion
-        </h1>
-        <p className="text-[#64748B] mt-2 text-lg font-medium">
+    <div className="w-full space-y-6 md:space-y-8 max-w-7xl mx-auto">
+      {/* ──── HEADER ──── */}
+      <div className="mb-6 md:mb-8">
+        <div className="flex items-center gap-3 flex-wrap mb-2">
+          <div className="w-10 h-10 rounded-xl bg-[#2563EB] flex items-center justify-center shadow-xs">
+            <BookOpen size={20} className="text-white" />
+          </div>
+          <h1 className="text-[#0F172A] font-extrabold text-2xl sm:text-3xl lg:text-4xl leading-tight">
+            Case Discussion
+          </h1>
+        </div>
+        <p className="text-sm sm:text-base lg:text-lg text-[#64748B] ml-0 sm:ml-[52px]">
           Book an appointment or join a consultation
         </p>
       </div>
@@ -390,31 +409,33 @@ fetchHearings(loggedIn, []);
                 <div
                   key={item.id}
                   className={`flex items-start justify-between p-4 rounded-xl border transition-all duration-300 ${isApproved
-                    ? "bg-emerald-50 border-emerald-200 text-emerald-900"
-                    : "bg-amber-50 border-amber-200 text-amber-900"
+                    ? "bg-emerald-50/80 border-emerald-200 text-emerald-900"
+                    : "bg-amber-50/80 border-amber-200 text-amber-900"
                     }`}
                 >
                   <div className="flex gap-3 items-center">
-                    <span className="text-xl">{isApproved ? "✅" : "🗓️"}</span>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isApproved ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                      {isApproved ? <CheckCircle2 size={18} /> : <Clock size={18} />}
+                    </div>
                     <div>
-                      <p className="font-semibold text-sm">
+                      <p className="font-bold text-sm">
                         {isApproved
                           ? `Your consultation request has been approved`
                           : `Your consultation has been rescheduled`}
                       </p>
-                      <p className="text-xs mt-0.5 opacity-90">
-                        Scheduled for: <span className="font-medium">{formatDateString(item.date)}</span> at <span className="font-medium">{formatTimeString(item.time)}</span> ({item.type})
+                      <p className="text-xs mt-0.5 opacity-90 font-medium">
+                        Scheduled for: <span className="font-bold">{formatDateString(item.date)}</span> at <span className="font-bold">{formatTimeString(item.time)}</span> ({item.type})
                         {!isApproved && item.reschedule_reason && (
-                          <span className="block mt-1 font-medium italic">Reason: {item.reschedule_reason}</span>
+                          <span className="block mt-1 font-semibold italic">Reason: {item.reschedule_reason}</span>
                         )}
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={() => handleDismissNotification(item.id)}
-                    className="text-gray-400 hover:text-gray-700 font-bold ml-4 text-sm leading-none focus:outline-none cursor-pointer"
+                    className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-200/50 transition-colors focus:outline-none cursor-pointer"
                   >
-                    ✕
+                    <X size={16} />
                   </button>
                 </div>
               );
@@ -422,14 +443,16 @@ fetchHearings(loggedIn, []);
           </div>
         )}
 
-      {/* Top Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 w-full">
+      {/* ──── ACTION CARDS ──── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8 w-full">
         {/* Book Appointment */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300">
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all duration-200">
           <div>
-            <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-xl mb-4">📅</div>
+            <div className="w-10 h-10 bg-blue-50 text-[#2563EB] rounded-xl flex items-center justify-center mb-4">
+              <CalendarPlus size={20} />
+            </div>
             <h2 className="text-xl font-extrabold text-[#0F172A]">Book Appointment</h2>
-            <p className="text-[#64748B] mt-2 text-sm font-medium">Choose a date and time to meet your advocate.</p>
+            <p className="text-[#64748B] mt-1.5 text-sm font-medium">Choose a date and time to meet your advocate.</p>
           </div>
           {canAddConsultation ? (
             <button
@@ -443,83 +466,90 @@ fetchHearings(loggedIn, []);
                 });
                 setShowModal(true);
               }}
-              className="w-full mt-6 bg-[#2563EB] hover:bg-[#1D4ED8] text-white py-3.5 rounded-full font-bold uppercase tracking-wider text-xs transition-colors shadow-md hover:shadow-lg active:scale-[0.98]"
+              className="w-full mt-6 bg-[#2563EB] hover:bg-[#1D4ED8] text-white py-3 px-5 rounded-xl font-bold text-xs sm:text-sm tracking-wide transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
             >
-              Book Appointment
+              <CalendarPlus size={16} />
+              <span>Book Appointment</span>
             </button>
           ) : (
-            <div className="w-full mt-6 inline-flex items-center justify-center gap-2 px-4 py-3.5 bg-red-50 border border-red-200 text-red-600 rounded-full text-xs font-bold uppercase tracking-wider">
-              <span>🔒</span>
+            <div className="w-full mt-6 inline-flex items-center justify-center gap-2 px-4 py-3 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-bold uppercase tracking-wider">
+              <Lock size={16} />
               <span>Booking not permitted</span>
             </div>
           )}
         </div>
 
-
-
-        {/* Consultation History */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300">
+        {/* Meeting History */}
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all duration-200">
           <div>
-            <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center text-xl mb-4">📜</div>
-            <h2 className="text-xl font-extrabold text-[#0F172A]">Consultation History</h2>
-            <p className="text-[#64748B] mt-2 text-sm font-medium">View your previous consultations and logs.</p>
+            <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4">
+              <History size={20} />
+            </div>
+            <h2 className="text-xl font-extrabold text-[#0F172A]">Meeting History</h2>
+            <p className="text-[#64748B] mt-1.5 text-sm font-medium">View your previous meetings and logs.</p>
           </div>
           <Link
             href="/client-consultation/history"
-            className="w-full mt-6 bg-[#D97706] hover:bg-[#B45309] text-white py-3.5 rounded-full font-bold uppercase tracking-wider text-xs transition-colors shadow-md hover:shadow-lg active:scale-[0.98] text-center"
+            className="w-full mt-6 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-5 rounded-xl font-bold text-xs sm:text-sm tracking-wide transition-all shadow-xs flex items-center justify-center gap-2 text-center cursor-pointer active:scale-[0.98]"
           >
-            View History
+            <History size={16} />
+            <span>View History</span>
           </Link>
         </div>
       </div>
 
-      {/* Consultation Requests */}
-      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 mb-8 overflow-hidden">
-        <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">Consultation Requests</h2>
+      {/* Meeting Requests */}
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6 sm:p-8 mb-8 overflow-hidden">
+        <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-2.5">
+          <Calendar size={22} className="text-[#2563EB]" />
+          <span>Meeting Requests</span>
+        </h2>
         <div className="w-full overflow-x-auto rounded-xl border border-[#E2E8F0]">
           <table className="min-w-full divide-y divide-[#E2E8F0]">
             <thead className="bg-[#F8FAFC]">
               <tr>
-                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client Name</th>
-                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
-                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
-                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
-                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
-                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Action</th>
+                <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Client Name</th>
+                <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Date</th>
+                <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Time</th>
+                <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Type</th>
+                <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Status</th>
+                <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E2E8F0] bg-white">
+            <tbody className="divide-y divide-[#E2E8F0] bg-white text-sm">
               {appointments.filter(
                 item =>
                   item.status === "Pending Client" ||
-                  item.status === "Rescheduled"
+                  item.status === "Pending"
               ).length === 0 ? (<tr>
                 <td colSpan="6" className="p-8 text-center text-[#64748B] font-medium">
-                  No pending consultation requests.
+                  No pending meeting requests.
                 </td>
               </tr>
               ) : (
 appointments.filter(
   item =>
     item.status === "Pending Client" ||
-    item.status === "Rescheduled"
+    item.status === "Pending"
 ).map((item) => (                  <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors duration-150">
                     <td className="p-4 font-bold text-[#0F172A] capitalize whitespace-nowrap">{item.client_name || item.client}</td>
-                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.date}</td>
-                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">{item.time}</td>
-                    <td className="p-4 text-sm text-[#475569] whitespace-nowrap">{item.type}</td>
-                    <td className="p-4 text-sm whitespace-nowrap">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">
+                    <td className="p-4 text-[#475569] whitespace-nowrap">{item.date}</td>
+                    <td className="p-4 text-[#475569] whitespace-nowrap font-medium">{item.time}</td>
+                    <td className="p-4 text-[#475569] whitespace-nowrap">{item.type}</td>
+                    <td className="p-4 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">
+                        <Clock size={11} />
                         {item.status}
                       </span>
                     </td>
-                    <td className="p-4 text-sm whitespace-nowrap">
+                    <td className="p-4 whitespace-nowrap">
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleApproveAppointment(item.id)}
-                          className="px-4 py-2 bg-[#16A34A] hover:bg-[#15803d] text-white rounded-full transition-colors text-xs font-bold uppercase tracking-wider shadow-sm active:scale-95"
+                          className="px-3.5 py-1.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl transition-colors text-xs font-bold flex items-center gap-1 shadow-2xs cursor-pointer"
                         >
-                          Approve
+                          <Check size={14} />
+                          <span>Approve</span>
                         </button>
                         <button
                           onClick={() => {
@@ -532,9 +562,10 @@ appointments.filter(
                             });
                             setShowModal(true);
                           }}
-                          className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-full transition-colors text-xs font-bold uppercase tracking-wider shadow-sm active:scale-95"
+                          className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl transition-colors text-xs font-bold flex items-center gap-1 shadow-2xs cursor-pointer"
                         >
-                          Reschedule
+                          <Clock size={14} />
+                          <span>Reschedule</span>
                         </button>
                       </div>
                     </td>
@@ -547,38 +578,80 @@ appointments.filter(
       </div>
 
       {/* Upcoming Hearings */}
-      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 mb-8 overflow-hidden">
-        <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">Upcoming Hearings</h2>
+      {/* Upcoming Meetings */}
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6 sm:p-8 mb-8 overflow-hidden">
+        <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-2.5">
+          <Clock size={22} className="text-[#2563EB]" />
+          <span>Upcoming Meetings</span>
+        </h2>
         <div className="w-full overflow-x-auto rounded-xl border border-[#E2E8F0]">
           <table className="min-w-full divide-y divide-[#E2E8F0]">
             <thead className="bg-[#F8FAFC]">
               <tr>
-                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case No</th>
-                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
-                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Next Hearing</th>
-                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Advocate</th>
-                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Date</th>
+                <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Time</th>
+                <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Type</th>
+                <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Google Meet Link</th>
+                <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E2E8F0] bg-white">
-              {hearings.length === 0 ? (
+            <tbody className="divide-y divide-[#E2E8F0] bg-white text-sm">
+              {appointments.filter(
+                item =>
+                  item.status === "Approved" ||
+                  item.status === "Scheduled" ||
+                  item.status === "Rescheduled" ||
+                  item.status === "Pending Advocate"
+              ).length === 0 ? (
                 <tr>
                   <td colSpan="5" className="p-8 text-center text-[#64748B] font-medium">
-                    No upcoming hearings.
+                    No upcoming meetings.
                   </td>
                 </tr>
               ) : (
-                hearings.map((item, index) => (
-                  <tr key={index} className="hover:bg-[#F8FAFC] transition-colors duration-150">
-                    <td className="p-4 font-bold text-[#0F172A] whitespace-nowrap">{item.caseNo}</td>
-                    <td className="p-4 text-[#475569] text-sm whitespace-nowrap">{item.type}</td>
-                    <td className="p-4 text-[#475569] text-sm font-medium whitespace-nowrap">{formatDateString(item.hearing)}</td>
-                    <td className="p-4 text-[#475569] text-sm whitespace-nowrap font-medium">{item.advocate}</td>
+                appointments.filter(
+                  item =>
+                    item.status === "Approved" ||
+                    item.status === "Scheduled" ||
+                    item.status === "Rescheduled" ||
+                    item.status === "Pending Advocate"
+                ).map((item) => (
+                  <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors duration-150">
+                    <td className="p-4 text-[#475569] font-medium whitespace-nowrap">{formatDateString(item.date)}</td>
+                    <td className="p-4 text-[#475569] font-medium whitespace-nowrap">{formatTimeString(item.time)}</td>
+                    <td className="p-4 text-[#475569] whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                        item.type === "Video Call" || item.type === "Video Consultation"
+                          ? "bg-blue-50 text-blue-700 border border-blue-200"
+                          : item.type === "Chat" || item.type === "Chat Consultation"
+                          ? "bg-purple-50 text-purple-700 border border-purple-200"
+                          : "bg-amber-50 text-amber-700 border border-amber-200"
+                      }`}>
+                        {item.type}
+                      </span>
+                    </td>
+                    <td className="p-4 whitespace-nowrap text-sm">
+                      {item.meeting_link ? (
+                        <a
+                          href={item.meeting_link.startsWith("http") ? item.meeting_link : `https://${item.meeting_link}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#2563EB] hover:text-[#1D4ED8] font-bold inline-flex items-center gap-1.5 bg-blue-50/70 border border-blue-200 px-3 py-1 rounded-lg transition-colors text-xs"
+                        >
+                          <Video size={14} />
+                          <span>Open Google Meet</span>
+                        </a>
+                      ) : (
+                        <span className="text-[#94A3B8] font-medium">-</span>
+                      )}
+                    </td>
                     <td className="p-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${item.status === 'Active'
-                        ? 'bg-green-50 text-green-700 border-green-200'
-                        : 'bg-blue-50 text-blue-700 border-blue-200'
-                        }`}>
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                        item.status === "Approved" || item.status === "Scheduled"
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : "bg-amber-50 text-amber-700 border border-amber-200"
+                      }`}>
+                        <CheckCircle2 size={11} />
                         {item.status}
                       </span>
                     </td>
@@ -593,21 +666,21 @@ appointments.filter(
       {/* Modal */}
       {mounted && showModal && typeof document !== "undefined" ? createPortal(
         <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-3xl p-8 md:p-10 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl relative animate-in fade-in zoom-in duration-200 border border-[#E2E8F0]">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-extrabold text-[#0F172A]">
+          <div className="bg-white rounded-2xl p-6 sm:p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 border border-[#E2E8F0]">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+              <h2 className="text-xl font-extrabold text-[#0F172A]">
                 {rescheduleId ? "Reschedule Consultation" : "Book Appointment"}
               </h2>
               <button
                 onClick={() => setShowModal(false)}
-                className="w-10 h-10 rounded-full flex items-center justify-center bg-[#F8FAFC] text-[#64748B] hover:bg-rose-100 hover:text-rose-600 transition-colors"
+                className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#F8FAFC] text-[#64748B] hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
                 aria-label="Close"
               >
-                <span className="text-xl font-bold">✕</span>
+                <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-5">
               {!rescheduleId && (
                 <>
                   <div>
@@ -622,7 +695,7 @@ appointments.filter(
                           name: e.target.value,
                         })
                       }
-                      className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all placeholder:text-[#94A3B8] text-sm font-medium"
+                      className="w-full border border-[#E2E8F0] rounded-xl p-3 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all placeholder:text-[#94A3B8] text-sm font-medium"
                     />
                   </div>
 
@@ -652,14 +725,14 @@ appointments.filter(
                     dateFormat="h:mm aa"
                     placeholderText="Select Time"
                     wrapperClassName="w-full"
-                    className="w-full p-3.5 text-[#0F172A] bg-transparent outline-none text-sm font-medium cursor-pointer"
+                    className="w-full p-3 text-[#0F172A] bg-transparent outline-none text-sm font-medium cursor-pointer"
                   />
                 </div>
               </div>
 
               {!rescheduleId && (
                 <div>
-                  <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2 block">Consultation Type</label>
+                  <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2 block">Meeting Type</label>
                   <select
                     value={formData.type}
                     onChange={(e) =>
@@ -668,7 +741,7 @@ appointments.filter(
                         type: e.target.value,
                       })
                     }
-                    className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+                    className="w-full border border-[#E2E8F0] rounded-xl p-3 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium cursor-pointer"
                   >
                     <option value="">Select Type</option>
                     <option value="Video Consultation">Video Consultation</option>
@@ -679,17 +752,17 @@ appointments.filter(
               )}
             </div>
 
-            <div className="flex justify-end gap-3 mt-10 pt-8 border-t border-[#F1F5F9]">
+            <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-[#F1F5F9]">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-6 py-3.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[#475569] text-xs font-bold uppercase tracking-wider transition-colors"
+                className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#475569] text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
               >
                 Cancel
               </button>
 
               <button
                 onClick={rescheduleId ? handleReschedule : handleBookAppointment}
-                className="px-8 py-3.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98]"
+                className="px-6 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-xs active:scale-95 cursor-pointer"
               >
                 {rescheduleId ? "Reschedule" : "Book Appointment"}
               </button>
@@ -699,19 +772,33 @@ appointments.filter(
         document.body
       ) : null}
 
-      {/* Custom Success Toast */}
+      {/* Custom Toast Notification */}
       {successToast.show && (
-        <div className="fixed top-5 right-5 z-50 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-emerald-500 transition-all duration-300 max-w-sm animate-in fade-in slide-in-from-top-4">
-          <span className="text-xl">✅</span>
+        <div className={`fixed top-5 right-5 z-[10000] px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border transition-all duration-300 max-w-sm animate-in fade-in slide-in-from-top-4 ${
+          successToast.type === "error"
+            ? "bg-rose-600 text-white border-rose-500"
+            : successToast.type === "warning"
+            ? "bg-amber-600 text-white border-amber-500"
+            : "bg-emerald-600 text-white border-emerald-500"
+        }`}>
+          {successToast.type === "error" ? (
+            <X size={20} className="text-white shrink-0" />
+          ) : successToast.type === "warning" ? (
+            <Clock size={20} className="text-white shrink-0" />
+          ) : (
+            <CheckCircle2 size={20} className="text-white shrink-0" />
+          )}
           <div className="flex-1">
-            <p className="font-bold text-sm leading-tight">Notification</p>
-            <p className="text-xs text-emerald-100 font-medium mt-0.5">{successToast.message}</p>
+            <p className="font-bold text-sm leading-tight">
+              {successToast.type === "error" ? "Error" : successToast.type === "warning" ? "Notice" : "Success"}
+            </p>
+            <p className="text-xs font-medium mt-0.5 opacity-90">{successToast.message}</p>
           </div>
           <button
-            onClick={() => setSuccessToast({ show: false, message: "" })}
-            className="text-emerald-200 hover:text-white font-bold ml-2 text-sm leading-none focus:outline-none"
+            onClick={() => setSuccessToast({ show: false, message: "", type: "success" })}
+            className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors focus:outline-none cursor-pointer"
           >
-            ✕
+            <X size={16} />
           </button>
         </div>
       )}

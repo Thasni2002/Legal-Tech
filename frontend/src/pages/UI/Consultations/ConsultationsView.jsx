@@ -6,9 +6,32 @@ import { useState, useEffect } from "react";
 import { getLoggedInUser } from "@/utils/auth";
 import { getTodayDateString } from "@/utils/dateUtils";
 import CustomDatePicker from "@/components/ui/CustomDatePicker";
+import Link from "next/link";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { createPortal } from "react-dom";
+import {
+  BookOpen,
+  BarChart3,
+  Video,
+  MessageSquare,
+  CalendarCheck,
+  History,
+  Calendar,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Check,
+  X,
+  Trash2,
+  ExternalLink,
+  AlertTriangle,
+  Plus,
+  ChevronRight,
+  User,
+  ArrowLeft,
+  CalendarDays,
+} from "lucide-react";
 
 export default function ConsultationsView() {
     const [showAppointments, setShowAppointments] = useState(false);
@@ -22,7 +45,7 @@ export default function ConsultationsView() {
 
     const [showHistory, setShowHistory] = useState(false);
     const [clientName, setClientName] = useState("");
-    const [consultationType, setConsultationType] = useState("Consultation Type");
+    const [consultationType, setConsultationType] = useState("Meeting Type");
     const [consultationDate, setConsultationDate] = useState("");
     const [consultationTime, setConsultationTime] = useState("");
     const [selectedTimeDate, setSelectedTimeDate] = useState(null);
@@ -38,6 +61,14 @@ export default function ConsultationsView() {
     const [showScheduleSuccess, setShowScheduleSuccess] = useState(false);
     const [showDuplicateModal, setShowDuplicateModal] = useState(false);
     const [duplicateMessage, setDuplicateMessage] = useState("");
+    const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+
+    const showToast = (message, type = "success") => {
+        setToast({ show: true, message, type });
+        setTimeout(() => {
+            setToast({ show: false, message: "", type: "success" });
+        }, 4000);
+    };
 
     const generateMeetingLink = async (currentClient, currentDate, currentTime) => {
         setGeneratingMeetLink(true);
@@ -100,7 +131,9 @@ export default function ConsultationsView() {
                 setHistory(hist);
             }
         } catch (err) {
-            console.error("Failed to fetch consultations:", err);
+            if (err.name !== "AbortError") {
+                console.warn("Could not fetch consultations:", err.message);
+            }
         }
     };
 
@@ -121,22 +154,78 @@ export default function ConsultationsView() {
             setDismissedNotifications(dismissed);
 
             try {
-                const res = await fetch(`${API_BASE_URL}/case-management/`);
-                if (res.ok) {
-                    const casesData = await res.json();
-                    const uniqueClientsMap = new Map();
-                    casesData.forEach(c => {
-                        const cName = c.clientName || c.client_name;
-                        if (cName && !uniqueClientsMap.has(cName)) {
-                            uniqueClientsMap.set(cName, {
-                                id: cName, // use name as unique id since we dedupe by name
-                                clientName: cName,
-                                emailId: c.emailId || c.email_id || ""
-                            });
-                        }
-                    });
-                    setClients(Array.from(uniqueClientsMap.values()));
-                }
+                const uniqueClientsMap = new Map();
+
+                // 1. Registered client users
+                try {
+                    const resUsers = await fetch(`${API_BASE_URL}/permissions/users`);
+                    if (resUsers.ok) {
+                        const usersData = await resUsers.json();
+                        usersData.forEach(u => {
+                            if (u.role && u.role.toLowerCase() === "client") {
+                                const firstName = (u.firstName || u.first_name || "").trim();
+                                const lastName = (u.lastName || u.last_name || "").trim();
+                                const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+                                const displayName = fullName || u.username;
+
+                                if (displayName) {
+                                    const key = displayName.toLowerCase();
+                                    if (!uniqueClientsMap.has(key)) {
+                                        uniqueClientsMap.set(key, {
+                                            id: u.id,
+                                            clientName: displayName,
+                                            emailId: u.email || ""
+                                        });
+                                    }
+                                }
+                            }
+                        });
+                    }
+                } catch (e) {}
+
+                // 2. Client Management entries
+                try {
+                    const resClientMgmt = await fetch(`${API_BASE_URL}/client-management/`);
+                    if (resClientMgmt.ok) {
+                        const clientsData = await resClientMgmt.json();
+                        clientsData.forEach(c => {
+                            const cName = (c.name || c.client_name || c.clientName || "").trim();
+                            if (cName) {
+                                const key = cName.toLowerCase();
+                                if (!uniqueClientsMap.has(key)) {
+                                    uniqueClientsMap.set(key, {
+                                        id: c.id || cName,
+                                        clientName: cName,
+                                        emailId: c.email || c.email_id || ""
+                                    });
+                                }
+                            }
+                        });
+                    }
+                } catch (e) {}
+
+                // 3. Case Management entries
+                try {
+                    const resCases = await fetch(`${API_BASE_URL}/case-management/`);
+                    if (resCases.ok) {
+                        const casesData = await resCases.json();
+                        casesData.forEach(c => {
+                            const cName = (c.clientName || c.client_name || "").trim();
+                            if (cName) {
+                                const key = cName.toLowerCase();
+                                if (!uniqueClientsMap.has(key)) {
+                                    uniqueClientsMap.set(key, {
+                                        id: cName,
+                                        clientName: cName,
+                                        emailId: c.emailId || c.email_id || ""
+                                    });
+                                }
+                            }
+                        });
+                    }
+                } catch (e) {}
+
+                setClients(Array.from(uniqueClientsMap.values()));
             } catch (err) {
                 console.error("Failed to fetch clients:", err);
             }
@@ -187,55 +276,59 @@ export default function ConsultationsView() {
 
     const handleStartConsultation = async () => {
         if (!clientName.trim()) {
-            alert("Please enter a client name.");
+            showToast("Please enter a client name.", "warning");
             return;
         }
-        if (consultationType === "Consultation Type") {
-            alert("Please select a consultation type.");
+        if (consultationType === "Consultation Type" || consultationType === "Meeting Type") {
+            showToast("Please select a meeting type.", "warning");
             return;
         }
         if (!consultationDate) {
-            alert("Please select a date.");
+            showToast("Please select a date.", "warning");
             return;
         }
         if (!consultationTime) {
-            alert("Please select a time.");
+            showToast("Please select a time.", "warning");
             return;
         }
 
         if (consultationType === "Video Call" && !meetingLink.trim()) {
-            alert("Please enter Google Meet link.");
+            showToast("Please enter Google Meet link.", "warning");
             return;
         }
 
         const selectedClient = clients.find(c => c.clientName === clientName);
-        const clientEmail = selectedClient ? selectedClient.emailId : "";
+        const clientEmail = selectedClient ? (selectedClient.emailId || selectedClient.email || "") : "";
 
-        const startData = {
+        const newMeeting = {
             client_name: clientName,
             client_email: clientEmail,
             type: consultationType,
             date: consultationDate,
             time: consultationTime,
             meeting_link: consultationType === "Video Call" ? meetingLink : "",
-            status: "Pending Client"
+            status: "Pending Client",
         };
 
         try {
             let url = `${API_BASE_URL}/consultations/start`;
-            const params = [];
             if (user) {
-                params.push(`advocate_id=${user.id}`);
-                params.push(`advocate_name=${encodeURIComponent(user.username)}`);
-            }
-            if (params.length > 0) {
-                url += "?" + params.join("&");
+                if (user.role && user.role.toLowerCase() === "client") {
+                    url += `?client_id=${user.id}`;
+                } else if (
+                    user.role && (
+                        user.role.toLowerCase() === "senior advocate" ||
+                        user.role.toLowerCase() === "junior advocate"
+                    )
+                ) {
+                    url += `?advocate_name=${encodeURIComponent(user.username || "")}`;
+                }
             }
 
             const res = await fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(startData)
+                body: JSON.stringify(newMeeting),
             });
 
             if (res.status === 409) {
@@ -257,11 +350,11 @@ export default function ConsultationsView() {
                 
 
             } else {
-                alert("Failed to start/schedule consultation");
+                showToast("Failed to start/schedule consultation.", "error");
             }
         } catch (err) {
             console.error("Error creating consultation:", err);
-            alert("Error connecting to server");
+            showToast("Error connecting to server.", "error");
         }
 
 
@@ -278,12 +371,13 @@ export default function ConsultationsView() {
                 fetchConsultations(user);
                 setShowDeleteModal(false);
                 setDeleteId(null);
+                showToast("Consultation deleted successfully.", "success");
             } else {
-                alert("Failed to delete consultation");
+                showToast("Failed to delete consultation.", "error");
             }
         } catch (err) {
             console.error("Error deleting:", err);
-            alert("Error connecting to server");
+            showToast("Error connecting to server.", "error");
         }
     };
 
@@ -292,23 +386,21 @@ export default function ConsultationsView() {
     const chatConsultations = history.filter(item => item.type === "Chat" || item.type === "Chat Consultation").length;
 
     return (
-        <div className="w-full space-y-8 max-w-7xl mx-auto">
+        <div className="w-full space-y-6 md:space-y-8 max-w-7xl mx-auto">
 
             {/* ── Duplicate Booking Warning Modal ── */}
             {showDuplicateModal && mounted && createPortal(
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center">
                     {/* Backdrop */}
                     <div
-                        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                        className="absolute inset-0 bg-[#0F172A]/40 backdrop-blur-sm"
                         onClick={() => setShowDuplicateModal(false)}
                     />
                     {/* Modal */}
-                    <div className="relative bg-white rounded-2xl shadow-2xl border border-[#E2E8F0] w-full max-w-md mx-4 p-8 animate-in zoom-in-95 fade-in duration-200">
+                    <div className="relative bg-white rounded-2xl shadow-2xl border border-[#E2E8F0] w-full max-w-md mx-4 p-6 sm:p-8 animate-in zoom-in-95 fade-in duration-200">
                         {/* Icon */}
-                        <div className="w-14 h-14 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                            <svg className="w-7 h-7 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3m0 3h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                            </svg>
+                        <div className="w-12 h-12 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-center mx-auto mb-4 text-amber-500">
+                            <AlertTriangle size={24} />
                         </div>
                         {/* Title */}
                         <h3 className="text-xl font-extrabold text-[#0F172A] text-center tracking-tight mb-2">
@@ -321,7 +413,7 @@ export default function ConsultationsView() {
                         {/* Action */}
                         <button
                             onClick={() => setShowDuplicateModal(false)}
-                            className="w-full bg-[#0F172A] hover:bg-[#1E293B] text-white font-bold text-sm py-3 rounded-xl transition-colors duration-200"
+                            className="w-full bg-[#0F172A] hover:bg-[#1E293B] text-white font-bold text-xs uppercase tracking-wider py-3 rounded-xl transition-colors duration-200 cursor-pointer"
                         >
                             OK, Choose a Different Time
                         </button>
@@ -329,41 +421,56 @@ export default function ConsultationsView() {
                 </div>,
                 document.body
             )}
-            {/* Page Header */}
-            <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 mb-8">
-                <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
-                    Case Discussion
-                </h1>
-                <p className="text-[#64748B] mt-2 text-lg font-medium">
-                    Schedule and manage client consultations
+
+            {/* ──── HEADER ──── */}
+            <div className="mb-6 md:mb-8">
+                <div className="flex items-center gap-3 flex-wrap mb-2">
+                    <div className="w-10 h-10 rounded-xl bg-[#2563EB] flex items-center justify-center shadow-xs">
+                        <BookOpen size={20} className="text-white" />
+                    </div>
+                    <h1 className="text-[#0F172A] font-extrabold text-2xl sm:text-3xl lg:text-4xl leading-tight">
+                        Case Discussion
+                    </h1>
+                </div>
+                <p className="text-sm sm:text-base lg:text-lg text-[#64748B] ml-0 sm:ml-[52px]">
+                    Schedule and manage client meetings
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
-                <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0]">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-xl">📊</div>
-                        <p className="text-[#64748B] font-bold uppercase tracking-wider text-xs">Total Consultations</p>
+            {/* ──── STATS ──── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
+                <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm hover:shadow-md transition-all">
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#2563EB] flex items-center justify-center">
+                            <BarChart3 size={20} />
+                        </div>
+                        <p className="text-[#64748B] font-bold uppercase tracking-wider text-xs">Total Meetings</p>
                     </div>
-                    <h3 className="text-4xl font-extrabold text-[#0F172A] tracking-tight">
+                    <h3 className="text-3xl font-extrabold text-[#0F172A] tracking-tight">
                         {totalConsultations}
                     </h3>
                 </div>
-                <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0]">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center text-xl">📹</div>
+
+                <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm hover:shadow-md transition-all">
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                            <Video size={20} />
+                        </div>
                         <p className="text-[#64748B] font-bold uppercase tracking-wider text-xs">Video Calls</p>
                     </div>
-                    <h3 className="text-4xl font-extrabold text-[#0F172A] tracking-tight">
+                    <h3 className="text-3xl font-extrabold text-[#0F172A] tracking-tight">
                         {videoCalls}
                     </h3>
                 </div>
-                <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0]">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center text-xl">💬</div>
-                        <p className="text-[#64748B] font-bold uppercase tracking-wider text-xs">Chat Consultations</p>
+
+                <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm hover:shadow-md transition-all">
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                            <MessageSquare size={20} />
+                        </div>
+                        <p className="text-[#64748B] font-bold uppercase tracking-wider text-xs">Chat Meetings</p>
                     </div>
-                    <h3 className="text-4xl font-extrabold text-[#0F172A] tracking-tight">
+                    <h3 className="text-3xl font-extrabold text-[#0F172A] tracking-tight">
                         {chatConsultations}
                     </h3>
                 </div>
@@ -388,31 +495,33 @@ export default function ConsultationsView() {
                                 <div
                                     key={item.id}
                                     className={`flex items-start justify-between p-4 rounded-xl border transition-all duration-300 ${isApproved
-                                        ? "bg-emerald-50 border-emerald-200 text-emerald-900"
-                                        : "bg-amber-50 border-amber-200 text-amber-900"
+                                        ? "bg-emerald-50/80 border-emerald-200 text-emerald-900"
+                                        : "bg-amber-50/80 border-amber-200 text-amber-900"
                                         }`}
                                 >
                                     <div className="flex gap-3 items-center">
-                                        <span className="text-xl">{isApproved ? "✅" : "🗓️"}</span>
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isApproved ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                                            {isApproved ? <CheckCircle2 size={18} /> : <Clock size={18} />}
+                                        </div>
                                         <div>
-                                            <p className="font-semibold text-sm">
+                                            <p className="font-bold text-sm">
                                                 {isApproved
                                                     ? `Client ${item.client} approved your consultation request`
                                                     : `Client ${item.client} requested a reschedule`}
                                             </p>
-                                            <p className="text-xs mt-0.5 opacity-90">
-                                                Scheduled for: <span className="font-medium">{formatDateString(item.date)}</span> at <span className="font-medium">{formatTimeString(item.time)}</span> ({item.type})
+                                            <p className="text-xs mt-0.5 opacity-90 font-medium">
+                                                Scheduled for: <span className="font-bold">{formatDateString(item.date)}</span> at <span className="font-bold">{formatTimeString(item.time)}</span> ({item.type})
                                                 {!isApproved && item.reschedule_reason && (
-                                                    <span className="block mt-1 font-medium italic">Reason: {item.reschedule_reason}</span>
+                                                    <span className="block mt-1 font-semibold italic">Reason: {item.reschedule_reason}</span>
                                                 )}
                                             </p>
                                         </div>
                                     </div>
                                     <button
                                         onClick={() => handleDismissNotification(item.id)}
-                                        className="text-gray-400 hover:text-gray-700 font-bold ml-4 text-sm leading-none focus:outline-none cursor-pointer"
+                                        className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-200/50 transition-colors focus:outline-none cursor-pointer"
                                     >
-                                        ✕
+                                        <X size={16} />
                                     </button>
                                 </div>
                             );
@@ -420,79 +529,81 @@ export default function ConsultationsView() {
                     </div>
                 )}
 
-            {/* Top Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 w-full">
+            {/* ──── ACTION CARDS ──── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8 w-full">
                 {/* Accept Appointments */}
-                <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 flex flex-col justify-between h-full transition-transform hover:scale-[1.02] duration-300">
+                <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all duration-200">
                     <div>
-                        <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center text-xl mb-4">
-                            📅
+                        <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4">
+                            <CalendarCheck size={20} />
                         </div>
                         <h3 className="text-xl font-extrabold text-[#0F172A]">
                             Accept Appointments
                         </h3>
-                        <p className="text-[#64748B] text-sm mt-2 font-medium">
+                        <p className="text-[#64748B] text-sm mt-1.5 font-medium">
                             View and manage consultation requests
                         </p>
                     </div>
 
                     <button
                         onClick={() => setShowAppointments(!showAppointments)}
-                        className="w-full mt-6 bg-[#16A34A] hover:bg-[#15803d] text-white py-3.5 rounded-full font-bold uppercase tracking-wider text-xs transition-colors shadow-md hover:shadow-lg active:scale-[0.98]"
+                        className="w-full mt-6 bg-[#2563EB] hover:bg-[#1D4ED8] text-white py-3 px-5 rounded-xl font-bold text-xs sm:text-sm tracking-wide transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
                     >
-                        {showAppointments ? "Hide Appointments" : "View Appointments"}
+                        <CalendarCheck size={16} />
+                        <span>{showAppointments ? "Hide Appointments" : "View Appointments"}</span>
                     </button>
                 </div>
 
-                {/* Consultation History */}
-                <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 flex flex-col justify-between h-full transition-transform hover:scale-[1.02] duration-300">
+                {/* Meeting History */}
+                <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all duration-200">
                     <div>
-                        <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center text-xl mb-4">
-                            📜
+                        <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4">
+                            <History size={20} />
                         </div>
                         <h3 className="text-xl font-extrabold text-[#0F172A]">
-                            Consultation History
+                            Meeting History
                         </h3>
-                        <p className="text-[#64748B] text-sm mt-2 font-medium">
-                            View previous consultations
+                        <p className="text-[#64748B] text-sm mt-1.5 font-medium">
+                            View previous meetings and records
                         </p>
                     </div>
 
-                    <button
-                        onClick={() => setShowHistory(!showHistory)}
-                        className="w-full mt-6 bg-[#D97706] hover:bg-[#b45309] text-white py-3.5 rounded-full font-bold uppercase tracking-wider text-xs transition-colors shadow-md hover:shadow-lg active:scale-[0.98]"
+                    <Link
+                        href="/consultations/history"
+                        className="w-full mt-6 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-5 rounded-xl font-bold text-xs sm:text-sm tracking-wide transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] text-center"
                     >
-                        {showHistory ? "Hide History" : "View History"}
-                    </button>
+                        <History size={16} />
+                        <span>View History</span>
+                    </Link>
                 </div>
-
             </div>
 
             {/* Appointment Requests */}
             {showAppointments && (
-                <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 mb-8 overflow-hidden">
-                    <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">
-                        Appointment Requests
+                <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6 sm:p-8 mb-8 overflow-hidden">
+                    <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-2.5">
+                        <CalendarCheck size={22} className="text-[#2563EB]" />
+                        <span>Appointment Requests</span>
                     </h2>
 
                     <div className="w-full overflow-x-auto rounded-xl border border-[#E2E8F0]">
                         <table className="min-w-full divide-y divide-[#E2E8F0]">
                             <thead className="bg-[#F8FAFC]">
                                 <tr>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase">Client Name</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase">Date</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase">Time</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase">Type</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase">Issue</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase">Status</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase">Action</th>
+                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider">Client Name</th>
+                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider">Date</th>
+                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider">Time</th>
+                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider">Type</th>
+                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider">Issue</th>
+                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider">Status</th>
+                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider">Action</th>
                                 </tr>
                             </thead>
 
-                            <tbody className="divide-y divide-[#E2E8F0] bg-white">
+                            <tbody className="divide-y divide-[#E2E8F0] bg-white text-sm">
                                 {appointments.length === 0 ? (
                                     <tr>
-                                        <td colSpan="8" className="p-8 text-center text-[#64748B] font-medium">
+                                        <td colSpan="7" className="p-8 text-center text-[#64748B] font-medium">
                                             No pending appointment requests.
                                         </td>
                                     </tr>
@@ -503,29 +614,30 @@ export default function ConsultationsView() {
                                                 {item.client}
                                             </td>
 
-                                            <td className="p-4 text-sm text-[#475569]">
+                                            <td className="p-4 text-[#475569]">
                                                 {formatDateString(item.date)}
                                             </td>
 
-                                            <td className="p-4 text-sm text-[#475569] font-medium">
+                                            <td className="p-4 text-[#475569] font-medium">
                                                 {formatTimeString(item.time)}
                                             </td>
 
-                                            <td className="p-4 text-sm text-[#475569]">
+                                            <td className="p-4 text-[#475569]">
                                                 {item.type}
                                             </td>
 
-                                            <td className="p-4 text-sm text-[#475569]">
+                                            <td className="p-4 text-[#475569]">
                                                 {item.issue || "General Consultation"}
                                             </td>
 
                                             <td className="p-4">
                                                 <span
-                                                    className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${item.status === "Pending Advocate"
+                                                    className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${item.status === "Pending Advocate"
                                                         ? "bg-amber-50 text-amber-700 border border-amber-200"
                                                         : "bg-purple-50 text-purple-700 border border-purple-200"
                                                         }`}
                                                 >
+                                                    <Clock size={12} />
                                                     {item.status || "Pending"}
                                                 </span>
                                             </td>
@@ -541,9 +653,10 @@ export default function ConsultationsView() {
                                                                     setSelectedAppointment(item);
                                                                     setShowAcceptModal(true);
                                                                 }}
-                                                                className="px-4 py-2 bg-[#16A34A] hover:bg-[#15803d] text-white rounded-full text-xs font-bold"
+                                                                className="px-3.5 py-1.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
                                                             >
-                                                                Accept
+                                                                <Check size={14} />
+                                                                <span>Accept</span>
                                                             </button>
 
                                                             <button
@@ -551,9 +664,10 @@ export default function ConsultationsView() {
                                                                     setSelectedAppointment(item);
                                                                     setShowDeclineModal(true);
                                                                 }}
-                                                                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-full text-xs font-bold"
+                                                                className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
                                                             >
-                                                                Reschedule
+                                                                <Clock size={14} />
+                                                                <span>Reschedule</span>
                                                             </button>
                                                         </>
                                                     )}
@@ -580,15 +694,16 @@ export default function ConsultationsView() {
 
                                                                         if (res.ok) {
                                                                             fetchConsultations(user);
-                                                                            alert("Client reschedule approved");
+                                                                            showToast("Client reschedule approved successfully!", "success");
                                                                         }
                                                                     } catch (err) {
                                                                         console.error(err);
                                                                     }
                                                                 }}
-                                                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-bold"
+                                                                className="px-3.5 py-1.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
                                                             >
-                                                                Accept Client Date
+                                                                <Check size={14} />
+                                                                <span>Accept Client Date</span>
                                                             </button>
 
                                                             <button
@@ -596,9 +711,10 @@ export default function ConsultationsView() {
                                                                     setSelectedAppointment(item);
                                                                     setShowDeclineModal(true);
                                                                 }}
-                                                                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-full text-xs font-bold"
+                                                                className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
                                                             >
-                                                                Give Another Date
+                                                                <Clock size={14} />
+                                                                <span>Give Another Date</span>
                                                             </button>
                                                         </>
                                                     )}
@@ -608,9 +724,10 @@ export default function ConsultationsView() {
                                                             setDeleteId(item.id);
                                                             setShowDeleteModal(true);
                                                         }}
-                                                        className="px-4 py-2 bg-slate-100 hover:bg-rose-100 text-[#475569] hover:text-rose-600 rounded-full text-xs font-bold"
+                                                        className="px-3.5 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 hover:border-rose-200 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
                                                     >
-                                                        Delete
+                                                        <Trash2 size={14} />
+                                                        <span>Delete</span>
                                                     </button>
                                                 </div>
                                             </td>
@@ -623,103 +740,11 @@ export default function ConsultationsView() {
                 </div>
             )}
 
-            {/* Consultation History Modal */}
-            {mounted && showHistory && typeof document !== "undefined" ? createPortal(
-                <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto p-8 md:p-10 border border-[#E2E8F0] animate-in fade-in zoom-in duration-200">
-                        <div className="flex items-center justify-between mb-8">
-                            <h2 className="text-2xl font-extrabold text-[#0F172A] flex items-center gap-4">
-                                <button
-                                    onClick={() => setShowHistory(false)}
-                                    className="w-10 h-10 rounded-full flex items-center justify-center bg-[#F8FAFC] text-[#64748B] hover:bg-slate-200 hover:text-[#0F172A] transition-colors"
-                                    aria-label="Back"
-                                >
-                                    <span className="text-xl font-bold">←</span>
-                                </button>
-                                <span>Consultation History</span>
-                                <span className="text-sm font-bold bg-[#F1F5F9] text-[#64748B] px-4 py-1.5 rounded-full">{history.length} total</span>
-                            </h2>
-                            <button
-                                onClick={() => setShowHistory(false)}
-                                className="w-10 h-10 rounded-full flex items-center justify-center bg-[#F8FAFC] text-[#64748B] hover:bg-rose-100 hover:text-rose-600 transition-colors"
-                                aria-label="Close"
-                            >
-                                <span className="text-xl font-bold">✕</span>
-                            </button>
-                        </div>
-                        {history.length === 0 ? (
-                            <div className="text-center py-12 text-[#64748B] font-medium bg-[#F8FAFC] rounded-2xl border border-dashed border-[#E2E8F0]">
-                                No consultations found. Start a new one below.
-                            </div>
-                        ) : (
-                            <div className="w-full overflow-x-auto rounded-xl border border-[#E2E8F0]">
-                                <table className="min-w-full divide-y divide-[#E2E8F0]">
-                                    <thead className="bg-[#F8FAFC]">
-                                        <tr>
-                                            <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client Name</th>
-                                            <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
-                                            <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
-                                            <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
-                                            <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
-                                            <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-[#E2E8F0] bg-white">
-                                        {history.map((item) => (
-                                            <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors">
-                                                <td className="p-4 whitespace-nowrap font-bold text-[#0F172A] capitalize">{item.client}</td>
-                                                <td className="p-4 whitespace-nowrap text-sm text-[#475569]">{formatDateString(item.date)}</td>
-                                                <td className="p-4 whitespace-nowrap text-sm font-medium text-[#475569]">{formatTimeString(item.time)}</td>
-                                                <td className="p-4 whitespace-nowrap">
-                                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${item.type === "Video Call" || item.type === "Video Consultation"
-                                                        ? "bg-blue-50 text-blue-700 border border-blue-200"
-                                                        : item.type === "Chat" || item.type === "Chat Consultation"
-                                                            ? "bg-purple-50 text-purple-700 border border-purple-200"
-                                                            : "bg-amber-50 text-amber-700 border border-amber-200"
-                                                        }`}>
-                                                        {item.type}
-                                                    </span>
-                                                </td>
-                                                <td className="p-4 whitespace-nowrap">
-                                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${item.status === "Completed"
-                                                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                                        : item.status === "Approved"
-                                                            ? "bg-green-50 text-green-700 border border-green-200"
-                                                            : item.status === "Rescheduled"
-                                                                ? "bg-amber-50 text-amber-700 border border-amber-200"
-                                                                : item.status === "Pending Client"
-                                                                    ? "bg-purple-50 text-purple-700 border border-purple-200"
-                                                                    : "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                                                        }`}>
-                                                        {item.status}
-                                                    </span>
-                                                </td>
-                                                <td className="p-4 whitespace-nowrap">
-                                                    <button
-                                                        onClick={() => {
-                                                            setDeleteId(item.id);
-                                                            setShowDeleteModal(true);
-                                                        }}
-                                                        className="px-4 py-2 bg-slate-100 hover:bg-rose-100 text-[#475569] hover:text-rose-600 rounded-full transition-colors text-xs font-bold uppercase tracking-wider active:scale-95 shadow-sm"
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </div>
-                </div>,
-                document.body
-            ) : null}
-
             {/* Consultation Form */}
-            <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 mb-8">
-                <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">
-                    Schedule Consultation
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6 sm:p-8 mb-8">
+                <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-2.5">
+                    <CalendarDays size={22} className="text-[#2563EB]" />
+                    <span>Schedule Meeting</span>
                 </h2>
                 <div className={`grid grid-cols-1 md:grid-cols-2 ${consultationType === "Video Call" ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-6`}>
                     <div className="flex flex-col">
@@ -727,7 +752,7 @@ export default function ConsultationsView() {
                         <select
                             value={clientName}
                             onChange={(e) => setClientName(e.target.value)}
-                            className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+                            className="w-full border border-[#E2E8F0] rounded-xl p-3 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium cursor-pointer"
                         >
                             <option value="">Select Client</option>
                             {clients.map((client) => (
@@ -752,9 +777,9 @@ export default function ConsultationsView() {
                                     setMeetingLink("");
                                 }
                             }}
-                            className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium cursor-pointer"
+                            className="w-full border border-[#E2E8F0] rounded-xl p-3 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium cursor-pointer"
                         >
-                            <option>Consultation Type</option>
+                            <option>Meeting Type</option>
                             <option value="Video Call">Video Call</option>
                             <option value="Chat">Chat</option>
                             <option value="Person to Person">Person to Person</option>
@@ -780,7 +805,7 @@ export default function ConsultationsView() {
                                 timeCaption="Time"
                                 dateFormat="h:mm aa"
                                 placeholderText="Select Time"
-                                className="w-full p-3.5 text-[#0F172A] bg-transparent outline-none text-sm font-medium cursor-pointer"
+                                className="w-full p-3 text-[#0F172A] bg-transparent outline-none text-sm font-medium cursor-pointer"
                             />
                         </div>
                     </div>
@@ -795,7 +820,7 @@ export default function ConsultationsView() {
                                 onChange={(e) => setMeetingLink(e.target.value)}
                                 placeholder={generatingMeetLink ? "Generating Meet link..." : "Paste Google Meet link"}
                                 disabled={generatingMeetLink}
-                                className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
+                                className="w-full border border-[#E2E8F0] rounded-xl p-3 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium"
                             />
                         </div>
                     )}
@@ -804,44 +829,46 @@ export default function ConsultationsView() {
                 <div className="mt-8 flex justify-end">
                     <button
                         onClick={handleStartConsultation}
-                        className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white px-8 py-3.5 rounded-full font-bold uppercase tracking-wider text-xs transition-all shadow-lg hover:shadow-xl active:scale-95 w-full md:w-auto"
+                        className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white px-6 py-3 rounded-xl font-bold text-xs sm:text-sm tracking-wide transition-all shadow-xs hover:shadow active:scale-95 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
                     >
-                        Schedule Consultation
+                        <Plus size={16} />
+                        <span>Schedule Meeting</span>
                     </button>
                 </div>
             </div>
 
-            {/* Scheduled Consultations Table */}
-            <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
-                <h2 className="text-2xl font-extrabold text-[#0F172A] mb-8">
-                    Scheduled Consultations
+            {/* Scheduled Meetings Table */}
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6 sm:p-8">
+                <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-2.5">
+                    <Clock size={22} className="text-[#2563EB]" />
+                    <span>Scheduled Meetings</span>
                 </h2>
                 {history.length === 0 ? (
                     <div className="text-center py-12 text-[#64748B] font-medium bg-[#F8FAFC] rounded-2xl border border-dashed border-[#E2E8F0]">
-                        No scheduled consultations.
+                        No scheduled meetings.
                     </div>
                 ) : (
                     <div className="w-full overflow-x-auto rounded-xl border border-[#E2E8F0]">
                         <table className="min-w-full divide-y divide-[#E2E8F0]">
                             <thead className="bg-[#F8FAFC]">
                                 <tr>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client Name</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Google Meet Link</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Action</th>
+                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Client Name</th>
+                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Date</th>
+                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Time</th>
+                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Type</th>
+                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Google Meet Link</th>
+                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Status</th>
+                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Action</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-[#E2E8F0] bg-white">
+                            <tbody className="divide-y divide-[#E2E8F0] bg-white text-sm">
                                 {history.map((item) => (
                                     <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors">
                                         <td className="p-4 whitespace-nowrap font-bold text-[#0F172A] capitalize">{item.client}</td>
-                                        <td className="p-4 whitespace-nowrap text-sm text-[#475569]">{formatDateString(item.date)}</td>
-                                        <td className="p-4 whitespace-nowrap text-sm font-medium text-[#475569]">{formatTimeString(item.time)}</td>
+                                        <td className="p-4 whitespace-nowrap text-[#475569]">{formatDateString(item.date)}</td>
+                                        <td className="p-4 whitespace-nowrap font-medium text-[#475569]">{formatTimeString(item.time)}</td>
                                         <td className="p-4 whitespace-nowrap">
-                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${item.type === "Video Call" || item.type === "Video Consultation"
+                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${item.type === "Video Call" || item.type === "Video Consultation"
                                                 ? "bg-blue-50 text-blue-700 border border-blue-200"
                                                 : item.type === "Chat" || item.type === "Chat Consultation"
                                                     ? "bg-purple-50 text-purple-700 border border-purple-200"
@@ -856,25 +883,27 @@ export default function ConsultationsView() {
                                                     href={item.meeting_link.startsWith("http") ? item.meeting_link : `https://${item.meeting_link}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="text-[#2563EB] hover:text-[#1D4ED8] hover:underline font-semibold flex items-center gap-1.5"
+                                                    className="text-[#2563EB] hover:text-[#1D4ED8] font-bold inline-flex items-center gap-1.5 bg-blue-50/70 border border-blue-200 px-3 py-1 rounded-lg transition-colors text-xs"
                                                 >
-                                                    📹 Open Google Meet
+                                                    <Video size={14} />
+                                                    <span>Open Google Meet</span>
                                                 </a>
                                             ) : (
                                                 <span className="text-[#94A3B8] font-medium">-</span>
                                             )}
                                         </td>
                                         <td className="p-4 whitespace-nowrap">
-                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${item.status === "Completed"
+                                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${item.status === "Completed"
                                                 ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                                 : item.status === "Approved"
-                                                    ? "bg-green-50 text-green-700 border border-green-200"
+                                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                                     : item.status === "Rescheduled"
                                                         ? "bg-amber-50 text-amber-700 border border-amber-200"
                                                         : item.status === "Pending Client"
                                                             ? "bg-purple-50 text-purple-700 border border-purple-200"
                                                             : "bg-indigo-50 text-indigo-700 border border-indigo-200"
                                                 }`}>
+                                                <CheckCircle2 size={11} />
                                                 {item.status}
                                             </span>
                                         </td>
@@ -884,9 +913,10 @@ export default function ConsultationsView() {
                                                     setDeleteId(item.id);
                                                     setShowDeleteModal(true);
                                                 }}
-                                                className="px-4 py-2 bg-slate-100 hover:bg-rose-100 text-[#475569] hover:text-rose-600 rounded-full transition-colors text-xs font-bold uppercase tracking-wider active:scale-95 shadow-sm cursor-pointer"
+                                                className="px-3 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 hover:border-rose-200 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
                                             >
-                                                Delete
+                                                <Trash2 size={13} />
+                                                <span>Delete</span>
                                             </button>
                                         </td>
                                     </tr>
@@ -900,24 +930,24 @@ export default function ConsultationsView() {
             {mounted && showScheduleSuccess && typeof document !== "undefined"
                 ? createPortal(
                     <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-                        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 text-center border border-[#E2E8F0] animate-in fade-in zoom-in duration-200">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-8 text-center border border-[#E2E8F0] animate-in fade-in zoom-in-95 duration-200">
 
-                            <div className="w-20 h-20 mx-auto bg-green-50 rounded-full flex items-center justify-center text-4xl mb-6 shadow-inner">
-                                ✅
+                            <div className="w-14 h-14 mx-auto bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-2xl flex items-center justify-center mb-4">
+                                <CheckCircle2 size={32} />
                             </div>
 
-                            <h2 className="text-2xl font-extrabold text-[#0F172A]">
+                            <h2 className="text-xl font-extrabold text-[#0F172A]">
                                 Consultation Scheduled
                             </h2>
 
-                            <p className="text-[#64748B] mt-4 font-medium leading-relaxed">
+                            <p className="text-[#64748B] text-sm mt-3 font-medium leading-relaxed">
                                 Your consultation has been scheduled successfully.
                                 The client will receive the meeting details and can approve it.
                             </p>
 
                             <button
                                 onClick={() => setShowScheduleSuccess(false)}
-                                className="mt-8 w-full py-4 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-full font-bold uppercase tracking-wider text-xs transition-all shadow-lg active:scale-95"
+                                className="mt-6 w-full py-3 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-xs active:scale-95 cursor-pointer"
                             >
                                 OK
                             </button>
@@ -927,36 +957,32 @@ export default function ConsultationsView() {
                 )
                 : null}
 
-
-
-
-
             {/* Delete Confirmation Modal */}
             {mounted && showDeleteModal && typeof document !== "undefined" ? createPortal(
                 <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 text-center border border-[#E2E8F0] animate-in fade-in zoom-in duration-200">
-                        <div className="w-20 h-20 mx-auto bg-rose-50 rounded-full flex items-center justify-center text-4xl mb-6 shadow-inner text-rose-500">
-                            🗑️
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-8 text-center border border-[#E2E8F0] animate-in fade-in zoom-in-95 duration-200">
+                        <div className="w-14 h-14 mx-auto bg-rose-50 border border-rose-200 text-rose-600 rounded-2xl flex items-center justify-center mb-4">
+                            <Trash2 size={28} />
                         </div>
-                        <h2 className="text-2xl font-extrabold text-[#0F172A]">
+                        <h2 className="text-xl font-extrabold text-[#0F172A]">
                             Delete Consultation
                         </h2>
-                        <p className="text-[#64748B] mt-4 font-medium leading-relaxed">
+                        <p className="text-[#64748B] text-sm mt-3 font-medium leading-relaxed">
                             Are you sure you want to delete this consultation? This action cannot be undone.
                         </p>
-                        <div className="flex gap-4 mt-8">
+                        <div className="flex gap-3 mt-6">
                             <button
                                 onClick={() => {
                                     setShowDeleteModal(false);
                                     setDeleteId(null);
                                 }}
-                                className="w-1/2 py-4 bg-slate-100 hover:bg-slate-200 text-[#475569] rounded-full font-bold uppercase tracking-wider text-xs transition-all"
+                                className="w-1/2 py-3 bg-slate-100 hover:bg-slate-200 text-[#475569] rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleDeleteConsultation}
-                                className="w-1/2 py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-full font-bold uppercase tracking-wider text-xs transition-all shadow-lg active:scale-95"
+                                className="w-1/2 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-xs active:scale-95 cursor-pointer"
                             >
                                 Yes, Delete
                             </button>
@@ -969,15 +995,15 @@ export default function ConsultationsView() {
             {/* Accept Approval Modal */}
             {mounted && showAcceptModal && typeof document !== "undefined" ? createPortal(
                 <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 text-center border border-[#E2E8F0]">
-                        <div className="w-20 h-20 mx-auto bg-green-50 rounded-full flex items-center justify-center text-4xl mb-6 shadow-inner">
-                            ✅
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-8 text-center border border-[#E2E8F0] animate-in fade-in zoom-in-95 duration-200">
+                        <div className="w-14 h-14 mx-auto bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-2xl flex items-center justify-center mb-4">
+                            <CheckCircle2 size={32} />
                         </div>
-                        <h2 className="text-2xl font-extrabold text-[#0F172A]">
+                        <h2 className="text-xl font-extrabold text-[#0F172A]">
                             Appointment Approved
                         </h2>
                         {selectedAppointment && (
-                            <p className="text-[#64748B] mt-4 font-medium leading-relaxed">
+                            <p className="text-[#64748B] text-sm mt-3 font-medium leading-relaxed">
                                 Appointment request from{" "}
                                 <span className="font-bold text-[#0F172A]">
                                     {selectedAppointment.client}
@@ -996,14 +1022,14 @@ export default function ConsultationsView() {
                                     if (res.ok) {
                                         fetchConsultations(user);
                                     } else {
-                                        alert("Failed to approve appointment");
+                                        showToast("Failed to approve appointment.", "error");
                                     }
                                 } catch (err) {
                                     console.error(err);
                                 }
                                 setShowAcceptModal(false);
                             }}
-                            className="mt-8 w-full py-4 bg-[#16A34A] hover:bg-[#15803d] text-white rounded-full font-bold uppercase tracking-wider text-xs transition-all shadow-lg active:scale-95"
+                            className="mt-6 w-full py-3 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-xs active:scale-95 cursor-pointer"
                         >
                             OK, Continue
                         </button>
@@ -1015,23 +1041,23 @@ export default function ConsultationsView() {
             {mounted && showRescheduleSuccess && typeof document !== "undefined"
                 ? createPortal(
                     <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-                        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 text-center border border-[#E2E8F0] animate-in fade-in zoom-in duration-200">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-8 text-center border border-[#E2E8F0] animate-in fade-in zoom-in-95 duration-200">
 
-                            <div className="w-20 h-20 mx-auto bg-amber-50 rounded-full flex items-center justify-center text-4xl mb-6 shadow-inner">
-                                📅
+                            <div className="w-14 h-14 mx-auto bg-amber-50 border border-amber-200 text-amber-600 rounded-2xl flex items-center justify-center mb-4">
+                                <Clock size={28} />
                             </div>
 
-                            <h2 className="text-2xl font-extrabold text-[#0F172A]">
+                            <h2 className="text-xl font-extrabold text-[#0F172A]">
                                 Reschedule Sent
                             </h2>
 
-                            <p className="text-[#64748B] mt-4 font-medium leading-relaxed">
+                            <p className="text-[#64748B] text-sm mt-3 font-medium leading-relaxed">
                                 Your reschedule request has been sent successfully to the client.
                             </p>
 
                             <button
                                 onClick={() => setShowRescheduleSuccess(false)}
-                                className="mt-8 w-full py-4 bg-[#D97706] hover:bg-[#b45309] text-white rounded-full font-bold uppercase tracking-wider text-xs transition-all shadow-lg active:scale-95"
+                                className="mt-6 w-full py-3 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-xs active:scale-95 cursor-pointer"
                             >
                                 OK
                             </button>
@@ -1041,13 +1067,12 @@ export default function ConsultationsView() {
                 )
                 : null}
 
-
             {/* Decline/Reschedule Modal */}
             {mounted && showDeclineModal && typeof document !== "undefined" ? createPortal(
                 <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg p-8 border border-[#E2E8F0]">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-2xl font-extrabold text-[#0F172A]">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 sm:p-8 border border-[#E2E8F0] animate-in fade-in zoom-in-95 duration-200">
+                        <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+                            <h2 className="text-xl font-extrabold text-[#0F172A]">
                                 Reschedule Appointment
                             </h2>
                             <button
@@ -1055,21 +1080,21 @@ export default function ConsultationsView() {
                                     setShowDeclineModal(false);
                                     setRescheduleReason("");
                                 }}
-                                className="w-10 h-10 rounded-full bg-[#F8FAFC] text-[#64748B] hover:bg-rose-100 hover:text-rose-600 flex items-center justify-center transition-colors"
+                                className="w-9 h-9 rounded-xl bg-[#F8FAFC] text-[#64748B] hover:bg-rose-50 hover:text-rose-600 flex items-center justify-center transition-colors cursor-pointer"
                             >
-                                ✕
+                                <X size={18} />
                             </button>
                         </div>
 
                         {selectedAppointment && (
-                            <div className="mb-8 p-4 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">
+                            <div className="mb-6 p-4 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]">
                                 <p className="font-bold text-[#0F172A] text-sm">
                                     <span className="text-[#64748B] font-semibold uppercase tracking-wider text-xs mr-2">Client:</span>
                                     {selectedAppointment.client}
                                 </p>
                             </div>
                         )}
-                        <div className="space-y-6">
+                        <div className="space-y-5">
                             <div>
                                 <label className="block mb-2 font-bold text-xs uppercase tracking-wider text-[#475569]">
                                     Next Available Date & Time
@@ -1081,7 +1106,7 @@ export default function ConsultationsView() {
                                         showTimeSelect
                                         timeIntervals={15}
                                         dateFormat="MMMM d, yyyy h:mm aa"
-                                        className="w-full p-4 text-[#0F172A] bg-transparent outline-none text-sm font-medium cursor-pointer"
+                                        className="w-full p-3.5 text-[#0F172A] bg-transparent outline-none text-sm font-medium cursor-pointer"
                                     />
                                 </div>
                             </div>
@@ -1094,24 +1119,24 @@ export default function ConsultationsView() {
                                     placeholder="Enter reason for rescheduling..."
                                     value={rescheduleReason}
                                     onChange={(e) => setRescheduleReason(e.target.value)}
-                                    className="w-full border border-[#E2E8F0] rounded-xl p-4 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium placeholder:text-[#94A3B8]"
+                                    className="w-full border border-[#E2E8F0] rounded-xl p-3.5 text-[#0F172A] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all text-sm font-medium placeholder:text-[#94A3B8]"
                                 />
                             </div>
                         </div>
-                        <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-[#F1F5F9]">
+                        <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-[#F1F5F9]">
                             <button
                                 onClick={() => {
                                     setShowDeclineModal(false);
                                     setRescheduleReason("");
                                 }}
-                                className="px-6 py-3.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[#475569] text-xs font-bold uppercase tracking-wider transition-colors"
+                                className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#475569] text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={async () => {
                                     if (!selectedDate) {
-                                        alert("Please select a valid date.");
+                                        showToast("Please select a valid date.", "warning");
                                         return;
                                     }
                                     const yyyy = selectedDate.getFullYear();
@@ -1138,15 +1163,16 @@ export default function ConsultationsView() {
                                             setShowRescheduleSuccess(true);
                                             fetchConsultations(user);
                                         } else {
-                                            alert("Failed to reschedule");
+                                            showToast("Failed to reschedule consultation.", "error");
                                         }
                                     } catch (err) {
                                         console.error(err);
+                                        showToast("Error connecting to server.", "error");
                                     }
                                     setShowDeclineModal(false);
                                     setRescheduleReason("");
                                 }}
-                                className="px-8 py-3.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full font-bold uppercase tracking-wider text-xs transition-all shadow-lg active:scale-95"
+                                className="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold uppercase tracking-wider text-xs transition-all shadow-xs active:scale-95 cursor-pointer"
                             >
                                 Submit Reschedule
                             </button>
@@ -1155,6 +1181,37 @@ export default function ConsultationsView() {
                 </div>,
                 document.body
             ) : null}
+
+            {/* Custom Toast Notification */}
+            {toast.show && (
+                <div className={`fixed top-5 right-5 z-[10000] px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border transition-all duration-300 max-w-sm animate-in fade-in slide-in-from-top-4 ${
+                    toast.type === "error"
+                        ? "bg-rose-600 text-white border-rose-500"
+                        : toast.type === "warning"
+                        ? "bg-amber-600 text-white border-amber-500"
+                        : "bg-emerald-600 text-white border-emerald-500"
+                }`}>
+                    {toast.type === "error" ? (
+                        <X size={20} className="text-white shrink-0" />
+                    ) : toast.type === "warning" ? (
+                        <Clock size={20} className="text-white shrink-0" />
+                    ) : (
+                        <CheckCircle2 size={20} className="text-white shrink-0" />
+                    )}
+                    <div className="flex-1">
+                        <p className="font-bold text-sm leading-tight">
+                            {toast.type === "error" ? "Error" : toast.type === "warning" ? "Notice" : "Success"}
+                        </p>
+                        <p className="text-xs font-medium mt-0.5 opacity-90">{toast.message}</p>
+                    </div>
+                    <button
+                        onClick={() => setToast({ show: false, message: "", type: "success" })}
+                        className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors focus:outline-none cursor-pointer"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
