@@ -15,19 +15,26 @@ def find_user_by_name(db: Session, name: str) -> Optional[User]:
     clean_name = name.lower().replace(" ", "")
     clean_name_underscore = name.lower().replace(" ", "_")
     
+    from sqlalchemy import func
     user = db.query(User).filter(
         (User.username.ilike(name)) | 
         (User.email.ilike(name)) |
         (User.username.ilike(clean_name)) |
-        (User.username.ilike(clean_name_underscore))
+        (User.username.ilike(clean_name_underscore)) |
+        (User.first_name.ilike(name)) |
+        (User.last_name.ilike(name)) |
+        (func.concat(User.first_name, ' ', User.last_name).ilike(name)) |
+        (func.concat(User.first_name, User.last_name).ilike(clean_name))
     ).first()
 
     if user:
         return user
         
-
     # Fallback 2: Check Case table (for clients)
-    client_case = db.query(Case).filter(Case.client_name.ilike(name)).first()
+    client_case = db.query(Case).filter(
+        (Case.client_name.ilike(name)) |
+        (Case.client_name.ilike(f"%{name}%"))
+    ).first()
     if client_case and client_case.email_id:
         user_by_case_email = db.query(User).filter(User.email.ilike(client_case.email_id)).first()
         if user_by_case_email:
@@ -45,16 +52,55 @@ def get_consultations(
         user = db.query(User).filter(User.id == client_id).first()
         if user:
             clean_username = user.username.replace("_", " ")
-            query = query.filter(
-                (Consultation.client_id == client_id) | 
-                (Consultation.client_name.ilike(user.username)) |
-                (Consultation.client_name.ilike(clean_username)) |
+            first_name = (user.first_name or "").strip()
+            last_name = (user.last_name or "").strip()
+            full_name = f"{first_name} {last_name}".strip()
+
+            from sqlalchemy import or_
+            filters = [
+                (Consultation.client_id == client_id),
+                (Consultation.client_name.ilike(user.username)),
+                (Consultation.client_name.ilike(clean_username)),
                 (Consultation.client_name.ilike(user.username.replace(" ", "")))
-            )
+            ]
+            if first_name:
+                filters.append(Consultation.client_name.ilike(first_name))
+                filters.append(Consultation.client_name.ilike(f"%{first_name}%"))
+            if last_name:
+                filters.append(Consultation.client_name.ilike(last_name))
+            if full_name:
+                filters.append(Consultation.client_name.ilike(full_name))
+                filters.append(Consultation.client_name.ilike(f"%{full_name}%"))
+            
+            client_cases = db.query(Case).filter(
+                (Case.email_id.ilike(user.email if user.email else "")) |
+                (Case.client_name.ilike(user.username)) |
+                (Case.client_name.ilike(clean_username)) |
+                (Case.client_name.ilike(first_name if first_name else "___never___")) |
+                (Case.client_name.ilike(full_name if full_name else "___never___"))
+            ).all()
+            for c in client_cases:
+                if c.client_name:
+                    filters.append(Consultation.client_name.ilike(c.client_name))
+                    filters.append(Consultation.client_name.ilike(f"%{c.client_name}%"))
+
+            query = query.filter(or_(*filters))
+
+            # Auto-link unlinked consultations to user.id if matched
+            matched_consults = query.all()
+            updated_any = False
+            for consult in matched_consults:
+                if consult.client_id is None:
+                    consult.client_id = client_id
+                    updated_any = True
+            if updated_any:
+                try:
+                    db.commit()
+                except Exception:
+                    db.rollback()
         else:
             query = query.filter(Consultation.client_id == client_id)
     
-        # If user.role == "Senior Advocate", we do NOT apply the filter, letting them see all cases
     if status is not None:
         query = query.filter(Consultation.status == status)
     return query.order_by(Consultation.date.desc(), Consultation.time.desc()).all()
@@ -137,9 +183,14 @@ def start_instant_consultation(db: Session, data: ConsultationStart, background_
         )
     # ──────────────────────────────────────────────────────────
 
-    # Lookup client ID by client_name
+    # Lookup client ID by client_email or client_name
     client_id = None
-    if data.client_name:
+    if data.client_email:
+        client = db.query(User).filter(User.email.ilike(data.client_email)).first()
+        if client:
+            client_id = client.id
+
+    if not client_id and data.client_name:
         client = find_user_by_name(db, data.client_name)
         if client:
             client_id = client.id
@@ -152,7 +203,7 @@ def start_instant_consultation(db: Session, data: ConsultationStart, background_
         time=data.time,
         meeting_link=data.meeting_link,
 
-        status=data.status if data.status else "Pending"
+        status=data.status if data.status else "Pending Client"
     )
     db.add(new_consultation)
     db.commit()
