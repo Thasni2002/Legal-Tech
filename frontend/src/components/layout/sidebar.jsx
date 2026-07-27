@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { getLoggedInUser } from "@/utils/auth";
@@ -15,29 +15,19 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
-  ChevronUp,
   Shield,
   ClipboardList,
   FileText,
+  Key,
+  Briefcase,
+  Layers,
 } from "lucide-react";
-import Image from "next/image";
 import { API_BASE_URL } from "@/utils/api";
-// Map original section titles to new header labels
-const sectionTitleMap = {
-  "Advocate Section": "Advocate Section",
-  "Junior Advocate": "Junior Advocate",
-  "Client Section": "Client Section",
-  "Clerk Section": "Clerk Section",
-  "User Roles": "SYSTEM",
-};
 
 export default function Sidebar({ isCollapsed, setIsCollapsed }) {
   const pathname = usePathname();
-  const [isOpen, setIsOpen] = useState(false); // mobile overlay
-  const [userRolesOpen, setUserRolesOpen] = useState(() =>
-    pathname?.startsWith("/permissions") || false
-  );
+  const [isOpen, setIsOpen] = useState(false); // Mobile drawer overlay state
+  const [activeModuleId, setActiveModuleId] = useState("advocate");
   const [user, setUser] = useState(null);
   const [customPermissions, setCustomPermissions] = useState({});
   const [rolePermissions, setRolePermissions] = useState({});
@@ -92,10 +82,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         if (parsed.profileImage) {
           setProfileImage(parsed.profileImage);
         }
-      } catch (e) { }
-    }
-    if (pathname?.startsWith("/permissions")) {
-      setUserRolesOpen(true);
+      } catch (e) {}
     }
 
     fetchPermissions();
@@ -130,10 +117,13 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
     return false; // fallback — hide item if no permission rule is found
   };
 
-  // Define the menu structure (icon + label + moduleKey)
-  const seniorMenu = [
+  // Define 2-Tier Modules with sub-items
+  const modules = useMemo(() => [
     {
+      id: "advocate",
       title: "Advocate Section",
+      shortLabel: "Admin",
+      icon: Scale,
       items: [
         { name: "Dashboard", path: "/", icon: Home, moduleKey: "Dashboard" },
         { name: "Case Management", path: "/case-management", icon: Folder, moduleKey: "Case Management" },
@@ -146,11 +136,11 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         { name: "Leave Management", path: "/leave-management", icon: Calendar, moduleKey: "Leave Management" },
       ],
     },
-  ];
-
-  const juniorMenu = [
     {
+      id: "junior",
       title: "Junior Advocate",
+      shortLabel: "Junior",
+      icon: Briefcase,
       items: [
         { name: "Dashboard", path: "/junior-dashboard", icon: Home, moduleKey: "Junior Dashboard" },
         { name: "Assigned Cases", path: "/assigned-cases", icon: Folder, moduleKey: "Assigned Cases" },
@@ -159,26 +149,11 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         { name: "Leave", path: "/junior-leave", icon: Calendar, moduleKey: "Junior Leave" },
       ],
     },
-  ];
-
-  const clientMenu = [
     {
-      title: "Client Section",
-      moduleKey: "Client Section",
-      items: [
-        { name: "Dashboard", path: "/client-dashboard", icon: Home, moduleKey: "Client Dashboard" },
-        { name: "Case Discussion", path: "/client-consultation", icon: BookOpen, moduleKey: "Consultation" },
-        { name: "Case Tracking", path: "/client-case-tracking", icon: Folder, moduleKey: "Case Tracking" },
-        { name: "Document Format Generate", path: "/client-document-format-generate", icon: FileText, moduleKey: "Client Document Generate" },
-        { name: "Documents", path: "/client-documents", icon: Settings, moduleKey: "Documents" },
-        { name: "Payments", path: "/client-payments", icon: CreditCard, moduleKey: "Payments" },
-      ],
-    },
-  ];
-
-  const clerkMenu = [
-    {
+      id: "clerk",
       title: "Clerk Section",
+      shortLabel: "Clerk",
+      icon: ClipboardList,
       items: [
         { name: "Dashboard", path: "/clerk/dashboard", icon: Home, moduleKey: "Clerk Dashboard" },
         { name: "Court Visit", path: "/clerk/court-visit", icon: Scale, moduleKey: "Court Visit" },
@@ -186,233 +161,250 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         { name: "Leave", path: "/clerk/leave", icon: Calendar, moduleKey: "Clerk Leave" },
       ],
     },
-  ];
+    {
+      id: "client",
+      title: "Client Section",
+      shortLabel: "Client",
+      icon: Users,
+      items: [
+        { name: "Dashboard", path: "/client-dashboard", icon: Home, moduleKey: "Client Dashboard" },
+        { name: "Case Discussion", path: "/client-consultation", icon: BookOpen, moduleKey: "Consultation" },
+        { name: "Case Tracking", path: "/client-case-tracking", icon: Folder, moduleKey: "Case Tracking" },
+        { name: "Document Format", path: "/client-document-format-generate", icon: FileText, moduleKey: "Client Document Generate" },
+        { name: "Documents", path: "/client-documents", icon: Settings, moduleKey: "Documents" },
+        { name: "Payments", path: "/client-payments", icon: CreditCard, moduleKey: "Payments" },
+      ],
+    },
+    {
+      id: "system",
+      title: "System & Roles",
+      shortLabel: "Permissions",
+      icon: Shield,
+      items: [
+        { name: "Roles Matrix", path: "/permissions/roles", icon: Shield, moduleKey: "Roles" },
+        { name: "Users Clearance", path: "/permissions/users", icon: Users, moduleKey: "Users" },
+        { name: "Permissions Config", path: "/permissions", icon: Key, moduleKey: "Permissions" },
+      ],
+    },
+  ], []);
 
-  // Returns the correct base menu for the logged-in user's role.
-  // Returns the correct base menu for the logged-in user's role.
-  // We return the full menu pool for all roles so that permissions (custom overrides
-  // and role defaults) can dynamically control item visibility based on database clearance.
-  const getBaseMenuForRole = (roleName) => {
-    return [
-      ...seniorMenu,
-      ...juniorMenu,
-      ...clerkMenu,
-      ...clientMenu,
-      {
-        title: "User Roles",
-        items: [
-          {
-            name: "User Roles",
-            isDropdown: true,
-            icon: Shield,
-            submenu: [
-              { name: "Roles", path: "/permissions/roles", moduleKey: "Roles" },
-              { name: "Users", path: "/permissions/users", moduleKey: "Users" },
-              { name: "Permissions", path: "/permissions", moduleKey: "Permissions" },
-            ],
-          },
-        ],
-      },
-    ];
-  };
-
-  let filteredMenuItems = [];
-  if (user) {
-    // Step 1: pick only the sections that belong to this role
-    const baseMenu = getBaseMenuForRole(user.role);
-
-    // Step 2: within those sections, hide items the user has no view permission for
-    filteredMenuItems = baseMenu
-      .map((section) => {
-        const filteredItems = section.items
-          .map((item) => {
-            if (item.isDropdown) {
-              const filteredSubmenu = item.submenu.filter((sub) =>
-                hasViewPermission(sub.moduleKey)
-              );
-              if (filteredSubmenu.length === 0) return null;
-              return { ...item, submenu: filteredSubmenu };
-            }
-            if (!hasViewPermission(item.moduleKey)) return null;
-            return item;
-          })
-          .filter(Boolean);
-
-        return { ...section, items: filteredItems };
+  // Filter items based on permissions
+  const filteredModules = useMemo(() => {
+    return modules
+      .map((mod) => {
+        const allowedItems = mod.items.filter((item) => hasViewPermission(item.moduleKey));
+        return { ...mod, items: allowedItems };
       })
-      .filter(Boolean)
-      .filter((section) => section.items.length > 0);
-  }
+      .filter((mod) => mod.items.length > 0);
+  }, [modules, customPermissions, rolePermissions, user]);
+
+  // Auto-detect current active module based on URL pathname
+  useEffect(() => {
+    if (!pathname) return;
+    for (const mod of filteredModules) {
+      const match = mod.items.some(
+        (item) => item.path === pathname || (item.path !== "/" && pathname.startsWith(item.path))
+      );
+      if (match) {
+        setActiveModuleId(mod.id);
+        break;
+      }
+    }
+  }, [pathname, filteredModules]);
+
+  const activeModule = filteredModules.find((m) => m.id === activeModuleId) || filteredModules[0];
+
+  const handleModuleClick = (modId) => {
+    setActiveModuleId(modId);
+    if (isCollapsed) {
+      setIsCollapsed(false); // Expand secondary drawer when module is clicked
+    }
+  };
 
   if (loading) {
     return (
-      <aside className={`fixed top-0 left-0 h-screen bg-white border-r border-[#E2E8F0] z-50 ${isCollapsed ? "w-[72px]" : "w-[280px]"}`}>
-        <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between px-6 py-5 border-b border-[#E2E8F0]">
-            <div className="flex items-center gap-2">
-              <Scale size={22} className="text-[#2563EB]" />
-              <h2 className={`text-xl font-bold tracking-tight ${isCollapsed ? "hidden" : "block"} text-[#0F172A]`}>LEGAL-TECH</h2>
-            </div>
-          </div>
-          <div className="flex-1 px-4 py-5 flex items-center justify-center text-slate-400">
-            <span className="animate-pulse text-xs">Loading...</span>
-          </div>
-        </div>
+      <aside className="fixed top-0 left-0 h-screen bg-[#0F172A] border-r border-slate-800 z-50 w-[72px] flex items-center justify-center">
+        <span className="animate-pulse text-xs text-blue-400">...</span>
       </aside>
     );
   }
 
   return (
     <>
-      {/* Mobile Hamburger */}
+      {/* Mobile Hamburger Toggle */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="fixed top-3 left-3 z-[60] flex items-center justify-center w-10 h-10 bg-[#0F172A] text-white rounded-lg shadow-lg md:hidden transition-colors duration-200"
+        aria-label="Toggle Navigation"
       >
         {isOpen ? <X size={24} className="text-white" /> : <Menu size={24} className="text-white" />}
       </button>
 
-      {/* Mobile overlay */}
+      {/* Mobile Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"
           onClick={() => setIsOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
-      <aside
-        className={`fixed top-0 left-0 h-screen transition-[width] duration-300 ease-in-out bg-white border-r border-[#E2E8F0] z-50 ${isCollapsed ? "md:w-[72px] w-[280px]" : "w-[280px]"
-          } ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
+      {/* Main Container for 2-Tier Sidebar */}
+      <div
+        className={`fixed top-0 left-0 h-screen z-50 flex transition-transform duration-300 ease-in-out ${
+          isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        }`}
       >
-        <div className="flex flex-col h-full overflow-y-auto">
-          {/* Logo & Collapse Toggle */}
-          <div className="flex items-center justify-between px-6 py-5 border-b border-[#E2E8F0]">
-            <div className="flex items-center gap-2">
-              <Scale size={22} className="text-[#2563EB]" />
-              <h2 className={`text-xl font-bold tracking-tight ${isCollapsed ? "hidden" : "block"} text-[#0F172A]`}>LEGAL-TECH</h2>
-            </div>
-            <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="hidden md:block p-1 rounded hover:bg-[#F1F5F9] transition-colors"
-              aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        {/* Tier 1: Primary Icon Rail (Width 72px) */}
+        <aside className="w-[72px] h-screen bg-[#0F172A] text-slate-300 flex flex-col justify-between items-center py-4 border-r border-slate-800 flex-shrink-0 z-20 select-none">
+          {/* Logo Mark */}
+          <div className="flex flex-col items-center gap-1 mb-4">
+            <Link
+              href="/"
+              className="w-11 h-11 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20 hover:scale-105 transition-transform"
+              title="LegalTech ERP"
             >
-              {isCollapsed ? (
-                <ChevronRight size={20} className="text-[#64748B]" />
+              <Scale size={24} />
+            </Link>
+            <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400">MB</span>
+          </div>
+
+          {/* Module Icons Navigation */}
+          <nav className="flex-1 flex flex-col gap-3 items-center w-full px-2 overflow-y-auto no-scrollbar py-2">
+            {filteredModules.map((mod) => {
+              const isActive = activeModuleId === mod.id;
+              const IconComp = mod.icon;
+              return (
+                <button
+                  key={mod.id}
+                  onClick={() => handleModuleClick(mod.id)}
+                  className={`group relative w-12 flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all duration-200 ${
+                    isActive
+                      ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800/80"
+                  }`}
+                  title={mod.title}
+                >
+                  <IconComp size={20} className={isActive ? "text-white" : "group-hover:scale-110 transition-transform"} />
+                  <span className="text-[10px] font-medium tracking-tight mt-1 truncate max-w-full">
+                    {mod.shortLabel}
+                  </span>
+
+                  {/* Active Indicator Bar on left edge */}
+                  {isActive && (
+                    <span className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-400 rounded-r-full" />
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* User Profile Avatar at Bottom */}
+          <div className="pt-2 border-t border-slate-800/80 w-full flex flex-col items-center">
+            <Link
+              href="/profile-management"
+              className="group relative p-1 rounded-full hover:ring-2 hover:ring-blue-500 transition-all"
+              title={user ? `${user.username} (${user.role})` : "Profile"}
+            >
+              {user ? (
+                <img
+                  src={
+                    profileImage ||
+                    `https://ui-avatars.com/api/?name=${user.firstName || user.username}&background=2563EB&color=fff&rounded=true&bold=true&size=150`
+                  }
+                  alt="Profile"
+                  className="w-9 h-9 rounded-full object-cover ring-2 ring-slate-700 group-hover:scale-105 transition-transform"
+                />
               ) : (
-                <ChevronLeft size={20} className="text-[#64748B]" />
+                <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 font-bold">
+                  ?
+                </div>
               )}
+            </Link>
+          </div>
+        </aside>
+
+        {/* Tier 2: Secondary Expandable Drawer (Width 220px) */}
+        <aside
+          className={`h-screen bg-white border-r border-[#E2E8F0] shadow-sm flex flex-col transition-all duration-300 ease-in-out overflow-hidden z-10 ${
+            isCollapsed ? "w-0 opacity-0 pointer-events-none" : "w-[220px] opacity-100"
+          }`}
+        >
+          {/* Drawer Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-[#E2E8F0] bg-slate-50/50">
+            <div className="flex flex-col min-w-0">
+              <h3 className="text-sm font-bold text-[#0F172A] truncate tracking-tight">
+                {activeModule?.title || "Workspace"}
+              </h3>
+              <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
+                MODULE FEATURES
+              </span>
+            </div>
+
+            {/* Collapse Toggle Button */}
+            <button
+              onClick={() => setIsCollapsed(true)}
+              className="p-1.5 rounded-lg bg-slate-200/70 hover:bg-slate-300 text-slate-600 hover:text-slate-900 transition-colors"
+              title="Collapse sub-menu"
+              aria-label="Collapse sub-menu"
+            >
+              <ChevronLeft size={16} />
             </button>
           </div>
 
+          {/* Drawer Links List */}
+          <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-1">
+            {activeModule?.items.map((item) => {
+              const isPathActive =
+                pathname === item.path || (item.path !== "/" && pathname?.startsWith(item.path));
+              const SubIcon = item.icon;
 
-          <nav className="flex-1 px-4 py-5">
-            {filteredMenuItems.map((section) => (
-              <div key={section.title} className="mb-5">
-                {/* Section Header */}
-                {!isCollapsed && (
-                  <h3 className="px-3 mb-2 text-[10px] font-semibold text-[#94A3B8] uppercase tracking-widest">
-                    {sectionTitleMap[section.title] || section.title}
-                  </h3>
-                )}
-                <ul className="space-y-0.5">
-                  {section.items.map((item) => {
-                    if (item.isDropdown) {
-                      const active = userRolesOpen;
-                      return (
-                        <li key={item.name}>
-                          <button
-                            onClick={() => setUserRolesOpen(!userRolesOpen)}
-                            className="flex w-full items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-[#64748B] hover:bg-slate-50 transition-colors duration-200"
-                          >
-                            <div className="flex items-center gap-2.5">
-                              <item.icon size={17} className="text-[#64748B] group-hover:text-[#0F172A]" />
-                              {!isCollapsed && <span>{item.name}</span>}
-                            </div>
-                            {userRolesOpen ? (
-                              <ChevronUp size={15} className="text-[#94A3B8]" />
-                            ) : (
-                              <ChevronDown size={15} className="text-[#94A3B8]" />
-                            )}
-                          </button>
-                          {userRolesOpen && (
-                            <ul className="pl-4 mt-1 ml-4 border-l-2 border-slate-200 space-y-0.5">
-                              {item.submenu.map((sub) => (
-                                <li key={sub.path}>
-                                  <Link
-                                    href={sub.path}
-                                    className={`block px-3 py-2 rounded-lg text-sm transition-colors duration-200 ${pathname === sub.path
-                                      ? "text-[#0F172A] bg-slate-100/80 font-semibold border-l-4 border-slate-900"
-                                      : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-50"
-                                      }`}
-                                  >
-                                    {sub.name}
-                                  </Link>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </li>
-                      );
-                    }
-
-                    const active = pathname === item.path || pathname.startsWith(item.path + "/");
-                    const IconComponent = item.icon;
-                    return (
-                      <li key={item.path} className="relative group">
-                        <Link
-                          href={item.path}
-                          title={isCollapsed ? item.name : undefined}
-                          className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 ${active
-                            ? "bg-slate-100/80 border-l-4 border-slate-900 text-[#0F172A] font-semibold"
-                            : "text-[#64748B] hover:bg-slate-50 hover:text-[#0F172A]"
-                            }`}
-                        >
-                          <IconComponent size={17} className="flex-shrink-0" />
-                          {!isCollapsed && <span>{item.name}</span>}
-                        </Link>
-                        {isCollapsed && (
-                          <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-2 py-1 bg-[#0F172A] text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                            {item.name}
-                          </div>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))}
+              return (
+                <Link
+                  key={item.path}
+                  href={item.path}
+                  onClick={() => setIsOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-150 ${
+                    isPathActive
+                      ? "bg-slate-100 text-blue-600 font-bold border-l-4 border-blue-600 shadow-sm"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  }`}
+                >
+                  <SubIcon
+                    size={16}
+                    className={isPathActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"}
+                  />
+                  <span className="truncate">{item.name}</span>
+                </Link>
+              );
+            })}
           </nav>
-          {/* User Profile */}
-          <Link
-            href="/profile-management"
-            className="px-6 py-5 border-t border-[#E2E8F0] flex items-center hover:bg-slate-50 transition"
-          >
-            {user ? (
-              <img
-                src={profileImage || `https://ui-avatars.com/api/?name=${user.firstName || user.username}&background=2563EB&color=fff&rounded=true&bold=true&size=150`}
-                alt="Profile"
-                className="w-9 h-9 rounded-full object-cover ring-2 ring-blue-100 shadow-sm flex-shrink-0 transition-transform group-hover:scale-105"
-              />
-            ) : (
-              <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold ring-2 ring-slate-200 flex-shrink-0">
-                ?
-              </div>
-            )}
 
-            {!isCollapsed && (
-              <div className="ml-3 text-left">
-                <h4 className="font-semibold text-sm text-[#0F172A] capitalize">
-                  {user ? user.username : "Guest User"}
-                </h4>
-                <p className="text-xs text-[#64748B]">
-                  {user ? user.role : "Viewer"}
-                </p>
+          {/* Drawer Footer Status */}
+          {user && (
+            <div className="p-3 border-t border-[#E2E8F0] bg-slate-50/60">
+              <div className="flex items-center justify-between text-[11px] text-slate-500">
+                <span className="font-medium truncate max-w-[130px]">{user.username}</span>
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-semibold border border-blue-100 capitalize">
+                  {user.role}
+                </span>
               </div>
-            )}
-          </Link>
-        </div>
-      </aside>
+            </div>
+          )}
+        </aside>
+      </div>
+
+      {/* Expand Button Floating Trigger when Collapsed */}
+      {isCollapsed && (
+        <button
+          onClick={() => setIsCollapsed(false)}
+          className="fixed bottom-6 left-[84px] z-40 hidden md:flex items-center gap-1.5 px-3 py-2 bg-[#0F172A] text-white text-xs font-semibold rounded-full shadow-xl hover:bg-blue-600 transition-all border border-slate-700"
+          title="Expand sub-menu"
+        >
+          <Layers size={14} />
+          <span>{activeModule?.shortLabel || "Menu"}</span>
+          <ChevronRight size={14} />
+        </button>
+      )}
     </>
   );
-}
+}
