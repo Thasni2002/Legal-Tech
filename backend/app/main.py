@@ -164,6 +164,7 @@ def health_check():
 
 
 from app.advocate.leave_management.routes import router as leave_router
+from app.advocate.ecourts.routes import router as ecourts_router
 
 # Routers
 app.include_router(auth_router)
@@ -180,3 +181,5 @@ app.include_router(clerk_format_physical_file_router)
 app.include_router(clerk_court_visit_router)
 app.include_router(clerk_efiling_router)
 app.include_router(leave_router, prefix="/leaves", tags=["Leave Management"])
+app.include_router(ecourts_router)
+

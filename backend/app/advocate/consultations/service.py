@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Session
 from typing import Optional
 from fastapi import BackgroundTasks
@@ -15,6 +16,7 @@ def find_user_by_name(db: Session, name: str) -> Optional[User]:
     clean_name = name.lower().replace(" ", "")
     clean_name_underscore = name.lower().replace(" ", "_")
     
+    # pyrefly: ignore [missing-import]
     from sqlalchemy import func
     user = db.query(User).filter(
         (User.username.ilike(name)) | 
@@ -176,6 +178,7 @@ def start_instant_consultation(db: Session, data: ConsultationStart, background_
     ).first()
 
     if existing:
+        # pyrefly: ignore [missing-import]
         from fastapi import HTTPException
         raise HTTPException(
             status_code=409,

@@ -476,6 +476,59 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
   });
 
   const [loadingEdit, setLoadingEdit] = useState(false);
+  const [ecourtsLoading, setEcourtsLoading] = useState(false);
+
+  const handleFetchFromECourts = async () => {
+    const cnr = (formData.cnrNumber || "").trim().toUpperCase();
+    if (!cnr) {
+      alert("Please enter a 16-character CNR Number first.");
+      return;
+    }
+    setEcourtsLoading(true);
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/ecourts/lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cnrNumber: cnr }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Failed to fetch from eCourts");
+      }
+      const data = await res.json();
+      
+      // Determine matching category & subtype
+      let category = "Family Court Cases";
+      let subtype = "OP – Original Petition (Family Court)";
+
+      if (data.caseType?.includes("OS") || data.courtType?.includes("Civil")) {
+        category = "Civil Cases";
+        subtype = "OS – Original Suit";
+      }
+
+      setSelectedCategory(category);
+      setSelectedSubtype(subtype);
+
+      setFormData((prev) => ({
+        ...prev,
+        cnrNumber: data.cnrNumber || cnr,
+        caseTitle: data.caseTitle || prev.caseTitle,
+        courtName: data.courtName || prev.courtName,
+        courtType: data.courtType || prev.courtType,
+        caseType: `${category}: ${subtype}`,
+        caseNo: data.caseNo || prev.caseNo,
+        nextHearingDate: data.nextHearingDate || prev.nextHearingDate,
+        clientName: data.petitioner || prev.clientName,
+        clientDistrict: data.district || prev.clientDistrict || "Ernakulam",
+      }));
+
+      alert(`✨ eCourts Data Fetched Successfully!\n\nCase Name: ${data.caseTitle}\nCourt: ${data.courtName}\nCase No: ${data.caseNo}\nNext Hearing: ${data.nextHearingDate || "N/A"}`);
+    } catch (err) {
+      alert(`⚠️ eCourts Fetch Error: ${err.message}`);
+    } finally {
+      setEcourtsLoading(false);
+    }
+  };
 
   // Validation state
   const [errors, setErrors] = useState({});
@@ -1496,7 +1549,17 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
 
               {/* CNR Number */}
               <div>
-                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">CNR Number</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">CNR Number</label>
+                  <button
+                    type="button"
+                    onClick={handleFetchFromECourts}
+                    disabled={ecourtsLoading}
+                    className="px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-lg transition-colors flex items-center gap-1 cursor-pointer border border-blue-200"
+                  >
+                    {ecourtsLoading ? "Fetching..." : "✨ Fetch from eCourts"}
+                  </button>
+                </div>
                 <input
                   type="text"
                   name="cnrNumber"

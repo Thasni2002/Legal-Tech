@@ -132,6 +132,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         { name: "Case Discussion", path: "/consultations", icon: BookOpen, moduleKey: "Consultations" },
         { name: "Billing", path: "/finance-management", icon: CreditCard, moduleKey: "Finance Management" },
         { name: "Calendar", path: "/calendar", icon: Calendar, moduleKey: "Calendar" },
+        { name: "eCourts Services", path: "/ecourts", icon: Scale, moduleKey: "eCourts Integration" },
         { name: "Assigned Tasks", path: "/assigned-tasks", icon: ClipboardList, moduleKey: "Assigned Tasks" },
         { name: "Leave Management", path: "/leave-management", icon: Calendar, moduleKey: "Leave Management" },
       ],
