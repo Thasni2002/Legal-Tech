@@ -177,7 +177,14 @@ export default function CaseView() {
         };
       });
 
-      setCases(normalizedCases);
+      // Sort cases by ID descending so recently added cases appear at the top
+      const sortedCases = [...normalizedCases].sort((a, b) => {
+        const idA = typeof a.id === "number" ? a.id : parseInt(a.id) || 0;
+        const idB = typeof b.id === "number" ? b.id : parseInt(b.id) || 0;
+        return idB - idA;
+      });
+
+      setCases(sortedCases);
     } catch (error) {
       console.warn("CaseView fetchCases network fallback active:", error?.message || error);
     }

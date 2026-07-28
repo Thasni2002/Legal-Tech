@@ -60,7 +60,7 @@ def create_case(db: Session, data: CaseCreate):
 
 
 def get_all_cases(db: Session):
-    cases = db.query(Case).all()
+    cases = db.query(Case).order_by(Case.id.desc()).all()
 
     for case in cases:
         db.expunge(case)

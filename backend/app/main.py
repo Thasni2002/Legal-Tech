@@ -19,7 +19,7 @@ from app.utils.scheduler import start_scheduler
 from app.advocate.dashboard import router as dashboard_router
 from app.advocate.tasks import router as tasks_router
 from app.advocate.tasks.models import Task, TaskMessage
-from app.advocate.case_management.models import CaseDocumentWorkflow
+from app.advocate.case_management.models import CaseDocumentWorkflow, CaseNote
 
 # Clerk models and routers
 from app.clerk.dashboard.models import ClerkTask

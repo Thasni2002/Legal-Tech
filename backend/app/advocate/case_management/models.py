@@ -86,5 +86,20 @@ class AIDocumentHistory(Base):
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
-    case = relationship("app.advocate.case_management.models.Case", backref="ai_document_histories")
+    case = relationship(Case, backref="ai_document_histories")
+
+
+class CaseNote(Base):
+    """Internal advocate notes & tasks for a specific case."""
+    __tablename__ = "case_notes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    case_id = Column(Integer, ForeignKey("case_management_cases.id", ondelete="CASCADE"), nullable=False)
+    text = Column(Text, nullable=False)
+    category = Column(String(100), default="General Note")  # Action Item, Reminder, General Note, Completed
+    author = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    case = relationship(Case, backref="notes")
+
 
