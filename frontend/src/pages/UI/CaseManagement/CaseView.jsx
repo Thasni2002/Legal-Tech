@@ -179,7 +179,7 @@ export default function CaseView() {
 
       setCases(normalizedCases);
     } catch (error) {
-      console.error(error);
+      console.warn("CaseView fetchCases network fallback active:", error?.message || error);
     }
   };
 
