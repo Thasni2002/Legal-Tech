@@ -477,6 +477,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
 
   const [loadingEdit, setLoadingEdit] = useState(false);
   const [ecourtsLoading, setEcourtsLoading] = useState(false);
+  const [ecourtsError, setEcourtsError] = useState("");
   const [autoFetchedCnr, setAutoFetchedCnr] = useState("");
   const lastFetchedCnrRef = useRef("");
   const isECourtsFetched = !!autoFetchedCnr && autoFetchedCnr === (formData.cnrNumber || "").trim().toUpperCase();
@@ -494,6 +495,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
 
     lastFetchedCnrRef.current = cnr;
     setEcourtsLoading(true);
+    setEcourtsError("");
     try {
       const res = await fetch(`${API_BASE_URL}/api/ecourts/lookup`, {
         method: "POST",
@@ -507,157 +509,81 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
       const data = await res.json();
 
       // Smart category & subtype matching from live eCourts payload
+      // Classification is based purely on API response data (courtName, caseType, act, title)
+      // No state-specific CNR prefix assumptions — works for any Indian state
       let category = "";
       let subtype = "";
 
       const rawType = (data.caseType || "").toLowerCase();
+      const rawCategory = (data.caseCategory || data.category || "").toLowerCase();
+      const rawAct = (data.act || data.actSection || "").toLowerCase();
       const rawCourt = (data.courtName || "").toLowerCase();
       const rawTitle = (data.caseTitle || "").toLowerCase();
-      const isHighCourt = cnr.startsWith("KLHC") || rawCourt.includes("high court");
+      const combinedSearchStr = `${rawType} ${rawCategory} ${rawAct} ${rawCourt} ${rawTitle}`.toLowerCase();
 
-      if (rawType.includes("bail") || rawTitle.includes("bail")) {
+      // Detect High Court by court name keywords only (works for any state)
+      const isHighCourt = rawCourt.includes("high court");
+
+      if (
+        combinedSearchStr.includes("family") ||
+        combinedSearchStr.includes("divorce") ||
+        combinedSearchStr.includes("marriage") ||
+        combinedSearchStr.includes("custody") ||
+        combinedSearchStr.includes("maintenance") ||
+        combinedSearchStr.includes("g&w") ||
+        combinedSearchStr.includes("rcr") ||
+        combinedSearchStr.includes("dissolution of muslim marriage")
+      ) {
+        category = "Family Court Cases";
+        if (combinedSearchStr.includes("divorce") || combinedSearchStr.includes("marriage")) {
+          subtype = "Divorce OP – Divorce Petition";
+        } else if (combinedSearchStr.includes("maintenance") || combinedSearchStr.includes("mc")) {
+          subtype = "MC – Maintenance Case";
+        } else {
+          subtype = "OP – Original Petition";
+        }
+      } else if (combinedSearchStr.includes("bail")) {
         category = "Criminal Cases";
         subtype = "Bail Appl. – Bail Application";
-      } else if (rawType.includes("ni act") || rawType.includes("138") || rawType.includes("cheque") || rawTitle.includes("138")) {
+      } else if (combinedSearchStr.includes("ni act") || combinedSearchStr.includes("138") || combinedSearchStr.includes("cheque")) {
         category = "Cheque & Financial Cases";
         subtype = "NI Act Case (Section 138)";
-      } else if (rawType.includes("family") || rawType.includes("divorce") || rawType.includes("custody") || rawType.includes("mc") || rawCourt.includes("family")) {
-        category = "Family Court Cases";
-        if (rawType.includes("divorce")) subtype = "Divorce OP – Divorce Petition";
-        else if (rawType.includes("mc") || rawType.includes("maintenance")) subtype = "MC – Maintenance Case";
-        else subtype = "OP – Original Petition";
-      } else if (rawType.includes("mact") || rawType.includes("accident") || rawType.includes("mv") || rawCourt.includes("mact")) {
+      } else if (combinedSearchStr.includes("mact") || combinedSearchStr.includes("accident") || combinedSearchStr.includes("motor vehicle")) {
         category = "Motor Accident Cases";
         subtype = "OP(MV) – Motor Vehicle Original Petition";
-      } else if (rawType.includes("consumer") || rawCourt.includes("consumer")) {
+      } else if (combinedSearchStr.includes("consumer")) {
         category = "Consumer Cases";
         subtype = "CC – Consumer Complaint";
-      } else if (rawType.includes("sessions") || rawType.includes("sc")) {
+      } else if (combinedSearchStr.includes("sessions")) {
         category = "Criminal Cases";
         subtype = "SC – Sessions Case";
-      } else if (rawType.includes("criminal") || rawType.includes("crl") || rawType.includes("cc") || rawType.includes("st") || rawCourt.includes("magistrate") || rawCourt.includes("cjm") || rawCourt.includes("jfcm")) {
+      } else if (combinedSearchStr.includes("magistrate") || combinedSearchStr.includes("cjm") || combinedSearchStr.includes("jfcm")) {
         category = "Criminal Cases";
         subtype = "CC – Calendar Case";
-      } else if (rawType.includes("civil") || rawType.includes("suit") || rawType.includes("os") || rawType.includes("op") || rawCourt.includes("munsiff") || rawCourt.includes("sub court")) {
+      } else if (combinedSearchStr.includes("civil") || combinedSearchStr.includes("suit") || combinedSearchStr.includes("os") || combinedSearchStr.includes("munsiff") || combinedSearchStr.includes("sub court")) {
         category = "Civil Cases";
         subtype = "OS – Original Suit";
       } else {
-        category = isHighCourt ? "Criminal Cases" : "Criminal Cases";
-        subtype = isHighCourt ? "Bail Appl. – Bail Application" : "CC – Calendar Case";
+        // Generic fallback: use court name to decide; defaults to Civil if unknown
+        category = isHighCourt ? "Criminal Cases" : "Civil Cases";
+        subtype = isHighCourt ? "Bail Appl. – Bail Application" : "OS – Original Suit";
       }
 
       setSelectedCategory(category);
       setSelectedSubtype(subtype);
 
-      // 1. CNR District Resolution (Mapping Kerala & District prefixes)
-      const cnrPrefixMap = {
-        "KLHC": "Ernakulam", // High Court of Kerala, Ernakulam (Kochi)
-        "KLAL": "Alappuzha",
-        "KLEK": "Ernakulam",
-        "KLID": "Idukki",
-        "KLKN": "Kannur",
-        "KLKS": "Kasaragod",
-        "KLCA": "Kasaragod",
-        "KLKL": "Kollam",
-        "KLKO": "Kollam",
-        "KLKM": "Kollam",
-        "KLKT": "Kottayam",
-        "KLKK": "Kozhikode",
-        "KLMP": "Malappuram",
-        "KLPK": "Palakkad",
-        "KLPT": "Pathanamthitta",
-        "KLTS": "Thrissur",
-        "KLTV": "Thiruvananthapuram",
-        "KLWA": "Wayanad",
-      };
+      // 1. District: use directly from API, no Kerala-specific filtering
+      let districtFetched = data.district || data.courtDistrict || "";
 
-      let districtFetched = "";
-      const prefix4 = cnr.slice(0, 4).toUpperCase();
-      if (cnrPrefixMap[prefix4]) {
-        districtFetched = cnrPrefixMap[prefix4];
-      } else if (data.district) {
-        const match = Object.keys(DISTRICT_COURTS).find((d) =>
-          d.toLowerCase().includes(data.district.toLowerCase()) || data.district.toLowerCase().includes(d.toLowerCase())
-        );
-        if (match) districtFetched = match;
-      }
-
-      if (!districtFetched && (isHighCourt || data.courtName?.toLowerCase().includes("high court"))) {
-        districtFetched = "Ernakulam";
-      }
-
-      if (!districtFetched && data.courtName) {
-        const match = Object.keys(DISTRICT_COURTS).find((d) =>
-          data.courtName.toLowerCase().includes(d.toLowerCase())
-        );
-        if (match) districtFetched = match;
-      }
-
-      if (!districtFetched) {
-        districtFetched = "Ernakulam";
-      }
-
-      // 2. Court Name & Type Keyword & Fuzzy Matching
-      const availableCourtsForDistrict = DISTRICT_COURTS[districtFetched] || Object.values(DISTRICT_COURTS).flat();
-      let matchedCourtName = "";
+      // 2. Court Name & Type: use directly from API, no local list matching
       const rawCourtName = (data.courtName || "").trim();
-      const rawJudge = (data.presidingJudge || "").trim();
-      const combinedCourtStr = `${rawCourtName} ${rawJudge}`.trim();
-      const rawLower = combinedCourtStr.toLowerCase();
-
-      if (isHighCourt || rawLower.includes("high court")) {
-        matchedCourtName = availableCourtsForDistrict.find((c) => c.includes("High Court of Kerala")) || "High Court of Kerala, Ernakulam (Kochi)";
-      } else if (rawLower.includes("magistrate") || rawLower.includes("cjm") || rawLower.includes("jfcm")) {
-        matchedCourtName = availableCourtsForDistrict.find((c) => c.includes("Judicial First Class Magistrate") || c.includes("Magistrate"));
-      } else if (rawLower.includes("family")) {
-        matchedCourtName = availableCourtsForDistrict.find((c) => c.includes("Family Court"));
-      } else if (rawLower.includes("mact") || rawLower.includes("accident")) {
-        matchedCourtName = availableCourtsForDistrict.find((c) => c.includes("MACT"));
-      } else if (rawLower.includes("pocso")) {
-        matchedCourtName = availableCourtsForDistrict.find((c) => c.includes("POCSO"));
-      } else if (rawLower.includes("sub court")) {
-        matchedCourtName = availableCourtsForDistrict.find((c) => c.includes("Sub Court"));
-      } else if (rawLower.includes("munsiff")) {
-        matchedCourtName = availableCourtsForDistrict.find((c) => c.includes("Munsiff"));
-      }
-
-      if (!matchedCourtName && rawCourtName) {
-        matchedCourtName = availableCourtsForDistrict.find((c) => c.toLowerCase() === rawCourtName.toLowerCase());
-
-        if (!matchedCourtName) {
-          matchedCourtName = availableCourtsForDistrict.find((c) =>
-            c.toLowerCase().includes(rawCourtName.toLowerCase()) || rawCourtName.toLowerCase().includes(c.toLowerCase())
-          );
-        }
-
-        if (!matchedCourtName) {
-          const tokens = rawCourtName.toLowerCase().split(/[\s,()]+/).filter((t) => t.length > 2);
-          let maxScore = 0;
-          for (const c of availableCourtsForDistrict) {
-            const cLower = c.toLowerCase();
-            let score = 0;
-            for (const token of tokens) {
-              if (cLower.includes(token)) score++;
-            }
-            if (score > maxScore) {
-              maxScore = score;
-              matchedCourtName = c;
-            }
-          }
-        }
-      }
-
-      const finalCourtName = matchedCourtName || rawCourtName || (availableCourtsForDistrict.length > 0 ? availableCourtsForDistrict[0] : "");
+      const finalCourtName = rawCourtName || "";
       const courtTypes = getTypesForCourtName(finalCourtName);
-      const matchedCourtType = isHighCourt
-        ? "Bail"
-        : (courtTypes && courtTypes.length > 0 ? courtTypes[0] : "Criminal");
+      const matchedCourtType = courtTypes && courtTypes.length > 0 ? courtTypes[0] : "";
 
-      // 3. Case ID and Case No auto generation
+
+      // 3. Case ID preservation (keep sequential system caseId format case-YYYY-XXX)
       const fetchedCaseNo = data.caseNo || "";
-      const derivedCaseId = fetchedCaseNo
-        ? fetchedCaseNo.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase()
-        : (data.cnrNumber || cnr);
 
       // 4. Clean Client details & Facts (No auto email generation per user request)
       const fetchedClientName = data.petitioner || formData.clientName || "";
@@ -677,7 +603,6 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
       setFormData((prev) => ({
         ...prev,
         cnrNumber: data.cnrNumber || cnr,
-        caseId: derivedCaseId || prev.caseId,
         caseTitle: data.caseTitle || prev.caseTitle,
         courtName: finalCourtName || prev.courtName,
         courtType: matchedCourtType || prev.courtType || "Criminal",
@@ -697,14 +622,16 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
       setAutoFetchedCnr(cnr);
 
       if (!isAuto) {
-        alert(`✨ Real eCourts Data Fetched Successfully!\n\nCase Title: ${data.caseTitle}\nCourt: ${finalCourtName}\nCase No: ${fetchedCaseNo || cnr}\nNext Hearing: ${data.nextHearingDate || "N/A"}`);
+        // Success: clear any previous error — banner below shows the green synced status
+        setEcourtsError("");
       }
     } catch (err) {
-      if (!isAuto) {
-        alert(`⚠️ eCourts Fetch Error: ${err.message}`);
-      } else {
-        console.warn("Auto eCourts fetch error:", err.message);
-      }
+      const isCreditsError = err.message && err.message.toLowerCase().includes("insufficient");
+      const friendlyMsg = isCreditsError
+        ? "⚠️ eCourts API has insufficient credits. Please recharge the account to auto-fetch case details. You can still fill in the form manually."
+        : `⚠️ eCourts lookup failed: ${err.message}`;
+      setEcourtsError(friendlyMsg);
+      console.warn("eCourts fetch error:", err.message);
     } finally {
       setEcourtsLoading(false);
     }
@@ -1659,19 +1586,14 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client District / Location</label>
                     </div>
-                    <select
+                    <input
+                      type="text"
                       name="clientDistrict"
+                      placeholder="e.g. Kannur, Pathanamthitta, Ernakulam"
                       value={formData.clientDistrict || ""}
-                      onChange={handleChange}
-                      className={`${baseInputClass} ${getBorderClass("clientDistrict")}`}
-                    >
-                      <option value="">Select District / Location</option>
-                      {Object.keys(DISTRICT_COURTS).map((dist) => (
-                        <option key={dist} value={dist}>
-                          {dist}
-                        </option>
-                      ))}
-                    </select>
+                      readOnly={true}
+                      className={`${baseInputClass} ${getBorderClass("clientDistrict")} bg-slate-100 cursor-not-allowed text-slate-700 font-medium`}
+                    />
                   </div>
                 </div>
 
@@ -1731,10 +1653,10 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                 <input
                   type="text"
                   name="caseTitle"
-                  placeholder="e.g. State vs. John Doe"
+                  placeholder="Auto-fetched from eCourts"
                   value={formData.caseTitle}
-                  onChange={handleChange}
-                  className={`${baseInputClass} ${getBorderClass("caseTitle")}`}
+                  readOnly={true}
+                  className={`${baseInputClass} ${getBorderClass("caseTitle")} bg-slate-100 cursor-not-allowed text-slate-700 font-medium`}
                 />
                 {touched.caseTitle && errors.caseTitle && <ErrorMsg message={errors.caseTitle} />}
               </div>
@@ -1773,10 +1695,16 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                     </div>
                   )}
                 </div>
-                {autoFetchedCnr && autoFetchedCnr === (formData.cnrNumber || "").trim().toUpperCase() && !ecourtsLoading && (
+                {autoFetchedCnr && autoFetchedCnr === (formData.cnrNumber || "").trim().toUpperCase() && !ecourtsLoading && !ecourtsError && (
                   <p className="mt-1 text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
                     <CheckCircle size={12} /> Auto-fetched & synced with eCourts
                   </p>
+                )}
+                {ecourtsError && (
+                  <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 leading-relaxed flex items-start gap-2">
+                    <span className="mt-0.5 flex-shrink-0 w-4 h-4 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center font-bold text-[10px]">!</span>
+                    <span>{ecourtsError}</span>
+                  </div>
                 )}
                 {touched.cnrNumber && errors.cnrNumber && <ErrorMsg message={errors.cnrNumber} />}
               </div>
@@ -1786,20 +1714,14 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Case Category</label>
                 </div>
-                <select
+                <input
+                  type="text"
                   name="caseCategory"
+                  placeholder="Auto-fetched from eCourts"
                   value={selectedCategory}
-                  onChange={handleCategoryChange}
-                  disabled={isECourtsFetched}
-                  className={`${baseInputClass} ${getBorderClass("caseType")} ${isECourtsFetched ? "bg-slate-100 cursor-not-allowed text-slate-600" : ""}`}
-                >
-                  <option value="">Select Category</option>
-                  {Object.keys(keralaCaseCategories).map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
+                  readOnly={true}
+                  className={`${baseInputClass} ${getBorderClass("caseType")} bg-slate-100 cursor-not-allowed text-slate-700 font-medium`}
+                />
                 {touched.caseType && errors.caseType && !selectedCategory && <ErrorMsg message={errors.caseType} />}
               </div>
 
@@ -1808,22 +1730,17 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Case Subtype / Type</label>
                 </div>
-                <select
+                <input
+                  type="text"
                   name="caseSubtype"
+                  placeholder="Auto-fetched from eCourts"
                   value={selectedSubtype}
-                  onChange={handleSubtypeChange}
-                  disabled={isECourtsFetched || !selectedCategory}
-                  className={`${baseInputClass} ${getBorderClass("caseType")} ${isECourtsFetched || !selectedCategory ? "bg-slate-100 cursor-not-allowed text-slate-600" : ""}`}
-                >
-                  <option value="">Select Subtype</option>
-                  {selectedCategory &&
-                    (keralaCaseCategories[selectedCategory] || []).map((sub) => (
-                      <option key={sub} value={sub}>
-                        {sub}
-                      </option>
-                    ))}
-                </select>
-                {touched.caseType && errors.caseType && selectedCategory && <ErrorMsg message={errors.caseType} />}
+                  readOnly={true}
+                  className={`${baseInputClass} ${getBorderClass("caseType")} bg-slate-100 cursor-not-allowed text-slate-700 font-medium`}
+                />
+                {touched.caseType && errors.caseType && selectedCategory && !selectedSubtype && (
+                  <ErrorMsg message={errors.caseType} />
+                )}
               </div>
 
               {/* Case Number */}
@@ -1906,24 +1823,6 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                     Category: {selectedCategory}
                   </span>
                 )}
-                {canFilterByCategory && !showAllCourts && (
-                  <button
-                    type="button"
-                    onClick={() => setShowAllCourts(true)}
-                    className="text-xs font-bold text-[#64748B] bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-full transition cursor-pointer border border-slate-200"
-                  >
-                    Show All Courts
-                  </button>
-                )}
-                {canFilterByCategory && showAllCourts && (
-                  <button
-                    type="button"
-                    onClick={() => setShowAllCourts(false)}
-                    className="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-full transition cursor-pointer border border-blue-200"
-                  >
-                    Filter by Category
-                  </button>
-                )}
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -1931,42 +1830,28 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Court Name</label>
                 </div>
-                <select
+                <input
+                  type="text"
                   name="courtName"
-                  value={formData.courtName}
-                  onChange={handleChange}
-                  disabled={isECourtsFetched}
-                  className={`${baseInputClass} ${getBorderClass("courtName")} ${isECourtsFetched ? "bg-slate-100 cursor-not-allowed text-slate-600" : ""}`}
-                >
-                  <option value="">Select Court Name</option>
-                  {(() => {
-                    const options = [...(availableCourts || [])];
-                    if (formData.courtName && !options.includes(formData.courtName)) {
-                      options.unshift(formData.courtName);
-                    }
-                    return options.map((court, idx) => (
-                      <option key={idx} value={court}>{court}</option>
-                    ));
-                  })()}
-                </select>
+                  placeholder="Auto-fetched from eCourts"
+                  value={formData.courtName || ""}
+                  readOnly={true}
+                  className={`${baseInputClass} ${getBorderClass("courtName")} bg-slate-100 cursor-not-allowed text-slate-700 font-medium`}
+                />
                 {touched.courtName && errors.courtName && <ErrorMsg message={errors.courtName} />}
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Court Type</label>
                 </div>
-                <select
+                <input
+                  type="text"
                   name="courtType"
-                  value={formData.courtType}
-                  onChange={handleChange}
-                  disabled={isECourtsFetched}
-                  className={`${baseInputClass} ${getBorderClass("courtType")} ${isECourtsFetched ? "bg-slate-100 cursor-not-allowed text-slate-600" : ""}`}
-                >
-                  <option value="">Select Court Type</option>
-                  {(getTypesForCourtName(formData.courtName) || []).map((type) => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
+                  placeholder="Auto-fetched from eCourts"
+                  value={formData.courtType || ""}
+                  readOnly={true}
+                  className={`${baseInputClass} ${getBorderClass("courtType")} bg-slate-100 cursor-not-allowed text-slate-700 font-medium`}
+                />
                 {touched.courtType && errors.courtType && <ErrorMsg message={errors.courtType} />}
               </div>
             </div>
