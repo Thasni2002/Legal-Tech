@@ -20,7 +20,9 @@ import {
   ChevronRight,
   RefreshCw,
   X,
-  Building
+  Building,
+  LayoutGrid,
+  List
 } from "lucide-react";
 import { usePermissions } from "@/utils/usePermissions";
 import { API_BASE_URL } from "@/utils/api";
@@ -33,6 +35,7 @@ export default function ClientView() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [viewMode, setViewMode] = useState("list"); // "list" or "grid"
   const [clientsPage, setClientsPage] = useState(0);
   const [showEditModal, setShowEditModal] = useState(false);
   const [metrics, setMetrics] = useState({
@@ -336,11 +339,188 @@ export default function ClientView() {
                 Closed
               </button>
             </div>
+
+            {/* View Mode Toggle (Grid vs List) */}
+            <div className="flex items-center gap-1 bg-[#F8FAFC] p-1 rounded-xl border border-[#E2E8F0] text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setViewMode("grid")}
+                title="Grid View"
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  viewMode === "grid"
+                    ? "bg-white text-[#2563EB] font-bold shadow-xs border border-[#E2E8F0]"
+                    : "text-[#64748B] hover:text-[#0F172A]"
+                }`}
+              >
+                <LayoutGrid size={14} />
+                <span className="hidden sm:inline">Grid</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                title="List View"
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  viewMode === "list"
+                    ? "bg-white text-[#2563EB] font-bold shadow-xs border border-[#E2E8F0]"
+                    : "text-[#64748B] hover:text-[#0F172A]"
+                }`}
+              >
+                <List size={14} />
+                <span className="hidden sm:inline">List</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Desktop Table View */}
-        <div className="hidden md:block overflow-x-auto rounded-xl border border-[#E2E8F0]">
+        {/* VIEW 1: GRID VIEW (When viewMode === "grid") */}
+        {viewMode === "grid" && (
+          <div>
+            {loading ? (
+              <div className="py-12 text-center text-[#64748B]">
+                <RefreshCw size={20} className="animate-spin mx-auto mb-2 text-[#2563EB]" />
+                <p className="text-xs">Loading client overview...</p>
+              </div>
+            ) : paginatedClients.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {paginatedClients.map((client) => {
+                  const initials = client.clientName ? client.clientName.charAt(0).toUpperCase() : "?";
+                  const statusLower = (client.status || "").toLowerCase();
+                  const isActive = statusLower === "active" || statusLower === "progress" || statusLower === "in progress";
+                  const isClosed = statusLower === "closed" || statusLower === "inactive";
+
+                  return (
+                    <div
+                      key={client.clientId}
+                      className="bg-white rounded-2xl border border-[#E2E8F0] p-4 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition-all space-y-4"
+                    >
+                      {/* Card Top Header */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          {client.profileImage ? (
+                            <img
+                              src={client.profileImage}
+                              alt={client.clientName}
+                              className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-100 shadow-xs shrink-0"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] text-white flex items-center justify-center font-bold text-sm select-none shadow-xs shrink-0">
+                              {initials}
+                            </div>
+                          )}
+                          <div>
+                            <h3 className="font-bold text-[#0F172A] text-sm leading-tight">
+                              {client.clientName}
+                            </h3>
+                            <span className="text-[10px] text-[#94A3B8] font-mono mt-0.5 block">
+                              {client.clientId}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card Metadata Info */}
+                      <div className="space-y-2 text-xs text-[#64748B] bg-[#F8FAFC] p-3 rounded-xl border border-[#E2E8F0]/60">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-[#94A3B8]">Court Room:</span>
+                          <span className="font-bold text-[#0F172A] truncate max-w-[170px]" title={client.courtName}>
+                            {client.courtName || "Unassigned"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-[#94A3B8]">Active Cases:</span>
+                          <span className="px-2 py-0.5 rounded-md bg-white border border-[#E2E8F0] font-bold text-[#0F172A]">
+                            {client.activeCases}
+                          </span>
+                        </div>
+
+                        <a
+                          href={`tel:${client.contactNumber}`}
+                          className="flex items-center gap-2 hover:text-[#2563EB] transition-colors"
+                        >
+                          <Phone size={12} className="text-[#94A3B8] shrink-0" />
+                          <span className="truncate">{client.contactNumber || "N/A"}</span>
+                        </a>
+
+                        <a
+                          href={`mailto:${client.emailId}`}
+                          className="flex items-center gap-2 hover:text-[#2563EB] transition-colors"
+                          title={client.emailId}
+                        >
+                          <Mail size={12} className="text-[#94A3B8] shrink-0" />
+                          <span className="truncate">{client.emailId || "N/A"}</span>
+                        </a>
+                      </div>
+
+                      {/* Card Footer Actions */}
+                      <div className="flex items-center justify-between pt-2 border-t border-[#F1F5F9] gap-2">
+                        <button
+                          onClick={() => {
+                            localStorage.setItem("clientData", JSON.stringify({
+                              clientId: client.clientId,
+                              fullName: client.clientName,
+                              clientName: client.clientName,
+                              email: client.emailId,
+                              emailId: client.emailId,
+                              phone: client.contactNumber,
+                              contactNumber: client.contactNumber,
+                              profileImage: client.profileImage || null,
+                              caseStatus: client.status,
+                              status: client.status,
+                            }));
+                            router.push("/client-management/view-history");
+                          }}
+                          className="flex-1 py-1.5 px-3 bg-[#F1F5F9] hover:bg-blue-50 text-[#0F172A] hover:text-[#2563EB] rounded-xl transition border border-[#E2E8F0] flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer"
+                        >
+                          <Eye size={13} />
+                          History
+                        </button>
+
+                        {hasPermission("Client Management", "edit") && (
+                          <button
+                            onClick={() => {
+                              localStorage.setItem("clientData", JSON.stringify({
+                                clientId: client.clientId,
+                                fullName: client.clientName,
+                                email: client.emailId,
+                                phone: client.contactNumber
+                              }));
+                              setShowEditModal(true);
+                            }}
+                            className="py-1.5 px-3 bg-[#F1F5F9] hover:bg-amber-50 text-[#0F172A] hover:text-amber-700 rounded-xl transition border border-[#E2E8F0] flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer"
+                            title="Edit Client"
+                          >
+                            <Edit3 size={13} />
+                            Edit
+                          </button>
+                        )}
+
+                        {hasPermission("Client Management", "delete") && (
+                          <button
+                            onClick={() => handleDelete(client.clientId)}
+                            className="py-1.5 px-3 bg-[#F1F5F9] hover:bg-red-50 text-[#0F172A] hover:text-red-600 rounded-xl transition border border-[#E2E8F0] flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer"
+                            title="Delete Client"
+                          >
+                            <Trash2 size={13} />
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState query={searchQuery} resetSearch={() => setSearchQuery("")} />
+            )}
+          </div>
+        )}
+
+        {/* VIEW 2: LIST VIEW (When viewMode === "list") */}
+        {viewMode === "list" && (
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto rounded-xl border border-[#E2E8F0]">
           {loading ? (
             <div className="py-12 text-center text-[#64748B]">
               <RefreshCw size={20} className="animate-spin mx-auto mb-2 text-[#2563EB]" />
@@ -354,7 +534,6 @@ export default function ClientView() {
                   <th className="py-3 px-4">Contact Details</th>
                   <th className="py-3 px-4">Court Room</th>
                   <th className="py-3 px-4 text-center">Cases</th>
-                  <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -420,36 +599,6 @@ export default function ClientView() {
                         <span className="px-2 py-0.5 rounded-md bg-[#F1F5F9] border border-[#E2E8F0]">
                           {client.activeCases}
                         </span>
-                      </td>
-
-                      <td className="py-3 px-4">
-                        <div className="flex items-center">
-                          <span className="relative flex h-2 w-2 mr-2">
-                            {isActive && (
-                              <>
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                              </>
-                            )}
-                            {isClosed && (
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                            )}
-                            {!isActive && !isClosed && (
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#94A3B8]"></span>
-                            )}
-                          </span>
-                          <span
-                            className={`text-xs font-bold capitalize ${
-                              isActive
-                                ? "text-emerald-700"
-                                : isClosed
-                                ? "text-red-700"
-                                : "text-[#64748B]"
-                            }`}
-                          >
-                            {client.status}
-                          </span>
-                        </div>
                       </td>
 
                       <td className="py-3 px-4 text-right">
@@ -558,16 +707,6 @@ export default function ClientView() {
                         </span>
                       </div>
                     </div>
-
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize border ${
-                        isActive
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : "bg-slate-100 text-slate-600 border-slate-200"
-                      }`}
-                    >
-                      {client.status}
-                    </span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-[#64748B]">
@@ -649,6 +788,8 @@ export default function ClientView() {
             <EmptyState query={searchQuery} resetSearch={() => setSearchQuery("")} />
           )}
         </div>
+        </>
+        )}
 
         {/* Pagination Controls */}
         {filteredClients.length > ITEMS_PER_PAGE && (

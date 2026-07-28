@@ -68,6 +68,7 @@ const ALL_GROUPS = [
       { key: "Assigned Tasks", label: "Assigned Tasks" },
       { key: "Profile", label: "Profile" },
       { key: "Leave Management", label: "Leave Management" },
+      { key: "eCourts Integration", label: "eCourts Services" },
     ],
   },
   {

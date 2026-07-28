@@ -27,6 +27,8 @@ import {
   ChevronRight,
   Send,
   EyeOff,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import { usePermissions } from "@/utils/usePermissions";
 
@@ -133,6 +135,7 @@ export default function CaseView() {
   const [cases, setCases] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [casesPage, setCasesPage] = useState(0);
+  const [viewMode, setViewMode] = useState("grid");
   const [deleteConfirm, setDeleteConfirm] = useState(null); // holds case id to delete
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -288,7 +291,37 @@ export default function CaseView() {
             <h2 className="font-bold text-xl text-[#0F172A]">My Cases</h2>
             <p className="text-sm text-[#64748B] mt-0.5">{filteredCases.length} case{filteredCases.length !== 1 ? "s" : ""} found</p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto items-stretch sm:items-center">
+            {/* View Mode Toggle (Grid vs List) */}
+            <div className="flex items-center gap-1 bg-[#F8FAFC] p-1 rounded-xl border border-[#E2E8F0] text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setViewMode("grid")}
+                title="Grid View"
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  viewMode === "grid"
+                    ? "bg-white text-[#2563EB] font-bold shadow-xs border border-[#E2E8F0]"
+                    : "text-[#64748B] hover:text-[#0F172A]"
+                }`}
+              >
+                <LayoutGrid size={14} />
+                <span className="hidden sm:inline">Grid</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                title="List View"
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  viewMode === "list"
+                    ? "bg-white text-[#2563EB] font-bold shadow-xs border border-[#E2E8F0]"
+                    : "text-[#64748B] hover:text-[#0F172A]"
+                }`}
+              >
+                <List size={14} />
+                <span className="hidden sm:inline">List</span>
+              </button>
+            </div>
+
             {/* Search */}
             <div className="relative">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
@@ -315,172 +348,262 @@ export default function CaseView() {
           </div>
         </div>
 
-        {/* Desktop / Tablet Table View (md and above) */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-[#F8FAFC] border-b border-[#F1F5F9]">
-                {["Case Name", "Case ID", "Client", "Court", "Status", "Actions"].map((h) => (
-                  <th key={h} className="px-5 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">
-                    {h}
-                  </th>
+        {/* VIEW 1: GRID VIEW */}
+        {viewMode === "grid" ? (
+          <div className="p-5 bg-[#F8FAFC]/50">
+            {filteredCases.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredCases.slice(casesPage * 6, (casesPage + 1) * 6).map((item) => (
+                  <div
+                    key={item.id}
+                    className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-xs hover:shadow-md hover:border-blue-300 transition-all flex flex-col justify-between space-y-4"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-xs font-mono font-bold text-[#2563EB] bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
+                            {item.case_id}
+                          </span>
+                          {item.case_no && (
+                            <span className="text-[11px] font-semibold text-[#334155] bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                              {item.case_no}
+                            </span>
+                          )}
+                        </div>
+                        <StatusBadge status={item.status} />
+                      </div>
+
+                      <div>
+                        <h3 className="font-bold text-[#0F172A] text-base leading-snug line-clamp-2" title={item.case_title}>
+                          {item.case_title}
+                        </h3>
+                        <p className="text-xs text-[#94A3B8] mt-1 font-medium">
+                          {item.case_type && item.case_type.includes(": ")
+                            ? item.case_type.replace(": ", " · ")
+                            : item.case_type}
+                        </p>
+                      </div>
+
+                      <div className="space-y-2 text-xs text-[#64748B] bg-[#F8FAFC] p-3 rounded-xl border border-[#E2E8F0]/60">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-[#94A3B8]">Client:</span>
+                          <div className="text-right truncate max-w-[160px]">
+                            <span className="font-bold text-[#0F172A]">{item.client_name || "—"}</span>
+                            {item.client_role && (
+                              <span className="ml-1 text-[10px] font-bold text-[#2563EB]">({item.client_role})</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-[#94A3B8]">Court:</span>
+                          <span className="font-semibold text-[#475569] truncate max-w-[160px]" title={item.court_name}>
+                            {item.court_name || "Unassigned"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-3 border-t border-[#F1F5F9]">
+                      <button
+                        onClick={() => router.push(`/case-management/view/${item.id}`)}
+                        className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-xl transition font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Eye size={14} /> View Case
+                      </button>
+                      {hasPermission("Case Management", "delete") && (
+                        <button
+                          onClick={() => setDeleteConfirm(item.id)}
+                          className="p-2 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl transition cursor-pointer"
+                          title="Delete Case"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#F8FAFC]">
+              </div>
+            ) : (
+              <div className="py-16 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-[#F1F5F9] flex items-center justify-center mx-auto mb-3">
+                  <Scale size={24} className="text-[#CBD5E1]" />
+                </div>
+                <p className="text-[#64748B] font-medium">No cases found</p>
+                <p className="text-[#94A3B8] text-sm mt-1">Try adding a new case or adjusting your search</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* VIEW 2: LIST VIEW */
+          <>
+            {/* Desktop / Tablet Table View (md and above) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-[#F8FAFC] border-b border-[#F1F5F9]">
+                    {["Case Name", "Case ID", "Client", "Court", "Status", "Actions"].map((h) => (
+                      <th key={h} className="px-5 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#F8FAFC]">
+                  {filteredCases.length > 0 ? (
+                    filteredCases.slice(casesPage * 5, (casesPage + 1) * 5).map((item) => (
+                      <tr
+                        key={item.id}
+                        className="hover:bg-[#F8FAFC] transition-colors duration-150 group"
+                      >
+                        <td className="px-5 py-4">
+                          <p className="text-sm font-semibold text-[#0F172A] max-w-[220px] truncate">{item.case_title}</p>
+                          <p className="text-xs text-[#94A3B8] mt-0.5">
+                            {item.case_type && item.case_type.includes(": ")
+                              ? item.case_type.replace(": ", " · ")
+                              : item.case_type}
+                          </p>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-xs font-mono font-bold text-[#2563EB] bg-blue-50 px-2.5 py-1 rounded-lg w-fit">
+                              {item.case_id}
+                            </span>
+                            {item.case_no && (
+                              <span className="text-xs font-semibold text-[#334155] bg-slate-100 px-2 py-0.5 rounded w-fit border border-slate-200">
+                                {item.case_no}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <p className="text-sm text-[#0F172A] font-semibold">{item.client_name}</p>
+                          {item.client_role ? (
+                            <span className="inline-block mt-1 text-[11px] font-bold text-[#2563EB] bg-blue-50/80 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-wider">
+                              {item.client_role}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="px-5 py-4 text-sm text-[#475569]">{item.court_name}</td>
+                        <td className="px-5 py-4">
+                          <StatusBadge status={item.status} />
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => router.push(`/case-management/view/${item.id}`)}
+                              title="View Case"
+                              className="p-2 rounded-lg bg-blue-50 text-[#2563EB] hover:bg-blue-100 transition cursor-pointer"
+                            >
+                              <Eye size={15} />
+                            </button>
+                            {hasPermission("Case Management", "delete") && (
+                              <button
+                                onClick={() => setDeleteConfirm(item.id)}
+                                title="Delete Case"
+                                className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition cursor-pointer"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="6" className="px-5 py-16 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-14 h-14 rounded-2xl bg-[#F1F5F9] flex items-center justify-center">
+                            <Scale size={24} className="text-[#CBD5E1]" />
+                          </div>
+                          <p className="text-[#64748B] font-medium">No cases found</p>
+                          <p className="text-[#94A3B8] text-sm">Try adding a new case or adjusting your search</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card List View (sm and below) */}
+            <div className="block md:hidden divide-y divide-[#F1F5F9]">
               {filteredCases.length > 0 ? (
                 filteredCases.slice(casesPage * 5, (casesPage + 1) * 5).map((item) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-[#F8FAFC] transition-colors duration-150 group"
-                  >
-                    <td className="px-5 py-4">
-                      <p className="text-sm font-semibold text-[#0F172A] max-w-[220px] truncate">{item.case_title}</p>
-                      <p className="text-xs text-[#94A3B8] mt-0.5">
-                        {item.case_type && item.case_type.includes(": ")
-                          ? item.case_type.replace(": ", " · ")
-                          : item.case_type}
-                      </p>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs font-mono font-bold text-[#2563EB] bg-blue-50 px-2.5 py-1 rounded-lg w-fit">
-                          {item.case_id}
-                        </span>
-                        {item.case_no && (
-                          <span className="text-xs font-semibold text-[#334155] bg-slate-100 px-2 py-0.5 rounded w-fit border border-slate-200">
-                            {item.case_no}
-                          </span>
-                        )}
+                  <div key={item.id} className="p-4 flex flex-col gap-3 hover:bg-slate-50/60 transition">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="font-bold text-sm text-[#0F172A] line-clamp-1">{item.case_title}</h3>
+                        <p className="text-xs text-[#94A3B8] mt-0.5">
+                          {item.case_type && item.case_type.includes(": ")
+                            ? item.case_type.replace(": ", " · ")
+                            : item.case_type}
+                        </p>
                       </div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <p className="text-sm text-[#0F172A] font-semibold">{item.client_name}</p>
-                      {item.client_role ? (
-                        <span className="inline-block mt-1 text-[11px] font-bold text-[#2563EB] bg-blue-50/80 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-wider">
-                          {item.client_role}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="px-5 py-4 text-sm text-[#475569]">{item.court_name}</td>
-                    <td className="px-5 py-4">
                       <StatusBadge status={item.status} />
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => router.push(`/case-management/view/${item.id}`)}
-                          title="View Case"
-                          className="p-2 rounded-lg bg-blue-50 text-[#2563EB] hover:bg-blue-100 transition cursor-pointer"
-                        >
-                          <Eye size={15} />
-                        </button>
-                        {hasPermission("Case Management", "delete") && (
-                          <button
-                            onClick={() => setDeleteConfirm(item.id)}
-                            title="Delete Case"
-                            className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition cursor-pointer"
-                          >
-                            <Trash2 size={15} />
-                          </button>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="font-mono font-bold text-[#2563EB] bg-blue-50 px-2 py-0.5 rounded-md">
+                        {item.case_id}
+                      </span>
+                      {item.case_no && (
+                        <span className="font-semibold text-[#334155] bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                          {item.case_no}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 text-xs">
+                      <div>
+                        <span className="text-[#94A3B8] block text-[10px] uppercase font-bold">Client</span>
+                        <span className="font-semibold text-[#0F172A]">{item.client_name || "—"}</span>
+                        {item.client_role && (
+                          <span className="ml-1 text-[10px] font-bold text-[#2563EB]">({item.client_role})</span>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                      <div>
+                        <span className="text-[#94A3B8] block text-[10px] uppercase font-bold">Court</span>
+                        <span className="font-medium text-[#475569] line-clamp-1">{item.court_name || "—"}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-2">
+                      <button
+                        onClick={() => router.push(`/case-management/view/${item.id}`)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-blue-50 text-[#2563EB] font-semibold text-xs hover:bg-blue-100 transition"
+                      >
+                        <Eye size={14} /> View Case
+                      </button>
+                      {hasPermission("Case Management", "delete") && (
+                        <button
+                          onClick={() => setDeleteConfirm(item.id)}
+                          className="py-2 px-3 rounded-lg bg-red-50 text-red-500 font-semibold text-xs hover:bg-red-100 transition"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 ))
               ) : (
-                <tr>
-                  <td colSpan="6" className="px-5 py-16 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="w-14 h-14 rounded-2xl bg-[#F1F5F9] flex items-center justify-center">
-                        <Scale size={24} className="text-[#CBD5E1]" />
-                      </div>
-                      <p className="text-[#64748B] font-medium">No cases found</p>
-                      <p className="text-[#94A3B8] text-sm">Try adding a new case or adjusting your search</p>
-                    </div>
-                  </td>
-                </tr>
+                <div className="p-8 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-[#F1F5F9] flex items-center justify-center mx-auto mb-3">
+                    <Scale size={20} className="text-[#CBD5E1]" />
+                  </div>
+                  <p className="text-[#64748B] font-medium text-sm">No cases found</p>
+                  <p className="text-[#94A3B8] text-xs mt-1">Try adding a new case or adjusting your search</p>
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile Card List View (sm and below) */}
-        <div className="block md:hidden divide-y divide-[#F1F5F9]">
-          {filteredCases.length > 0 ? (
-            filteredCases.slice(casesPage * 5, (casesPage + 1) * 5).map((item) => (
-              <div key={item.id} className="p-4 flex flex-col gap-3 hover:bg-slate-50/60 transition">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h3 className="font-bold text-sm text-[#0F172A] line-clamp-1">{item.case_title}</h3>
-                    <p className="text-xs text-[#94A3B8] mt-0.5">
-                      {item.case_type && item.case_type.includes(": ")
-                        ? item.case_type.replace(": ", " · ")
-                        : item.case_type}
-                    </p>
-                  </div>
-                  <StatusBadge status={item.status} />
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="font-mono font-bold text-[#2563EB] bg-blue-50 px-2 py-0.5 rounded-md">
-                    {item.case_id}
-                  </span>
-                  {item.case_no && (
-                    <span className="font-semibold text-[#334155] bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                      {item.case_no}
-                    </span>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 text-xs">
-                  <div>
-                    <span className="text-[#94A3B8] block text-[10px] uppercase font-bold">Client</span>
-                    <span className="font-semibold text-[#0F172A]">{item.client_name || "—"}</span>
-                    {item.client_role && (
-                      <span className="ml-1 text-[10px] font-bold text-[#2563EB]">({item.client_role})</span>
-                    )}
-                  </div>
-                  <div>
-                    <span className="text-[#94A3B8] block text-[10px] uppercase font-bold">Court</span>
-                    <span className="font-medium text-[#475569] line-clamp-1">{item.court_name || "—"}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  <button
-                    onClick={() => router.push(`/case-management/view/${item.id}`)}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-blue-50 text-[#2563EB] font-semibold text-xs hover:bg-blue-100 transition"
-                  >
-                    <Eye size={14} /> View Case
-                  </button>
-                  {hasPermission("Case Management", "delete") && (
-                    <button
-                      onClick={() => setDeleteConfirm(item.id)}
-                      className="py-2 px-3 rounded-lg bg-red-50 text-red-500 font-semibold text-xs hover:bg-red-100 transition"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="p-8 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-[#F1F5F9] flex items-center justify-center mx-auto mb-3">
-                <Scale size={20} className="text-[#CBD5E1]" />
-              </div>
-              <p className="text-[#64748B] font-medium text-sm">No cases found</p>
-              <p className="text-[#94A3B8] text-xs mt-1">Try adding a new case or adjusting your search</p>
             </div>
-          )}
-        </div>
+          </>
+        )}
 
         {/* Pagination Controls */}
-        {filteredCases.length > 5 && (
+        {filteredCases.length > (viewMode === "grid" ? 6 : 5) && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-[#F1F5F9] bg-[#F8FAFC]/50">
             <span className="text-xs text-[#64748B] font-semibold">
-              Page {casesPage + 1} of {Math.ceil(filteredCases.length / 5)}
+              Page {casesPage + 1} of {Math.ceil(filteredCases.length / (viewMode === "grid" ? 6 : 5))}
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -491,8 +614,8 @@ export default function CaseView() {
                 &lt;
               </button>
               <button
-                onClick={() => setCasesPage(p => Math.min(Math.ceil(filteredCases.length / 5) - 1, p + 1))}
-                disabled={(casesPage + 1) * 5 >= filteredCases.length}
+                onClick={() => setCasesPage(p => Math.min(Math.ceil(filteredCases.length / (viewMode === "grid" ? 6 : 5)) - 1, p + 1))}
+                disabled={(casesPage + 1) * (viewMode === "grid" ? 6 : 5) >= filteredCases.length}
                 className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 transition cursor-pointer select-none font-bold text-xs"
               >
                 &gt;

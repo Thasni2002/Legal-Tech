@@ -9,6 +9,8 @@ import {
   Search,
   Eye,
   Trash2,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Image from "next/image";
@@ -26,6 +28,8 @@ export default function LawfirmView() {
   const [assignedCases, setAssignedCases] = useState([]);
   const [caseSearch, setCaseSearch] = useState("");
   const [caseFilter, setCaseFilter] = useState("All");
+  const [membersViewMode, setMembersViewMode] = useState("list"); // "list" or "grid"
+  const [casesViewMode, setCasesViewMode] = useState("list"); // "list" or "grid"
   const [advocatesPage, setAdvocatesPage] = useState(0);
   const [casesPage, setCasesPage] = useState(0);
   const [selectedViewCase, setSelectedViewCase] = useState(null);
@@ -283,150 +287,263 @@ export default function LawfirmView() {
       {!loading && advocates.length > 0 && (
         <div className="bg-white rounded-2xl sm:rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 overflow-hidden">
 
-          {/* Header with Search + Filter */}
-          <div className="p-4 sm:p-8 border-b border-[#F1F5F9] flex flex-col sm:flex-row gap-3 sm:gap-6 justify-between items-stretch sm:items-center bg-white">
-
+          {/* Header with Search + Filter + View Toggle */}
+          <div className="p-4 sm:p-6 border-b border-[#F1F5F9] flex flex-col md:flex-row gap-3 sm:gap-4 justify-between items-stretch md:items-center bg-white">
             <h2 className="text-xl font-extrabold text-[#0F172A]">
               Firm Members Profile
             </h2>
-            <div className="flex items-center border border-[#E2E8F0] rounded-full px-4 py-2.5 sm:py-3 w-full sm:w-[400px] bg-[#F8FAFC] focus-within:ring-2 focus-within:ring-[#2563EB]/20 focus-within:border-[#2563EB] transition-all">
-              <Search className="w-5 h-5 text-[#94A3B8]" />
-              <input
-                type="text"
-                placeholder="Search member..."
-                className="w-full ml-3 bg-transparent outline-none text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
-                value={search}
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center border border-[#E2E8F0] rounded-full px-4 py-2 sm:py-2.5 w-full sm:w-[260px] bg-[#F8FAFC] focus-within:ring-2 focus-within:ring-[#2563EB]/20 focus-within:border-[#2563EB] transition-all">
+                <Search className="w-4 h-4 text-[#94A3B8]" />
+                <input
+                  type="text"
+                  placeholder="Search member..."
+                  className="w-full ml-2 bg-transparent outline-none text-xs text-[#0F172A] placeholder:text-[#94A3B8]"
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setAdvocatesPage(0);
+                  }}
+                />
+              </div>
+
+              <select
+                className="border border-[#E2E8F0] rounded-full px-4 py-2 text-xs bg-[#F8FAFC] text-[#0F172A] font-medium outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all cursor-pointer"
+                value={filter}
                 onChange={(e) => {
-                  setSearch(e.target.value);
+                  setFilter(e.target.value);
                   setAdvocatesPage(0);
                 }}
-              />
-            </div>
+              >
+                <option value="All">All Statuses</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
 
-            <select
-              className="border border-[#E2E8F0] rounded-full px-6 py-3 text-sm bg-[#F8FAFC] text-[#0F172A] font-medium outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all w-full md:w-auto"
-              value={filter}
-              onChange={(e) => {
-                setFilter(e.target.value);
-                setAdvocatesPage(0);
-              }}
-            >
-              <option value="All">All Statuses</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
+              {/* View Toggle */}
+              <div className="flex items-center gap-1 bg-[#F8FAFC] p-1 rounded-full border border-[#E2E8F0] text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setMembersViewMode("grid")}
+                  title="Grid View"
+                  className={`px-3 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
+                    membersViewMode === "grid"
+                      ? "bg-white text-[#2563EB] font-bold shadow-xs border border-[#E2E8F0]"
+                      : "text-[#64748B] hover:text-[#0F172A]"
+                  }`}
+                >
+                  <LayoutGrid size={14} />
+                  <span className="hidden sm:inline">Grid</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMembersViewMode("list")}
+                  title="List View"
+                  className={`px-3 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
+                    membersViewMode === "list"
+                      ? "bg-white text-[#2563EB] font-bold shadow-xs border border-[#E2E8F0]"
+                      : "text-[#64748B] hover:text-[#0F172A]"
+                  }`}
+                >
+                  <List size={14} />
+                  <span className="hidden sm:inline">List</span>
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* Table */}
+          {/* Members Content */}
           {filteredAdvocates.length > 0 ? (
             <>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-                    <tr>
-                      <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                        Profile
-                      </th>
-                      <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                        Name
-                      </th>
-                      <th className="hidden sm:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                        Phone
-                      </th>
-                      <th className="hidden md:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                        Role
-                      </th>
-                      <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                        Status
-                      </th>
-                      <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-center text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody className="divide-y divide-[#F1F5F9]">
-                    {filteredAdvocates.slice(advocatesPage * 5, (advocatesPage + 1) * 5).map((item) => (
-                      <tr
-                        key={item.id}
-                        className="hover:bg-slate-50/50 transition duration-200 group"
-                      >
-                        {/* Profile */}
-                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5">
+              {/* GRID VIEW */}
+              {membersViewMode === "grid" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 sm:p-6 bg-[#F8FAFC]/50 border-b border-[#E2E8F0]">
+                  {filteredAdvocates.slice(advocatesPage * 6, (advocatesPage + 1) * 6).map((item) => (
+                    <div
+                      key={item.id}
+                      className="bg-white rounded-2xl border border-[#E2E8F0] p-4 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition-all space-y-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
                           <img
                             src={
                               item.profileImage
                                 ? item.profileImage
-                                : `https://ui-avatars.com/api/?name=${item.advocateName || (item.role === 'Clerk' ? 'Clerk' : 'Advocate')}&background=E2E8F0&color=64748B&rounded=true&bold=true`
+                                : `https://ui-avatars.com/api/?name=${encodeURIComponent(item.advocateName || (item.role === 'Clerk' ? 'Clerk' : 'Advocate'))}&background=E2E8F0&color=64748B&rounded=true&bold=true`
                             }
-                            alt={item.advocateName || (item.role === 'Clerk' ? "Clerk" : "Advocate")}
-                            className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm ring-1 ring-[#E2E8F0] group-hover:ring-[#CBD5E1] transition-all"
+                            alt={item.advocateName || "Member"}
+                            className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-xs ring-1 ring-[#E2E8F0] shrink-0"
                           />
-                        </td>
-
-                        {/* Name */}
-                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5">
                           <div>
-                            <p className="font-bold text-[#0F172A] text-sm">
+                            <h3 className="font-bold text-[#0F172A] text-sm leading-tight">
                               {item.advocateName}
-                            </p>
-                            <p className="text-xs text-[#64748B] mt-1 font-medium">
+                            </h3>
+                            <span className="text-xs text-[#64748B] block mt-0.5 font-medium truncate max-w-[170px]" title={item.emailAddress || item.email}>
                               {item.emailAddress || item.email || "No Email"}
-                            </p>
+                            </span>
                           </div>
-                        </td>
+                        </div>
 
-                        <td className="hidden sm:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">
-                          {item.phoneNumber || "-"}
-                        </td>
-
-                        <td className="hidden md:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">
-                          {item.role || "Junior Advocate"}
-                        </td>
-
-
-                        {/* Status */}
-                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5">
-                          <span
-                            className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${item.status === "Active" || !item.status
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider shrink-0 ${
+                            item.status === "Active" || !item.status
                               ? "bg-green-100 text-green-700"
                               : "bg-red-100 text-red-700"
-                              }`}
+                          }`}
+                        >
+                          {item.status || "Active"}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1.5 text-xs text-[#64748B] bg-[#F8FAFC] p-3 rounded-xl border border-[#E2E8F0]/60">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-[#94A3B8]">Role:</span>
+                          <span className="font-bold text-[#0F172A]">{item.role || "Junior Advocate"}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-[#94A3B8]">Phone:</span>
+                          <span className="font-semibold text-[#475569]">{item.phoneNumber || "-"}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#F1F5F9]">
+                        <button
+                          onClick={() => router.push(`/lawfirm-management/view?id=${item.id}`)}
+                          className="px-3 py-1.5 rounded-xl bg-[#F1F5F9] text-[#64748B] hover:bg-blue-100 hover:text-blue-600 transition-colors text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Eye size={14} />
+                          View Profile
+                        </button>
+                        {hasPermission("Law Firm Management", "delete") && (
+                          <button
+                            onClick={() => {
+                              setDeleteType("advocate");
+                              setDeleteId(item.id);
+                              setShowDeleteModal(true);
+                            }}
+                            className="p-1.5 rounded-xl bg-[#F1F5F9] text-[#64748B] hover:bg-red-100 hover:text-red-600 transition-colors cursor-pointer"
+                            title="Delete Member"
                           >
-                            {item.status || "Active"}
-                          </span>
-                        </td>
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-                        {/* Actions */}
-                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5">
-                          <div className="flex justify-center gap-2">
-                            <button
-                              onClick={() =>
-                                router.push(`/lawfirm-management/view?id=${item.id}`)
-                              }
-                              className="w-9 h-9 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-blue-100 hover:text-blue-600 flex items-center justify-center transition-colors"
-                            >
-                              <Eye size={16} />
-                            </button>
-
-                            {hasPermission("Law Firm Management", "delete") && (
-                              <button
-                                onClick={() => {
-                                  setDeleteType("advocate");
-                                  setDeleteId(item.id);
-                                  setShowDeleteModal(true);
-                                }} className="w-9 h-9 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            )}
-                          </div>
-                        </td>
+              {/* LIST VIEW */}
+              {membersViewMode === "list" && (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
+                      <tr>
+                        <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                          Profile
+                        </th>
+                        <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                          Name
+                        </th>
+                        <th className="hidden sm:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                          Phone
+                        </th>
+                        <th className="hidden md:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                          Role
+                        </th>
+                        <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                          Status
+                        </th>
+                        <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-center text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                          Actions
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+
+                    <tbody className="divide-y divide-[#F1F5F9]">
+                      {filteredAdvocates.slice(advocatesPage * 5, (advocatesPage + 1) * 5).map((item) => (
+                        <tr
+                          key={item.id}
+                          className="hover:bg-slate-50/50 transition duration-200 group"
+                        >
+                          {/* Profile */}
+                          <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5">
+                            <img
+                              src={
+                                item.profileImage
+                                  ? item.profileImage
+                                  : `https://ui-avatars.com/api/?name=${item.advocateName || (item.role === 'Clerk' ? 'Clerk' : 'Advocate')}&background=E2E8F0&color=64748B&rounded=true&bold=true`
+                              }
+                              alt={item.advocateName || (item.role === 'Clerk' ? "Clerk" : "Advocate")}
+                              className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm ring-1 ring-[#E2E8F0] group-hover:ring-[#CBD5E1] transition-all"
+                            />
+                          </td>
+
+                          {/* Name */}
+                          <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5">
+                            <div>
+                              <p className="font-bold text-[#0F172A] text-sm">
+                                {item.advocateName}
+                              </p>
+                              <p className="text-xs text-[#64748B] mt-1 font-medium">
+                                {item.emailAddress || item.email || "No Email"}
+                              </p>
+                            </div>
+                          </td>
+
+                          <td className="hidden sm:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">
+                            {item.phoneNumber || "-"}
+                          </td>
+
+                          <td className="hidden md:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">
+                            {item.role || "Junior Advocate"}
+                          </td>
+
+
+                          {/* Status */}
+                          <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5">
+                            <span
+                              className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${item.status === "Active" || !item.status
+                                ? "bg-green-100 text-green-700"
+                                : "bg-red-100 text-red-700"
+                                }`}
+                            >
+                              {item.status || "Active"}
+                            </span>
+                          </td>
+
+                          {/* Actions */}
+                          <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5">
+                            <div className="flex justify-center gap-2">
+                              <button
+                                onClick={() =>
+                                  router.push(`/lawfirm-management/view?id=${item.id}`)
+                                }
+                                className="w-9 h-9 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-blue-100 hover:text-blue-600 flex items-center justify-center transition-colors"
+                              >
+                                <Eye size={16} />
+                              </button>
+
+                              {hasPermission("Law Firm Management", "delete") && (
+                                <button
+                                  onClick={() => {
+                                    setDeleteType("advocate");
+                                    setDeleteId(item.id);
+                                    setShowDeleteModal(true);
+                                  }} className="w-9 h-9 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
               {/* Pagination Controls */}
               {filteredAdvocates.length > 5 && (
@@ -466,30 +583,158 @@ export default function LawfirmView() {
       {assignedCases.length > 0 && (
         <div className="bg-white rounded-2xl sm:rounded-3xl border border-[#E2E8F0] shadow-xl shadow-slate-200/40 overflow-hidden mt-5 sm:mt-8">
 
-          {/* Header */}
-          <div className="p-4 sm:p-8 border-b border-[#F1F5F9] flex flex-col sm:flex-row gap-3 sm:gap-6 justify-between items-stretch sm:items-center bg-white">
+          {/* Header with Search + View Toggle */}
+          <div className="p-4 sm:p-6 border-b border-[#F1F5F9] flex flex-col md:flex-row gap-3 sm:gap-4 justify-between items-stretch md:items-center bg-white">
             <h2 className="text-xl font-extrabold text-[#0F172A]">
               Junior Assigned Cases
             </h2>
 
-            {/* Search */}
-            <div className="flex items-center border border-[#E2E8F0] rounded-full px-4 py-2.5 sm:py-3 w-full sm:w-80 bg-[#F8FAFC] focus-within:ring-2 focus-within:ring-[#2563EB]/20 focus-within:border-[#2563EB] transition-all">
-              <Search className="w-5 h-5 text-[#94A3B8]" />
-              <input
-                type="text"
-                placeholder="Search case..."
-                className="w-full ml-3 bg-transparent outline-none text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
-                value={caseSearch}
-                onChange={(e) => {
-                  setCaseSearch(e.target.value);
-                  setCasesPage(0);
-                }}
-              />
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Search */}
+              <div className="flex items-center border border-[#E2E8F0] rounded-full px-4 py-2 sm:py-2.5 w-full sm:w-72 bg-[#F8FAFC] focus-within:ring-2 focus-within:ring-[#2563EB]/20 focus-within:border-[#2563EB] transition-all">
+                <Search className="w-4 h-4 text-[#94A3B8]" />
+                <input
+                  type="text"
+                  placeholder="Search case..."
+                  className="w-full ml-2 bg-transparent outline-none text-xs text-[#0F172A] placeholder:text-[#94A3B8]"
+                  value={caseSearch}
+                  onChange={(e) => {
+                    setCaseSearch(e.target.value);
+                    setCasesPage(0);
+                  }}
+                />
+              </div>
+
+              {/* View Toggle */}
+              <div className="flex items-center gap-1 bg-[#F8FAFC] p-1 rounded-full border border-[#E2E8F0] text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setCasesViewMode("grid")}
+                  title="Grid View"
+                  className={`px-3 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
+                    casesViewMode === "grid"
+                      ? "bg-white text-[#2563EB] font-bold shadow-xs border border-[#E2E8F0]"
+                      : "text-[#64748B] hover:text-[#0F172A]"
+                  }`}
+                >
+                  <LayoutGrid size={14} />
+                  <span className="hidden sm:inline">Grid</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCasesViewMode("list")}
+                  title="List View"
+                  className={`px-3 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
+                    casesViewMode === "list"
+                      ? "bg-white text-[#2563EB] font-bold shadow-xs border border-[#E2E8F0]"
+                      : "text-[#64748B] hover:text-[#0F172A]"
+                  }`}
+                >
+                  <List size={14} />
+                  <span className="hidden sm:inline">List</span>
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
+          {/* GRID VIEW */}
+          {casesViewMode === "grid" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 sm:p-6 bg-[#F8FAFC]/50 border-b border-[#E2E8F0]">
+              {filteredAssignedCases
+                .slice(casesPage * 6, (casesPage + 1) * 6)
+                .map((item) => (
+                  <div
+                    key={item.id}
+                    className="bg-white rounded-2xl border border-[#E2E8F0] p-4 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition-all space-y-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-bold text-[#0F172A] text-sm leading-tight">
+                          {item.case_name}
+                        </h3>
+                        <span className="text-[11px] font-mono text-[#64748B] block mt-1">
+                          {item.case_id_code || item.case_number || (item.case_id ? `CASE-#${item.case_id}` : `#${item.id}`)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 text-xs text-[#64748B] bg-[#F8FAFC] p-3 rounded-xl border border-[#E2E8F0]/60">
+                      <span className="text-[11px] font-semibold text-[#94A3B8] block mb-1">Assigned Advocates:</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Primary */}
+                        <div className="flex items-center gap-2 bg-white px-2.5 py-1 rounded-lg border border-[#E2E8F0] shadow-xs">
+                          {(() => {
+                            const pImg = getAdvocateProfileImage(item.advocate_name);
+                            const fallbackUrl = item.advocate_name
+                              ? `https://ui-avatars.com/api/?name=${encodeURIComponent(item.advocate_name)}&background=2563EB&color=FFFFFF&rounded=true&bold=true`
+                              : `https://ui-avatars.com/api/?name=Advocate&background=E2E8F0&color=64748B&rounded=true&bold=true`;
+                            return (
+                              <img
+                                src={pImg || fallbackUrl}
+                                alt={item.advocate_name || "Primary Advocate"}
+                                className="w-6 h-6 rounded-full object-cover shrink-0"
+                              />
+                            );
+                          })()}
+                          <span className="font-bold text-[#0F172A] text-xs truncate max-w-[110px]" title={item.advocate_name}>
+                            {item.advocate_name || "Primary Advocate"}
+                          </span>
+                        </div>
+
+                        {/* Standby */}
+                        {(item.secondary_advocate_name || item.secondaryAdvocateName) && (
+                          <div className="flex items-center gap-2 bg-amber-50/80 px-2.5 py-1 rounded-lg border border-amber-200/80 shadow-xs">
+                            {(() => {
+                              const secName = item.secondary_advocate_name || item.secondaryAdvocateName;
+                              const sImg = getAdvocateProfileImage(secName);
+                              const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(secName)}&background=F59E0B&color=FFFFFF&rounded=true&bold=true`;
+                              return (
+                                <img
+                                  src={sImg || fallbackUrl}
+                                  alt={secName}
+                                  className="w-6 h-6 rounded-full object-cover shrink-0"
+                                />
+                              );
+                            })()}
+                            <span className="font-bold text-amber-800 text-xs truncate max-w-[110px]" title={item.secondary_advocate_name || item.secondaryAdvocateName}>
+                              {item.secondary_advocate_name || item.secondaryAdvocateName}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#F1F5F9]">
+                      <button
+                        onClick={() => setSelectedViewCase(item)}
+                        className="px-3 py-1.5 rounded-xl bg-blue-50 text-[#2563EB] hover:bg-blue-100 transition-colors text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                        title="View Details & Edit"
+                      >
+                        <Eye size={14} />
+                        View Details
+                      </button>
+                      {hasPermission("Law Firm Management", "delete") && (
+                        <button
+                          onClick={() => {
+                            setDeleteType("case");
+                            setDeleteId(item.id);
+                            setShowDeleteModal(true);
+                          }}
+                          className="p-1.5 rounded-xl bg-[#F1F5F9] text-[#64748B] hover:bg-red-100 hover:text-red-600 transition-colors cursor-pointer"
+                          title="Delete Assignment"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+
+          {/* LIST VIEW */}
+          {casesViewMode === "list" && (
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
                 <tr>
@@ -586,6 +831,7 @@ export default function LawfirmView() {
               </tbody>
             </table>
           </div>
+          )}
 
           {/* Pagination Controls */}
           {filteredAssignedCases.length > 5 && (
