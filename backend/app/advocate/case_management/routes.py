@@ -345,3 +345,49 @@ async def review_workflow_document(
             
     return doc
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Case Notes Routes
+# ─────────────────────────────────────────────────────────────────────────────
+
+from .schemas import CaseNoteCreate, CaseNoteOut
+from .models import CaseNote
+from typing import List as TypingList
+
+
+@router.get("/{case_id}/notes", response_model=TypingList[CaseNoteOut])
+def get_case_notes(case_id: int, db: Session = Depends(get_db)):
+    """Fetch all internal advocate notes for a case (newest first)."""
+    notes = (
+        db.query(CaseNote)
+        .filter(CaseNote.case_id == case_id)
+        .order_by(CaseNote.created_at.desc())
+        .all()
+    )
+    return notes
+
+
+@router.post("/{case_id}/notes", response_model=CaseNoteOut)
+def add_case_note(case_id: int, data: CaseNoteCreate, db: Session = Depends(get_db)):
+    """Add a new internal advocate note to a case."""
+    note = CaseNote(
+        case_id=case_id,
+        text=data.text,
+        category=data.category or "General Note",
+        author=data.author,
+    )
+    db.add(note)
+    db.commit()
+    db.refresh(note)
+    return note
+
+
+@router.delete("/{case_id}/notes/{note_id}")
+def delete_case_note(case_id: int, note_id: int, db: Session = Depends(get_db)):
+    """Delete an internal advocate note."""
+    note = db.query(CaseNote).filter(CaseNote.id == note_id, CaseNote.case_id == case_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    db.delete(note)
+    db.commit()
+    return {"message": "Note deleted"}

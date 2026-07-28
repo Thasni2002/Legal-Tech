@@ -1,5 +1,26 @@
 from pydantic import BaseModel
 from typing import Optional, List
+from datetime import datetime
+
+
+# Case Note Schemas
+class CaseNoteCreate(BaseModel):
+    text: str
+    category: Optional[str] = "General Note"
+    author: Optional[str] = None
+
+
+class CaseNoteOut(BaseModel):
+    id: int
+    case_id: int
+    text: str
+    category: str
+    author: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 
 
 # Document Schema
