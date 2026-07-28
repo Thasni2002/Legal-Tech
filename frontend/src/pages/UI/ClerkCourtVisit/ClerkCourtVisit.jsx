@@ -13,7 +13,9 @@ import {
   Trash2, 
   AlertCircle,
   Play,
-  Square
+  Square,
+  LayoutGrid,
+  List
 } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
 import { API_BASE_URL } from "@/utils/api";
@@ -25,6 +27,7 @@ export default function ClerkCourtVisit() {
   const [cases, setCases] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [viewMode, setViewMode] = useState("grid");
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchAllData = async () => {
@@ -234,20 +237,52 @@ export default function ClerkCourtVisit() {
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-          {["All", "Pending", "In Court", "Completed"].map((status) => (
+        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+            {["All", "Pending", "In Court", "Completed"].map((status) => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  statusFilter === status
+                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                {status === "All" ? `All Cases (${combinedItems.length})` : status}
+              </button>
+            ))}
+          </div>
+
+          {/* Grid & List View Mode Switcher */}
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold">
             <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                statusFilter === status
-                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              type="button"
+              onClick={() => setViewMode("grid")}
+              title="Grid View"
+              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                viewMode === "grid"
+                  ? "bg-white text-emerald-700 font-bold shadow-xs border border-slate-200"
+                  : "text-slate-500 hover:text-slate-900"
               }`}
             >
-              {status === "All" ? `All Cases (${combinedItems.length})` : status}
+              <LayoutGrid size={15} />
+              <span className="hidden sm:inline">Grid</span>
             </button>
-          ))}
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              title="List View"
+              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                viewMode === "list"
+                  ? "bg-white text-emerald-700 font-bold shadow-xs border border-slate-200"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              <List size={15} />
+              <span className="hidden sm:inline">List</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -267,7 +302,7 @@ export default function ClerkCourtVisit() {
             {searchQuery ? "No cases match your search query." : "All newly added cases will automatically appear here for court visit tracking."}
           </p>
         </div>
-      ) : (
+      ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map((item) => (
             <div key={item.id} className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-all space-y-5 flex flex-col justify-between">
@@ -281,7 +316,7 @@ export default function ClerkCourtVisit() {
                     {item.visit_status}
                   </span>
                   {item.dbVisitId && (
-                    <button onClick={() => handleDelete(item.dbVisitId)} className="text-slate-400 hover:text-red-600 p-1" title="Delete Log">
+                    <button onClick={() => handleDelete(item.dbVisitId)} className="text-slate-400 hover:text-red-600 p-1 cursor-pointer" title="Delete Log">
                       <Trash2 size={16} />
                     </button>
                   )}
@@ -327,7 +362,7 @@ export default function ClerkCourtVisit() {
                   {item.visit_status === 'Pending' && (
                     <button
                       onClick={() => handleCheckIn(item)}
-                      className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 transition-all hover:scale-[1.02]"
+                      className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 transition-all hover:scale-[1.02] cursor-pointer"
                     >
                       <Play size={14} /> Check In Now
                     </button>
@@ -335,7 +370,7 @@ export default function ClerkCourtVisit() {
                   {item.visit_status === 'In Court' && (
                     <button
                       onClick={() => handleCheckOut(item)}
-                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.02]"
+                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.02] cursor-pointer"
                     >
                       <Square size={14} /> Check Out & Complete
                     </button>
@@ -349,6 +384,98 @@ export default function ClerkCourtVisit() {
               </div>
             </div>
           ))}
+        </div>
+      ) : (
+        /* LIST VIEW TABLE */
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-4">Case Details</th>
+                  <th className="px-6 py-4">Court & Hall</th>
+                  <th className="px-6 py-4">Client</th>
+                  <th className="px-6 py-4">Hearing Date</th>
+                  <th className="px-6 py-4">Check In / Out</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-sm font-medium text-slate-700">
+                {filteredItems.map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 w-fit">
+                          {item.case_no}
+                        </span>
+                        <span className="font-bold text-slate-900 mt-0.5">{item.case_title}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col text-xs text-slate-600">
+                        <span className="font-semibold text-slate-900">{item.court_name}</span>
+                        <span className="text-slate-400">{item.court_hall}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-slate-800 text-xs font-semibold">
+                      {item.client_name || "N/A"}
+                    </td>
+                    <td className="px-6 py-4 text-xs font-semibold text-slate-600">
+                      {item.next_hearing_date}
+                    </td>
+                    <td className="px-6 py-4 text-xs font-medium text-slate-500 whitespace-nowrap">
+                      <div>In: <span className="font-semibold text-slate-700">{item.check_in_time || '--:--'}</span></div>
+                      <div>Out: <span className="font-semibold text-slate-700">{item.check_out_time || '--:--'}</span></div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-3 py-1 rounded-full text-xs font-extrabold inline-block ${
+                        item.visit_status === 'Completed' ? 'bg-emerald-100 text-emerald-800' :
+                        item.visit_status === 'In Court' ? 'bg-amber-100 text-amber-800 animate-pulse' :
+                        'bg-slate-100 text-slate-700'
+                      }`}>
+                        {item.visit_status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {item.visit_status === 'Pending' && (
+                          <button
+                            onClick={() => handleCheckIn(item)}
+                            className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                          >
+                            <Play size={13} /> Check In
+                          </button>
+                        )}
+                        {item.visit_status === 'In Court' && (
+                          <button
+                            onClick={() => handleCheckOut(item)}
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                          >
+                            <Square size={13} /> Check Out
+                          </button>
+                        )}
+                        {item.visit_status === 'Completed' && (
+                          <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-xs border border-emerald-200">
+                            ✓ Done
+                          </span>
+                        )}
+                        {item.dbVisitId && (
+                          <button
+                            onClick={() => handleDelete(item.dbVisitId)}
+                            className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+                            title="Delete Log"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

@@ -37,6 +37,7 @@ const ALL_MODULES = [
   "Leave Management",
   "Junior Leave",
   "Clerk Leave",
+  "eCourts Integration",
 ];
 
 export default function UserEdit() {

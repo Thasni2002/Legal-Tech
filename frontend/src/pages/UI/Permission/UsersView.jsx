@@ -52,6 +52,7 @@ const ALL_MODULES = [
   "Leave Management",
   "Junior Leave",
   "Clerk Leave",
+  "eCourts Integration",
 ];
 
 const SENIOR_JUNIOR_MODULES = [
@@ -68,6 +69,7 @@ const SENIOR_JUNIOR_MODULES = [
       { key: "Assigned Tasks", label: "Assigned Tasks" },
       { key: "Profile", label: "Profile" },
       { key: "Leave Management", label: "Leave Management" },
+      { key: "eCourts Integration", label: "eCourts Services" },
     ]
   },
   {

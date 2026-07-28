@@ -182,9 +182,9 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
       shortLabel: "Permissions",
       icon: Shield,
       items: [
-        { name: "Roles Matrix", path: "/permissions/roles", icon: Shield, moduleKey: "Roles" },
-        { name: "Users Clearance", path: "/permissions/users", icon: Users, moduleKey: "Users" },
-        { name: "Permissions Config", path: "/permissions", icon: Key, moduleKey: "Permissions" },
+        { name: "Roles", path: "/permissions/roles", icon: Shield, moduleKey: "Roles" },
+        { name: "Users Management", path: "/permissions/users", icon: Users, moduleKey: "Users" },
+        { name: "Permissions", path: "/permissions", icon: Key, moduleKey: "Permissions" },
       ],
     },
   ], []);
@@ -204,7 +204,11 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
     if (!pathname) return;
     for (const mod of filteredModules) {
       const match = mod.items.some(
-        (item) => item.path === pathname || (item.path !== "/" && pathname.startsWith(item.path))
+        (item) =>
+          item.path === pathname ||
+          (item.path !== "/" &&
+            item.path !== "/permissions" &&
+            pathname.startsWith(item.path + "/"))
       );
       if (match) {
         setActiveModuleId(mod.id);
@@ -356,7 +360,10 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
           <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-1.5 font-poppins">
             {activeModule?.items.map((item) => {
               const isPathActive =
-                pathname === item.path || (item.path !== "/" && pathname?.startsWith(item.path));
+                pathname === item.path ||
+                (item.path !== "/" &&
+                  item.path !== "/permissions" &&
+                  pathname?.startsWith(item.path + "/"));
               const SubIcon = item.icon;
 
               return (

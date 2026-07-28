@@ -8,6 +8,8 @@ import {
   Eye,
   FileText,
   Trash2,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import useModulePermission from "@/utils/useModulePermission";
 import { getLoggedInUser } from "@/utils/auth";
@@ -83,6 +85,7 @@ export default function AssignedCasesView() {
   const [cases, setCases] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [viewMode, setViewMode] = useState("list"); // "list" or "grid"
   const [selectedCase, setSelectedCase] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -297,17 +300,17 @@ export default function AssignedCasesView() {
         </div>
       </div>
 
-      {/* Cases Table */}
+      {/* Cases Section (Grid vs List) */}
       <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-5 border-b border-[#E2E8F0] flex flex-col md:flex-row md:items-center justify-between gap-4">
           <h2 className="text-lg font-bold text-[#0F172A] whitespace-nowrap">My Assigned Cases</h2>
           
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-            <div className="flex w-full sm:w-auto items-center gap-3">
+          <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3 w-full md:w-auto">
+            <div className="flex flex-wrap w-full sm:w-auto items-center gap-3">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full sm:w-auto border border-[#E2E8F0] rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all text-sm text-[#0F172A] cursor-pointer bg-white"
+                className="border border-[#E2E8F0] rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all text-sm text-[#0F172A] cursor-pointer bg-white"
               >
                 <option value="All">All Statuses</option>
                 <option value="Active">Active</option>
@@ -316,19 +319,138 @@ export default function AssignedCasesView() {
               </select>
               <input
                 type="text"
-                placeholder="Search by case title, case no, client or court..."
+                placeholder="Search by title, case no, client..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full sm:w-72 border border-[#E2E8F0] rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
+                className="w-full sm:w-64 border border-[#E2E8F0] rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
               />
             </div>
-            <span className="text-xs font-semibold text-[#64748B] bg-[#F1F5F9] px-3 py-1.5 rounded-full whitespace-nowrap self-end sm:self-auto">
+
+            {/* View Mode Toggle (Grid vs List) */}
+            <div className="flex items-center gap-1 bg-[#F8FAFC] p-1 rounded-xl border border-[#E2E8F0] text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setViewMode("grid")}
+                title="Grid View"
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  viewMode === "grid"
+                    ? "bg-white text-[#2563EB] font-bold shadow-xs border border-[#E2E8F0]"
+                    : "text-[#64748B] hover:text-[#0F172A]"
+                }`}
+              >
+                <LayoutGrid size={14} />
+                <span className="hidden sm:inline">Grid</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                title="List View"
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  viewMode === "list"
+                    ? "bg-white text-[#2563EB] font-bold shadow-xs border border-[#E2E8F0]"
+                    : "text-[#64748B] hover:text-[#0F172A]"
+                }`}
+              >
+                <List size={14} />
+                <span className="hidden sm:inline">List</span>
+              </button>
+            </div>
+
+            <span className="text-xs font-semibold text-[#64748B] bg-[#F1F5F9] px-3 py-1.5 rounded-full whitespace-nowrap">
               {filteredCases.length} cases
             </span>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* GRID VIEW */}
+        {viewMode === "grid" && (
+          <div className="p-5 bg-[#F8FAFC]/50">
+            {filteredCases.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredCases.map((item, index) => (
+                  <div
+                    key={index}
+                    className="bg-white rounded-2xl border border-[#E2E8F0] p-4 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition-all space-y-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <span className="px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-mono font-extrabold border border-blue-200">
+                          {item.caseIdCode}
+                        </span>
+                        <h3 className="font-bold text-[#0F172A] text-sm mt-2 leading-tight">
+                          {item.title || item.caseTitle || "Assigned Case"}
+                        </h3>
+                      </div>
+
+                      <span
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-xs shrink-0 ${getStatusBadgeClass(
+                          item.status
+                        )}`}
+                      >
+                        {item.status === "Won" ? "🏆 Case Won" : item.status === "Lost" ? "❌ Case Lost" : item.status}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5 text-xs text-[#64748B] bg-[#F8FAFC] p-3 rounded-xl border border-[#E2E8F0]/60">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-[#94A3B8]">Client:</span>
+                        <span className="font-bold text-[#0F172A] truncate max-w-[170px]">
+                          {isJuniorAdvocate && isSensitiveCase(item)
+                            ? "Confidential (Restricted)"
+                            : item.client || "Not Specified"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-[#94A3B8]">Court:</span>
+                        <span className="font-semibold text-[#475569] truncate max-w-[170px]" title={item.court}>
+                          {item.court || "Court Not Specified"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-[#94A3B8]">Next Hearing:</span>
+                        <span className="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                          {item.hearing || "No hearing date"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#F1F5F9]">
+                      <button
+                        onClick={() => setSelectedCase(item)}
+                        className="w-full py-2 px-3 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-xl transition font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                        title="See Case Details"
+                      >
+                        <Eye size={14} />
+                        View Case Details
+                      </button>
+
+                      {perms.delete && (
+                        <button
+                          onClick={() => setDeleteConfirm(item.id)}
+                          className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition text-xs font-bold flex items-center justify-center cursor-pointer"
+                          title="Delete Case"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-16 text-center flex flex-col items-center gap-2">
+                <FileText size={32} className="text-[#CBD5E1]" />
+                <p className="text-[#64748B] text-sm font-medium">No matching assigned cases found.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* LIST VIEW */}
+        {viewMode === "list" && (
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
@@ -411,6 +533,7 @@ export default function AssignedCasesView() {
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       {/* DELETE CONFIRM DIALOG */}

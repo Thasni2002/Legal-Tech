@@ -43,6 +43,8 @@ export default function ECourtsView() {
   });
   
   // CNR Lookup State
+  const [searchMode, setSearchMode] = useState("our"); // "our" (Firm's System Cases) or "external" (Other Cases)
+  const [selectedCaseId, setSelectedCaseId] = useState("");
   const [cnrInput, setCnrInput] = useState("");
   const [lookupLoading, setLookupLoading] = useState(false);
   const [caseDetails, setCaseDetails] = useState(null);
@@ -333,44 +335,194 @@ export default function ECourtsView() {
         <div className="space-y-6">
           {/* Search Box Card */}
           <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
-            <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Search className="w-4 h-4 text-blue-600" />
-              Enter 16-Character eCourts CNR Number
-            </h2>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <input
-                  type="text"
-                  maxLength={16}
-                  value={cnrInput}
-                  onChange={(e) => setCnrInput(e.target.value.toUpperCase())}
-                  placeholder="e.g. KLER010045212026"
-                  className="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 focus:bg-white rounded-xl px-4 py-3 text-sm font-mono font-bold tracking-widest text-slate-900 outline-none uppercase transition-all shadow-inner"
-                />
-                <span className="absolute right-3 top-3.5 text-xs text-slate-400 font-mono">
-                  {cnrInput.length}/16
-                </span>
+            {/* Search Mode Toggle Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-100">
+              <div>
+                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <Search className="w-4 h-4 text-blue-600" />
+                  CNR Quick Lookup & Case Timeline
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Select a registered case from our Case Management or lookup any external case across India.
+                </p>
               </div>
 
-              <button
-                onClick={() => handleCnrLookup(cnrInput)}
-                disabled={lookupLoading}
-                className="px-6 py-3 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {lookupLoading ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    Searching eCourts...
-                  </>
-                ) : (
-                  <>
-                    <Search className="w-4 h-4" />
-                    Fetch Case Status
-                  </>
-                )}
-              </button>
+              {/* Mode Toggle Buttons */}
+              <div className="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200/80 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchMode("our");
+                    setLookupError("");
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    searchMode === "our"
+                      ? "bg-white text-blue-600 shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <Building2 className="w-3.5 h-3.5" />
+                  Our Cases ({registeredCases.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchMode("external");
+                    setSelectedCaseId("");
+                    setCnrInput("");
+                    setLookupError("");
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    searchMode === "external"
+                      ? "bg-white text-blue-600 shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  External / Other Case
+                </button>
+              </div>
             </div>
+
+            {/* MODE 1: OUR SYSTEM CASES */}
+            {searchMode === "our" && (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <select
+                      value={selectedCaseId}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSelectedCaseId(val);
+                        const found = registeredCases.find(
+                          (c) => String(c.id) === String(val) || String(c.case_id) === String(val)
+                        );
+                        if (found) {
+                          const cnr = (found.cnr_number || found.cnrNumber || "").trim();
+                          setCnrInput(cnr);
+                          if (cnr) {
+                            handleCnrLookup(cnr);
+                          } else {
+                            setLookupError("Selected case does not have a CNR Number assigned yet.");
+                            setCaseDetails(null);
+                          }
+                        } else {
+                          setCnrInput("");
+                          setCaseDetails(null);
+                        }
+                      }}
+                      className="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 focus:bg-white rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition-all cursor-pointer"
+                    >
+                      <option value="">-- Select a Case from Case Management ({registeredCases.length} cases) --</option>
+                      {registeredCases.map((c) => (
+                        <option key={c.id || c.case_id} value={c.id}>
+                          {c.case_title} — CNR: {c.cnr_number || c.cnrNumber || "No CNR"} ({c.client_name || "No Client"})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={() => handleCnrLookup(cnrInput)}
+                    disabled={lookupLoading || !cnrInput}
+                    className="px-6 py-3 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {lookupLoading ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Fetching Timeline...
+                      </>
+                    ) : (
+                      <>
+                        <Search className="w-4 h-4" />
+                        Load Case Timeline
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Quick Select Chips for System Cases */}
+                {registeredCases.length > 0 && (
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
+                      Quick Select System Case:
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {registeredCases.slice(0, 6).map((c) => {
+                        const isSelected = String(selectedCaseId) === String(c.id);
+                        return (
+                          <button
+                            key={c.id || c.case_id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCaseId(c.id);
+                              const cnr = (c.cnr_number || c.cnrNumber || "").trim();
+                              setCnrInput(cnr);
+                              if (cnr) {
+                                handleCnrLookup(cnr);
+                              } else {
+                                setLookupError("This case does not have a CNR Number assigned.");
+                                setCaseDetails(null);
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                              isSelected
+                                ? "bg-blue-50 border-blue-300 text-blue-700 font-bold"
+                                : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                            }`}
+                          >
+                            <FileText className="w-3.5 h-3.5 text-blue-500" />
+                            <span className="truncate max-w-[180px]">{c.case_title}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* MODE 2: EXTERNAL / OTHER CASE LOOKUP */}
+            {searchMode === "external" && (
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      maxLength={16}
+                      value={cnrInput}
+                      onChange={(e) => setCnrInput(e.target.value.toUpperCase())}
+                      placeholder="Enter 16-character external eCourts CNR (e.g. KLER010045212026)"
+                      className="w-full bg-slate-50 border border-slate-300 focus:border-blue-500 focus:bg-white rounded-xl px-4 py-3 text-sm font-mono font-bold tracking-widest text-slate-900 outline-none uppercase transition-all shadow-inner"
+                    />
+                    <span className="absolute right-3 top-3.5 text-xs text-slate-400 font-mono">
+                      {cnrInput.length}/16
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => handleCnrLookup(cnrInput)}
+                    disabled={lookupLoading || cnrInput.length < 16}
+                    className="px-6 py-3 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {lookupLoading ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Searching eCourts...
+                      </>
+                    ) : (
+                      <>
+                        <Search className="w-4 h-4" />
+                        Search External Case
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500">
+                  ℹ️ Search any third-party or opposition case across eCourts India by entering its 16-character CNR Number.
+                </p>
+              </div>
+            )}
 
             {lookupError && (
               <div className="mt-4 p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl flex items-center gap-2">
