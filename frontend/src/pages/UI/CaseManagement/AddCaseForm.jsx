@@ -1085,15 +1085,22 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
     if (!validateAll()) return;
 
     const cnrUpper = (formData.cnrNumber || "").trim().toUpperCase();
-    const cnrExists = (existingCases || []).some(
-      (c) =>
-        c.cnr_number &&
-        c.cnr_number.trim().toUpperCase() === cnrUpper &&
-        (!isEditMode || String(c.id) !== String(editId))
-    );
-    if (cnrExists) {
-      alert("This CNR Number is already registered with another case.");
-      return;
+    if (cnrUpper) {
+      const cnrExists = (existingCases || []).some(
+        (c) =>
+          c.cnr_number &&
+          c.cnr_number.trim().toUpperCase() === cnrUpper &&
+          (!isEditMode || String(c.id) !== String(editId))
+      );
+      if (cnrExists) {
+        setErrors((prev) => ({
+          ...prev,
+          cnrNumber: "A case with this CNR Number already exists.",
+        }));
+        setTouched((prev) => ({ ...prev, cnrNumber: true }));
+        alert("This CNR Number is already registered with another case.");
+        return;
+      }
     }
 
     if (!isEditMode && clientMode === "new") {
@@ -1102,6 +1109,8 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
         (c) => c.emailId && typeof c.emailId === "string" && c.emailId.trim().toLowerCase() === emailLower
       );
       if (emailExists) {
+        setErrors((prev) => ({ ...prev, emailId: "This email is already associated with another client." }));
+        setTouched((prev) => ({ ...prev, emailId: true }));
         alert("This email is already associated with another client.");
         return;
       }
@@ -1109,6 +1118,8 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
         (u) => u.email && typeof u.email === "string" && u.email.trim().toLowerCase() === emailLower
       );
       if (emailExistsInUsers) {
+        setErrors((prev) => ({ ...prev, emailId: "A user account with this email already exists." }));
+        setTouched((prev) => ({ ...prev, emailId: true }));
         alert("A user account with this email already exists.");
         return;
       }
@@ -1117,6 +1128,8 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
         (u) => u.username && typeof u.username === "string" && u.username.trim().toLowerCase() === username
       );
       if (usernameExistsInUsers) {
+        setErrors((prev) => ({ ...prev, emailId: "This email address generates a username that already exists in the system." }));
+        setTouched((prev) => ({ ...prev, emailId: true }));
         alert("This email address generates a username that already exists in the system.");
         return;
       }
@@ -1141,7 +1154,8 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
           });
 
           if (!uploadRes.ok) {
-            throw new Error(`Failed to upload document: ${doc.file.name}`);
+            alert(`Failed to upload document: ${doc.file.name}`);
+            return;
           }
 
           const uploadData = await uploadRes.json();
@@ -1210,7 +1224,18 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => null);
-        throw new Error(errData?.detail || "Failed to save case");
+        const detailMsg = errData?.detail || "Failed to save case";
+        if (detailMsg.toLowerCase().includes("cnr number already exists")) {
+          setErrors((prev) => ({
+            ...prev,
+            cnrNumber: "A case with this CNR Number already exists.",
+          }));
+          setTouched((prev) => ({ ...prev, cnrNumber: true }));
+          alert("A case with this CNR Number already exists in the system. Please use a unique CNR Number.");
+          return;
+        }
+        alert(detailMsg);
+        return;
       }
 
       // Provision user if New Client mode and tempPassword is provided
@@ -1294,8 +1319,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
         
       }
     } catch (error) {
-      console.error("Save error:", error);
-      alert(error.message || "Something went wrong while saving the case.");
+      alert("Something went wrong while saving the case.");
     }
   };
 
