@@ -42,7 +42,7 @@ export default function LawfirmTableView({ advocate }) {
 
           <button
             onClick={() => setEditMode(true)}
-            className="px-8 py-3.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] cursor-pointer flex items-center gap-2"
+            className="px-5 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-sm hover:shadow-md active:scale-[0.98] cursor-pointer flex items-center gap-2"
           >
             <Pencil size={16} />
             Edit Profile

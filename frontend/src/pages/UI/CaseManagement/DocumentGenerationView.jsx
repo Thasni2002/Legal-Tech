@@ -274,7 +274,7 @@ export default function DocumentGenerationView() {
                 <meta charset='utf-8'>
                 <title>${docTitle}</title>
                 <style>
-                    body { font-family: 'Calibri', 'Arial', sans-serif; font-size: 11pt; line-height: 1.6; color: #1e293b; padding: 30px; }
+                    body { font-family: 'Inter', -apple-system, sans-serif; font-size: 11pt; line-height: 1.6; color: #1e293b; padding: 30px; }
                     h1 { font-size: 18pt; font-weight: bold; color: #0f172a; margin-bottom: 12px; border-bottom: 2px solid #3b82f6; padding-bottom: 4px; }
                     h2 { font-size: 14pt; font-weight: bold; color: #1e3a8a; margin-top: 18px; margin-bottom: 8px; }
                     h3 { font-size: 12pt; font-weight: bold; color: #334155; margin-top: 14px; margin-bottom: 6px; }
