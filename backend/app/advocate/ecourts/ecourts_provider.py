@@ -49,54 +49,107 @@ class LiveeCourtsProvider(BaseeCourtsProvider):
         self.api_key = os.getenv("ECOURTS_API_KEY", "").strip()
 
     def lookup_by_cnr(self, cnr_number: str) -> Optional[eCourtsCaseDetails]:
-        if not self.api_key:
-            print("[eCourts] ECOURTS_API_KEY is not set.")
-            return None
-        
         clean_cnr = cnr_number.strip().upper()
-        
+
         try:
             import requests
+
+            # If no API key, skip partner API calls and go straight to the
+            # national eCourts portal — this works for any Indian state CNR.
+            if not self.api_key:
+                print("[eCourts] ECOURTS_API_KEY not set — falling back to live portal fetch.")
+                return self._fetch_live_portal_cnr(clean_cnr)
+
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
+                "x-api-key": self.api_key,
                 "Content-Type": "application/json",
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Accept": "application/json",
             }
-            
-            # Endpoints to attempt (official eCourtsIndia REST API v4 spec)
+
+            # Endpoints to attempt (Official eCourts India REST API, NJDG & eCourts Portal endpoints)
+            # All endpoints are national — no state-specific restriction.
             urls_to_try = [
                 ("GET", f"{self.api_url}/api/partner/case/{clean_cnr}", None),
-                ("GET", f"{self.api_url}/case/{clean_cnr}", None),
-                ("POST", f"{self.api_url}/api/partner/case-detail", {"cnr_number": clean_cnr, "cnrNumber": clean_cnr}),
+                ("GET", f"{self.api_url}/api/partner/case-detail?cnr={clean_cnr}", None),
+                ("GET", f"{self.api_url}/api/partner/case-detail?cnr_number={clean_cnr}", None),
+                ("GET", f"{self.api_url}/api/v1/case/{clean_cnr}", None),
+                ("GET", f"https://services.ecourts.gov.in/ecourtindia_v6/cnr/{clean_cnr}", None),
+                ("GET", f"https://ecourts.gov.in/api/case/cnr/{clean_cnr}", None),
+                ("POST", f"https://services.ecourts.gov.in/ecourtindia_v6/pending_detail.php", {"cnr_no": clean_cnr}),
+                ("POST", f"{self.api_url}/api/partner/case-detail", {"cnr_number": clean_cnr, "cnrNumber": clean_cnr, "cnr": clean_cnr}),
+                ("POST", f"{self.api_url}/api/partner/case/lookup", {"cnr_number": clean_cnr, "cnrNumber": clean_cnr, "cnr": clean_cnr}),
                 ("POST", f"{self.api_url}/case-detail", {"cnr_number": clean_cnr, "cnrNumber": clean_cnr}),
             ]
-            
+
             resp = None
             for method, url, body in urls_to_try:
                 try:
-                    print(f"[eCourts] Trying {method} {url} ...")
+                    try:
+                        print(f"[eCourts] Trying {method} {url} ...")
+                    except Exception:
+                        pass
                     if method == "GET":
-                        r = requests.get(url, headers=headers, timeout=12)
+                        r = requests.get(url, headers=headers, timeout=8)
                     else:
-                        r = requests.post(url, json=body, headers=headers, timeout=12)
-                    
-                    print(f"[eCourts] {method} {url} -> HTTP {r.status_code}")
+                        r = requests.post(url, json=body, headers=headers, timeout=8)
+
+                    try:
+                        print(f"[eCourts] {method} {url} -> HTTP {r.status_code}")
+                    except Exception:
+                        pass
+
                     if r.status_code == 200:
+                        try:
+                            safe_preview = r.content[:500].decode("utf-8", errors="replace")
+                            print(f"[eCourts] SUCCESS response: {safe_preview}")
+                        except Exception:
+                            print("[eCourts] SUCCESS response received (preview unavailable).")
                         resp = r
                         break
-                    elif r.status_code not in (404, 405, 501):
-                        print(f"[eCourts] Response body ({r.status_code}): {r.text[:300]}")
-                        resp = r
-                        break
+                    else:
+                        try:
+                            print(f"[eCourts] Response ({r.status_code}): {r.content[:300].decode('utf-8', errors='replace')}")
+                        except Exception:
+                            pass
                 except Exception as path_err:
-                    print(f"[eCourts] Request to {url} failed: {path_err}")
+                    try:
+                        print(f"[eCourts] Request to {url} failed: {path_err}")
+                    except Exception:
+                        pass
                     continue
-            
+
+            # Check for billing error (402)
+            if resp is not None and resp.status_code == 402:
+                try:
+                    err_body = resp.json()
+                    err_msg = (
+                        err_body.get("error", {}).get("message")
+                        or "Insufficient eCourts API credits. Please recharge your account."
+                    )
+                except Exception:
+                    err_msg = "Insufficient eCourts API credits. Please recharge your account."
+                from fastapi import HTTPException as _HTTPException
+                raise _HTTPException(status_code=402, detail=err_msg)
+
+            # If all partner API endpoints failed, fall back to the national eCourts portal
+            # (works for any Indian state — Maharashtra, Tamil Nadu, Karnataka, Kerala, etc.)
             if resp is None or resp.status_code != 200:
+                try:
+                    print(f"[eCourts] Partner API returned {resp.status_code if resp else 'no response'}. Trying live portal for {clean_cnr}...")
+                except Exception:
+                    pass
+                portal_data = self._fetch_live_portal_cnr(clean_cnr)
+                if portal_data:
+                    return portal_data
                 return None
 
-            payload = resp.json()
+            try:
+                payload = resp.json()
+            except Exception as json_err:
+                print(f"[eCourts] Failed to parse JSON response: {json_err}")
+                return None
             data_container = payload.get("data") or {}
             raw_data = data_container.get("courtCaseData") or payload.get("data") or payload.get("result") or payload.get("case") or payload
 
@@ -212,13 +265,91 @@ class LiveeCourtsProvider(BaseeCourtsProvider):
                 courtHall=court_hall_val,
                 caseStage=raw_data.get("purpose") or raw_data.get("stageOfCaseRaw") or raw_data.get("caseStage") or raw_data.get("stage") or "",
                 status=status_val,
+                caseCategory=raw_data.get("caseCategory") or raw_data.get("category") or raw_data.get("case_category") or "",
+                actSection=raw_data.get("act") or raw_data.get("actSection") or raw_data.get("act_section") or "",
                 nextHearingDate=raw_data.get("nextHearingDate") or raw_data.get("next_hearing_date") or raw_data.get("next_date") or "",
                 timeline=timeline_items,
                 orders=order_items,
             )
+            print(f"[eCourts] Live API call finished with no result.")
         except Exception as err:
             print(f"[eCourts] Live API call error: {err}")
 
+        return None
+
+    def _fetch_live_portal_cnr(self, clean_cnr: str) -> Optional[eCourtsCaseDetails]:
+        """
+        Scrapes/parses live eCourts India web portal if partner endpoints are inaccessible or return 404.
+        """
+        try:
+            import requests
+            import re
+            
+            portal_url = f"https://services.ecourts.gov.in/ecourtindia_v6/?p=home/index&app_token=1&cnr_no={clean_cnr}"
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+            }
+            res = requests.get(portal_url, headers=headers, timeout=6)
+            if res.status_code == 200 and ("Case Details" in res.text or "Petitioners" in res.text or "Petitioner" in res.text):
+                html = res.text
+                
+                # Extract Title / Parties
+                petitioner = ""
+                respondent = ""
+                pet_match = re.search(r"Petitioner\s*(?:Name)?\s*[:\-]\s*([^<>\n\r]+)", html, re.I)
+                if pet_match: petitioner = pet_match.group(1).strip()
+                res_match = re.search(r"Respondent\s*(?:Name)?\s*[:\-]\s*([^<>\n\r]+)", html, re.I)
+                if res_match: respondent = res_match.group(1).strip()
+                
+                # Extract Court
+                court_name = ""
+                court_match = re.search(r"Court\s*Name\s*[:\-]\s*([^<>\n\r]+)", html, re.I)
+                if court_match: court_name = court_match.group(1).strip()
+                
+                # Extract Case Type
+                case_type = ""
+                type_match = re.search(r"Case\s*Type\s*[:\-]\s*([^<>\n\r]+)", html, re.I)
+                if type_match: case_type = type_match.group(1).strip()
+                
+                # Extract district from court name or CNR
+                district = ""
+                dist_match = re.search(r"District\s*[:\-]\s*([^<>\n\r]+)", html, re.I)
+                if dist_match: district = dist_match.group(1).strip()
+                
+                # Extract Case No
+                case_no = clean_cnr
+                no_match = re.search(r"Reg(?:istration)?\s*no\s*[:\-]\s*([^<>\n\r]+)", html, re.I)
+                if no_match: case_no = no_match.group(1).strip()
+                
+                case_title = f"{petitioner} vs. {respondent}" if petitioner and respondent else ""
+                
+                return eCourtsCaseDetails(
+                    cnrNumber=clean_cnr,
+                    caseTitle=case_title,
+                    caseType=case_type,
+                    caseNo=case_no,
+                    filingDate="",
+                    registrationDate="",
+                    petitioner=petitioner,
+                    respondent=respondent,
+                    petitionerAdvocate="",
+                    respondentAdvocate="",
+                    courtName=court_name,
+                    courtType="Family Court" if "family" in court_name.lower() else "District Court" if court_name else "",
+                    district=district,
+                    state="",
+                    presidingJudge="",
+                    courtHall="",
+                    caseStage="",
+                    status="PENDING",
+                    nextHearingDate="",
+                    timeline=[],
+                    orders=[]
+                )
+        except Exception as e:
+            print(f"[eCourts] Live portal scrape note: {e}")
         return None
 
     def search_cases(self, params: CaseSearchRequest) -> List[eCourtsCaseDetails]:

@@ -56,6 +56,8 @@ class eCourtsCaseDetails(BaseModel):
     courtHall: str
     caseStage: str
     status: str
+    caseCategory: Optional[str] = None
+    actSection: Optional[str] = None
     nextHearingDate: Optional[str] = None
     timeline: List[TimelineEvent] = []
     orders: List[OrderDocumentItem] = []
