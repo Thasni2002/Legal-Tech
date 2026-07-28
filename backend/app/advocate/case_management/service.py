@@ -8,9 +8,12 @@ from .schemas import CaseCreate, CaseUpdate
 
 
 
+from sqlalchemy import func
+
 def create_case(db: Session, data: CaseCreate):
     if data.cnrNumber and data.cnrNumber.strip():
-        existing = db.query(Case).filter(Case.cnr_number == data.cnrNumber.strip()).first()
+        cnr_val = data.cnrNumber.strip()
+        existing = db.query(Case).filter(func.lower(Case.cnr_number) == func.lower(cnr_val)).first()
         if existing:
             from fastapi import HTTPException
             raise HTTPException(status_code=400, detail="A case with this CNR Number already exists.")
@@ -179,7 +182,7 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
     if data.cnrNumber is not None:
         cnr_val = data.cnrNumber.strip() if isinstance(data.cnrNumber, str) else ""
         if cnr_val:
-            existing = db.query(Case).filter(Case.cnr_number == cnr_val, Case.id != case_id).first()
+            existing = db.query(Case).filter(func.lower(Case.cnr_number) == func.lower(cnr_val), Case.id != case_id).first()
             if existing:
                 from fastapi import HTTPException
                 raise HTTPException(status_code=400, detail="A case with this CNR Number already exists.")

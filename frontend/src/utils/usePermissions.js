@@ -10,41 +10,40 @@ export function usePermissions() {
 
   useEffect(() => {
     const loggedIn = getLoggedInUser();
-    Promise.resolve().then(() => {
-      setUser(loggedIn);
-    });
+    setUser(loggedIn);
 
     if (loggedIn && loggedIn.id) {
       Promise.all([
-        fetch(`${API_BASE_URL}/permissions/users/${loggedIn.id}`).then((res) => {
-          return res.status === 200 ? res.json() : { customPermissions: {} };
-        }),
-        fetch(`${API_BASE_URL}/permissions`).then((res) => {
-          return res.status === 200 ? res.json() : {};
-        })
+        fetch(`${API_BASE_URL}/permissions/users/${loggedIn.id}`)
+          .then((res) => (res.status === 200 ? res.json() : { customPermissions: {} }))
+          .catch(() => ({ customPermissions: {} })),
+        fetch(`${API_BASE_URL}/permissions`)
+          .then((res) => (res.status === 200 ? res.json() : {}))
+          .catch(() => ({}))
       ])
         .then(([userData, matrix]) => {
-          setCustomPermissions(userData.customPermissions || {});
+          setCustomPermissions(userData?.customPermissions || {});
           
-          const roleKey = Object.keys(matrix).find(
-            (k) => k.toLowerCase().replace(/\s+/g, "") === loggedIn.role.toLowerCase().replace(/\s+/g, "")
-          );
-          if (roleKey) {
-            setRolePermissions(matrix[roleKey] || {});
-          } else {
-            setRolePermissions(matrix[loggedIn.role] || {});
+          if (matrix && loggedIn.role) {
+            const roleNorm = loggedIn.role.toLowerCase().replace(/\s+/g, "");
+            const roleKey = Object.keys(matrix).find(
+              (k) => k.toLowerCase().replace(/\s+/g, "") === roleNorm
+            );
+            if (roleKey) {
+              setRolePermissions(matrix[roleKey] || {});
+            } else {
+              setRolePermissions(matrix[loggedIn.role] || {});
+            }
           }
         })
         .catch((err) => {
-          console.error("Error loading permissions hook:", err);
+          console.warn("Permissions hook network fallback active:", err?.message || err);
         })
         .finally(() => {
           setLoading(false);
         });
     } else {
-      Promise.resolve().then(() => {
-        setLoading(false);
-      });
+      setLoading(false);
     }
   }, []);
 
@@ -63,7 +62,7 @@ export function usePermissions() {
       return !!rolePermissions[moduleKey][action];
     }
 
-    return false; // fallback
+    return true; // fallback — allow access by default if no explicit restriction rule is matched
   };
 
   return { user, hasPermission, loading };
