@@ -19,8 +19,8 @@ def render_base_template(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{title}</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #F1F5F9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #F1F5F9; padding: 40px 15px;">
+<body style="margin: 0; padding: 0; background-color: #F1F5F9; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #F1F5F9; padding: 40px 15px; font-family: 'Inter', sans-serif;">
     <tr>
       <td align="center">
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; background-color: #FFFFFF; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04); border: 1px solid #E2E8F0;">
@@ -32,7 +32,7 @@ def render_base_template(
                 <tr>
                   <td align="center">
                     <div style="display: inline-block; background: rgba(37, 99, 235, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 10px 16px; margin-bottom: 12px;">
-                      <span style="color: #60A5FA; font-weight: 800; font-size: 20px; letter-spacing: 2px;">⚖️ LEGAL-TECH</span>
+                      <span style="color: #60A5FA; font-weight: 800; font-size: 20px; letter-spacing: 2px; font-family: 'Orbitron', 'Space Grotesk', 'Rajdhani', sans-serif;">⚖️ LEGAL-TECH</span>
                     </div>
                     <div>
                       <span style="background: linear-gradient(90deg, #2563EB, #3B82F6); color: #FFFFFF; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; display: inline-block;">

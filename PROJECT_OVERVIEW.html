@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Legal-Tech CRM & ERP Ecosystem — Project Overview</title>
+  <title>Legal-Tech - Project Overview</title>
   <meta name="description" content="Comprehensive single-page overview of the Legal-Tech CRM & ERP Ecosystem — a unified platform for modern law firm management." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Orbitron:wght@400..900&family=Rajdhani:wght@400;500;600;700&family=Space+Grotesk:wght@400..700&display=swap" rel="stylesheet" />
   <style>
     :root {
       --gold:       #c9a84c;
@@ -25,6 +25,8 @@
       --amber:      #f59e0b;
       --blue-acc:   #3b82f6;
       --radius:     14px;
+      --font-sans:  'Inter', sans-serif;
+      --font-legaltech: 'Orbitron', 'Space Grotesk', 'Rajdhani', sans-serif;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -32,7 +34,7 @@
     html { scroll-behavior: smooth; }
 
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: var(--font-sans);
       background: var(--navy);
       color: var(--text-main);
       line-height: 1.7;
@@ -59,8 +61,14 @@
     }
     .nav-brand {
       display: flex; align-items: center; gap: .75rem;
-      font-weight: 700; font-size: 1rem; color: var(--gold-light);
-      text-decoration: none;
+      font-family: var(--font-legaltech);
+      font-weight: 800; font-size: 1rem; color: var(--gold-light);
+      text-decoration: none; letter-spacing: 0.05em; text-transform: uppercase;
+    }
+    .font-legaltech {
+      font-family: var(--font-legaltech);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
     }
     .nav-brand .icon {
       width: 32px; height: 32px;
@@ -125,7 +133,7 @@
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
 
     .hero h1 {
-      font-family: 'Playfair Display', serif;
+      font-family: var(--font-sans);
       font-size: clamp(2.8rem, 7vw, 5.2rem);
       font-weight: 800; line-height: 1.1;
       color: #fff;
@@ -186,7 +194,7 @@
       content: ''; width: 24px; height: 2px; background: var(--gold);
     }
     h2.section-title {
-      font-family: 'Playfair Display', serif;
+      font-family: var(--font-sans);
       font-size: clamp(1.8rem, 4vw, 2.8rem);
       font-weight: 700; color: #fff; margin-bottom: 1rem;
     }

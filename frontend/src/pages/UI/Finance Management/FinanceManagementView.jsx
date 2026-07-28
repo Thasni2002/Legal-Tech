@@ -374,29 +374,27 @@ export default function CourtFeeCalView() {
   return (
     <div className="w-full space-y-8 max-w-7xl mx-auto pb-10">
       {/* Page Header */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-3xl shadow-sm p-8 md:p-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="relative z-10">
+      <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
           <h1 className="text-[#0F172A] font-extrabold text-3xl md:text-4xl tracking-tight leading-tight">
             Billing
           </h1>
           <p className="text-[#64748B] text-sm mt-1">
-            Generate and manage client invoices & fee details
+            Generate and manage client invoices &amp; fee details
           </p>
         </div>
         <button
           onClick={() => setIsHistoryOpen(true)}
-          className="relative z-10 flex items-center gap-2.5 px-6 py-3.5 bg-[#0F172A] hover:bg-slate-800 text-white rounded-2xl font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95 cursor-pointer self-start sm:self-auto"
+          className="flex items-center gap-2.5 px-5 py-2.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl font-bold text-sm shadow-sm hover:shadow-md transition-all active:scale-95 cursor-pointer self-start sm:self-auto"
         >
-          <History size={18} />
+          <History size={16} />
           Invoice History
-          <span className="bg-blue-600 text-white text-xs px-2.5 py-0.5 rounded-full font-bold ml-1">
+          <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full font-bold ml-1">
             {invoices.length}
           </span>
         </button>
-        <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 opacity-10 pointer-events-none text-blue-600">
-          <Landmark size={200} />
-        </div>
       </div>
+
 
       {/* Dynamic Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">

@@ -311,7 +311,7 @@ export default function ClerkFormatPhysicalFile() {
             height: 400px;
             border: 4px solid #000;
             padding: 20px;
-            font-family: sans-serif;
+            font-family: 'Inter', -apple-system, sans-serif;
             text-align: center;
             background: #fff;
             color: #000;

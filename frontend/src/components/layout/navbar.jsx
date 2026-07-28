@@ -131,10 +131,19 @@ export default function Navbar() {
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
-    <nav className="bg-white border-b border-[#E2E8F0] px-4 md:px-6 pl-14 md:pl-6 py-3 flex justify-end items-center">
+    <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] px-4 md:px-6 pl-14 md:pl-6 py-3 flex justify-between items-center font-sans shadow-xs">
+      {/* Left Side: Legal Tech Futuristic Brand Header */}
+      <div className="flex items-center gap-3">
+        <span className="font-legaltech text-base md:text-lg font-black tracking-wider bg-gradient-to-r from-blue-700 via-indigo-600 to-slate-900 bg-clip-text text-transparent uppercase">
+          LEGAL TECH
+        </span>
+        <span className="hidden sm:inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 tracking-wider font-sans uppercase">
+          Enterprise
+        </span>
+      </div>
 
       {/* Right Side */}
-      <div className="flex items-end gap-3">
+      <div className="flex items-center gap-3">
 
         {/* Notifications */}
         <div className="relative" ref={notificationRef}>

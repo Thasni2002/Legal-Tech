@@ -7,7 +7,9 @@
   <meta name="description" content="Comprehensive single-page documentation for the Legal-Tech CRM & ERP Ecosystem — a unified platform for law firms covering case management, AI drafting, automated notifications, and role-based access control." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:wght@400;500&family=Orbitron:wght@400..900&family=Rajdhani:wght@400;500;600;700&family=Space+Grotesk:wght@400..700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -27,16 +29,24 @@
       --card-bg:   rgba(255,255,255,0.04);
       --radius:    14px;
       --radius-sm: 8px;
+      --font-sans: 'Inter', sans-serif;
+      --font-legaltech: 'Orbitron', 'Space Grotesk', 'Rajdhani', sans-serif;
     }
 
     html { scroll-behavior: smooth; }
 
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: var(--font-sans);
       background: var(--navy);
       color: #E2E8F0;
       line-height: 1.7;
       font-size: 15px;
+    }
+
+    .font-legaltech {
+      font-family: var(--font-legaltech);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
     }
 
     /* ─── SCROLLBAR ─── */
@@ -69,10 +79,13 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      font-family: var(--font-legaltech);
       font-weight: 800;
       font-size: 1.05rem;
       color: #fff;
       white-space: nowrap;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
     }
     .nav-logo span.icon {
       width: 34px; height: 34px;

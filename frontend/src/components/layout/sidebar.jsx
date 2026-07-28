@@ -251,22 +251,22 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
 
       {/* Main Container for 2-Tier Sidebar */}
       <div
-        className={`fixed top-0 left-0 h-screen z-50 flex transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 h-screen z-50 flex transition-transform duration-300 ease-in-out font-poppins ${
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
         {/* Tier 1: Primary Icon Rail (Width 72px) */}
-        <aside className="w-[72px] h-screen bg-[#0F172A] text-slate-300 flex flex-col justify-between items-center py-4 border-r border-slate-800 flex-shrink-0 z-20 select-none">
+        <aside className="w-[72px] h-screen bg-[#0F172A] text-slate-300 flex flex-col justify-between items-center py-4 border-r border-slate-800 flex-shrink-0 z-20 select-none font-poppins">
           {/* Logo Mark */}
           <div className="flex flex-col items-center gap-1 mb-4">
             <Link
               href="/"
               className="w-11 h-11 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20 hover:scale-105 transition-transform"
-              title="LegalTech ERP"
+              title="Legal Tech Enterprise"
             >
               <Scale size={24} />
             </Link>
-            <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400">MB</span>
+            <span className="text-[9px] font-black uppercase tracking-widest text-blue-400 font-legaltech">LT</span>
           </div>
 
           {/* Module Icons Navigation */}
@@ -278,21 +278,21 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
                 <button
                   key={mod.id}
                   onClick={() => handleModuleClick(mod.id)}
-                  className={`group relative w-12 flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all duration-200 ${
+                  className={`group relative w-12 flex flex-col items-center justify-center py-2.5 px-1 rounded-2xl transition-all duration-200 ${
                     isActive
-                      ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
-                      : "text-slate-400 hover:text-white hover:bg-slate-800/80"
+                      ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 font-bold"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800/80 font-semibold"
                   }`}
                   title={mod.title}
                 >
                   <IconComp size={20} className={isActive ? "text-white" : "group-hover:scale-110 transition-transform"} />
-                  <span className="text-[10px] font-medium tracking-tight mt-1 truncate max-w-full">
+                  <span className="text-[10.5px] tracking-tight mt-1 truncate max-w-full font-poppins font-semibold">
                     {mod.shortLabel}
                   </span>
 
                   {/* Active Indicator Bar on left edge */}
                   {isActive && (
-                    <span className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-400 rounded-r-full" />
+                    <span className="absolute -left-2 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-blue-400 rounded-r-full" />
                   )}
                 </button>
               );
@@ -324,21 +324,21 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
           </div>
         </aside>
 
-        {/* Tier 2: Secondary Expandable Drawer (Width 220px) */}
+        {/* Tier 2: Secondary Expandable Drawer (Width 230px) */}
         <aside
-          className={`h-screen bg-white border-r border-[#E2E8F0] shadow-sm flex flex-col transition-all duration-300 ease-in-out overflow-hidden z-10 ${
-            isCollapsed ? "w-0 opacity-0 pointer-events-none" : "w-[220px] opacity-100"
+          className={`h-screen bg-white border-r border-[#E2E8F0] shadow-sm flex flex-col transition-all duration-300 ease-in-out overflow-hidden z-10 font-poppins ${
+            isCollapsed ? "w-0 opacity-0 pointer-events-none" : "w-[230px] opacity-100"
           }`}
         >
           {/* Drawer Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-[#E2E8F0] bg-slate-50/50">
             <div className="flex flex-col min-w-0">
-              <h3 className="text-sm font-bold text-[#0F172A] truncate tracking-tight">
+              <span className="text-[10px] font-black tracking-widest text-blue-600 uppercase font-legaltech mb-0.5">
+                LEGAL TECH
+              </span>
+              <h3 className="text-sm font-extrabold text-[#0F172A] truncate tracking-tight font-poppins">
                 {activeModule?.title || "Workspace"}
               </h3>
-              <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
-                MODULE FEATURES
-              </span>
             </div>
 
             {/* Collapse Toggle Button */}
@@ -353,7 +353,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
           </div>
 
           {/* Drawer Links List */}
-          <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-1">
+          <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-1.5 font-poppins">
             {activeModule?.items.map((item) => {
               const isPathActive =
                 pathname === item.path || (item.path !== "/" && pathname?.startsWith(item.path));
@@ -364,17 +364,24 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
                   key={item.path}
                   href={item.path}
                   onClick={() => setIsOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-150 ${
+                  className={`group relative flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-[14px] transition-all duration-150 overflow-hidden ${
                     isPathActive
-                      ? "bg-slate-100 text-blue-600 font-bold border-l-4 border-blue-600 shadow-sm"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      ? "bg-[#EFF6FF] text-[#2563EB] font-extrabold shadow-xs"
+                      : "text-slate-800 hover:bg-slate-50 hover:text-slate-900 font-semibold"
                   }`}
                 >
+                  {/* Active Left Indicator Bar matching user photo */}
+                  {isPathActive && (
+                    <span className="absolute left-0 top-0 bottom-0 w-[5px] bg-[#2563EB] rounded-r-full" />
+                  )}
+
                   <SubIcon
-                    size={16}
-                    className={isPathActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"}
+                    size={20}
+                    className={`shrink-0 transition-colors ${
+                      isPathActive ? "text-[#2563EB]" : "text-slate-500 group-hover:text-slate-700"
+                    }`}
                   />
-                  <span className="truncate">{item.name}</span>
+                  <span className="truncate tracking-tight">{item.name}</span>
                 </Link>
               );
             })}
@@ -382,10 +389,10 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
 
           {/* Drawer Footer Status */}
           {user && (
-            <div className="p-3 border-t border-[#E2E8F0] bg-slate-50/60">
+            <div className="p-3.5 border-t border-[#E2E8F0] bg-slate-50/60 font-poppins">
               <div className="flex items-center justify-between text-[11px] text-slate-500">
                 <span className="font-medium truncate max-w-[130px]">{user.username}</span>
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-semibold border border-blue-100 capitalize">
+                <span className="text-[9px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-bold border border-blue-100 capitalize">
                   {user.role}
                 </span>
               </div>

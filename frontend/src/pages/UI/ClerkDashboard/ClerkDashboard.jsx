@@ -143,19 +143,20 @@ export default function ClerkDashboard() {
   return (
     <div className="w-full min-h-screen bg-[#F8FAFC] p-4 sm:p-8 space-y-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#FAF6F0] via-[#F4EFE6] to-[#EFE8DC] border border-[#E6DFD5] text-[#2C221E] rounded-3xl p-6 sm:p-10 shadow-lg shadow-amber-900/5 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="relative z-10 space-y-2">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-[#8C6D53]/15 border border-[#8C6D53]/30 rounded-full text-[#6B4E38] text-xs font-bold uppercase tracking-wider">
-            🏛️ Advocate Clerk Command Center
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-100 rounded-full text-blue-600 text-xs font-bold uppercase tracking-wider mb-1">
+            🏛️ Clerk Workspace
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#2C221E]">
-            Welcome back, <span className="capitalize text-[#8C5E34]">{user.firstName || user.username || "Clerk"}</span>
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#0F172A]">
+            Welcome back, <span className="capitalize text-[#2563EB]">{user.firstName || user.username || "Clerk"}</span>
           </h1>
-          <p className="text-[#5A4D46] text-sm max-w-xl font-medium">
+          <p className="text-[#64748B] text-sm font-medium">
             Manage daily court visits, physical file formatting, and leaves.
           </p>
         </div>
       </div>
+
 
       {/* Stats Summary Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">

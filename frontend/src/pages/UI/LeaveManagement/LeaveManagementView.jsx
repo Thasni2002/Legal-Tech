@@ -329,7 +329,7 @@ export default function LeaveManagementView({
         <head>
           <title>Leave Requests Report (${viewMode.toUpperCase()})</title>
           <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 24px; color: #1e293b; }
+            body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; color: #1e293b; }
             h2 { color: #0f172a; margin-bottom: 4px; }
             p { color: #64748b; font-size: 14px; margin-top: 0; }
             table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
@@ -852,20 +852,20 @@ export default function LeaveManagementView({
                   padding: "11px 26px",
                   borderRadius: "12px",
                   border: "none",
-                  background: "#0F172A",
+                  background: "#2563EB",
                   color: "#ffffff",
                   fontWeight: "700",
                   fontSize: "14px",
                   cursor: "pointer",
                   opacity: submitting ? 0.7 : 1,
-                  boxShadow: "0 4px 12px rgba(15, 23, 42, 0.15)",
+                  boxShadow: "0 4px 12px rgba(37, 99, 235, 0.25)",
                   transition: "all 0.15s ease",
                 }}
                 onMouseEnter={(e) => {
-                  if (!submitting) e.currentTarget.style.background = "#1E293B";
+                  if (!submitting) e.currentTarget.style.background = "#1D4ED8";
                 }}
                 onMouseLeave={(e) => {
-                  if (!submitting) e.currentTarget.style.background = "#0F172A";
+                  if (!submitting) e.currentTarget.style.background = "#2563EB";
                 }}
               >
                 {submitting ? "Submitting..." : "Submit Leave Request"}
@@ -896,7 +896,7 @@ export default function LeaveManagementView({
               padding: "10px 20px",
               borderRadius: "10px",
               border: "none",
-              background: clerkTab === "own" ? "#0F172A" : "#F1F5F9",
+              background: clerkTab === "own" ? "#2563EB" : "#F1F5F9",
               color: clerkTab === "own" ? "#ffffff" : "#475569",
               fontWeight: "600",
               fontSize: "14px",
@@ -911,7 +911,7 @@ export default function LeaveManagementView({
               padding: "10px 20px",
               borderRadius: "10px",
               border: "none",
-              background: clerkTab === "team" ? "#0F172A" : "#F1F5F9",
+              background: clerkTab === "team" ? "#2563EB" : "#F1F5F9",
               color: clerkTab === "team" ? "#ffffff" : "#475569",
               fontWeight: "600",
               fontSize: "14px",
@@ -950,7 +950,7 @@ export default function LeaveManagementView({
                     padding: "8px 16px",
                     borderRadius: "8px",
                     border: "none",
-                    background: active ? "#0F172A" : "transparent",
+                    background: active ? "#2563EB" : "transparent",
                     color: active ? "#ffffff" : "#475569",
                     fontWeight: active ? "600" : "500",
                     fontSize: "14px",
@@ -1041,12 +1041,12 @@ export default function LeaveManagementView({
                   padding: "9px 18px",
                   borderRadius: "8px",
                   border: "none",
-                  background: "#0F172A",
+                  background: "#2563EB",
                   color: "#ffffff",
                   fontSize: "13px",
                   fontWeight: "600",
                   cursor: "pointer",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                  boxShadow: "0 2px 4px rgba(37, 99, 235, 0.2)",
                 }}
               >
                 <Plus style={{ width: "16px", height: "16px" }} />
