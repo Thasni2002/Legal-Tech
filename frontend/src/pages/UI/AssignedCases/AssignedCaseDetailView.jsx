@@ -1,9 +1,8 @@
 "use client";
 
 import { API_BASE_URL } from "@/utils/api";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { getTodayDateString } from "@/utils/dateUtils";
 import CustomDatePicker from "@/components/ui/CustomDatePicker";
 import {
   FileText,
@@ -22,11 +21,81 @@ import {
   Scale,
   Pencil,
   Trash2,
+  Hash,
+  Send,
+  AlertCircle,
 } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
 import { isSensitiveCase } from "@/utils/caseSensitivity";
 import DocumentViewerModal from "@/components/common/DocumentViewerModal";
 
+// ─── Status helpers ────────────────────────────────────────────────────────────
+function getStatusBadgeStyle(status) {
+  const s = String(status || "").trim();
+  const lower = s.toLowerCase();
+  if (lower.includes("won") || lower === "completed" || lower === "judgment delivered") {
+    return { className: "bg-emerald-50 text-emerald-700 border border-emerald-200 font-extrabold", icon: <CheckCircle size={11} /> };
+  }
+  if (lower.includes("lost") || lower === "closed" || lower.includes("reject")) {
+    return { className: "bg-rose-50 text-rose-700 border border-rose-200 font-extrabold", icon: <AlertCircle size={11} /> };
+  }
+  if (
+    lower === "in progress" || lower === "hearing scheduled" || lower === "hearing completed" ||
+    lower === "case preparation" || lower === "advocate assigned"
+  ) {
+    return { className: "bg-blue-50 text-blue-700 border border-blue-200 font-bold", icon: <Clock size={11} /> };
+  }
+  if (lower === "active" || lower === "document verified") {
+    return { className: "bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold", icon: <CheckCircle size={11} /> };
+  }
+  if (
+    lower === "under review" || lower === "awaiting judgment" || lower === "on hold" ||
+    lower === "document pending" || lower === "client consulting" || lower === "client detail collection" ||
+    lower === "document data collection" || lower === "court file" || lower === "pending"
+  ) {
+    return { className: "bg-amber-50 text-amber-700 border border-amber-200 font-bold", icon: <Clock size={11} /> };
+  }
+  return { className: "bg-slate-100 text-slate-700 border border-slate-200 font-bold", icon: <Clock size={11} /> };
+}
+
+function StatusBadge({ status }) {
+  const rawStatus = status || "Active";
+  const displayStatus = rawStatus === "Won" ? "🏆 Case Won" : rawStatus === "Lost" ? "❌ Case Lost" : rawStatus;
+  const style = getStatusBadgeStyle(rawStatus);
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide whitespace-nowrap ${style.className}`}>
+      {style.icon}
+      {displayStatus}
+    </span>
+  );
+}
+
+function InfoRow({ icon, label, value }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="mt-0.5 w-8 h-8 rounded-lg bg-[#F1F5F9] flex items-center justify-center text-[#2563EB] flex-shrink-0">
+        {icon}
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">{label}</p>
+        <p className="text-sm font-semibold text-[#0F172A] mt-0.5">{value || "—"}</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Tab definitions ────────────────────────────────────────────────────────────
+const TABS = [
+  { key: "overview",   label: "Case Overview" },
+  { key: "documents",  label: "Case Documents" },
+  { key: "hearings",   label: "eCourts Hearings" },
+  { key: "orders",     label: "Orders & Judgments" },
+  { key: "parties",    label: "Parties & Advocates" },
+  { key: "notes",      label: "Advocate Notes" },
+  { key: "billing",    label: "Billing" },
+];
+
+// ─── Main Component ─────────────────────────────────────────────────────────────
 export default function AssignedCaseDetailView({
   selectedCase,
   setSelectedCase,
@@ -37,7 +106,7 @@ export default function AssignedCaseDetailView({
   handleStatusChange,
   setCases,
 }) {
-  const [caseTab, setCaseTab] = useState("overview"); // "overview" | "documents" | "appearances"
+  const [activeTab, setActiveTab] = useState("overview");
   const [selectedDocument, setSelectedDocument] = useState(null);
 
   // Upload state
@@ -46,12 +115,12 @@ export default function AssignedCaseDetailView({
   const fileInputRef = useRef(null);
 
   // Document password/lock states
-  const [docPasswordModal, setDocPasswordModal] = useState(null); // { doc, callback }
+  const [docPasswordModal, setDocPasswordModal] = useState(null);
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [selectedDoc, setSelectedDoc] = useState(null);
 
-  // Appearance Modal state (handles both Add and Edit)
+  // Appearance Modal state
   const [appearanceModal, setAppearanceModal] = useState(false);
   const [editingAppearanceIdx, setEditingAppearanceIdx] = useState(null);
   const [appearanceLoading, setAppearanceLoading] = useState(false);
@@ -64,18 +133,164 @@ export default function AssignedCaseDetailView({
     nextDate: "",
   });
 
+  // eCourts state
+  const [ecourtsData, setEcourtsData] = useState(null);
+  const [syncLoading, setSyncLoading] = useState(false);
+
+  // Notes state
+  const [caseNotes, setCaseNotes] = useState([]);
+  const [newNoteText, setNewNoteText] = useState("");
+  const [newNoteCategory, setNewNoteCategory] = useState("Action Item");
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [noteSaving, setNoteSaving] = useState(false);
+
+  // Billing state
+  const [caseInvoices, setCaseInvoices] = useState([]);
+  const [feeLoading, setFeeLoading] = useState(false);
+
   const loggedInUser = getLoggedInUser();
   const isJuniorAdvocate =
-    loggedInUser &&
-    loggedInUser.role &&
-    loggedInUser.role.toLowerCase().includes("junior");
+    loggedInUser && loggedInUser.role && loggedInUser.role.toLowerCase().includes("junior");
 
-  // Filter visible documents for junior advocate
+  // ─── eCourts fetch ────────────────────────────────────────────────────────────
+  const fetchECourtsData = async () => {
+    try {
+      const cnr = selectedCase?.cnr_number || selectedCase?.caseNo;
+      if (!cnr) return;
+      setSyncLoading(true);
+      const res = await fetch(`${API_BASE_URL}/api/ecourts/lookup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cnrNumber: cnr }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEcourtsData(data);
+      }
+    } catch (err) {
+      console.error("eCourts fetch error:", err);
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
+  // ─── Notes fetch/CRUD ─────────────────────────────────────────────────────────
+  const fetchCaseNotes = async () => {
+    const caseId = selectedCase?.case_id || selectedCase?.caseId;
+    if (!caseId) return;
+    setNotesLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/case-management/${caseId}/notes`);
+      if (res.ok) {
+        const data = await res.json();
+        setCaseNotes(Array.isArray(data) ? data : []);
+      }
+    } catch (e) {
+      console.error("Failed to fetch case notes:", e);
+    } finally {
+      setNotesLoading(false);
+    }
+  };
+
+  const handleAddNote = async () => {
+    if (!newNoteText.trim()) return;
+    const caseId = selectedCase?.case_id || selectedCase?.caseId;
+    if (!caseId) {
+      alert("Cannot save note: parent case ID not available for this assignment.");
+      return;
+    }
+    setNoteSaving(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/case-management/${caseId}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: newNoteText.trim(),
+          category: newNoteCategory,
+          author: loggedInUser?.fullName || loggedInUser?.full_name || loggedInUser?.username || "Junior Advocate",
+        }),
+      });
+      if (res.ok) {
+        const saved = await res.json();
+        setCaseNotes((prev) => [saved, ...prev]);
+        setNewNoteText("");
+      }
+    } catch (e) {
+      console.error("Failed to save note:", e);
+    } finally {
+      setNoteSaving(false);
+    }
+  };
+
+  const handleDeleteNote = async (noteId) => {
+    const caseId = selectedCase?.case_id || selectedCase?.caseId;
+    if (!caseId) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/case-management/${caseId}/notes/${noteId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setCaseNotes((prev) => prev.filter((n) => n.id !== noteId));
+      }
+    } catch (e) {
+      console.error("Failed to delete note:", e);
+    }
+  };
+
+  // ─── Billing fetch ────────────────────────────────────────────────────────────
+  const fetchCaseInvoices = async () => {
+    const caseNo = (selectedCase?.caseNo || "").trim().toLowerCase();
+    if (!caseNo) return;
+    setFeeLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/finance/invoices`);
+      if (res.ok) {
+        const data = await res.json();
+        const matched = (Array.isArray(data) ? data : []).filter((inv) => {
+          const invCase = (inv.case_number || "").trim().toLowerCase();
+          return invCase !== "" && invCase === caseNo;
+        });
+        setCaseInvoices(matched);
+      }
+    } catch (e) {
+      console.error("Failed to fetch invoices:", e);
+    } finally {
+      setFeeLoading(false);
+    }
+  };
+
+  // ─── Initial data load ────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (selectedCase?.id) {
+      fetchECourtsData();
+      fetchCaseNotes();
+      fetchCaseInvoices();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCase?.id]);
+
+  // ─── Billing computed ─────────────────────────────────────────────────────────
+  const totalBilled = caseInvoices.reduce((sum, inv) => sum + (Number(inv.grand_total) || 0), 0);
+  const totalPaid = caseInvoices
+    .filter((inv) => inv.status === "Paid")
+    .reduce((sum, inv) => sum + (Number(inv.grand_total) || 0), 0);
+  const totalPending = caseInvoices
+    .filter((inv) => inv.status !== "Paid")
+    .reduce((sum, inv) => sum + (Number(inv.grand_total) || 0), 0);
+  const paymentStatus =
+    caseInvoices.length === 0
+      ? "No Invoices"
+      : totalPending === 0
+      ? "Fully Paid"
+      : totalPaid > 0
+      ? "Partially Paid"
+      : "Payment Due";
+
+  // ─── Document helpers ─────────────────────────────────────────────────────────
   const getVisibleDocs = (docs = []) => {
     if (!isJuniorAdvocate) return docs;
     return docs.filter((d) => d.password && d.password.trim().length > 0);
   };
-
   const visibleDocs = getVisibleDocs(selectedCase?.documents || []);
 
   const caseAllowsUpload = (caseItem) => {
@@ -83,11 +298,9 @@ export default function AssignedCaseDetailView({
     return caseItem.documents.some((d) => d.upload === true);
   };
 
-  // View document with base64/URL normalization
   const handleViewDocument = (doc) => {
     let rawUrl = doc.fileUrl || doc.file_url || doc.url || "";
     let fileTitle = doc.file || doc.documentType || "Assigned Document";
-
     if (rawUrl.startsWith("data:") || rawUrl.length > 500) {
       try {
         const parts = rawUrl.split(",");
@@ -96,23 +309,12 @@ export default function AssignedCaseDetailView({
         const bstr = atob(parts[1]);
         let n = bstr.length;
         const u8arr = new Uint8Array(n);
-        while (n--) {
-          u8arr[n] = bstr.charCodeAt(n);
-        }
+        while (n--) { u8arr[n] = bstr.charCodeAt(n); }
         const blob = new Blob([u8arr], { type: mimeType });
-        const bUrl = URL.createObjectURL(blob);
-
-        setSelectedDoc({
-          fileUrl: bUrl,
-          title: fileTitle,
-          badge: doc.documentType || "Document",
-        });
+        setSelectedDoc({ fileUrl: URL.createObjectURL(blob), title: fileTitle, badge: doc.documentType || "Document" });
         return;
-      } catch (e) {
-        console.error("Failed to parse base64 for preview:", e);
-      }
+      } catch (e) { console.error("Failed to parse base64 for preview:", e); }
     }
-
     let normalized = rawUrl;
     if (typeof window !== "undefined") {
       if (window.location.hostname === "127.0.0.1") {
@@ -121,87 +323,44 @@ export default function AssignedCaseDetailView({
         normalized = rawUrl.replace("127.0.0.1:8000", "localhost:8000");
       }
     }
-
-    setSelectedDoc({
-      fileUrl: normalized,
-      title: fileTitle,
-      badge: doc.documentType || "Document",
-    });
+    setSelectedDoc({ fileUrl: normalized, title: fileTitle, badge: doc.documentType || "Document" });
   };
 
-  // Handle document upload
   const handleUploadFile = async (e) => {
     const file = e.target.files[0];
     if (!file || !selectedCase) return;
-
     setUploadLoading(true);
     setUploadSuccess(false);
-
     try {
       const formData = new FormData();
       formData.append("file", file);
-
-      const uploadRes = await fetch(
-        `${API_BASE_URL}/lawfirm-management/assigned-cases/upload-document`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      if (!uploadRes.ok) {
-        throw new Error("Failed to upload document file");
-      }
-
+      const uploadRes = await fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases/upload-document`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!uploadRes.ok) throw new Error("Failed to upload document file");
       const uploadData = await uploadRes.json();
-      const newDocObj = {
-        file: file.name,
-        documentType: "Uploaded File",
-        upload: true,
-        fileUrl: uploadData.file_url,
-      };
-
+      const newDocObj = { file: file.name, documentType: "Uploaded File", upload: true, fileUrl: uploadData.file_url };
       const updatedDocs = [...(selectedCase.documents || []), newDocObj];
-
-      const saveRes = await fetch(
-        `${API_BASE_URL}/lawfirm-management/assigned-cases/${selectedCase.id}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            assigned_documents: updatedDocs,
-          }),
-        }
-      );
-
-      if (!saveRes.ok) {
-        throw new Error("Failed to save document to assigned case");
-      }
-
-      setSelectedCase((prev) => ({
-        ...prev,
-        documents: updatedDocs,
-      }));
-
-      setCases((prevCases) =>
-        prevCases.map((c) =>
-          c.id === selectedCase.id ? { ...c, documents: updatedDocs } : c
-        )
-      );
-
+      const saveRes = await fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases/${selectedCase.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assigned_documents: updatedDocs }),
+      });
+      if (!saveRes.ok) throw new Error("Failed to save document to assigned case");
+      setSelectedCase((prev) => ({ ...prev, documents: updatedDocs }));
+      setCases((prevCases) => prevCases.map((c) => c.id === selectedCase.id ? { ...c, documents: updatedDocs } : c));
       setUploadSuccess(true);
     } catch (error) {
       console.error("Error uploading file:", error);
       alert("Error uploading document. Please try again.");
     } finally {
       setUploadLoading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  // Open appearance modal for CREATE
+  // ─── Appearance handlers ──────────────────────────────────────────────────────
   const handleOpenCreateAppearance = () => {
     const user = getLoggedInUser();
     setEditingAppearanceIdx(null);
@@ -216,7 +375,6 @@ export default function AssignedCaseDetailView({
     setAppearanceModal(true);
   };
 
-  // Open appearance modal for EDIT
   const handleOpenEditAppearance = (app, idx) => {
     setEditingAppearanceIdx(idx);
     setAppearanceForm({
@@ -230,46 +388,25 @@ export default function AssignedCaseDetailView({
     setAppearanceModal(true);
   };
 
-  // Save (Create or Update) court appearance entry
   const handleSaveAppearance = async (e) => {
     e.preventDefault();
     if (!selectedCase) return;
     setAppearanceLoading(true);
-
     const isEdit = editingAppearanceIdx !== null;
     const endpoint = isEdit
       ? `${API_BASE_URL}/lawfirm-management/assigned-cases/${selectedCase.id}/appearances/${editingAppearanceIdx}`
       : `${API_BASE_URL}/lawfirm-management/assigned-cases/${selectedCase.id}/appearances`;
-
     const method = isEdit ? "PUT" : "POST";
-
     try {
-      const res = await fetch(endpoint, {
-        method: method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(appearanceForm),
-      });
-
+      const res = await fetch(endpoint, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(appearanceForm) });
       if (!res.ok) throw new Error("Failed to save court appearance");
       const updatedCase = await res.json();
-
       const newAppearances = updatedCase.appearances || [];
       const updatedHearing = updatedCase.due_date || selectedCase.hearing;
-
-      setSelectedCase((prev) => ({
-        ...prev,
-        appearances: newAppearances,
-        hearing: updatedHearing,
-      }));
-
+      setSelectedCase((prev) => ({ ...prev, appearances: newAppearances, hearing: updatedHearing }));
       setCases((prevCases) =>
-        prevCases.map((c) =>
-          c.id === selectedCase.id
-            ? { ...c, appearances: newAppearances, hearing: updatedHearing }
-            : c
-        )
+        prevCases.map((c) => c.id === selectedCase.id ? { ...c, appearances: newAppearances, hearing: updatedHearing } : c)
       );
-
       setAppearanceModal(false);
       setEditingAppearanceIdx(null);
     } catch (err) {
@@ -280,34 +417,19 @@ export default function AssignedCaseDetailView({
     }
   };
 
-  // Delete court appearance entry
   const handleDeleteAppearance = async (idx) => {
-    if (!selectedCase || !window.confirm("Are you sure you want to delete this appearance entry?")) {
-      return;
-    }
-
+    if (!selectedCase || !window.confirm("Are you sure you want to delete this appearance entry?")) return;
     try {
       const res = await fetch(
         `${API_BASE_URL}/lawfirm-management/assigned-cases/${selectedCase.id}/appearances/${idx}`,
-        {
-          method: "DELETE",
-        }
+        { method: "DELETE" }
       );
-
       if (!res.ok) throw new Error("Failed to delete appearance entry");
       const updatedCase = await res.json();
-
       const newAppearances = updatedCase.appearances || [];
-
-      setSelectedCase((prev) => ({
-        ...prev,
-        appearances: newAppearances,
-      }));
-
+      setSelectedCase((prev) => ({ ...prev, appearances: newAppearances }));
       setCases((prevCases) =>
-        prevCases.map((c) =>
-          c.id === selectedCase.id ? { ...c, appearances: newAppearances } : c
-        )
+        prevCases.map((c) => c.id === selectedCase.id ? { ...c, appearances: newAppearances } : c)
       );
     } catch (err) {
       console.error("Error deleting appearance:", err);
@@ -317,33 +439,34 @@ export default function AssignedCaseDetailView({
 
   if (!selectedCase) return null;
 
+  // ─── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="w-full max-w-7xl mx-auto pb-10 animate-in fade-in duration-200">
-      {/* Unified Single Main Container Box */}
       <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden">
-        {/* Case Header Section */}
+
+        {/* ── Case Header ──────────────────────────────────────────────────────── */}
         <div className="p-5 sm:p-6 border-b border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 min-w-0">
             <button
               onClick={onClose}
-              className="p-2.5 bg-slate-100 hover:bg-slate-200 text-[#0F172A] rounded-xl font-bold transition flex items-center gap-2 cursor-pointer text-sm shadow-xs"
+              className="p-2.5 bg-slate-100 hover:bg-slate-200 text-[#0F172A] rounded-xl font-bold transition flex items-center gap-2 cursor-pointer text-sm shadow-xs shrink-0"
               title="Back to Assigned Cases"
             >
               <ArrowLeft size={18} />
               <span>Back</span>
             </button>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-3">
-                <span className="bg-blue-50 text-[#2563EB] p-2 rounded-xl border border-blue-100 shadow-xs">
+                <span className="bg-blue-50 text-[#2563EB] p-2 rounded-xl border border-blue-100 shadow-xs shrink-0">
                   <Gavel size={20} />
                 </span>
-                <h1 className="text-[#0F172A] font-extrabold text-2xl sm:text-3xl tracking-tight">
+                <h1 className="text-[#0F172A] font-extrabold text-xl sm:text-2xl tracking-tight truncate">
                   {selectedCase.title}
                 </h1>
               </div>
-              <p className="text-xs text-[#64748B] font-semibold uppercase tracking-wider mt-1.5 flex items-center gap-2">
+              <p className="text-xs text-[#64748B] font-semibold uppercase tracking-wider mt-1.5 flex items-center gap-2 flex-wrap">
                 <span className="bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-md">
-                  Case No: {selectedCase.caseNo || "N/A"}
+                  Case #{selectedCase.caseNo || "N/A"}
                 </span>
                 <span>•</span>
                 <span className="bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-md font-mono">
@@ -352,106 +475,70 @@ export default function AssignedCaseDetailView({
               </p>
             </div>
           </div>
-
-
-
         </div>
 
-        {/* Top Segmented Tab Navigation */}
-        <div className="border-b border-[#E2E8F0] bg-slate-50/50 p-4 sm:p-5 flex items-center justify-between flex-wrap gap-4">
-          <div className="inline-flex bg-slate-200/60 p-1.5 rounded-xl gap-1 border border-slate-200">
-            <button
-              onClick={() => setCaseTab("overview")}
-              className={`px-5 py-2.5 text-xs font-bold rounded-lg flex items-center gap-2 transition-all cursor-pointer ${
-                caseTab === "overview"
-                  ? "bg-white text-[#2563EB] shadow-sm"
-                  : "text-[#64748B] hover:text-[#0F172A]"
-              }`}
-            >
-              <Briefcase size={15} />
-              <span>Overview & Strategy</span>
-            </button>
-
-            <button
-              onClick={() => setCaseTab("documents")}
-              className={`px-5 py-2.5 text-xs font-bold rounded-lg flex items-center gap-2 transition-all cursor-pointer ${
-                caseTab === "documents"
-                  ? "bg-white text-[#2563EB] shadow-sm"
-                  : "text-[#64748B] hover:text-[#0F172A]"
-              }`}
-            >
-              <FileText size={15} />
-              <span>Assigned Documents</span>
-              <span className={`text-[11px] px-2 py-0.5 rounded-full font-black ${
-                caseTab === "documents"
-                  ? "bg-blue-100 text-[#2563EB]"
-                  : "bg-slate-300/60 text-slate-700"
-              }`}>
-                {visibleDocs.length}
-              </span>
-            </button>
-
-            <button
-              onClick={() => setCaseTab("appearances")}
-              className={`px-5 py-2.5 text-xs font-bold rounded-lg flex items-center gap-2 transition-all cursor-pointer ${
-                caseTab === "appearances"
-                  ? "bg-white text-[#2563EB] shadow-sm"
-                  : "text-[#64748B] hover:text-[#0F172A]"
-              }`}
-            >
-              <Scale size={15} />
-              <span>Case Appearances</span>
-              <span className={`text-[11px] px-2 py-0.5 rounded-full font-black ${
-                caseTab === "appearances"
-                  ? "bg-blue-100 text-[#2563EB]"
-                  : "bg-slate-300/60 text-slate-700"
-              }`}>
-                {(selectedCase.appearances || []).length}
-              </span>
-            </button>
+        {/* ── Tab Bar ──────────────────────────────────────────────────────────── */}
+        <div className="border-b border-[#F1F5F9] bg-[#F8FAFC] p-2 sm:p-3 flex items-center gap-3">
+          <div className="flex overflow-x-auto no-scrollbar gap-1 sm:gap-1.5 scroll-smooth flex-1">
+            {TABS.map((tabObj) => (
+              <button
+                key={tabObj.key}
+                onClick={() => setActiveTab(tabObj.key)}
+                className={`px-3.5 sm:px-5 py-2.5 sm:py-3 text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-colors relative cursor-pointer rounded-xl whitespace-nowrap shrink-0 ${
+                  activeTab === tabObj.key
+                    ? "text-[#2563EB] bg-white shadow-sm font-extrabold border border-slate-200"
+                    : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100/50"
+                }`}
+              >
+                {tabObj.label}
+                {tabObj.key === "documents" && visibleDocs.length > 0 && (
+                  <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-black inline-block ${activeTab === "documents" ? "bg-blue-100 text-[#2563EB]" : "bg-slate-200 text-slate-600"}`}>
+                    {visibleDocs.length}
+                  </span>
+                )}
+                {tabObj.key === "notes" && caseNotes.length > 0 && (
+                  <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-black inline-block ${activeTab === "notes" ? "bg-purple-100 text-purple-700" : "bg-slate-200 text-slate-600"}`}>
+                    {caseNotes.length}
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
 
-          {/* Quick Action Button inside Tab Header */}
-          {caseTab === "documents" && caseAllowsUpload(selectedCase) && (
-            <div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                id="doc-upload-input"
-                onChange={handleUploadFile}
-              />
+          {/* Tab-contextual action buttons */}
+          {activeTab === "documents" && caseAllowsUpload(selectedCase) && (
+            <div className="shrink-0">
+              <input ref={fileInputRef} type="file" className="hidden" id="doc-upload-input" onChange={handleUploadFile} />
               <label
                 htmlFor="doc-upload-input"
                 className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all shadow-sm ${
-                  uploadLoading
-                    ? "bg-[#E2E8F0] text-[#94A3B8]"
-                    : "bg-[#2563EB] text-white hover:bg-[#1d4ed8]"
+                  uploadLoading ? "bg-[#E2E8F0] text-[#94A3B8]" : "bg-[#2563EB] text-white hover:bg-[#1d4ed8]"
                 }`}
               >
                 <Upload size={14} />
-                {uploadLoading ? "Uploading..." : "Upload Document"}
+                {uploadLoading ? "Uploading..." : "Upload"}
               </label>
             </div>
           )}
-
-          {caseTab === "appearances" && (
+          {activeTab === "hearings" && (
             <button
               onClick={handleOpenCreateAppearance}
-              className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer shrink-0"
             >
               <Plus size={14} />
-              <span>Log Court Appearance</span>
+              <span className="hidden sm:inline">Log Appearance</span>
             </button>
           )}
         </div>
 
-        {/* Tab Content Body */}
-        <div className="p-6 sm:p-8">
-          {/* ── Tab 1: Overview & Strategy ── */}
-          {caseTab === "overview" && (
-            <div className="space-y-8 animate-in fade-in duration-200">
-              {/* Standby Advocate Alert Banner */}
+        {/* ── Tab Content ──────────────────────────────────────────────────────── */}
+        <div className="p-4 sm:p-6 md:p-8">
+
+          {/* ══ OVERVIEW ══════════════════════════════════════════════════════ */}
+          {activeTab === "overview" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+
+              {/* Standby advocate alert */}
               {(() => {
                 const normUser = (loggedInUser?.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
                 const normSec = (selectedCase.secondaryAdvocate || selectedCase.secondary_advocate_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -459,167 +546,102 @@ export default function AssignedCaseDetailView({
                 if (!isStandby) return null;
                 return (
                   <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3.5 text-amber-900 shadow-xs">
-                    <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 text-xl font-bold">
-                      🛡️
-                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 text-xl font-bold">🛡️</div>
                     <div>
                       <h4 className="text-xs font-extrabold uppercase tracking-wider text-amber-900">You are assigned as Standby / Backup Advocate</h4>
                       <p className="text-xs text-amber-800 font-medium mt-0.5">
-                        Primary Counsel: <span className="font-bold">{selectedCase.primaryAdvocate || selectedCase.advocate_name || "N/A"}</span>. You have full proxy access to manage hearings, log court appearances, and view records if the primary advocate is absent.
+                        Primary Counsel: <span className="font-bold">{selectedCase.primaryAdvocate || selectedCase.advocate_name || "N/A"}</span>. Full proxy access to manage hearings, log appearances, and view records.
                       </p>
                     </div>
                   </div>
                 );
               })()}
 
-              <div>
-                <h3 className="text-sm font-extrabold uppercase tracking-wider text-[#64748B] mb-4 flex items-center gap-2">
-                  <Building2 size={16} className="text-[#2563EB]" />
-                  <span>Case Forum & Assigned Counsel</span>
-                </h3>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200/80 hover:border-slate-300 transition-all">
-                    <span className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider block mb-1.5">
-                      Client Name
-                    </span>
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-[#2563EB] shrink-0">
-                        <User size={16} />
-                      </div>
-                      <span className="text-sm font-bold text-[#0F172A] truncate">
-                        {isJuniorAdvocate && isSensitiveCase(selectedCase) ? "Confidential (Restricted)" : (selectedCase.client || "Not Specified")}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200/80 hover:border-slate-300 transition-all">
-                    <span className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider block mb-1.5">
-                      Primary Advocate
-                    </span>
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0 font-black text-xs">
-                        PA
-                      </div>
-                      <span className="text-sm font-bold text-[#0F172A] truncate">
-                        {(() => {
-                          const p = selectedCase.primaryAdvocate || selectedCase.advocate_name || selectedCase.advocateName;
-                          if (!p) return "Not Specified";
-                          return p.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-                        })()}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200/80 hover:border-slate-300 transition-all">
-                    <span className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider block mb-1.5">
-                      Standby Advocate
-                    </span>
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 shrink-0 font-black text-xs">
-                        SA
-                      </div>
-                      <span className="text-sm font-bold text-[#0F172A] truncate">
-                        {(() => {
-                          const s = selectedCase.secondaryAdvocate || selectedCase.secondary_advocate_name || selectedCase.secondaryAdvocateName;
-                          if (!s || s === "None") return "None";
-                          return s.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-                        })()}
-                      </span>
-                    </div>
-                  </div>
-
-
-                  <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200/80 hover:border-slate-300 transition-all">
-                    <span className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider block mb-1.5">
-                      Court / Forum
-                    </span>
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600 shrink-0">
-                        <Building2 size={16} />
-                      </div>
-                      <span className="text-sm font-bold text-[#0F172A] truncate">
-                        {selectedCase.court || "Not Specified"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200/80 hover:border-slate-300 transition-all">
-                    <span className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider block mb-1.5">
-                      Next Hearing Date
-                    </span>
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
-                        <Calendar size={16} />
-                      </div>
-                      <span className="text-sm font-bold text-[#0F172A] truncate">
-                        {selectedCase.hearing || "No hearing date"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200/80 hover:border-slate-300 transition-all">
-                    <span className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider block mb-1.5 flex items-center justify-between">
-                      <span>Current Status</span>
-                      <span className="text-[9px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded">Update Status</span>
-                    </span>
-                    <div className="mt-1">
-                      <select
-                        value={selectedCase.status || "Active"}
-                        onChange={(e) => {
-                          const newStatus = e.target.value;
-                          if (handleStatusChange && selectedCase.id) {
-                            handleStatusChange(selectedCase.id, newStatus);
-                          }
-                        }}
-                        className={`w-full px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wider border outline-none cursor-pointer transition-all shadow-xs ${
-                          getStatusSelectClass ? getStatusSelectClass(selectedCase.status) : "bg-white text-slate-800 border-slate-200"
-                        }`}
-                      >
-                        <option value="Active" className="bg-white text-slate-800">Active</option>
-                        <option value="Client Consulting" className="bg-white text-slate-800">Client Consulting</option>
-                        <option value="Client Detail Collection" className="bg-white text-slate-800">Client Detail Collection</option>
-                        <option value="Document Data Collection" className="bg-white text-slate-800">Document Data Collection</option>
-                        <option value="Document Pending" className="bg-white text-slate-800">Document Pending</option>
-                        <option value="Document Verified" className="bg-white text-slate-800">Document Verified</option>
-                        <option value="Advocate Assigned" className="bg-white text-slate-800">Advocate Assigned</option>
-                        <option value="Under Review" className="bg-white text-slate-800">Under Review</option>
-                        <option value="Case Preparation" className="bg-white text-slate-800">Case Preparation</option>
-                        <option value="Court File" className="bg-white text-slate-800">Court File</option>
-                        <option value="In Progress" className="bg-white text-slate-800">In Progress</option>
-                        <option value="Hearing Scheduled" className="bg-white text-slate-800">Hearing Scheduled</option>
-                        <option value="Hearing Completed" className="bg-white text-slate-800">Hearing Completed</option>
-                        <option value="Awaiting Judgment" className="bg-white text-slate-800">Awaiting Judgment</option>
-                        <option value="Judgment Delivered" className="bg-white text-slate-800">Judgment Delivered</option>
-                        <option value="Won" className="bg-white text-emerald-700 font-bold">🏆 Case Won</option>
-                        <option value="Lost" className="bg-white text-rose-700 font-bold">❌ Case Lost</option>
-                        <option value="On Hold" className="bg-white text-slate-800">On Hold</option>
-                        <option value="Closed" className="bg-white text-slate-800">Closed</option>
-                      </select>
-                    </div>
-                  </div>
-
+              {/* Status row + update dropdown */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <StatusBadge status={selectedCase.status} />
+                  <span className="text-xs text-[#94A3B8] font-semibold tracking-wide uppercase">
+                    {selectedCase.court || ""}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 w-full sm:w-auto justify-between sm:justify-end">
+                  <label className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Update Status:</label>
+                  <select
+                    value={selectedCase.status || "Active"}
+                    onChange={(e) => {
+                      if (handleStatusChange && selectedCase.id) {
+                        handleStatusChange(selectedCase.id, e.target.value);
+                      }
+                    }}
+                    className="rounded-xl border border-[#E2E8F0] bg-white px-3 py-1.5 text-xs font-bold text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition cursor-pointer shadow-sm"
+                  >
+                    {[
+                      "Active","Client Consulting","Client Detail Collection","Document Data Collection",
+                      "Document Pending","Document Verified","Advocate Assigned","Under Review","Case Preparation",
+                      "Court File","In Progress","Hearing Scheduled","Hearing Completed","Awaiting Judgment",
+                      "Judgment Delivered","Won","Lost","On Hold","Closed","Disposed",
+                    ].map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
                 </div>
               </div>
 
+              {/* Info grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                {/* Case Details */}
+                <div className="bg-[#F8FAFC] rounded-2xl p-4 sm:p-5 border border-[#F1F5F9] space-y-4">
+                  <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Case Details</h4>
+                  <InfoRow icon={<Hash size={14} />} label="Case Number" value={selectedCase.caseNo} />
+                  <InfoRow icon={<Hash size={14} />} label="Assignment ID" value={`#${selectedCase.id}`} />
+                  <InfoRow icon={<Scale size={14} />} label="Practice Area" value={selectedCase.practiceArea || selectedCase.practice_area} />
+                </div>
 
-              <div>
-                <h3 className="text-sm font-extrabold uppercase tracking-wider text-[#64748B] mb-4 flex items-center gap-2">
-                  <Briefcase size={16} className="text-amber-500" />
-                  <span>Case Strategy & Advocate Notes</span>
-                </h3>
+                {/* Court Information */}
+                <div className="bg-[#F8FAFC] rounded-2xl p-4 sm:p-5 border border-[#F1F5F9] space-y-4">
+                  <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Court Information</h4>
+                  <InfoRow icon={<Building2 size={14} />} label="Court / Forum" value={selectedCase.court} />
+                  <InfoRow icon={<Calendar size={14} />} label="Next Hearing Date" value={selectedCase.hearing || "To be scheduled"} />
+                </div>
 
-                <div className="border-l-4 border-amber-400 bg-amber-50/50 p-6 rounded-r-2xl border-y border-r border-amber-200/60 shadow-xs">
+                {/* Client & Counsel full-width */}
+                <div className="bg-[#F8FAFC] rounded-2xl p-4 sm:p-5 border border-[#F1F5F9] space-y-4 md:col-span-2">
+                  <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Client & Counsel</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <InfoRow
+                      icon={<User size={14} />}
+                      label="Client Name"
+                      value={isJuniorAdvocate && isSensitiveCase(selectedCase) ? "Confidential (Restricted)" : selectedCase.client}
+                    />
+                    <InfoRow
+                      icon={<Briefcase size={14} />}
+                      label="Primary Advocate"
+                      value={selectedCase.primaryAdvocate || selectedCase.advocate_name}
+                    />
+                    <InfoRow
+                      icon={<Briefcase size={14} />}
+                      label="Standby Advocate"
+                      value={selectedCase.secondaryAdvocate || selectedCase.secondary_advocate_name || "None"}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Assignment / Strategy Notes */}
+              {selectedCase.notes && (
+                <div className="border-l-4 border-amber-400 bg-amber-50/50 p-5 rounded-r-2xl border-y border-r border-amber-200/60 shadow-xs">
+                  <h4 className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <FileText size={13} /> Case Strategy &amp; Advocate Notes
+                  </h4>
                   <p className="text-[#334155] text-sm font-medium leading-relaxed italic">
-                    "{selectedCase.notes || "No strategy notes provided for this assigned case."}"
+                    &quot;{selectedCase.notes}&quot;
                   </p>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
-          {/* ── Tab 2: Assigned Documents ── */}
-          {caseTab === "documents" && (
+          {/* ══ DOCUMENTS ══════════════════════════════════════════════════════ */}
+          {activeTab === "documents" && (
             <div className="space-y-6 animate-in fade-in duration-200">
               {uploadSuccess && (
                 <div className="flex items-center gap-2.5 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
@@ -638,7 +660,7 @@ export default function AssignedCaseDetailView({
                       <p className="text-slate-700 font-bold text-sm">No documents found</p>
                       <p className="text-slate-400 text-xs mt-1 max-w-sm mx-auto">
                         {isJuniorAdvocate
-                          ? "No PIN-protected or assigned documents have been shared with you yet."
+                          ? "No PIN-protected documents have been shared with you yet."
                           : "No documents attached to this case assignment."}
                       </p>
                     </div>
@@ -647,7 +669,6 @@ export default function AssignedCaseDetailView({
                   visibleDocs.map((doc, idx) => {
                     const isSelected = selectedDocument?.file === doc.file;
                     const isLocked = doc.password && doc.password.trim().length > 0;
-
                     return (
                       <div
                         key={idx}
@@ -665,28 +686,19 @@ export default function AssignedCaseDetailView({
                               <Lock size={18} />
                             </div>
                           ) : (
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border shadow-xs ${
-                              isSelected ? "bg-blue-100 border-blue-200 text-[#2563EB]" : "bg-slate-100 border-slate-200 text-[#64748B]"
-                            }`}>
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border shadow-xs ${isSelected ? "bg-blue-100 border-blue-200 text-[#2563EB]" : "bg-slate-100 border-slate-200 text-[#64748B]"}`}>
                               <FileText size={18} />
                             </div>
                           )}
-
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold truncate text-[#0F172A]">
-                              {doc.file}
-                            </p>
+                            <p className="text-sm font-bold truncate text-[#0F172A]">{doc.file}</p>
                             <p className="text-xs text-[#64748B] mt-0.5">{doc.documentType}</p>
                           </div>
                         </div>
-
                         <button
                           onClick={() => {
                             if (isLocked) {
-                              setDocPasswordModal({
-                                doc: doc,
-                                callback: () => handleViewDocument(doc),
-                              });
+                              setDocPasswordModal({ doc, callback: () => handleViewDocument(doc) });
                               setPasswordInput("");
                               setPasswordError("");
                             } else {
@@ -711,117 +723,463 @@ export default function AssignedCaseDetailView({
             </div>
           )}
 
-          {/* ── Tab 3: Case Appearances ── */}
-          {caseTab === "appearances" && (
+          {/* ══ ECOURTS HEARINGS ════════════════════════════════════════════════ */}
+          {activeTab === "hearings" && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              {/* Header banner */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-blue-50 border border-blue-200 rounded-2xl p-4">
                 <div>
-                  <h3 className="text-base font-bold text-[#0F172A]">
-                    Court Appearance Log ({(selectedCase.appearances || []).length})
-                  </h3>
-                  <p className="text-xs text-[#64748B] mt-0.5">
-                    Track advocate court appearances, proceedings summary, and hearing schedules
+                  <h4 className="text-sm font-bold text-blue-900">eCourts Hearing Timeline</h4>
+                  <p className="text-xs text-blue-700 mt-0.5">
+                    Case #{selectedCase.caseNo} • Next Hearing: {selectedCase.hearing || "To be scheduled"}
                   </p>
                 </div>
+                <button
+                  onClick={fetchECourtsData}
+                  disabled={syncLoading}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-50 w-full sm:w-auto shrink-0"
+                >
+                  {syncLoading ? "Syncing..." : "Sync eCourts Now"}
+                </button>
               </div>
 
-              {(selectedCase.appearances || []).length === 0 ? (
-                <div className="text-center py-14 px-4 bg-slate-50/60 rounded-2xl border border-dashed border-slate-200 space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mx-auto text-[#2563EB]">
-                    <Scale size={24} />
-                  </div>
-                  <div>
-                    <p className="text-slate-800 font-bold text-sm">No court appearances logged yet</p>
-                    <p className="text-slate-400 text-xs mt-1 max-w-sm mx-auto">
-                      Record advocate court appearances, proceedings notes, and next hearing dates.
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleOpenCreateAppearance}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer mt-2"
-                  >
-                    <Plus size={14} />
-                    <span>Log First Appearance</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {(selectedCase.appearances || []).map((app, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-slate-300 transition-all space-y-3"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                        <div className="flex items-center gap-3">
-                          <span className="w-9 h-9 rounded-xl bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold text-xs shrink-0 border border-blue-100">
-                            <Calendar size={16} />
+              {/* Logged appearances as timeline (primary source) */}
+              {(selectedCase.appearances || []).length > 0 ? (
+                <div className="relative pl-7 sm:pl-8 space-y-6 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                  {(selectedCase.appearances || []).map((item, idx) => (
+                    <div key={idx} className="relative">
+                      <span className="absolute -left-[27px] sm:-left-[29px] top-1 w-6 h-6 rounded-full border-2 border-blue-500 bg-white flex items-center justify-center text-xs font-bold text-blue-600">
+                        {idx + 1}
+                      </span>
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-xs">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200 self-start">
+                            {item.stage || "Hearing"}
                           </span>
-                          <div>
-                            <span className="text-sm font-extrabold text-[#0F172A]">
-                              {app.appearanceDate || "Date N/A"}
-                            </span>
-                            <div className="flex items-center gap-2 mt-0.5 text-xs text-[#64748B]">
-                              <User size={13} className="text-[#2563EB]" />
-                              <span className="font-semibold">{app.advocateName || "Assigned Advocate"}</span>
-                            </div>
-                          </div>
+                          <span className="text-xs font-bold text-slate-500">{item.appearanceDate}</span>
                         </div>
-
-                        <div className="flex items-center gap-2">
-                          {app.stage && (
-                            <span className="px-3 py-1 bg-purple-50 text-purple-700 border border-purple-200/60 rounded-full text-xs font-bold">
-                              {app.stage}
-                            </span>
-                          )}
-                          {app.courtBench && (
-                            <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-semibold">
-                              {app.courtBench}
-                            </span>
-                          )}
-
-                          {/* EDIT & DELETE Action Buttons */}
-                          <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 pl-3">
-                            <button
-                              onClick={() => handleOpenEditAppearance(app, idx)}
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                              title="Edit Appearance Entry"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteAppearance(idx)}
-                              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                              title="Delete Appearance Entry"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </div>
+                        <h5 className="text-sm font-bold text-slate-900">{item.courtBench || selectedCase.court}</h5>
+                        {item.summary && (
+                          <p className="text-xs text-slate-600 mt-1 leading-relaxed">&quot;{item.summary}&quot;</p>
+                        )}
+                        {item.nextDate && (
+                          <p className="text-[11px] font-semibold text-blue-600 mt-2 flex items-center gap-1">
+                            <Clock size={11} /> Next Hearing Date Fixed: {item.nextDate}
+                          </p>
+                        )}
+                        <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+                          <User size={11} /> {item.advocateName || "Advocate"}
+                        </p>
                       </div>
-
-                      {app.summary && (
-                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-xs text-[#334155] leading-relaxed font-medium">
-                          <p className="font-bold text-slate-700 uppercase tracking-wider text-[10px] mb-1">Proceedings Summary</p>
-                          "{app.summary}"
-                        </div>
-                      )}
-
-                      {app.nextDate && (
-                        <div className="flex items-center gap-2 text-xs font-bold text-blue-700 bg-blue-50/70 border border-blue-200/60 px-3.5 py-2 rounded-xl inline-flex">
-                          <Clock size={14} className="text-[#2563EB]" />
-                          <span>Next Hearing Date Fixed: {app.nextDate}</span>
-                        </div>
-                      )}
                     </div>
                   ))}
+                </div>
+              ) : ecourtsData?.timeline && ecourtsData.timeline.length > 0 ? (
+                <div className="relative pl-7 sm:pl-8 space-y-6 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                  {ecourtsData.timeline.map((item, idx) => (
+                    <div key={idx} className="relative">
+                      <span className={`absolute -left-[27px] sm:-left-[29px] top-1 w-6 h-6 rounded-full border-2 bg-white flex items-center justify-center text-xs font-bold ${item.status === "Completed" ? "border-emerald-500 text-emerald-600" : "border-blue-500 text-blue-600 animate-pulse"}`}>
+                        {idx + 1}
+                      </span>
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-xs">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200 self-start">{item.eventStage}</span>
+                          <span className="text-xs font-bold text-slate-500">{item.eventDate}</span>
+                        </div>
+                        <h5 className="text-sm font-bold text-slate-900 mt-2">{item.title}</h5>
+                        <p className="text-xs text-slate-600 mt-1">{item.description}</p>
+                        {item.benchName && <p className="text-[11px] font-semibold text-slate-400 mt-2">Bench: {item.benchName} ({item.courtHall})</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mx-auto text-blue-400">
+                    <Scale size={22} />
+                  </div>
+                  <p className="text-slate-500 text-xs font-medium">
+                    No hearing timeline data yet. Log court appearances to build the timeline, or sync with eCourts.
+                  </p>
+                </div>
+              )}
+
+              {/* Quick log footer */}
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                <p className="text-xs text-slate-500 font-medium">
+                  {(selectedCase.appearances || []).length} court appearance{(selectedCase.appearances || []).length !== 1 ? "s" : ""} logged
+                </p>
+                <button
+                  onClick={handleOpenCreateAppearance}
+                  className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded-xl transition shadow-sm cursor-pointer"
+                >
+                  <Plus size={13} /> Log Appearance
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ══ ORDERS & JUDGMENTS ══════════════════════════════════════════════ */}
+          {activeTab === "orders" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+                Official Court Orders &amp; Judgment Documents
+              </h4>
+              {ecourtsData?.orders && ecourtsData.orders.length > 0 ? (
+                <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                  <table className="w-full min-w-[620px] text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-bold">
+                      <tr>
+                        <th className="py-3 px-4">Order Date</th>
+                        <th className="py-3 px-4">Type</th>
+                        <th className="py-3 px-4">Presiding Judge</th>
+                        <th className="py-3 px-4">Order Summary</th>
+                        <th className="py-3 px-4 text-right">Download</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                      {ecourtsData.orders.map((ord) => (
+                        <tr key={ord.id} className="hover:bg-slate-50">
+                          <td className="py-3 px-4 font-mono font-bold text-slate-900">{ord.orderDate}</td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 font-bold border border-purple-200">{ord.orderType}</span>
+                          </td>
+                          <td className="py-3 px-4">{ord.judgeName}</td>
+                          <td className="py-3 px-4">{ord.summary}</td>
+                          <td className="py-3 px-4 text-right">
+                            {ord.fileUrl ? (
+                              <a href={ord.fileUrl} target="_blank" rel="noreferrer" className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1 transition cursor-pointer">
+                                PDF ({ord.fileSize})
+                              </a>
+                            ) : (
+                              <span className="text-slate-400 font-semibold">N/A</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-10 text-center bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                  <div className="w-14 h-14 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center mx-auto">
+                    <Gavel size={22} className="text-purple-400" />
+                  </div>
+                  <p className="text-slate-500 text-sm font-semibold">No court orders available yet</p>
+                  <p className="text-slate-400 text-xs">Sync with eCourts to fetch official orders and judgments.</p>
                 </div>
               )}
             </div>
           )}
+
+          {/* ══ PARTIES & ADVOCATES ══════════════════════════════════════════════ */}
+          {activeTab === "parties" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#F1F5F9]">
+                <div>
+                  <h3 className="font-extrabold text-lg text-[#0F172A]">Parties &amp; Legal Representatives</h3>
+                  <p className="text-xs text-[#64748B] mt-0.5">Comprehensive overview of petitioner, respondent, opposing counsel, and bench officer.</p>
+                </div>
+                <span className="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-200 self-start sm:self-auto shrink-0">
+                  Case #{selectedCase.caseNo || "N/A"}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                {/* Petitioner Side */}
+                <div className="bg-gradient-to-br from-[#F0F9FF] to-[#E0F2FE] rounded-2xl p-5 sm:p-6 border border-[#BAE6FD] space-y-4 shadow-xs relative overflow-hidden">
+                  <div className="absolute top-0 right-0 bg-[#0284C7] text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl tracking-wider">
+                    Petitioner Side
+                  </div>
+                  <div className="flex items-center gap-3 mb-2 pr-24">
+                    <div className="w-10 h-10 rounded-xl bg-[#0284C7] text-white flex items-center justify-center font-bold shrink-0">
+                      <User size={20} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold text-[#0369A1] uppercase tracking-wider">Client / Petitioner</p>
+                      <h4 className="text-base font-extrabold text-[#0F172A] truncate">
+                        {isJuniorAdvocate && isSensitiveCase(selectedCase) ? "Confidential" : (selectedCase.client || ecourtsData?.petitioner || "Petitioner")}
+                      </h4>
+                    </div>
+                  </div>
+                  <div className="space-y-3 pt-3 border-t border-[#B9E6FE]">
+                    <div className="bg-white/80 rounded-xl p-3.5 border border-sky-100">
+                      <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Petitioner Advocate / Legal Counsel</p>
+                      <p className="text-xs font-bold text-[#0284C7] mt-0.5">
+                        {ecourtsData?.petitionerAdvocate || selectedCase.primaryAdvocate || selectedCase.advocate_name || "Advocate (On Record)"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Respondent Side */}
+                <div className="bg-gradient-to-br from-[#FFF7ED] to-[#FFEDD5] rounded-2xl p-5 sm:p-6 border border-[#FDBA74] space-y-4 shadow-xs relative overflow-hidden">
+                  <div className="absolute top-0 right-0 bg-[#EA580C] text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl tracking-wider">
+                    Respondent Side
+                  </div>
+                  <div className="flex items-center gap-3 mb-2 pr-24">
+                    <div className="w-10 h-10 rounded-xl bg-[#EA580C] text-white flex items-center justify-center font-bold shrink-0">
+                      <User size={20} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold text-[#C2410C] uppercase tracking-wider">Respondent / Opposing Party</p>
+                      <h4 className="text-base font-extrabold text-[#0F172A] truncate">
+                        {ecourtsData?.respondent || (selectedCase.title ? selectedCase.title.split(/ vs\.? | v\.? /i)[1] : "") || "State / Respondent"}
+                      </h4>
+                    </div>
+                  </div>
+                  <div className="space-y-3 pt-3 border-t border-[#FED7AA]">
+                    <div className="bg-white/80 rounded-xl p-3.5 border border-orange-100">
+                      <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Respondent Advocate / Opposing Counsel</p>
+                      <p className="text-xs font-bold text-[#C2410C] mt-0.5">
+                        {ecourtsData?.respondentAdvocate || "Government Pleader / Opposing Counsel"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Presiding Judicial Officer */}
+              <div className="bg-purple-50/60 border border-purple-100 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold shrink-0">
+                    <Gavel size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Presiding Judicial Officer</p>
+                    <h5 className="text-sm font-extrabold text-[#0F172A]">
+                      {ecourtsData?.presidingJudge || "Hon'ble Presiding Judge"}
+                    </h5>
+                    <p className="text-xs text-[#64748B] mt-0.5">{selectedCase.court}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ══ ADVOCATE NOTES ══════════════════════════════════════════════════ */}
+          {activeTab === "notes" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#F1F5F9]">
+                <div>
+                  <h3 className="font-extrabold text-lg text-[#0F172A]">Advocate Notes &amp; Internal Tasks</h3>
+                  <p className="text-xs text-[#64748B] mt-0.5">Private internal case notes and action items for advocates.</p>
+                </div>
+                <span className="text-xs font-bold text-purple-700 bg-purple-50 px-3 py-1.5 rounded-full border border-purple-200 self-start sm:self-auto shrink-0">
+                  {caseNotes.length} Note{caseNotes.length !== 1 ? "s" : ""} Recorded
+                </span>
+              </div>
+
+              {/* Add note form */}
+              <div className="bg-[#F8FAFC] rounded-2xl p-4 sm:p-5 border border-[#E2E8F0] space-y-4">
+                <h4 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider flex items-center gap-2">
+                  <Pencil size={14} className="text-[#2563EB]" /> Add Internal Case Note
+                </h4>
+                <textarea
+                  placeholder="Type internal case instructions, task details, or hearing preparation notes..."
+                  value={newNoteText}
+                  onChange={(e) => setNewNoteText(e.target.value)}
+                  className="w-full rounded-xl border border-[#E2E8F0] bg-white p-3.5 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition resize-y min-h-[90px]"
+                />
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <label className="text-xs font-bold text-[#64748B] shrink-0">Priority / Tag:</label>
+                    <select
+                      value={newNoteCategory}
+                      onChange={(e) => setNewNoteCategory(e.target.value)}
+                      className="rounded-lg border border-[#E2E8F0] bg-white px-3 py-1.5 text-xs font-semibold text-[#0F172A] flex-1 sm:flex-none"
+                    >
+                      <option value="Action Item">🔴 Urgent / Action Item</option>
+                      <option value="Hearing Prep">🟡 Hearing Prep</option>
+                      <option value="Client Call">🟢 Client Call</option>
+                      <option value="General Note">🔵 General Note</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={handleAddNote}
+                    disabled={!newNoteText.trim() || noteSaving}
+                    className="px-4 py-2.5 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition disabled:opacity-50 cursor-pointer shadow-sm w-full sm:w-auto shrink-0"
+                  >
+                    <Send size={13} /> {noteSaving ? "Saving..." : "Save Note"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Notes feed */}
+              <div className="space-y-3">
+                {notesLoading ? (
+                  <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-400 text-xs font-medium animate-pulse">
+                    Loading advocate notes…
+                  </div>
+                ) : caseNotes.length > 0 ? (
+                  caseNotes.map((note) => {
+                    const formattedDate = note.created_at
+                      ? new Date(note.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                      : note.date || "—";
+                    return (
+                      <div key={note.id} className="bg-white rounded-2xl p-4 sm:p-5 border border-[#E2E8F0] shadow-xs space-y-2 relative group hover:border-blue-200 transition">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide border ${
+                              note.category === "Action Item" ? "bg-rose-50 text-rose-700 border-rose-200"
+                              : note.category === "Hearing Prep" ? "bg-amber-50 text-amber-700 border-amber-200"
+                              : note.category === "Client Call" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-blue-50 text-blue-700 border-blue-200"
+                            }`}>
+                              {note.category}
+                            </span>
+                            <span className="text-[11px] text-[#94A3B8] font-semibold">{formattedDate}</span>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteNote(note.id)}
+                            className="text-slate-400 hover:text-red-600 transition cursor-pointer p-1 rounded-lg hover:bg-red-50 shrink-0"
+                            title="Delete note"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                        <p className="text-sm text-[#334155] leading-relaxed whitespace-pre-wrap">{note.text}</p>
+                        <p className="text-[11px] text-[#64748B] font-medium pt-1 border-t border-slate-100 flex items-center gap-1">
+                          <User size={11} /> Logged by: <span className="font-bold text-[#0F172A]">{note.author || "Advocate"}</span>
+                        </p>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs font-medium">
+                    No advocate notes logged yet for this case. Use the box above to record task notes!
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ══ BILLING ══════════════════════════════════════════════════════════ */}
+          {activeTab === "billing" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Header */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-[#F1F5F9]">
+                <div>
+                  <h3 className="font-extrabold text-lg text-[#0F172A]">Fee &amp; Billing Overview</h3>
+                  <p className="text-xs text-[#64748B] mt-0.5">
+                    Billing data from Finance Management — invoices matched for case{" "}
+                    <span className="font-bold text-[#0F172A]">{selectedCase.caseNo}</span>.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`px-3 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wide border ${
+                    paymentStatus === "Fully Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : paymentStatus === "Partially Paid" ? "bg-amber-50 text-amber-700 border-amber-200"
+                    : paymentStatus === "No Invoices" ? "bg-slate-50 text-slate-500 border-slate-200"
+                    : "bg-rose-50 text-rose-700 border-rose-200"
+                  }`}>
+                    {paymentStatus === "Fully Paid" && "🟢 "}
+                    {paymentStatus === "Partially Paid" && "🟡 "}
+                    {paymentStatus === "Payment Due" && "🔴 "}
+                    {paymentStatus === "No Invoices" && "⚪ "}
+                    {paymentStatus}
+                  </span>
+                  <button
+                    onClick={fetchCaseInvoices}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition cursor-pointer"
+                  >
+                    {feeLoading ? "Refreshing..." : "↻ Refresh"}
+                  </button>
+                </div>
+              </div>
+
+              {feeLoading ? (
+                <div className="p-12 text-center text-slate-400 text-sm font-medium animate-pulse">Loading billing data…</div>
+              ) : (
+                <>
+                  {/* Summary cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 sm:p-5 shadow-xs">
+                      <p className="text-[11px] font-bold text-blue-700 uppercase tracking-wider mb-2">Total Invoiced</p>
+                      <h4 className="text-xl sm:text-2xl lg:text-3xl font-black text-blue-900">₹{totalBilled.toLocaleString("en-IN")}</h4>
+                      <p className="text-[11px] text-blue-600/80 font-medium mt-2">{caseInvoices.length} invoice{caseInvoices.length !== 1 ? "s" : ""} raised</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 sm:p-5 shadow-xs">
+                      <p className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider mb-2">Amount Received</p>
+                      <h4 className="text-xl sm:text-2xl lg:text-3xl font-black text-emerald-900">₹{totalPaid.toLocaleString("en-IN")}</h4>
+                      <p className="text-[11px] text-emerald-600/80 font-medium mt-2">{caseInvoices.filter((inv) => inv.status === "Paid").length} paid invoice{caseInvoices.filter((inv) => inv.status === "Paid").length !== 1 ? "s" : ""}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 sm:p-5 shadow-xs sm:col-span-2 md:col-span-1">
+                      <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider mb-2">Pending / Due</p>
+                      <h4 className="text-xl sm:text-2xl lg:text-3xl font-black text-amber-900">₹{totalPending.toLocaleString("en-IN")}</h4>
+                      <p className="text-[11px] text-amber-600/80 font-medium mt-2">{caseInvoices.filter((inv) => inv.status !== "Paid").length} outstanding invoice{caseInvoices.filter((inv) => inv.status !== "Paid").length !== 1 ? "s" : ""}</p>
+                    </div>
+                  </div>
+
+                  {/* Invoice table */}
+                  <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden">
+                    <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider">Invoice Records from Billing</h4>
+                      <span className="text-xs font-bold text-slate-500">{caseInvoices.length} Invoice{caseInvoices.length !== 1 ? "s" : ""}</span>
+                    </div>
+                    {caseInvoices.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[700px] text-left border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50/50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                              <th className="px-5 py-3">Invoice #</th>
+                              <th className="px-5 py-3">Date</th>
+                              <th className="px-5 py-3">Client</th>
+                              <th className="px-5 py-3">Payment Mode</th>
+                              <th className="px-5 py-3">Advocate Fee</th>
+                              <th className="px-5 py-3 text-right">Grand Total (₹)</th>
+                              <th className="px-5 py-3 text-center">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 text-xs">
+                            {caseInvoices.map((inv) => {
+                              const createdDate = inv.created_at
+                                ? new Date(inv.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+                                : "—";
+                              const statusColor =
+                                inv.status === "Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : inv.status === "Overdue" ? "bg-rose-50 text-rose-700 border-rose-200"
+                                : inv.status === "Sent" ? "bg-blue-50 text-blue-700 border-blue-200"
+                                : "bg-amber-50 text-amber-700 border-amber-200";
+                              return (
+                                <tr key={inv.id} className="hover:bg-slate-50/80 transition">
+                                  <td className="px-5 py-3.5 font-bold text-blue-600">INV-{String(inv.id).padStart(4, "0")}</td>
+                                  <td className="px-5 py-3.5 text-slate-600 font-medium">{createdDate}</td>
+                                  <td className="px-5 py-3.5 text-slate-800 font-semibold">{inv.client_name || "—"}</td>
+                                  <td className="px-5 py-3.5 text-slate-600">{inv.payment_method || "—"}</td>
+                                  <td className="px-5 py-3.5 text-slate-700 font-semibold">
+                                    {inv.advocate_fee_amount > 0 ? `₹${Number(inv.advocate_fee_amount).toLocaleString("en-IN")}` : "—"}
+                                  </td>
+                                  <td className="px-5 py-3.5 text-right font-black text-slate-800">₹{Number(inv.grand_total || 0).toLocaleString("en-IN")}</td>
+                                  <td className="px-5 py-3.5 text-center">
+                                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${statusColor}`}>{inv.status}</span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="p-8 sm:p-10 text-center bg-slate-50">
+                        <p className="text-slate-500 text-sm font-semibold mb-1">No billing invoices found for this case</p>
+                        <p className="text-slate-400 text-xs">
+                          Invoices with case number{" "}
+                          <span className="font-bold text-slate-600">{selectedCase.caseNo}</span>{" "}
+                          will appear here once created in Finance Management.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
 
-      {/* Viewer Modal */}
+      {/* ─── Document Viewer Modal ─────────────────────────────────────────────── */}
       {selectedDoc && (
         <DocumentViewerModal
           fileUrl={selectedDoc.fileUrl}
@@ -831,7 +1189,7 @@ export default function AssignedCaseDetailView({
         />
       )}
 
-      {/* Document PIN prompt modal */}
+      {/* ─── Document PIN Prompt Modal ─────────────────────────────────────────── */}
       {docPasswordModal && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setDocPasswordModal(null)} />
@@ -845,7 +1203,6 @@ export default function AssignedCaseDetailView({
                 Please enter the 6-digit PIN set by the senior advocate to view this file.
               </p>
             </div>
-            
             <div className="space-y-2">
               <input
                 type="text"
@@ -858,18 +1215,15 @@ export default function AssignedCaseDetailView({
                   setPasswordInput(val);
                   setPasswordError("");
                 }}
-                className="w-32 mx-auto rounded-xl border border-[#E2E8F0] px-4 py-3 text-center text-lg font-mono tracking-[0.75em] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition"
+                className="w-32 mx-auto rounded-xl border border-[#E2E8F0] px-4 py-3 text-center text-lg font-mono tracking-[0.75em] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition block"
                 autoFocus
               />
-              {passwordError && (
-                <p className="text-xs text-red-500 font-semibold">{passwordError}</p>
-              )}
+              {passwordError && <p className="text-xs text-red-500 font-semibold">{passwordError}</p>}
             </div>
-
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setDocPasswordModal(null)}
-                className="flex-1 py-2 rounded-xl border border-[#E2E8F0] text-[#64748B] font-semibold text-xs hover:bg-[#F8FAFC] transition"
+                className="flex-1 py-2 rounded-xl border border-[#E2E8F0] text-[#64748B] font-semibold text-xs hover:bg-[#F8FAFC] transition cursor-pointer"
               >
                 Cancel
               </button>
@@ -883,16 +1237,17 @@ export default function AssignedCaseDetailView({
                   }
                 }}
                 disabled={passwordInput.length !== 6}
-                className="flex-1 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-semibold text-xs transition disabled:opacity-50"
+                className="flex-1 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-semibold text-xs transition disabled:opacity-50 cursor-pointer"
               >
                 Unlock
               </button>
             </div>
           </div>
-        </div>
-      , document.body)}
+        </div>,
+        document.body
+      )}
 
-      {/* Add / Edit Court Appearance Modal */}
+      {/* ─── Log Court Appearance Modal ───────────────────────────────────────── */}
       {appearanceModal && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setAppearanceModal(false)} />
@@ -906,7 +1261,7 @@ export default function AssignedCaseDetailView({
                   <h3 className="text-lg font-bold text-[#0F172A]">
                     {editingAppearanceIdx !== null ? "Edit Court Appearance" : "Log Court Appearance"}
                   </h3>
-                  <p className="text-xs text-[#64748B]">Record hearing details & proceedings summary</p>
+                  <p className="text-xs text-[#64748B]">Record hearing details &amp; proceedings summary</p>
                 </div>
               </div>
               <button
@@ -920,9 +1275,7 @@ export default function AssignedCaseDetailView({
             <form onSubmit={handleSaveAppearance} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                    Appearance Date *
-                  </label>
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5">Appearance Date *</label>
                   <CustomDatePicker
                     selected={appearanceForm.appearanceDate}
                     onChange={(dateStr) => setAppearanceForm({ ...appearanceForm, appearanceDate: dateStr })}
@@ -930,11 +1283,8 @@ export default function AssignedCaseDetailView({
                     required
                   />
                 </div>
-
                 <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                    Appeared Advocate *
-                  </label>
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5">Appeared Advocate *</label>
                   <input
                     type="text"
                     required
@@ -948,9 +1298,7 @@ export default function AssignedCaseDetailView({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                    Court / Bench
-                  </label>
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5">Court / Bench</label>
                   <input
                     type="text"
                     placeholder="e.g. High Court / Sub Court"
@@ -959,11 +1307,8 @@ export default function AssignedCaseDetailView({
                     className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB]"
                   />
                 </div>
-
                 <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                    Stage of Proceeding
-                  </label>
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5">Stage of Proceeding</label>
                   <select
                     value={appearanceForm.stage}
                     onChange={(e) => setAppearanceForm({ ...appearanceForm, stage: e.target.value })}
@@ -981,9 +1326,7 @@ export default function AssignedCaseDetailView({
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                  Proceedings Summary / Advocate Notes
-                </label>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">Proceedings Summary / Advocate Notes</label>
                 <textarea
                   rows={3}
                   placeholder="Enter summary of proceedings, court orders, or instructions..."
@@ -994,9 +1337,7 @@ export default function AssignedCaseDetailView({
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                  Next Hearing Date (Updates Case Hearing)
-                </label>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">Next Hearing Date (Updates Case Hearing)</label>
                 <CustomDatePicker
                   selected={appearanceForm.nextDate}
                   onChange={(dateStr) => setAppearanceForm({ ...appearanceForm, nextDate: dateStr })}
@@ -1022,8 +1363,9 @@ export default function AssignedCaseDetailView({
               </div>
             </form>
           </div>
-        </div>
-      , document.body)}
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
