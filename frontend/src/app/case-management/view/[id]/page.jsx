@@ -1,7 +1,6 @@
 import CaseDetailClient from "./CaseDetailClient";
-import { use } from "react";
 
-export default function CaseDetailPage({ params }) {
-  const { id } = use(params);
+export default async function CaseDetailPage({ params }) {
+  const { id } = await params;
   return <CaseDetailClient id={id} />;
 }
