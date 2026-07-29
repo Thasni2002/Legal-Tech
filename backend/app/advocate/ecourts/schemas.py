@@ -97,3 +97,48 @@ class eCourtsDashboardMetrics(BaseModel):
     upcomingHearings: int
     casesUpdatedToday: int
     ordersDownloaded: int
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Similar Case History Feature Schemas
+# ─────────────────────────────────────────────────────────────────────────────
+
+class SimilarCaseRequest(BaseModel):
+    caseType: str
+    courtType: Optional[str] = None
+    courtName: Optional[str] = None
+    caseId: Optional[int] = None          # Exclude the current case from results
+
+
+class CaseAnalysisResult(BaseModel):
+    cnrNumber: Optional[str] = None
+    caseTitle: str
+    caseNo: Optional[str] = None
+    caseType: str
+    courtName: str
+    courtType: Optional[str] = None
+    filingDate: Optional[str] = None
+    outcome: str                          # "Won" | "Lost" | "Pending" | "Disposed" | "Unknown"
+    outcomeDetail: str
+    petitioner: str
+    respondent: str
+    mainArgument: str                     # Key legal argument / main issue
+    loopholes: List[str]                  # Identified weaknesses / gaps
+    importantSections: List[str]          # Key acts / sections cited e.g. "IPC 420"
+    seniorAdvocateTip: Optional[str] = None # Strategic advice to win active case
+    presidingJudge: Optional[str] = None
+    nextHearingDate: Optional[str] = None
+    source: str                           # "internal" | "ecourts"
+    similarityScore: int                  # 0–100
+
+
+class SimilarCasesResponse(BaseModel):
+    totalFound: int
+    internalCount: int
+    ecourtsCount: int
+    cases: List[CaseAnalysisResult]
+    summaryStats: Dict[str, Any]          # { won, lost, pending, topActs }
+    masterStrategy: Optional[Dict[str, Any]] = None # { winProbability, currentCaseSummary, winningFormula, mainLoophole, advocateRecommendation, keyLoopholes, mainArguments, importantActs }
+
+
+

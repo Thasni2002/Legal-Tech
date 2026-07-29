@@ -13,6 +13,8 @@ from .schemas import (
     SyncCaseResponse,
     CauseListItem,
     eCourtsDashboardMetrics,
+    SimilarCaseRequest,
+    SimilarCasesResponse,
 )
 from .service import (
     lookup_cnr_service,
@@ -21,6 +23,7 @@ from .service import (
     get_cause_list_service,
     get_ecourts_metrics_service,
 )
+
 
 router = APIRouter(
     prefix="/api/ecourts",
@@ -61,3 +64,20 @@ def get_cause_list(
     advocateName: Optional[str] = Query(None),
 ):
     return get_cause_list_service(courtName, date, advocateName)
+
+
+@router.post("/similar-cases", response_model=SimilarCasesResponse)
+def get_similar_cases(
+    data: SimilarCaseRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Fetches similar historical cases from:
+    1. Internal firm DB (filtered by case_type)
+    2. Live eCourts API (search by case_type)
+    Each result is analysed by Gemini AI to extract outcome, loopholes,
+    main argument, and important sections/acts.
+    """
+    from .service import get_similar_cases_service
+    return get_similar_cases_service(db, data)
+
