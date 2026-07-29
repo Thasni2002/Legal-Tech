@@ -742,7 +742,6 @@ export default function CaseDetailView({ id }) {
                 { key: "documents", label: "📁 Case Documents" },
                 { key: "hearings", label: "⚖️ eCourts Hearings" },
                 { key: "orders", label: "📜 Orders & Judgments" },
-                { key: "parties", label: "👥 Parties & Advocates" },
                 { key: "notes", label: "📝 Advocate Notes" },
                 { key: "fees", label: "💳 Billing" },
               ].map((t) => (
@@ -760,7 +759,6 @@ export default function CaseDetailView({ id }) {
               { key: "documents", label: "Case Documents" },
               { key: "hearings", label: "eCourts Hearings" },
               { key: "orders", label: "Orders & Judgments" },
-              { key: "parties", label: "Parties & Advocates" },
               { key: "notes", label: "Advocate Notes" },
               { key: "fees", label: "Billing" },
             ].map((tabObj) => (
@@ -912,7 +910,101 @@ export default function CaseDetailView({ id }) {
                 );
               })()}
 
-              {/* ── Previous Similar Case History ──────────────────── */}
+                            {/* Parties & Legal Representatives Section */}
+              <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#F1F5F9]">
+                <div>
+                  <h3 className="font-extrabold text-lg text-[#0F172A]">Parties & Legal Representatives</h3>
+                  <p className="text-xs text-[#64748B] mt-0.5">Comprehensive overview of petitioner, respondent, opposing counsel, and bench officer.</p>
+                </div>
+                <span className="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-200 self-start sm:self-auto shrink-0">
+                  CNR: {selectedCase.cnr_number || "N/A"}
+                </span>
+              </div>
+
+              {/* VS Layout Cards */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                {/* Petitioner Side Card */}
+                <div className="bg-gradient-to-br from-[#F0F9FF] to-[#E0F2FE] rounded-2xl p-5 sm:p-6 border border-[#BAE6FD] space-y-4 shadow-xs relative overflow-hidden">
+                  <div className="absolute top-0 right-0 bg-[#0284C7] text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl tracking-wider">
+                    Petitioner Side
+                  </div>
+                  <div className="flex items-center gap-3 mb-2 pr-24">
+                    <div className="w-10 h-10 rounded-xl bg-[#0284C7] text-white flex items-center justify-center font-bold shrink-0">
+                      <User size={20} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold text-[#0369A1] uppercase tracking-wider">Client / Petitioner</p>
+                      <h4 className="text-base font-extrabold text-[#0F172A] truncate">
+                        {selectedCase.client_name || ecourtsData?.petitioner || "Petitioner"}
+                      </h4>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 pt-3 border-t border-[#B9E6FE]">
+                    <div className="bg-white/80 rounded-xl p-3.5 border border-sky-100">
+                      <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Petitioner Role</p>
+                      <p className="text-xs font-bold text-[#0F172A] mt-0.5">{selectedCase.client_role || "Petitioner / Complainant"}</p>
+                    </div>
+                    <div className="bg-white/80 rounded-xl p-3.5 border border-sky-100">
+                      <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Petitioner Advocate / Legal Counsel</p>
+                      <p className="text-xs font-bold text-[#0284C7] mt-0.5">
+                        {ecourtsData?.petitionerAdvocate || selectedCase.selected_advocate || "Advocate (On Record)"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Respondent Side Card */}
+                <div className="bg-gradient-to-br from-[#FFF7ED] to-[#FFEDD5] rounded-2xl p-5 sm:p-6 border border-[#FDBA74] space-y-4 shadow-xs relative overflow-hidden">
+                  <div className="absolute top-0 right-0 bg-[#EA580C] text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl tracking-wider">
+                    Respondent Side
+                  </div>
+                  <div className="flex items-center gap-3 mb-2 pr-24">
+                    <div className="w-10 h-10 rounded-xl bg-[#EA580C] text-white flex items-center justify-center font-bold shrink-0">
+                      <User size={20} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold text-[#C2410C] uppercase tracking-wider">Respondent / Opposing Party</p>
+                      <h4 className="text-base font-extrabold text-[#0F172A] truncate">
+                        {ecourtsData?.respondent || (selectedCase.case_title ? selectedCase.case_title.split(/ vs\.? | v\.? /i)[1] : "") || "State / Respondent"}
+                      </h4>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 pt-3 border-t border-[#FED7AA]">
+                    <div className="bg-white/80 rounded-xl p-3.5 border border-orange-100">
+                      <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Respondent Role</p>
+                      <p className="text-xs font-bold text-[#0F172A] mt-0.5">Respondent / Accused Party</p>
+                    </div>
+                    <div className="bg-white/80 rounded-xl p-3.5 border border-orange-100">
+                      <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Respondent Advocate / Opposing Counsel</p>
+                      <p className="text-xs font-bold text-[#C2410C] mt-0.5">
+                        {ecourtsData?.respondentAdvocate || "Government Pleader / Opposing Counsel"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Presiding Judicial Officer Card */}
+              <div className="bg-purple-50/60 border border-purple-100 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold shrink-0">
+                    <Gavel size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Presiding Judicial Officer</p>
+                    <h5 className="text-sm font-extrabold text-[#0F172A]">
+                      {ecourtsData?.presidingJudge || "Hon'ble Presiding Judge"}
+                    </h5>
+                    <p className="text-xs text-[#64748B] mt-0.5">{selectedCase.court_name}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+{/* ── Previous Similar Case History ──────────────────── */}
               <div className="bg-gradient-to-br from-indigo-50 via-purple-50/50 to-violet-50/30 border border-indigo-200 rounded-2xl p-5 sm:p-6 shadow-sm mt-6 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-start gap-3">
@@ -1359,102 +1451,6 @@ export default function CaseDetailView({ id }) {
           )}
 
 
-
-          {/* TAB: PARTIES & ADVOCATES */}
-          {activeTab === "parties" && (
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#F1F5F9]">
-                <div>
-                  <h3 className="font-extrabold text-lg text-[#0F172A]">Parties & Legal Representatives</h3>
-                  <p className="text-xs text-[#64748B] mt-0.5">Comprehensive overview of petitioner, respondent, opposing counsel, and bench officer.</p>
-                </div>
-                <span className="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-200 self-start sm:self-auto shrink-0">
-                  CNR: {selectedCase.cnr_number || "N/A"}
-                </span>
-              </div>
-
-              {/* VS Layout Cards */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                {/* Petitioner Side Card */}
-                <div className="bg-gradient-to-br from-[#F0F9FF] to-[#E0F2FE] rounded-2xl p-5 sm:p-6 border border-[#BAE6FD] space-y-4 shadow-xs relative overflow-hidden">
-                  <div className="absolute top-0 right-0 bg-[#0284C7] text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl tracking-wider">
-                    Petitioner Side
-                  </div>
-                  <div className="flex items-center gap-3 mb-2 pr-24">
-                    <div className="w-10 h-10 rounded-xl bg-[#0284C7] text-white flex items-center justify-center font-bold shrink-0">
-                      <User size={20} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-bold text-[#0369A1] uppercase tracking-wider">Client / Petitioner</p>
-                      <h4 className="text-base font-extrabold text-[#0F172A] truncate">
-                        {selectedCase.client_name || ecourtsData?.petitioner || "Petitioner"}
-                      </h4>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 pt-3 border-t border-[#B9E6FE]">
-                    <div className="bg-white/80 rounded-xl p-3.5 border border-sky-100">
-                      <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Petitioner Role</p>
-                      <p className="text-xs font-bold text-[#0F172A] mt-0.5">{selectedCase.client_role || "Petitioner / Complainant"}</p>
-                    </div>
-                    <div className="bg-white/80 rounded-xl p-3.5 border border-sky-100">
-                      <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Petitioner Advocate / Legal Counsel</p>
-                      <p className="text-xs font-bold text-[#0284C7] mt-0.5">
-                        {ecourtsData?.petitionerAdvocate || selectedCase.selected_advocate || "Advocate (On Record)"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Respondent Side Card */}
-                <div className="bg-gradient-to-br from-[#FFF7ED] to-[#FFEDD5] rounded-2xl p-5 sm:p-6 border border-[#FDBA74] space-y-4 shadow-xs relative overflow-hidden">
-                  <div className="absolute top-0 right-0 bg-[#EA580C] text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl tracking-wider">
-                    Respondent Side
-                  </div>
-                  <div className="flex items-center gap-3 mb-2 pr-24">
-                    <div className="w-10 h-10 rounded-xl bg-[#EA580C] text-white flex items-center justify-center font-bold shrink-0">
-                      <User size={20} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-bold text-[#C2410C] uppercase tracking-wider">Respondent / Opposing Party</p>
-                      <h4 className="text-base font-extrabold text-[#0F172A] truncate">
-                        {ecourtsData?.respondent || (selectedCase.case_title ? selectedCase.case_title.split(/ vs\.? | v\.? /i)[1] : "") || "State / Respondent"}
-                      </h4>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 pt-3 border-t border-[#FED7AA]">
-                    <div className="bg-white/80 rounded-xl p-3.5 border border-orange-100">
-                      <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Respondent Role</p>
-                      <p className="text-xs font-bold text-[#0F172A] mt-0.5">Respondent / Accused Party</p>
-                    </div>
-                    <div className="bg-white/80 rounded-xl p-3.5 border border-orange-100">
-                      <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Respondent Advocate / Opposing Counsel</p>
-                      <p className="text-xs font-bold text-[#C2410C] mt-0.5">
-                        {ecourtsData?.respondentAdvocate || "Government Pleader / Opposing Counsel"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Presiding Judicial Officer Card */}
-              <div className="bg-purple-50/60 border border-purple-100 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold shrink-0">
-                    <Gavel size={20} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Presiding Judicial Officer</p>
-                    <h5 className="text-sm font-extrabold text-[#0F172A]">
-                      {ecourtsData?.presidingJudge || "Hon'ble Presiding Judge"}
-                    </h5>
-                    <p className="text-xs text-[#64748B] mt-0.5">{selectedCase.court_name}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* TAB: ADVOCATE NOTES & TASKS */}
           {activeTab === "notes" && (

@@ -4,12 +4,15 @@ import { API_BASE_URL } from "@/utils/api";
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import {
   Eye,
   FileText,
   Trash2,
   LayoutGrid,
   List,
+  Search,
+  X,
 } from "lucide-react";
 import useModulePermission from "@/utils/useModulePermission";
 import { getLoggedInUser } from "@/utils/auth";
@@ -81,6 +84,7 @@ const getStatusBadgeClass = (status) => {
 };
 
 export default function AssignedCasesView() {
+  const router = useRouter();
   const { perms, loading } = useModulePermission("Assigned Cases");
   const [cases, setCases] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -89,6 +93,7 @@ export default function AssignedCasesView() {
   const [selectedCase, setSelectedCase] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [viewBriefModal, setViewBriefModal] = useState(null);
 
   const user = getLoggedInUser();
   const isJuniorAdvocate =
@@ -109,11 +114,13 @@ export default function AssignedCasesView() {
       let casesToShow = data;
       if (user && user.role && user.role.toLowerCase().includes("junior")) {
         casesToShow = data.filter((item) => {
-          const primaryName = item.advocate_name || "";
+          const primaryName = item.advocate_name || item.advocateName || "";
           const secondaryName = item.secondary_advocate_name || item.secondaryAdvocateName || "";
+          const juniorName = item.junior_advocate || item.juniorAdvocate || item.assigned_to || "";
 
           const normalizedPrimary = primaryName.toLowerCase().replace(/[^a-z0-9]/g, "");
           const normalizedSecondary = secondaryName.toLowerCase().replace(/[^a-z0-9]/g, "");
+          const normalizedJunior = juniorName.toLowerCase().replace(/[^a-z0-9]/g, "");
           const normalizedUsername = (user.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
           const normalizedEmail = (user.email || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
@@ -131,7 +138,14 @@ export default function AssignedCasesView() {
             normalizedSecondary.includes(normalizedUsername)
           );
 
-          return isPrimaryMatch || isSecondaryMatch;
+          const isJuniorMatch = juniorName && (
+            normalizedJunior === normalizedUsername ||
+            normalizedJunior === normalizedEmail ||
+            normalizedUsername.includes(normalizedJunior) ||
+            normalizedJunior.includes(normalizedUsername)
+          );
+
+          return isPrimaryMatch || isSecondaryMatch || isJuniorMatch;
         });
       }
 
@@ -139,15 +153,15 @@ export default function AssignedCasesView() {
         id: item.id,
         caseId: item.case_id,
         caseIdCode: item.case_id_code || item.case_number || (item.case_id ? `CASE-#${item.case_id}` : `#${item.id}`),
-        title: item.case_title,
-        caseNo: item.case_number,
-        client: item.client_name || "N/A",
-        court: item.practice_court || item.practice_area || "N/A",
-        hearing: item.due_date || "No hearing date",
+        title: item.case_title || item.title || item.caseTitle || "Assigned Case",
+        caseNo: item.case_number || item.caseNo || "N/A",
+        client: item.client_name || item.client || "N/A",
+        court: item.practice_court || item.practice_area || item.court || "N/A",
+        hearing: item.due_date || item.next_hearing_date || "No hearing date",
         status: item.status || "Active",
-        documents: item.assigned_documents || [],
+        documents: item.assigned_documents || item.documents || [],
         appearances: item.appearances || [],
-        notes: item.assignment_notes || "",
+        notes: item.assignment_notes || item.notes || "",
         primaryAdvocate: item.advocate_name || "",
         secondaryAdvocate: item.secondaryAdvocateName || item.secondary_advocate_name || "",
         secondary_advocate_name: item.secondaryAdvocateName || item.secondary_advocate_name || "",
@@ -222,12 +236,19 @@ export default function AssignedCasesView() {
   };
 
   const filteredCases = cases.filter((item) => {
-    const query = searchQuery.toLowerCase();
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) {
+      const matchesStatus = statusFilter === "All" || item.status === statusFilter;
+      return matchesStatus;
+    }
     const matchesSearch =
-      item.title?.toLowerCase().includes(query) ||
-      item.caseNo?.toLowerCase().includes(query) ||
-      item.client?.toLowerCase().includes(query) ||
-      item.court?.toLowerCase().includes(query);
+      (item.title && item.title.toLowerCase().includes(query)) ||
+      (item.caseNo && String(item.caseNo).toLowerCase().includes(query)) ||
+      (item.caseIdCode && String(item.caseIdCode).toLowerCase().includes(query)) ||
+      (item.caseId && String(item.caseId).toLowerCase().includes(query)) ||
+      (item.id && String(item.id).toLowerCase().includes(query)) ||
+      (item.client && item.client.toLowerCase().includes(query)) ||
+      (item.court && item.court.toLowerCase().includes(query));
       
     const matchesStatus = statusFilter === "All" || item.status === statusFilter;
     
@@ -416,9 +437,28 @@ export default function AssignedCasesView() {
                     </div>
 
                     <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#F1F5F9]">
+                      {(() => {
+                        try {
+                          const targetId = item.caseId || item.case_id || item.id;
+                          const saved = JSON.parse(localStorage.getItem(`saved_briefs_${targetId}`) || "[]");
+                          if (saved && saved.length > 0) {
+                            return (
+                              <button
+                                onClick={() => setViewBriefModal(saved[0])}
+                                className="py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition font-extrabold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs shrink-0"
+                                title="View Saved AI Summary"
+                              >
+                                <Eye size={13} />
+                                <span>View Summary</span>
+                              </button>
+                            );
+                          }
+                        } catch (e) {}
+                        return null;
+                      })()}
                       <button
                         onClick={() => setSelectedCase(item)}
-                        className="w-full py-2 px-3 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-xl transition font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-xl transition font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                         title="See Case Details"
                       >
                         <Eye size={14} />
@@ -488,12 +528,30 @@ export default function AssignedCasesView() {
                     </div>
 
                     <div className="flex items-center gap-2 pt-1">
+                      {(() => {
+                        try {
+                          const targetId = item.caseId || item.case_id || item.id;
+                          const saved = JSON.parse(localStorage.getItem(`saved_briefs_${targetId}`) || "[]");
+                          if (saved && saved.length > 0) {
+                            return (
+                              <button
+                                onClick={() => setViewBriefModal(saved[0])}
+                                className="py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs shrink-0"
+                              >
+                                <Eye size={13} />
+                                <span>Summary</span>
+                              </button>
+                            );
+                          }
+                        } catch (e) {}
+                        return null;
+                      })()}
                       <button
                         onClick={() => setSelectedCase(item)}
                         className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                       >
                         <Eye size={14} />
-                        View Case Details
+                        View Details
                       </button>
                       {perms.delete && (
                         <button
@@ -527,39 +585,55 @@ export default function AssignedCasesView() {
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-[#F1F5F9]">
+                <tbody className="divide-y divide-[#E2E8F0]">
                   {filteredCases.length > 0 ? (
                     filteredCases.map((item, index) => (
-                      <tr
-                        key={index}
-                        className="hover:bg-[#F8FAFC] transition-colors duration-150 group"
-                      >
-                        <td className="px-4 sm:px-5 py-3.5 text-xs sm:text-sm font-semibold text-[#0F172A]">
-                          {item.caseIdCode}
+                      <tr key={index} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="px-4 sm:px-5 py-3.5">
+                          <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-mono font-extrabold border border-blue-200 block w-fit mb-1">
+                            {item.caseIdCode}
+                          </span>
+                          <span className="font-bold text-[#0F172A] text-xs leading-snug block max-w-xs truncate">
+                            {item.title || "Assigned Case"}
+                          </span>
                         </td>
-
-                        <td className="px-4 sm:px-5 py-3.5 text-xs sm:text-sm text-[#475569] font-medium">
-                          {isJuniorAdvocate && isSensitiveCase(item) ? "Confidential (Restricted)" : (item.client || "Not Specified")}
+                        <td className="px-4 sm:px-5 py-3.5 text-xs text-[#475569] font-medium max-w-[150px] truncate">
+                          {isJuniorAdvocate && isSensitiveCase(item) ? "Confidential" : item.client}
                         </td>
-
-                        <td className="px-4 sm:px-5 py-3.5 text-xs sm:text-sm text-[#475569]">
+                        <td className="px-4 sm:px-5 py-3.5 text-xs text-[#475569] font-medium max-w-[150px] truncate">
                           {item.court}
                         </td>
-
+                        <td className="px-4 sm:px-5 py-3.5 text-xs font-bold text-[#2563EB]">
+                          {item.hearing}
+                        </td>
                         <td className="px-4 sm:px-5 py-3.5">
-                          <span className="text-[11px] sm:text-xs font-semibold text-[#64748B] bg-[#F1F5F9] px-2.5 py-1 rounded-lg inline-block whitespace-nowrap">
-                            {item.hearing}
+                          <span className={`px-2.5 py-1 rounded-full text-xs uppercase tracking-wider inline-block ${getStatusBadgeClass(item.status)}`}>
+                            {item.status === "Won" ? "🏆 Won" : item.status === "Lost" ? "❌ Lost" : item.status}
                           </span>
                         </td>
 
                         <td className="px-4 sm:px-5 py-3.5">
-                          <span className={`px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-bold inline-block uppercase tracking-wider shadow-xs whitespace-nowrap ${getStatusBadgeClass(item.status)}`}>
-                            {item.status === "Won" ? "🏆 Case Won" : item.status === "Lost" ? "❌ Case Lost" : item.status}
-                          </span>
-                        </td>
+                          <div className="flex gap-2 items-center">
+                            {(() => {
+                              try {
+                                const targetId = item.caseId || item.case_id || item.id;
+                                const saved = JSON.parse(localStorage.getItem(`saved_briefs_${targetId}`) || "[]");
+                                if (saved && saved.length > 0) {
+                                  return (
+                                    <button
+                                      onClick={() => setViewBriefModal(saved[0])}
+                                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors cursor-pointer shadow-xs shrink-0"
+                                      title="View Saved Brief Summary"
+                                    >
+                                      <Eye size={14} />
+                                      Summary
+                                    </button>
+                                  );
+                                }
+                              } catch (e) {}
+                              return null;
+                            })()}
 
-                        <td className="px-4 sm:px-5 py-3.5">
-                          <div className="flex gap-2">
                             <button
                               onClick={() => setSelectedCase(item)}
                               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#2563EB] bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer"
@@ -599,6 +673,69 @@ export default function AssignedCasesView() {
           </div>
         )}
       </div>
+
+      {/* SAVED BRIEF READER MODAL PORTAL */}
+      {viewBriefModal && typeof window !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewBriefModal(null)} />
+
+          <div className="relative bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 z-10">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2 rounded-xl bg-blue-600/30 text-blue-400 border border-blue-500/30 shrink-0">
+                  <FileText size={20} />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest block">
+                    Win Likelihood: {viewBriefModal.winProbability || 75}%
+                  </span>
+                  <h3 className="text-base sm:text-lg font-black text-white truncate max-w-md">📜 {viewBriefModal.fileName}</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Downloaded: {viewBriefModal.downloadedAt}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewBriefModal(null)}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition cursor-pointer shrink-0"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-6 bg-slate-50/50">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-xs font-mono whitespace-pre-wrap leading-relaxed text-slate-800">
+                {viewBriefModal.fileContent}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-white border-t border-slate-200 flex items-center justify-between shrink-0">
+              <button
+                onClick={() => {
+                  const file = new Blob([viewBriefModal.fileContent], { type: "text/plain;charset=utf-8" });
+                  const element = document.createElement("a");
+                  element.href = URL.createObjectURL(file);
+                  element.download = viewBriefModal.fileName;
+                  document.body.appendChild(element);
+                  element.click();
+                  document.body.removeChild(element);
+                }}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-sm"
+              >
+                📥 Download File Again
+              </button>
+              <button
+                onClick={() => setViewBriefModal(null)}
+                className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer"
+              >
+                Close Reader
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* DELETE CONFIRM DIALOG */}
       {deleteConfirm && typeof document !== "undefined" && createPortal(

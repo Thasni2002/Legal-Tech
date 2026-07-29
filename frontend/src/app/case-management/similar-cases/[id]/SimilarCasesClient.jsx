@@ -67,16 +67,49 @@ export default function SimilarCasesClient({ caseId }) {
   const [error, setError] = useState(null);
   const [selectedCaseIdx, setSelectedCaseIdx] = useState(0);
 
-  // Fetch active case
+  // Fetch active case (tries case-management endpoint first, then assigned-cases endpoint)
   useEffect(() => {
     if (!caseId) return;
     const fetchCase = async () => {
       setCaseLoading(true);
       try {
+        // 1. Try case-management endpoint first
         const res = await fetch(`${API_BASE_URL}/case-management/${caseId}`);
         if (res.ok) {
           const data = await res.json();
           setCaseData(data);
+          return;
+        }
+
+        // 2. Fall back to assigned-cases endpoint if case-management is 404
+        const assignedRes = await fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases/${caseId}`);
+        if (assignedRes.ok) {
+          const assignedData = await assignedRes.json();
+
+          // If assigned case links to a master case_id, try fetching master case
+          if (assignedData.case_id) {
+            const masterRes = await fetch(`${API_BASE_URL}/case-management/${assignedData.case_id}`);
+            if (masterRes.ok) {
+              const masterData = await masterRes.json();
+              setCaseData(masterData);
+              return;
+            }
+          }
+
+          // Otherwise construct full caseData from assignedData
+          setCaseData({
+            id: assignedData.id,
+            case_id: assignedData.case_id || assignedData.id,
+            case_title: assignedData.case_title || assignedData.title || assignedData.caseTitle || `Case #${assignedData.case_number || assignedData.id}`,
+            case_no: assignedData.case_number || assignedData.caseNo || assignedData.case_id_code || `ID-${assignedData.id}`,
+            case_type: assignedData.practice_area || assignedData.practice_court || "Civil",
+            court_name: assignedData.practice_court || assignedData.court_name || "High Court",
+            court_type: assignedData.practice_court ? "High Court" : "District Court",
+            cnr_number: assignedData.cnr_number || assignedData.cnrNumber || "",
+            client_name: assignedData.client_name || assignedData.client || "Client",
+            status: assignedData.status || "Active",
+            case_description: assignedData.assignment_notes || "",
+          });
         }
       } catch (e) {
         console.error("Failed to load parent case:", e);
@@ -97,10 +130,10 @@ export default function SimilarCasesClient({ caseId }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          caseType: caseData.case_type || "",
-          courtType: caseData.court_type || "",
-          courtName: caseData.court_name || "",
-          caseId: Number(caseId),
+          caseType: caseData.case_type || caseData.practice_area || "Civil",
+          courtType: caseData.court_type || "High Court",
+          courtName: caseData.court_name || "High Court",
+          caseId: Number(caseData.case_id || caseData.id || caseId),
         }),
       });
       if (res.ok) {
@@ -213,9 +246,15 @@ ${master.advocateRecommendation || "File protective interim applications early."
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
             <button
-              onClick={() => router.push(`/case-management/view/${caseId}`)}
+              onClick={() => {
+                if (typeof window !== "undefined" && window.history.length > 1) {
+                  router.back();
+                } else {
+                  router.push(`/case-management/view/${caseId}`);
+                }
+              }}
               className="p-2 sm:p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 transition cursor-pointer shrink-0"
-              title="Back to Case Overview"
+              title="Back"
             >
               <ArrowLeft size={16} />
             </button>

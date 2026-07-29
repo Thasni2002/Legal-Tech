@@ -2,9 +2,12 @@
 
 import { API_BASE_URL } from "@/utils/api";
 import React, { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import CustomDatePicker from "@/components/ui/CustomDatePicker";
 import {
+  Eye,
+  Search,
   FileText,
   Calendar,
   X,
@@ -96,6 +99,7 @@ const TABS = [
 
 // ─── Main Component ─────────────────────────────────────────────────────────────
 export default function AssignedCaseDetailView({
+
   selectedCase,
   setSelectedCase,
   onClose,
@@ -105,6 +109,8 @@ export default function AssignedCaseDetailView({
   handleStatusChange,
   setCases,
 }) {
+  const router = useRouter();
+  const [viewBriefModal, setViewBriefModal] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedDocument, setSelectedDocument] = useState(null);
 
@@ -451,8 +457,8 @@ export default function AssignedCaseDetailView({
       <div className="bg-white rounded-xl sm:rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden w-full max-w-full min-w-0">
 
         {/* ── Case Header ──────────────────────────────────────────────────────── */}
-        <div className="p-3.5 sm:p-5 md:p-6 border-b border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 bg-white w-full max-w-full min-w-0">
-          <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 w-full">
+        <div className="p-3.5 sm:p-5 md:p-6 border-b border-[#E2E8F0] flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white w-full max-w-full min-w-0">
+          <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1 w-full">
             <button
               onClick={onClose}
               className="p-2 sm:p-2.5 bg-slate-100 hover:bg-slate-200 text-[#0F172A] rounded-xl font-bold transition flex items-center gap-1.5 sm:gap-2 cursor-pointer text-xs sm:text-sm shadow-xs shrink-0"
@@ -480,6 +486,43 @@ export default function AssignedCaseDetailView({
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* Action Buttons Bar - View Summary & View Similar Cases */}
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full xl:w-auto shrink-0">
+            <button
+              id="btn-view-summary-assigned"
+              onClick={() => {
+                try {
+                  const targetId = selectedCase.caseId || selectedCase.case_id || selectedCase.id;
+                  const saved = JSON.parse(localStorage.getItem(`saved_briefs_${targetId}`) || "[]");
+                  if (saved && saved.length > 0) {
+                    setViewBriefModal(saved[0]);
+                  } else {
+                    router.push(`/case-management/similar-cases/${targetId}`);
+                  }
+                } catch (e) {
+                  const targetId = selectedCase.caseId || selectedCase.case_id || selectedCase.id;
+                  router.push(`/case-management/similar-cases/${targetId}`);
+                }
+              }}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-xs hover:shadow active:scale-95 cursor-pointer text-center min-w-0"
+            >
+              <Eye size={14} className="shrink-0" />
+              <span className="truncate">View Summary</span>
+            </button>
+
+            <button
+              id="btn-similar-cases-assigned"
+              onClick={() => {
+                const targetId = selectedCase.caseId || selectedCase.case_id || selectedCase.id;
+                router.push(`/case-management/similar-cases/${targetId}`);
+              }}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white text-xs font-extrabold transition shadow-xs hover:shadow active:scale-95 cursor-pointer text-center min-w-0"
+            >
+              <Search size={14} className="shrink-0" />
+              <span className="truncate">View Similar Cases</span>
+            </button>
           </div>
         </div>
 
@@ -727,6 +770,65 @@ export default function AssignedCaseDetailView({
                   </p>
                 </div>
               )}
+
+              {/* ── Saved AI Strategic Briefs History ──────────────────── */}
+              {(() => {
+                try {
+                  const targetId = selectedCase.caseId || selectedCase.case_id || selectedCase.id;
+                  const savedBriefs = JSON.parse(localStorage.getItem(`saved_briefs_${targetId}`) || "[]");
+                  if (!savedBriefs || savedBriefs.length === 0) return null;
+
+                  return (
+                    <div className="bg-gradient-to-r from-indigo-50/70 via-purple-50/70 to-blue-50/70 rounded-2xl p-4 sm:p-5 border border-indigo-200/80 space-y-3 w-full max-w-full min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h5 className="text-xs font-extrabold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
+                          <FileText size={14} className="text-indigo-600" />
+                          Downloaded AI Strategic Briefs ({savedBriefs.length})
+                        </h5>
+                        <span className="text-[10px] font-bold text-indigo-600 bg-white px-2.5 py-0.5 rounded-full border border-indigo-200">
+                          Saved in History
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {savedBriefs.slice(0, 5).map((brief, bIdx) => (
+                          <div key={bIdx} className="bg-white rounded-xl p-3.5 border border-indigo-100 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-xs font-extrabold text-slate-900 truncate">📜 {brief.fileName}</p>
+                              <p className="text-[11px] text-slate-500 mt-0.5">
+                                Downloaded: <span className="font-semibold text-slate-700">{brief.downloadedAt}</span> · Win Likelihood: <span className="font-extrabold text-emerald-600">{brief.winProbability}%</span>
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                onClick={() => setViewBriefModal(brief)}
+                                className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                              >
+                                <Eye size={13} /> View Summary
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const element = document.createElement("a");
+                                  const file = new Blob([brief.fileContent], { type: "text/plain;charset=utf-8" });
+                                  element.href = URL.createObjectURL(file);
+                                  element.download = brief.fileName;
+                                  document.body.appendChild(element);
+                                  element.click();
+                                  document.body.removeChild(element);
+                                }}
+                                className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                              >
+                                <Upload size={13} /> Download File
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                } catch (e) {
+                  return null;
+                }
+              })()}
             </div>
           )}
 
@@ -1397,6 +1499,173 @@ export default function AssignedCaseDetailView({
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── SAVED BRIEF READER MODAL PORTAL ──────────────── */}
+      {viewBriefModal && typeof window !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewBriefModal(null)} />
+
+          <div className="relative bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 z-10">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2 rounded-xl bg-blue-600/30 text-blue-400 border border-blue-500/30 shrink-0">
+                  <FileText size={20} />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest block">
+                    Win Likelihood: {viewBriefModal.winProbability || 75}%
+                  </span>
+                  <h3 className="text-base sm:text-lg font-black text-white truncate max-w-md">📜 {viewBriefModal.fileName}</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Downloaded: {viewBriefModal.downloadedAt}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewBriefModal(null)}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition cursor-pointer shrink-0"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-6 bg-slate-50/50">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-xs font-mono whitespace-pre-wrap leading-relaxed text-slate-800">
+                {viewBriefModal.fileContent || (
+                  <div>
+                    <h4 className="font-extrabold text-slate-900 text-sm mb-2">Winning Strategy Formula</h4>
+                    <p className="mb-4 text-slate-700 font-sans">{viewBriefModal.winningFormula}</p>
+
+                    <h4 className="font-extrabold text-amber-900 text-sm mb-2">Key Loopholes</h4>
+                    <ul className="list-disc pl-5 mb-4 text-amber-800 font-sans">
+                      {(viewBriefModal.keyLoopholes || []).map((l, i) => <li key={i}>{l}</li>)}
+                    </ul>
+
+                    <h4 className="font-extrabold text-blue-900 text-sm mb-2">Main Statutory Arguments</h4>
+                    <ul className="list-disc pl-5 mb-4 text-blue-800 font-sans">
+                      {(viewBriefModal.mainArguments || []).map((a, i) => <li key={i}>{a}</li>)}
+                    </ul>
+
+                    <h4 className="font-extrabold text-emerald-900 text-sm mb-2">Important Acts & Sections</h4>
+                    <p className="mb-4 text-slate-700 font-sans">{(viewBriefModal.importantActs || []).join(", ")}</p>
+
+                    <h4 className="font-extrabold text-purple-900 text-sm mb-2">Senior Advocate Recommendation</h4>
+                    <p className="text-slate-700 font-sans">{viewBriefModal.advocateRecommendation}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-white border-t border-slate-200 flex items-center justify-between shrink-0">
+              <button
+                onClick={() => {
+                  const file = new Blob([viewBriefModal.fileContent], { type: "text/plain;charset=utf-8" });
+                  const element = document.createElement("a");
+                  element.href = URL.createObjectURL(file);
+                  element.download = viewBriefModal.fileName;
+                  document.body.appendChild(element);
+                  element.click();
+                  document.body.removeChild(element);
+                }}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-sm"
+              >
+                📥 Download File Again
+              </button>
+              <button
+                onClick={() => setViewBriefModal(null)}
+                className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer"
+              >
+                Close Reader
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+          {/* ── SAVED BRIEF READER MODAL PORTAL ──────────────── */}
+      {viewBriefModal && typeof window !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewBriefModal(null)} />
+
+          <div className="relative bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 z-10">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2 rounded-xl bg-blue-600/30 text-blue-400 border border-blue-500/30 shrink-0">
+                  <FileText size={20} />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest block">
+                    Win Likelihood: {viewBriefModal.winProbability || 75}%
+                  </span>
+                  <h3 className="text-base sm:text-lg font-black text-white truncate max-w-md">📜 {viewBriefModal.fileName}</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Downloaded: {viewBriefModal.downloadedAt}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewBriefModal(null)}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition cursor-pointer shrink-0"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-6 bg-slate-50/50">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-xs font-mono whitespace-pre-wrap leading-relaxed text-slate-800">
+                {viewBriefModal.fileContent || (
+                  <div>
+                    <h4 className="font-extrabold text-slate-900 text-sm mb-2">Winning Strategy Formula</h4>
+                    <p className="mb-4 text-slate-700 font-sans">{viewBriefModal.winningFormula}</p>
+
+                    <h4 className="font-extrabold text-amber-900 text-sm mb-2">Key Loopholes</h4>
+                    <ul className="list-disc pl-5 mb-4 text-amber-800 font-sans">
+                      {(viewBriefModal.keyLoopholes || []).map((l, i) => <li key={i}>{l}</li>)}
+                    </ul>
+
+                    <h4 className="font-extrabold text-blue-900 text-sm mb-2">Main Statutory Arguments</h4>
+                    <ul className="list-disc pl-5 mb-4 text-blue-800 font-sans">
+                      {(viewBriefModal.mainArguments || []).map((a, i) => <li key={i}>{a}</li>)}
+                    </ul>
+
+                    <h4 className="font-extrabold text-emerald-900 text-sm mb-2">Important Acts & Sections</h4>
+                    <p className="mb-4 text-slate-700 font-sans font-medium">{(viewBriefModal.importantActs || []).join(", ")}</p>
+
+                    <h4 className="font-extrabold text-purple-900 text-sm mb-2">Senior Advocate Recommendation</h4>
+                    <p className="text-slate-700 font-sans">{viewBriefModal.advocateRecommendation}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-white border-t border-slate-200 flex items-center justify-between shrink-0">
+              <button
+                onClick={() => {
+                  const file = new Blob([viewBriefModal.fileContent], { type: "text/plain;charset=utf-8" });
+                  const element = document.createElement("a");
+                  element.href = URL.createObjectURL(file);
+                  element.download = viewBriefModal.fileName;
+                  document.body.appendChild(element);
+                  element.click();
+                  document.body.removeChild(element);
+                }}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-sm"
+              >
+                📥 Download File Again
+              </button>
+              <button
+                onClick={() => setViewBriefModal(null)}
+                className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer"
+              >
+                Close Reader
+              </button>
+            </div>
           </div>
         </div>,
         document.body
