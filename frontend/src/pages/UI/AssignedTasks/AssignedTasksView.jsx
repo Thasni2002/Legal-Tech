@@ -109,7 +109,6 @@ export default function AssignedTasksView({ isJuniorView = false }) {
     setTasks((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
     );
-    // Update selected task if open
     if (selectedTask && selectedTask.id === taskId) {
       setSelectedTask((prev) => ({ ...prev, status: newStatus }));
     }
@@ -147,7 +146,6 @@ export default function AssignedTasksView({ isJuniorView = false }) {
     if (!perms.edit) return;
     const newPinStatus = !currentPinStatus;
 
-    // Optimistic update
     setTasks((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, is_pinned: newPinStatus } : t))
     );
@@ -197,71 +195,45 @@ export default function AssignedTasksView({ isJuniorView = false }) {
 
   if (permsLoading || (perms?.view && loading)) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", gap: "14px", background: "linear-gradient(160deg,#F0F4FF 0%,#F8FAFC 60%,#EFF6FF 100%)" }}>
-        <div style={{
-          background: "linear-gradient(135deg,#2563EB,#1d4ed8)",
-          borderRadius: "16px",
-          padding: "16px",
-          boxShadow: "0 8px 24px rgba(37,99,235,0.25)",
-        }}>
-          <Loader2 size={28} color="#fff" style={{ animation: "spin 1s linear infinite" }} />
+      <div className="w-full min-h-screen flex flex-col items-center justify-center gap-3.5 bg-gradient-to-br from-[#F0F4FF] via-[#F8FAFC] to-[#EFF6FF] p-4">
+        <div className="bg-gradient-to-br from-[#2563EB] to-[#1d4ed8] rounded-2xl p-4 shadow-xl">
+          <Loader2 size={28} className="text-white animate-spin" />
         </div>
-        <p style={{ color: "#64748B", fontSize: "14px", margin: 0 }}>Loading task board...</p>
+        <p className="text-slate-500 text-sm font-medium">Loading task board...</p>
       </div>
     );
   }
 
   if (!permsLoading && !perms?.view) {
     return (
-      <div style={{ width: "100%", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(160deg,#F0F4FF 0%,#F8FAFC 60%,#EFF6FF 100%)" }}>
-        <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "12px", padding: "40px", maxWidth: "360px", textAlign: "center", boxShadow: "0 4px 14px rgba(0,0,0,0.05)" }}>
-          <div style={{ fontSize: "36px", marginBottom: "12px" }}>🔒</div>
-          <h2 style={{ fontSize: "20px", fontWeight: "bold", color: "#1E293B", margin: 0 }}>Access Restricted</h2>
-          <p style={{ color: "#64748B", fontSize: "14.5px", marginTop: "10px", lineHeight: "1.5" }}>You do not have permission to view Assigned Tasks.</p>
+      <div className="w-full min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F0F4FF] via-[#F8FAFC] to-[#EFF6FF] p-4">
+        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-8 max-w-sm w-full text-center shadow-lg">
+          <div className="text-4xl mb-3">🔒</div>
+          <h2 className="text-lg font-bold text-slate-800">Access Restricted</h2>
+          <p className="text-slate-500 text-xs sm:text-sm mt-2 leading-relaxed">You do not have permission to view Assigned Tasks.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#F8FAFC",
-      padding: "24px",
-    }}>
+    <div className="min-h-screen bg-[#F8FAFC] p-3 sm:p-5 md:p-8 w-full max-w-full min-w-0 overflow-x-hidden">
       {/* ─── Hero / Page Header ─── */}
-      <div style={{
-        background: "#ffffff",
-        border: "1px solid #E2E8F0",
-        borderRadius: "16px",
-        padding: "24px 28px 24px",
-        position: "relative",
-        overflow: "hidden",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-        marginBottom: "24px",
-      }}>
-        {/* Decorative orbs */}
-        <div style={{ position: "absolute", top: "-60px", right: "80px", width: "220px", height: "220px", borderRadius: "50%", background: "rgba(37,99,235,0.015)", pointerEvents: "none" }} />
-        <div style={{ position: "absolute", bottom: "-80px", right: "300px", width: "160px", height: "160px", borderRadius: "50%", background: "rgba(37,99,235,0.02)", pointerEvents: "none" }} />
+      <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-6 md:p-7 relative overflow-hidden shadow-xs mb-4 sm:mb-6 w-full max-w-full min-w-0">
+        {/* Decorative background accent */}
+        <div className="absolute -top-16 -right-16 w-52 h-52 rounded-full bg-blue-600/5 pointer-events-none" />
 
-        <div style={{ position: "relative", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-              <div style={{
-                background: "#EFF6FF",
-                borderRadius: "10px",
-                padding: "8px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}>
-                <Kanban size={22} color="#2563EB" />
+        <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full min-w-0">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="bg-[#EFF6FF] rounded-xl p-2.5 sm:p-3 text-[#2563EB] shrink-0 border border-blue-100 shadow-xs">
+                <Kanban size={22} className="sm:w-[24px] sm:h-[24px]" />
               </div>
-              <div>
-                <h1 style={{ color: "#0F172A", fontSize: "22px", fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-slate-900 font-extrabold text-lg sm:text-xl md:text-2xl tracking-tight truncate">
                   Assigned Tasks
                 </h1>
-                <p style={{ color: "#64748B", fontSize: "13px", margin: "2px 0 0" }}>
+                <p className="text-slate-500 text-xs sm:text-sm mt-0.5 truncate">
                   {isSenior && !isJuniorView
                     ? "Manage and track tasks assigned to your team"
                     : "Your assigned tasks — stay on top of your work"}
@@ -270,94 +242,47 @@ export default function AssignedTasksView({ isJuniorView = false }) {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0 flex-wrap sm:flex-nowrap w-full sm:w-auto">
             <button
               onClick={() => fetchTasks(true)}
               disabled={refreshing}
-              style={{
-                padding: "9px 16px",
-                borderRadius: "9px",
-                border: "1px solid #E2E8F0",
-                background: "#ffffff",
-                color: "#475569",
-                fontSize: "13px",
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-                transition: "all 0.2s",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "#F8FAFC"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; }}
+              className="px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center justify-center gap-2 shadow-xs cursor-pointer disabled:opacity-50 flex-1 sm:flex-none"
             >
-              <RefreshCw size={14} style={refreshing ? { animation: "spin 1s linear infinite" } : {}} />
-              Refresh
+              <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+              <span>Refresh</span>
             </button>
 
             {!isJuniorView && perms.add && (
               <button
                 onClick={() => { setEditingTask(null); setShowForm(true); }}
-                style={{
-                  padding: "9px 20px",
-                  borderRadius: "9px",
-                  border: "none",
-                  background: "#2563EB",
-                  color: "#ffffff",
-                  fontSize: "13px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "7px",
-                  boxShadow: "0 4px 12px rgba(37,99,235,0.2)",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "#1d4ed8"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "#2563EB"; }}
+                className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-extrabold transition flex items-center justify-center gap-2 shadow-md cursor-pointer flex-1 sm:flex-none"
               >
                 <Plus size={16} />
-                Assign New Task
+                <span>Assign New Task</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Stats row */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4,1fr)",
-          gap: "12px",
-          marginTop: "24px",
-          position: "relative",
-        }}>
+        {/* Stats grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5 mt-4 sm:mt-6 w-full max-w-full min-w-0">
           {stats.map((s) => {
             const Icon = s.icon;
             return (
-              <div key={s.key} style={{
-                background: "rgba(220, 237, 238, 0.91)",
-                borderRadius: "12px",
-                padding: "14px 16px",
-                border: "1.5px solid " + s.border,
-                boxShadow: "0 1px 2px rgba(0, 0, 0, 0.02)",
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-              }}>
-                <div style={{
-                  background: s.bg,
-                  borderRadius: "9px",
-                  padding: "7px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}>
-                  <Icon size={16} color={s.color} />
+              <div
+                key={s.key}
+                className="rounded-xl p-3 sm:p-4 border border-slate-200/80 bg-slate-50/80 shadow-2xs flex items-center gap-3 min-w-0"
+                style={{ borderColor: s.border }}
+              >
+                <div
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 border"
+                  style={{ background: s.bg, borderColor: s.border }}
+                >
+                  <Icon size={16} style={{ color: s.color }} className="sm:w-[18px] sm:h-[18px]" />
                 </div>
-                <div>
-                  <div style={{ color: "#475569", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>{s.label}</div>
-                  <div style={{ color: "#0F172A", fontSize: "22px", fontWeight: 800, lineHeight: 1 }}>{s.count}</div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">{s.label}</p>
+                  <p className="text-lg sm:text-2xl font-black text-slate-900 leading-tight mt-0.5">{s.count}</p>
                 </div>
               </div>
             );
@@ -365,153 +290,100 @@ export default function AssignedTasksView({ isJuniorView = false }) {
         </div>
       </div>
 
-      {/* ─── Filters bar ─── */}
-      <div style={{
-        padding: "16px 36px",
-        background: "#fff",
-        borderBottom: "1.5px solid #E2E8F0",
-        display: "flex",
-        alignItems: "center",
-        gap: "12px",
-        flexWrap: "wrap",
-      }}>
-        {/* Search */}
-        <div style={{ position: "relative", flex: "1 1 280px", maxWidth: "420px" }}>
-          <Search size={15} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#94A3B8" }} />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by task, case, or advocate..."
-            style={{
-              width: "100%",
-              padding: "9px 13px 9px 36px",
-              border: "1.5px solid #E2E8F0",
-              borderRadius: "9px",
-              fontSize: "13.5px",
-              color: "#0F172A",
-              background: "#FAFBFC",
-              outline: "none",
-              boxSizing: "border-box",
-            }}
-            onFocus={(e) => (e.target.style.borderColor = "#2563EB")}
-            onBlur={(e) => (e.target.style.borderColor = "#E2E8F0")}
-          />
-        </div>
+      {/* ─── Unified Task Board Container ─── */}
+      <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-xs overflow-hidden w-full max-w-full min-w-0">
+        {/* Filters Header Bar */}
+        <div className="p-3.5 sm:p-4 border-b border-[#E2E8F0] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#F8FAFC]/60">
+          {/* Search */}
+          <div className="relative flex-1 min-w-0 max-w-full sm:max-w-md">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by task, case, or advocate..."
+              className="w-full pl-9 pr-3.5 py-2 sm:py-2.5 border border-[#E2E8F0] rounded-xl text-xs sm:text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+            />
+          </div>
 
-        {/* Priority filter */}
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <Filter size={14} color="#94A3B8" />
-          <span style={{ fontSize: "12px", color: "#64748B", fontWeight: 600 }}>Priority:</span>
-          <div style={{ display: "flex", gap: "4px" }}>
-            {PRIORITY_FILTERS.map((p) => (
-              <button
-                key={p}
-                onClick={() => setPriorityFilter(p)}
-                style={{
-                  padding: "5px 12px",
-                  borderRadius: "20px",
-                  border: `1.5px solid ${priorityFilter === p ? "#2563EB" : "#E2E8F0"}`,
-                  background: priorityFilter === p ? "#2563EB" : "#fff",
-                  color: priorityFilter === p ? "#fff" : "#64748B",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                }}
+          {/* Priority filter & Count */}
+          <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 min-w-0">
+            <div className="flex items-center gap-2 shrink-0 min-w-0">
+              <div className="flex items-center gap-1.5 text-slate-400 shrink-0">
+                <Filter size={14} />
+                <span className="text-xs font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Priority:</span>
+              </div>
+              <select
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value)}
+                className="rounded-xl border border-[#CBD5E1] bg-white px-3.5 py-2 text-xs font-bold text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-xs cursor-pointer min-w-[130px]"
               >
-                {p}
-              </button>
-            ))}
+                <option value="All">All Priorities</option>
+                <option value="Urgent">Urgent</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </div>
+
+            <div className="text-xs font-bold text-slate-500 shrink-0">
+              {filteredTasks.length} task{filteredTasks.length !== 1 ? "s" : ""}
+            </div>
           </div>
         </div>
 
-        <div style={{ marginLeft: "auto", fontSize: "12px", color: "#94A3B8", fontWeight: 500 }}>
-          {filteredTasks.length} task{filteredTasks.length !== 1 ? "s" : ""}
-        </div>
-      </div>
-
-      {/* ─── Main content ─── */}
-      <div style={{ padding: "24px 36px 36px", overflowX: "auto" }}>
-        {loading ? (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 0", gap: "14px" }}>
-            <div style={{
-              background: "linear-gradient(135deg,#2563EB,#1d4ed8)",
-              borderRadius: "16px",
-              padding: "16px",
-              boxShadow: "0 8px 24px rgba(37,99,235,0.25)",
-            }}>
-              <Loader2 size={28} color="#fff" style={{ animation: "spin 1s linear infinite" }} />
+        {/* Board Body */}
+        <div className="p-3.5 sm:p-5 md:p-6 w-full max-w-full min-w-0">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <div className="bg-gradient-to-br from-[#2563EB] to-[#1d4ed8] rounded-2xl p-4 shadow-xl">
+                <Loader2 size={28} className="text-white animate-spin" />
+              </div>
+              <p className="text-slate-500 text-sm font-medium">Loading task board...</p>
             </div>
-            <p style={{ color: "#64748B", fontSize: "14px", margin: 0 }}>Loading task board...</p>
-          </div>
-        ) : error ? (
-          <div style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            padding: "60px 0",
-            gap: "12px",
-            color: "#DC2626",
-          }}>
-            <AlertCircle size={32} />
-            <p style={{ margin: 0, fontSize: "14px", fontWeight: 500 }}>{error}</p>
-            <button onClick={() => fetchTasks()} style={{
-              padding: "8px 18px", borderRadius: "8px", border: "1.5px solid #DC2626",
-              background: "#FEF2F2", color: "#DC2626", fontSize: "13px", fontWeight: 600, cursor: "pointer",
-            }}>
-              Try Again
-            </button>
-          </div>
-        ) : filteredTasks.length === 0 && tasks.length === 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "80px 0", gap: "14px" }}>
-            <div style={{
-              background: "linear-gradient(135deg,#EFF6FF,#DBEAFE)",
-              borderRadius: "20px",
-              padding: "24px",
-              boxShadow: "0 4px 20px rgba(37,99,235,0.1)",
-            }}>
-              <ClipboardList size={40} color="#93C5FD" />
-            </div>
-            <h3 style={{ fontSize: "17px", fontWeight: 700, color: "#1E293B", margin: 0 }}>No Tasks Yet</h3>
-            <p style={{ color: "#64748B", fontSize: "13.5px", margin: 0, textAlign: "center", maxWidth: "340px" }}>
-              {isSenior && !isJuniorView
-                ? "Get started by assigning your first task to a junior advocate."
-                : "You have no assigned tasks yet. Check back later."}
-            </p>
-            {!isJuniorView && isSenior && perms.add && (
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-3 text-red-600 bg-red-50/50 rounded-2xl border border-red-200 p-6">
+              <AlertCircle size={32} />
+              <p className="text-xs sm:text-sm font-semibold">{error}</p>
               <button
-                onClick={() => setShowForm(true)}
-                style={{
-                  padding: "10px 22px",
-                  borderRadius: "9px",
-                  border: "none",
-                  background: "linear-gradient(135deg,#2563EB,#1d4ed8)",
-                  color: "#fff",
-                  fontSize: "14px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "7px",
-                  boxShadow: "0 4px 14px rgba(37,99,235,0.3)",
-                }}
+                onClick={() => fetchTasks()}
+                className="px-4 py-2 rounded-xl border border-red-600 bg-red-100 text-red-700 text-xs font-bold hover:bg-red-200 transition cursor-pointer"
               >
-                <Plus size={16} />
-                Assign First Task
+                Try Again
               </button>
-            )}
-          </div>
-        ) : (
-          <KanbanBoard
-            tasks={filteredTasks}
-            onOpenTask={setSelectedTask}
-            onStatusChange={handleStatusChange}
-            currentUserId={user?.id}
-            isSenior={isSenior}
-            perms={perms}
-            onPinToggle={handlePinToggle}
-          />
-        )}
+            </div>
+          ) : filteredTasks.length === 0 && tasks.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-14 px-4 text-center space-y-3 w-full max-w-full min-w-0">
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-400">
+                <ClipboardList size={32} />
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-slate-800">No Tasks Yet</h3>
+              <p className="text-slate-500 text-xs sm:text-sm max-w-xs mx-auto leading-relaxed">
+                {isSenior && !isJuniorView
+                  ? "Get started by assigning your first task to a junior advocate."
+                  : "You have no assigned tasks yet. Check back later."}
+              </p>
+              {!isJuniorView && isSenior && perms.add && (
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold shadow-md transition flex items-center gap-2 cursor-pointer"
+                >
+                  <Plus size={16} />
+                  <span>Assign First Task</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <KanbanBoard
+              tasks={filteredTasks}
+              onOpenTask={setSelectedTask}
+              onStatusChange={handleStatusChange}
+              currentUserId={user?.id}
+              isSenior={isSenior}
+              perms={perms}
+              onPinToggle={handlePinToggle}
+            />
+          )}
+        </div>
       </div>
 
       {/* ─── Modals ─── */}
@@ -535,11 +407,6 @@ export default function AssignedTasksView({ isJuniorView = false }) {
           onPinToggle={handlePinToggle}
         />
       )}
-
-      <style>{`
-        @keyframes spin { to { transform:rotate(360deg); } }
-        @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
-      `}</style>
     </div>
   );
 }
