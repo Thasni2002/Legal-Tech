@@ -86,12 +86,12 @@ function InfoRow({ icon, label, value }) {
 
 // ─── Tab definitions (Parties merged into Overview) ───────────────────────────
 const TABS = [
-  { key: "overview",   label: "Case Overview" },
-  { key: "documents",  label: "Case Documents" },
-  { key: "hearings",   label: "eCourts Hearings" },
-  { key: "orders",     label: "Orders & Judgments" },
-  { key: "notes",      label: "Advocate Notes" },
-  { key: "billing",    label: "Billing" },
+  { key: "overview", label: "Case Overview" },
+  { key: "documents", label: "Case Documents" },
+  { key: "hearings", label: "eCourts Hearings" },
+  { key: "orders", label: "Orders & Judgments" },
+  { key: "notes", label: "Advocate Notes" },
+  { key: "billing", label: "Billing" },
 ];
 
 // ─── Main Component ─────────────────────────────────────────────────────────────
@@ -287,10 +287,10 @@ export default function AssignedCaseDetailView({
     caseInvoices.length === 0
       ? "No Invoices"
       : totalPending === 0
-      ? "Fully Paid"
-      : totalPaid > 0
-      ? "Partially Paid"
-      : "Payment Due";
+        ? "Fully Paid"
+        : totalPaid > 0
+          ? "Partially Paid"
+          : "Payment Due";
 
   // ─── Document helpers ─────────────────────────────────────────────────────────
   const getVisibleDocs = (docs = []) => {
@@ -485,7 +485,7 @@ export default function AssignedCaseDetailView({
 
         {/* ── Tab Bar Navigation ────────────────────────────────────────────────── */}
         <div className="border-b border-[#F1F5F9] bg-[#F8FAFC] p-3 sm:p-4 w-full max-w-full min-w-0">
-          
+
           {/* Mobile & Tablet Dropdown Selector (Visible on < 1024px) */}
           <div className="block lg:hidden w-full min-w-0">
             <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -516,11 +516,10 @@ export default function AssignedCaseDetailView({
               <button
                 key={tabObj.key}
                 onClick={() => setActiveTab(tabObj.key)}
-                className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors relative cursor-pointer rounded-xl whitespace-nowrap shrink-0 ${
-                  activeTab === tabObj.key
+                className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors relative cursor-pointer rounded-xl whitespace-nowrap shrink-0 ${activeTab === tabObj.key
                     ? "text-[#2563EB] bg-white shadow-xs font-extrabold border border-slate-300"
                     : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-200/60"
-                }`}
+                  }`}
               >
                 {tabObj.label}
                 {tabObj.key === "documents" && visibleDocs.length > 0 && (
@@ -584,10 +583,10 @@ export default function AssignedCaseDetailView({
                     className="rounded-xl border border-[#E2E8F0] bg-white px-3 py-1.5 text-xs font-bold text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition cursor-pointer shadow-xs max-w-[200px] sm:max-w-none"
                   >
                     {[
-                      "Active","Client Consulting","Client Detail Collection","Document Data Collection",
-                      "Document Pending","Document Verified","Advocate Assigned","Under Review","Case Preparation",
-                      "Court File","In Progress","Hearing Scheduled","Hearing Completed","Awaiting Judgment",
-                      "Judgment Delivered","Won","Lost","On Hold","Closed","Disposed",
+                      "Active", "Client Consulting", "Client Detail Collection", "Document Data Collection",
+                      "Document Pending", "Document Verified", "Advocate Assigned", "Under Review", "Case Preparation",
+                      "Court File", "In Progress", "Hearing Scheduled", "Hearing Completed", "Awaiting Judgment",
+                      "Judgment Delivered", "Won", "Lost", "On Hold", "Closed", "Disposed",
                     ].map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
@@ -743,9 +742,8 @@ export default function AssignedCaseDetailView({
                     <input ref={fileInputRef} type="file" className="hidden" id="doc-upload-input" onChange={handleUploadFile} />
                     <label
                       htmlFor="doc-upload-input"
-                      className={`flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all shadow-xs ${
-                        uploadLoading ? "bg-[#E2E8F0] text-[#94A3B8]" : "bg-[#2563EB] text-white hover:bg-[#1d4ed8]"
-                      }`}
+                      className={`flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all shadow-xs ${uploadLoading ? "bg-[#E2E8F0] text-[#94A3B8]" : "bg-[#2563EB] text-white hover:bg-[#1d4ed8]"
+                        }`}
                     >
                       <Upload size={14} />
                       {uploadLoading ? "Uploading..." : "Upload Document"}
@@ -783,13 +781,12 @@ export default function AssignedCaseDetailView({
                     return (
                       <div
                         key={idx}
-                        className={`rounded-2xl border p-3.5 sm:p-4 transition-all flex items-center justify-between gap-3 sm:gap-4 w-full max-w-full min-w-0 ${
-                          isLocked
+                        className={`rounded-2xl border p-3.5 sm:p-4 transition-all flex items-center justify-between gap-3 sm:gap-4 w-full max-w-full min-w-0 ${isLocked
                             ? "bg-slate-50/80 border-slate-200 hover:border-slate-300"
                             : isSelected
-                            ? "bg-blue-50/60 border-blue-200 shadow-xs"
-                            : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
-                        }`}
+                              ? "bg-blue-50/60 border-blue-200 shadow-xs"
+                              : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
+                          }`}
                       >
                         <div className="flex items-center gap-3 min-w-0 flex-1">
                           {isLocked ? (
@@ -816,13 +813,12 @@ export default function AssignedCaseDetailView({
                               handleViewDocument(doc);
                             }
                           }}
-                          className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0 ${
-                            isLocked
+                          className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0 ${isLocked
                               ? "bg-[#EFF6FF] text-[#2563EB] border border-[#BFDBFE] hover:bg-[#DBEAFE]"
                               : isSelected
-                              ? "bg-[#2563EB] text-white shadow-xs hover:bg-blue-700"
-                              : "bg-slate-100 text-[#475569] hover:bg-slate-200"
-                          }`}
+                                ? "bg-[#2563EB] text-white shadow-xs hover:bg-blue-700"
+                                : "bg-slate-100 text-[#475569] hover:bg-slate-200"
+                            }`}
                         >
                           {isLocked ? "Unlock & View" : "View"}
                         </button>
@@ -1055,12 +1051,11 @@ export default function AssignedCaseDetailView({
                       <div key={note.id} className="bg-white rounded-2xl p-4 sm:p-5 border border-[#E2E8F0] shadow-xs space-y-2 relative group hover:border-blue-200 transition w-full max-w-full min-w-0">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide border ${
-                              note.category === "Action Item" ? "bg-rose-50 text-rose-700 border-rose-200"
-                              : note.category === "Hearing Prep" ? "bg-amber-50 text-amber-700 border-amber-200"
-                              : note.category === "Client Call" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : "bg-blue-50 text-blue-700 border-blue-200"
-                            }`}>
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide border ${note.category === "Action Item" ? "bg-rose-50 text-rose-700 border-rose-200"
+                                : note.category === "Hearing Prep" ? "bg-amber-50 text-amber-700 border-amber-200"
+                                  : note.category === "Client Call" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : "bg-blue-50 text-blue-700 border-blue-200"
+                              }`}>
                               {note.category}
                             </span>
                             <span className="text-[11px] text-[#94A3B8] font-semibold">{formattedDate}</span>
@@ -1102,12 +1097,11 @@ export default function AssignedCaseDetailView({
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`px-3 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wide border ${
-                    paymentStatus === "Fully Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                    : paymentStatus === "Partially Paid" ? "bg-amber-50 text-amber-700 border-amber-200"
-                    : paymentStatus === "No Invoices" ? "bg-slate-50 text-slate-500 border-slate-200"
-                    : "bg-rose-50 text-rose-700 border-rose-200"
-                  }`}>
+                  <span className={`px-3 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wide border ${paymentStatus === "Fully Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : paymentStatus === "Partially Paid" ? "bg-amber-50 text-amber-700 border-amber-200"
+                        : paymentStatus === "No Invoices" ? "bg-slate-50 text-slate-500 border-slate-200"
+                          : "bg-rose-50 text-rose-700 border-rose-200"
+                    }`}>
                     {paymentStatus === "Fully Paid" && "🟢 "}
                     {paymentStatus === "Partially Paid" && "🟡 "}
                     {paymentStatus === "Payment Due" && "🔴 "}
@@ -1173,9 +1167,9 @@ export default function AssignedCaseDetailView({
                                 : "—";
                               const statusColor =
                                 inv.status === "Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                : inv.status === "Overdue" ? "bg-rose-50 text-rose-700 border-rose-200"
-                                : inv.status === "Sent" ? "bg-blue-50 text-blue-700 border-blue-200"
-                                : "bg-amber-50 text-amber-700 border-amber-200";
+                                  : inv.status === "Overdue" ? "bg-rose-50 text-rose-700 border-rose-200"
+                                    : inv.status === "Sent" ? "bg-blue-50 text-blue-700 border-blue-200"
+                                      : "bg-amber-50 text-amber-700 border-amber-200";
                               return (
                                 <tr key={inv.id} className="hover:bg-slate-50/80 transition">
                                   <td className="px-4 sm:px-5 py-3.5 font-bold text-blue-600">INV-{String(inv.id).padStart(4, "0")}</td>

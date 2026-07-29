@@ -334,210 +334,296 @@ export default function ClientPayments() {
         </div>
       </div>
     );
-  }
-
-  return (
-    <div className="w-full space-y-6 md:space-y-8">
+  }  return (
+    <div className="w-full max-w-full min-w-0 space-y-4 sm:space-y-6 md:space-y-8 animate-in fade-in duration-200 overflow-hidden">
+      
       {/* Page Header */}
-      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6">
-        <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
-          Payments
-        </h1>
-        <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xs p-4 sm:p-6 w-full max-w-full min-w-0">
+        <div className="flex items-center gap-2.5 mb-1">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold shrink-0 border border-blue-100 shadow-xs">
+            <CreditCard size={18} className="sm:w-[20px] sm:h-[20px]" />
+          </div>
+          <h1 className="text-[#0F172A] font-extrabold text-xl sm:text-2xl md:text-3xl tracking-tight truncate">
+            Payments
+          </h1>
+        </div>
+        <p className="text-xs sm:text-sm text-[#64748B] font-medium leading-relaxed break-words mt-1">
           View, download, and pay outstanding fee invoices
         </p>
       </div>
 
       {/* Success Notification */}
       {paymentSuccess && (
-        <div className="bg-emerald-50 border border-emerald-500 text-emerald-700 px-4 py-3.5 rounded-lg flex items-center gap-2 animate-bounce">
-          <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />
-          <span className="font-medium">Payment completed successfully! The invoice record has been updated and a receipt generated.</span>
+        <div className="bg-emerald-50 border border-emerald-500 text-emerald-700 p-3.5 sm:p-4 rounded-xl flex items-center gap-2.5 text-xs sm:text-sm font-semibold shadow-xs animate-in fade-in">
+          <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+          <span>Payment completed successfully! The invoice record has been updated and a receipt generated.</span>
         </div>
       )}
 
       {/* Financial Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white border border-[#E2E8F0] p-5 rounded-xl shadow-sm">
-          <span className="text-sm font-medium text-[#64748B]">Active Account</span>
-          <div className="flex items-center gap-2.5 mt-2">
-            <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 w-full max-w-full min-w-0">
+        <div className="bg-white border border-[#E2E8F0] p-4 sm:p-5 rounded-2xl shadow-xs min-w-0">
+          <span className="text-xs font-bold text-[#64748B] uppercase tracking-wider block mb-2">Active Account</span>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#2563EB] flex items-center justify-center font-extrabold text-sm border border-blue-100 shrink-0">
               {clientName ? clientName.charAt(0).toUpperCase() : "?"}
             </div>
-            <div>
-              <h4 className="font-semibold text-slate-800 text-sm">{clientName || "Demo Client"}</h4>
-              <p className="text-xs text-slate-400 truncate max-w-[200px]">{clientEmail}</p>
+            <div className="min-w-0 flex-1">
+              <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm truncate">{clientName || "Demo Client"}</h4>
+              <p className="text-[11px] text-slate-500 truncate mt-0.5">{clientEmail}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white border border-[#E2E8F0] p-5 rounded-xl shadow-sm">
-          <span className="text-sm font-medium text-[#EF4444]">Total Outstanding Amount</span>
-          <h3 className="text-2xl font-bold text-red-600 mt-1.5">
+        <div className="bg-white border border-[#E2E8F0] p-4 sm:p-5 rounded-2xl shadow-xs min-w-0">
+          <span className="text-xs font-bold text-[#EF4444] uppercase tracking-wider block mb-1">Total Outstanding Amount</span>
+          <h3 className="text-xl sm:text-2xl font-black text-rose-600 tracking-tight">
             ₹{totalDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </h3>
-          <p className="text-xs text-slate-400 mt-1">{dueInvoices.length} pending billing request{dueInvoices.length !== 1 ? "s" : ""}</p>
+          <p className="text-[11px] font-semibold text-slate-400 mt-1">{dueInvoices.length} pending billing request{dueInvoices.length !== 1 ? "s" : ""}</p>
         </div>
 
-        <div className="bg-white border border-[#E2E8F0] p-5 rounded-xl shadow-sm">
-          <span className="text-sm font-medium text-[#16A34A]">Total Paid Amount</span>
-          <h3 className="text-2xl font-bold text-[#16A34A] mt-1.5">
+        <div className="bg-white border border-[#E2E8F0] p-4 sm:p-5 rounded-2xl shadow-xs sm:col-span-2 lg:col-span-1 min-w-0">
+          <span className="text-xs font-bold text-[#16A34A] uppercase tracking-wider block mb-1">Total Paid Amount</span>
+          <h3 className="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight">
             ₹{totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </h3>
-          <p className="text-xs text-slate-400 mt-1">{paidInvoices.length} successful payment{paidInvoices.length !== 1 ? "s" : ""}</p>
+          <p className="text-[11px] font-semibold text-slate-400 mt-1">{paidInvoices.length} successful payment{paidInvoices.length !== 1 ? "s" : ""}</p>
         </div>
       </div>
 
       {/* Due Payments Section */}
-      <div className="space-y-4">
-        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-          <CreditCard className="w-5 h-5 text-blue-500" />
+      <div className="space-y-3.5 sm:space-y-4 w-full max-w-full min-w-0">
+        <h3 className="text-base sm:text-lg md:text-xl font-extrabold text-[#0F172A] flex items-center gap-2">
+          <CreditCard className="w-5 h-5 text-[#2563EB] shrink-0" />
           <span>Due Payments</span>
         </h3>
 
         {dueInvoices.length === 0 ? (
-          <div className="bg-white border border-[#E2E8F0] rounded-xl py-12 px-6 text-center shadow-sm">
-            <div className="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Check className="w-6 h-6" />
+          <div className="bg-white border border-[#E2E8F0] rounded-2xl py-10 sm:py-12 px-4 text-center shadow-xs space-y-2 w-full">
+            <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-100">
+              <Check className="w-5 h-5" />
             </div>
-            <h4 className="font-semibold text-slate-700 text-lg">No Due Invoices</h4>
-            <p className="text-slate-400 text-sm mt-1">Excellent! You are all caught up on your legal fee payments.</p>
+            <h4 className="font-extrabold text-slate-800 text-sm sm:text-base">No Due Invoices</h4>
+            <p className="text-slate-400 text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
+              Excellent! You are all caught up on your legal fee payments.
+            </p>
           </div>
         ) : (
-          <div className="overflow-x-auto bg-white border border-[#E2E8F0] rounded-xl shadow-sm">
-            <table className="w-full border-collapse text-left text-sm">
-              <thead>
-                <tr className="bg-slate-50 border-b border-[#E2E8F0] text-slate-600 text-xs font-semibold uppercase">
-                  <th className="p-4">Invoice ID</th>
-                  <th className="p-4">Case ID</th>
-                  <th className="p-4">Date</th>
-                  <th className="p-4">Subtotal</th>
-                  <th className="p-4">GST</th>
-                  <th className="p-4">Grand Total</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-center">Actions</th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-slate-100">
-                {dueInvoices.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-slate-50">
-                    <td className="p-4 font-medium">#{inv.id}</td>
-
-                    <td className="p-4">
-                      {inv.case_number || "General Consultation"}
-                    </td>
-
-                    <td className="p-4">
-                      {new Date(inv.created_at).toLocaleDateString()}
-                    </td>
-
-                    <td className="p-4">₹{inv.subtotal}</td>
-
-                    <td className="p-4">₹{inv.gst}</td>
-
-                    <td className="p-4 font-bold text-slate-900">
-                      ₹{inv.grand_total.toFixed(2)}
-                    </td>
-
-                    <td className="p-4">
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full ${inv.status.toLowerCase() === "overdue"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-yellow-100 text-yellow-700"
-                          }`}
-                      >
-                        {inv.status}
-                      </span>
-                    </td>
-
-                    <td className="p-4">
-                      <div className="flex gap-2 justify-center">
-                        <button
-                          onClick={() => handleDownloadInvoicePDF(inv)}
-                          className="p-2 border rounded-lg hover:bg-gray-50"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
-
-                        {perms.add ? (
-                          <button
-                            type="button"
-                            onClick={() => handlePaymentSubmit(inv)}
-                            className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm"
-                          >
-                            Pay Now
-                          </button>
-                        ) : (
-                          <span className="px-3 py-2 bg-slate-100 text-slate-400 rounded-lg text-sm font-semibold flex items-center gap-1">
-                            🔒 Restricted
-                          </span>
-                        )}
-                      </div>
-                    </td>
+          <>
+            {/* Desktop & Tablet Table (Visible >= 768px) */}
+            <div className="hidden md:block overflow-x-auto bg-white border border-[#E2E8F0] rounded-2xl shadow-xs w-full">
+              <table className="w-full border-collapse text-left text-xs sm:text-sm">
+                <thead>
+                  <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0] text-slate-600 text-[11px] font-bold uppercase tracking-wider">
+                    <th className="p-3.5">Invoice ID</th>
+                    <th className="p-3.5">Case ID</th>
+                    <th className="p-3.5">Date</th>
+                    <th className="p-3.5">Subtotal</th>
+                    <th className="p-3.5">GST</th>
+                    <th className="p-3.5">Grand Total</th>
+                    <th className="p-3.5">Status</th>
+                    <th className="p-3.5 text-center">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+
+                <tbody className="divide-y divide-[#F1F5F9] font-medium text-slate-700">
+                  {dueInvoices.map((inv) => (
+                    <tr key={inv.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3.5 font-mono font-bold text-[#0F172A]">#{inv.id}</td>
+                      <td className="p-3.5 font-bold text-slate-800">{inv.case_number || "General Consultation"}</td>
+                      <td className="p-3.5 text-slate-500 font-semibold">{new Date(inv.created_at).toLocaleDateString()}</td>
+                      <td className="p-3.5">₹{inv.subtotal}</td>
+                      <td className="p-3.5">₹{inv.gst}</td>
+                      <td className="p-3.5 font-extrabold text-[#0F172A]">₹{inv.grand_total.toFixed(2)}</td>
+                      <td className="p-3.5">
+                        <span
+                          className={`px-2.5 py-1 text-xs font-extrabold rounded-full border ${
+                            inv.status.toLowerCase() === "overdue"
+                              ? "bg-red-50 text-red-700 border-red-200"
+                              : "bg-amber-50 text-amber-700 border-amber-200"
+                          }`}
+                        >
+                          {inv.status}
+                        </span>
+                      </td>
+                      <td className="p-3.5 text-center">
+                        <div className="flex gap-2 justify-center items-center">
+                          <button
+                            onClick={() => handleDownloadInvoicePDF(inv)}
+                            className="p-2 border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 transition cursor-pointer"
+                            title="Download Invoice PDF"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+
+                          {perms.add ? (
+                            <button
+                              type="button"
+                              onClick={() => handlePaymentSubmit(inv)}
+                              className="px-3.5 py-1.5 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                            >
+                              Pay Now
+                            </button>
+                          ) : (
+                            <span className="px-3 py-1.5 bg-slate-100 text-slate-400 rounded-xl text-xs font-semibold flex items-center gap-1">
+                              🔒 Restricted
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Stacked Cards (Visible < 768px) */}
+            <div className="block md:hidden space-y-3 w-full max-w-full min-w-0">
+              {dueInvoices.map((inv) => (
+                <div key={inv.id} className="bg-white rounded-2xl border border-[#E2E8F0] p-4 space-y-3 shadow-xs min-w-0">
+                  <div className="flex items-start justify-between gap-2 border-b border-[#F1F5F9] pb-2.5">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Invoice #{inv.id}</span>
+                      <h4 className="font-extrabold text-xs text-[#0F172A] truncate mt-0.5">{inv.case_number || "General Consultation"}</h4>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full border shrink-0 ${
+                        inv.status.toLowerCase() === "overdue"
+                          ? "bg-red-50 text-red-700 border-red-200"
+                          : "bg-amber-50 text-amber-700 border-amber-200"
+                      }`}
+                    >
+                      {inv.status}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs py-1">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Date</span>
+                      <span className="font-semibold text-slate-700">{new Date(inv.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Grand Total</span>
+                      <span className="font-black text-sm text-[#0F172A]">₹{inv.grand_total.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#F1F5F9]">
+                    <button
+                      onClick={() => handleDownloadInvoicePDF(inv)}
+                      className="px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 flex items-center gap-1.5 hover:bg-slate-50 transition cursor-pointer"
+                    >
+                      <Download size={13} /> Invoice PDF
+                    </button>
+                    {perms.add ? (
+                      <button
+                        type="button"
+                        onClick={() => handlePaymentSubmit(inv)}
+                        className="px-4 py-1.5 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-xl text-xs font-extrabold transition shadow-xs cursor-pointer"
+                      >
+                        Pay Now
+                      </button>
+                    ) : (
+                      <span className="px-3 py-1 bg-slate-100 text-slate-400 rounded-xl text-xs font-semibold">
+                        🔒 Restricted
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
-      {/* Payment History Table */}
-      <div className="bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm space-y-4">
-        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-          <CheckCircle className="w-5 h-5 text-emerald-500" />
+      {/* Payment History Section */}
+      <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-6 shadow-xs space-y-4 w-full max-w-full min-w-0">
+        <h3 className="text-base sm:text-lg md:text-xl font-extrabold text-[#0F172A] flex items-center gap-2">
+          <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
           <span>Payment History</span>
         </h3>
 
         {paidInvoices.length === 0 ? (
-          <div className="text-center py-8 text-slate-400 text-sm">
+          <div className="text-center py-8 text-slate-400 text-xs sm:text-sm font-semibold">
             No completed payments recorded.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-sm">
-              <thead>
-                <tr className="bg-slate-50 border-b border-[#E2E8F0] text-slate-600 text-xs font-semibold uppercase tracking-wider">
-                  <th className="p-3">#Invoice ID</th>
-                  <th className="p-3">Case ID</th>
-                  <th className="p-3">Payment Date</th>
-                  <th className="p-3 text-right">Amount</th>
-                  <th className="p-3 text-center">Status</th>
-                  <th className="p-3 text-center">Receipt</th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-slate-100">
-                {paidInvoices.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="p-3 font-mono text-xs text-slate-500">#{inv.id}</td>
-                    <td className="p-3 font-semibold text-slate-800">{inv.case_number || "Consultation"}</td>
-                    <td className="p-3 text-slate-500">{new Date(inv.created_at).toLocaleDateString()}</td>
-                    <td className="p-3 text-right font-bold text-slate-900">₹{inv.grand_total.toFixed(2)}</td>
-                    <td className="p-3 text-center">
-                      <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 uppercase">
-                        {inv.status}
-                      </span>
-                    </td>
-                    <td className="p-3 text-center">
-                      <button
-                        onClick={() => handleDownloadInvoicePDF(inv)}
-                        className="text-blue-600 hover:text-blue-700 p-1.5 rounded-lg hover:bg-blue-50 transition-colors"
-                        title="Download Receipt PDF"
-                      >
-                        <Download className="w-4 h-4 mx-auto" />
-                      </button>
-                    </td>
+          <>
+            {/* Desktop & Tablet Table (Visible >= 768px) */}
+            <div className="hidden md:block overflow-x-auto rounded-xl border border-[#E2E8F0] w-full">
+              <table className="w-full border-collapse text-left text-xs sm:text-sm">
+                <thead>
+                  <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0] text-slate-600 text-[11px] font-bold uppercase tracking-wider">
+                    <th className="p-3.5">#Invoice ID</th>
+                    <th className="p-3.5">Case ID</th>
+                    <th className="p-3.5">Payment Date</th>
+                    <th className="p-3.5 text-right">Amount</th>
+                    <th className="p-3.5 text-center">Status</th>
+                    <th className="p-3.5 text-center">Receipt</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+
+                <tbody className="divide-y divide-[#F1F5F9] font-medium text-slate-700">
+                  {paidInvoices.map((inv) => (
+                    <tr key={inv.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3.5 font-mono text-xs text-slate-500 font-bold">#{inv.id}</td>
+                      <td className="p-3.5 font-bold text-slate-800">{inv.case_number || "Consultation"}</td>
+                      <td className="p-3.5 text-slate-500 font-semibold">{new Date(inv.created_at).toLocaleDateString()}</td>
+                      <td className="p-3.5 text-right font-extrabold text-[#0F172A]">₹{inv.grand_total.toFixed(2)}</td>
+                      <td className="p-3.5 text-center">
+                        <span className="px-2.5 py-0.5 text-xs font-extrabold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase">
+                          {inv.status}
+                        </span>
+                      </td>
+                      <td className="p-3.5 text-center">
+                        <button
+                          onClick={() => handleDownloadInvoicePDF(inv)}
+                          className="text-[#2563EB] hover:text-[#1d4ed8] p-1.5 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer"
+                          title="Download Receipt PDF"
+                        >
+                          <Download className="w-4 h-4 mx-auto" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Stacked Cards (Visible < 768px) */}
+            <div className="block md:hidden space-y-3 w-full max-w-full min-w-0">
+              {paidInvoices.map((inv) => (
+                <div key={inv.id} className="bg-white rounded-xl border border-[#E2E8F0] p-3.5 space-y-2.5 shadow-xs min-w-0">
+                  <div className="flex items-start justify-between gap-2 border-b border-[#F1F5F9] pb-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Invoice #{inv.id}</span>
+                      <h4 className="font-extrabold text-xs text-[#0F172A] truncate mt-0.5">{inv.case_number || "Consultation"}</h4>
+                    </div>
+                    <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase shrink-0">
+                      {inv.status}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs py-1">
+                    <span className="text-slate-500 font-semibold">Date: {new Date(inv.created_at).toLocaleDateString()}</span>
+                    <span className="font-black text-sm text-emerald-600">₹{inv.grand_total.toFixed(2)}</span>
+                  </div>
+
+                  <div className="pt-2 border-t border-[#F1F5F9] flex justify-end">
+                    <button
+                      onClick={() => handleDownloadInvoicePDF(inv)}
+                      className="px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-bold text-[#2563EB] bg-blue-50/60 hover:bg-blue-100 flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      <Download size={13} /> Download Receipt
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
-
-
 
     </div>
   );

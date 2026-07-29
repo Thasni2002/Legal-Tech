@@ -396,187 +396,187 @@ export default function CaseTracking() {
       {/* ── Case Detail Modal (portal) ── */}
       {mounted && selectedCase && typeof document !== "undefined"
         ? createPortal(
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-3 sm:p-6 animate-fade-in">
-              <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl relative max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
-                {/* Modal Header */}
-                <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 bg-slate-50/70 shrink-0">
-                  <div>
-                    <h2 className="text-lg sm:text-xl font-extrabold text-[#0F172A] tracking-tight">
-                      Case Details Log
-                    </h2>
-                    <p className="text-xs text-[#64748B] mt-0.5 font-medium">
-                      {selectedCase.name}
-                    </p>
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-3 sm:p-6 animate-fade-in">
+            <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl relative max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 bg-slate-50/70 shrink-0">
+                <div>
+                  <h2 className="text-lg sm:text-xl font-extrabold text-[#0F172A] tracking-tight">
+                    Case Details Log
+                  </h2>
+                  <p className="text-xs text-[#64748B] mt-0.5 font-medium">
+                    {selectedCase.name}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedCase(null)}
+                  className="text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-full p-2 transition-colors cursor-pointer shadow-xs"
+                  title="Close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+                  {/* Left — case info */}
+                  <div className="bg-slate-50/60 rounded-xl border border-slate-200/80 p-4 space-y-2.5 shadow-2xs">
+                    <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200/60 pb-2 mb-3">
+                      Case Parameters
+                    </h3>
+                    {[
+                      ["Case ID", selectedCase.id],
+                      ["Case Title", selectedCase.name],
+                      ["Case No.", selectedCase.case_no || "N/A"],
+                      ["Advocate", selectedCase.selected_advocate || "N/A"],
+                      ["Court", selectedCase.court],
+                    ].map(([label, val]) => (
+                      <div
+                        key={label}
+                        className="grid grid-cols-3 gap-2 border-b border-slate-200/40 pb-2 last:border-0 items-center text-xs"
+                      >
+                        <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">
+                          {label}
+                        </span>
+                        <span className="col-span-2 text-[#0F172A] font-semibold text-xs sm:text-sm break-words">
+                          {val}
+                        </span>
+                      </div>
+                    ))}
+
+                    {/* Status row */}
+                    <div className="grid grid-cols-3 gap-2 pt-1 items-center">
+                      <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">
+                        Status
+                      </span>
+                      <span className="col-span-2">
+                        <span
+                          className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${statusBadge(
+                            selectedCase.status
+                          )}`}
+                        >
+                          {selectedCase.status}
+                        </span>
+                      </span>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => setSelectedCase(null)}
-                    className="text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-full p-2 transition-colors cursor-pointer shadow-xs"
-                    title="Close"
-                  >
-                    <X size={18} />
-                  </button>
+
+                  {/* Right — docs */}
+                  <div className="space-y-4">
+                    {/* Documents Box with Scrollbar for >4 items */}
+                    <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/80 shadow-2xs flex flex-col">
+                      <div className="flex items-center justify-between gap-2 font-bold text-sm text-[#0F172A] mb-3 pb-2 border-b border-slate-200/60">
+                        <div className="flex items-center gap-2">
+                          <Briefcase size={16} className="text-[#2563EB]" />
+                          <span>Documents</span>
+                        </div>
+                        <span className="text-[11px] text-[#2563EB] font-bold bg-white px-2.5 py-0.5 rounded-full border border-indigo-100 shadow-2xs">
+                          {selectedCase.documents ? selectedCase.documents.length : 0} Files
+                        </span>
+                      </div>
+
+                      {/* Scroll container if > 4 docs */}
+                      <div className="max-h-[210px] overflow-y-auto pr-1 space-y-2 scrollbar-thin scrollbar-thumb-slate-300">
+                        {selectedCase.documents &&
+                          selectedCase.documents.length > 0 ? (
+                          selectedCase.documents.map((doc, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200/80 hover:border-indigo-200 shadow-2xs transition-colors gap-2"
+                            >
+                              <span className="text-slate-800 flex items-center gap-2 font-semibold text-xs truncate min-w-0 flex-1">
+                                <FileText
+                                  size={15}
+                                  className="text-indigo-500 shrink-0"
+                                />
+                                <span className="truncate" title={doc.file}>
+                                  {doc.file || "Unnamed Document"}
+                                </span>
+                              </span>
+                              {doc.file && (
+                                <button
+                                  onClick={() =>
+                                    setSelectedDoc({
+                                      fileUrl: doc.url || null,
+                                      title: doc.file,
+                                      badge:
+                                        doc.documentType || "Document",
+                                    })
+                                  }
+                                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2563EB] hover:text-white bg-indigo-50 hover:bg-[#2563EB] border border-indigo-200/80 px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer shrink-0 shadow-2xs"
+                                >
+                                  <Eye size={12} />
+                                  <span>View</span>
+                                </button>
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="py-6 text-center text-slate-400 italic text-xs">
+                            No documents uploaded for this case
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="p-4 sm:p-6 overflow-y-auto space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
-                    {/* Left — case info */}
-                    <div className="bg-slate-50/60 rounded-xl border border-slate-200/80 p-4 space-y-2.5 shadow-2xs">
-                      <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200/60 pb-2 mb-3">
-                        Case Parameters
-                      </h3>
-                      {[
-                        ["Case ID", selectedCase.id],
-                        ["Case Title", selectedCase.name],
-                        ["Case No.", selectedCase.case_no || "N/A"],
-                        ["Advocate", selectedCase.selected_advocate || "N/A"],
-                        ["Court", selectedCase.court],
-                      ].map(([label, val]) => (
-                        <div
-                          key={label}
-                          className="grid grid-cols-3 gap-2 border-b border-slate-200/40 pb-2 last:border-0 items-center text-xs"
+                {/* ── Update Status ── */}
+                <div className="border-t border-slate-100 pt-4">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    Update Case Status
+                  </h3>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="relative flex-1 min-w-[200px]">
+                      <CheckCircle
+                        size={16}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      />
+                      <select
+                        className="w-full border border-slate-200 rounded-xl pl-9 pr-8 py-2.5 text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none cursor-pointer bg-white shadow-2xs disabled:opacity-60"
+                        value={selectedCase.status || ""}
+                        disabled={updatingStatus}
+                        onChange={(e) =>
+                          handleStatusChange(
+                            selectedCase.dbId,
+                            e.target.value
+                          )
+                        }
+                      >
+                        {STATUS_OPTIONS.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
                         >
-                          <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">
-                            {label}
-                          </span>
-                          <span className="col-span-2 text-[#0F172A] font-semibold text-xs sm:text-sm break-words">
-                            {val}
-                          </span>
-                        </div>
-                      ))}
-
-                      {/* Status row */}
-                      <div className="grid grid-cols-3 gap-2 pt-1 items-center">
-                        <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">
-                          Status
-                        </span>
-                        <span className="col-span-2">
-                          <span
-                            className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${statusBadge(
-                              selectedCase.status
-                            )}`}
-                          >
-                            {selectedCase.status}
-                          </span>
-                        </span>
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
                       </div>
                     </div>
-
-                    {/* Right — docs */}
-                    <div className="space-y-4">
-                      {/* Documents Box with Scrollbar for >4 items */}
-                      <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/80 shadow-2xs flex flex-col">
-                        <div className="flex items-center justify-between gap-2 font-bold text-sm text-[#0F172A] mb-3 pb-2 border-b border-slate-200/60">
-                          <div className="flex items-center gap-2">
-                            <Briefcase size={16} className="text-[#2563EB]" />
-                            <span>Documents</span>
-                          </div>
-                          <span className="text-[11px] text-[#2563EB] font-bold bg-white px-2.5 py-0.5 rounded-full border border-indigo-100 shadow-2xs">
-                            {selectedCase.documents ? selectedCase.documents.length : 0} Files
-                          </span>
-                        </div>
-
-                        {/* Scroll container if > 4 docs */}
-                        <div className="max-h-[210px] overflow-y-auto pr-1 space-y-2 scrollbar-thin scrollbar-thumb-slate-300">
-                          {selectedCase.documents &&
-                          selectedCase.documents.length > 0 ? (
-                            selectedCase.documents.map((doc, idx) => (
-                              <div
-                                key={idx}
-                                className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200/80 hover:border-indigo-200 shadow-2xs transition-colors gap-2"
-                              >
-                                <span className="text-slate-800 flex items-center gap-2 font-semibold text-xs truncate min-w-0 flex-1">
-                                  <FileText
-                                    size={15}
-                                    className="text-indigo-500 shrink-0"
-                                  />
-                                  <span className="truncate" title={doc.file}>
-                                    {doc.file || "Unnamed Document"}
-                                  </span>
-                                </span>
-                                {doc.file && (
-                                  <button
-                                    onClick={() =>
-                                      setSelectedDoc({
-                                        fileUrl: doc.url || null,
-                                        title: doc.file,
-                                        badge:
-                                          doc.documentType || "Document",
-                                      })
-                                    }
-                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2563EB] hover:text-white bg-indigo-50 hover:bg-[#2563EB] border border-indigo-200/80 px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer shrink-0 shadow-2xs"
-                                  >
-                                    <Eye size={12} />
-                                    <span>View</span>
-                                  </button>
-                                )}
-                              </div>
-                            ))
-                          ) : (
-                            <div className="py-6 text-center text-slate-400 italic text-xs">
-                              No documents uploaded for this case
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* ── Update Status ── */}
-                  <div className="border-t border-slate-100 pt-4">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                      Update Case Status
-                    </h3>
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <div className="relative flex-1 min-w-[200px]">
-                        <CheckCircle
-                          size={16}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                        />
-                        <select
-                          className="w-full border border-slate-200 rounded-xl pl-9 pr-8 py-2.5 text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none cursor-pointer bg-white shadow-2xs disabled:opacity-60"
-                          value={selectedCase.status || ""}
-                          disabled={updatingStatus}
-                          onChange={(e) =>
-                            handleStatusChange(
-                              selectedCase.dbId,
-                              e.target.value
-                            )
-                          }
-                        >
-                          {STATUS_OPTIONS.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
-                        <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M19 9l-7 7-7-7"
-                            />
-                          </svg>
-                        </div>
-                      </div>
-                      {updatingStatus && (
-                        <span className="text-xs text-indigo-600 font-semibold animate-pulse">
-                          Saving status…
-                        </span>
-                      )}
-                    </div>
+                    {updatingStatus && (
+                      <span className="text-xs text-indigo-600 font-semibold animate-pulse">
+                        Saving status…
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
-            </div>,
-            document.body
-          )
+            </div>
+          </div>,
+          document.body
+        )
         : null}
 
       {/* ── Document Viewer ── */}
