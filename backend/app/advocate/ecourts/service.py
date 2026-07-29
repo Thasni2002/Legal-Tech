@@ -11,6 +11,8 @@ from .schemas import (
     CauseListItem,
     SyncCaseResponse,
     eCourtsDashboardMetrics,
+    SimilarCasesResponse,
+    CaseAnalysisResult,
 )
 from .ecourts_provider import get_ecourts_provider
 
@@ -338,15 +340,13 @@ def _map_status_to_outcome(status: str) -> str:
     return "Pending"
 
 
-def get_similar_cases_service(db: Session, data) -> "SimilarCasesResponse":
+def get_similar_cases_service(db: Session, data: CaseSearchRequest) -> SimilarCasesResponse:
     """
     Fetches similar cases from:
     1. Internal firm DB (cases with matching case_type)
     2. Live eCourts API (search by case_type)
     Each result is analysed by Gemini AI.
     """
-    from .schemas import SimilarCasesResponse, CaseAnalysisResult, CaseSearchRequest
-
     results: List[CaseAnalysisResult] = []
     internal_count = 0
     ecourts_count = 0
