@@ -72,25 +72,24 @@ function StatusBadge({ status }) {
 
 function InfoRow({ icon, label, value }) {
   return (
-    <div className="flex items-start gap-3">
-      <div className="mt-0.5 w-8 h-8 rounded-lg bg-[#F1F5F9] flex items-center justify-center text-[#2563EB] flex-shrink-0">
+    <div className="flex items-start gap-2.5 sm:gap-3 min-w-0 w-full">
+      <div className="mt-0.5 w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#F1F5F9] flex items-center justify-center text-[#2563EB] shrink-0">
         {icon}
       </div>
-      <div>
+      <div className="min-w-0 flex-1">
         <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">{label}</p>
-        <p className="text-sm font-semibold text-[#0F172A] mt-0.5">{value || "—"}</p>
+        <p className="text-xs sm:text-sm font-semibold text-[#0F172A] mt-0.5 break-words">{value || "—"}</p>
       </div>
     </div>
   );
 }
 
-// ─── Tab definitions ────────────────────────────────────────────────────────────
+// ─── Tab definitions (Parties merged into Overview) ───────────────────────────
 const TABS = [
   { key: "overview",   label: "Case Overview" },
   { key: "documents",  label: "Case Documents" },
   { key: "hearings",   label: "eCourts Hearings" },
   { key: "orders",     label: "Orders & Judgments" },
-  { key: "parties",    label: "Parties & Advocates" },
   { key: "notes",      label: "Advocate Notes" },
   { key: "billing",    label: "Billing" },
 ];
@@ -151,6 +150,13 @@ export default function AssignedCaseDetailView({
   const loggedInUser = getLoggedInUser();
   const isJuniorAdvocate =
     loggedInUser && loggedInUser.role && loggedInUser.role.toLowerCase().includes("junior");
+
+  // Resolve case title reliably
+  const caseDisplayTitle =
+    selectedCase?.title ||
+    selectedCase?.caseTitle ||
+    selectedCase?.case_title ||
+    (selectedCase?.caseNo ? `Case #${selectedCase.caseNo}` : "Assigned Case");
 
   // ─── eCourts fetch ────────────────────────────────────────────────────────────
   const fetchECourtsData = async () => {
@@ -441,53 +447,79 @@ export default function AssignedCaseDetailView({
 
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="w-full max-w-7xl mx-auto pb-10 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden">
+    <div className="w-full max-w-full min-w-0 mx-auto pb-6 sm:pb-10 animate-in fade-in duration-200 overflow-hidden">
+      <div className="bg-white rounded-xl sm:rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden w-full max-w-full min-w-0">
 
         {/* ── Case Header ──────────────────────────────────────────────────────── */}
-        <div className="p-5 sm:p-6 border-b border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white">
-          <div className="flex items-center gap-4 min-w-0">
+        <div className="p-3.5 sm:p-5 md:p-6 border-b border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 bg-white w-full max-w-full min-w-0">
+          <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 w-full">
             <button
               onClick={onClose}
-              className="p-2.5 bg-slate-100 hover:bg-slate-200 text-[#0F172A] rounded-xl font-bold transition flex items-center gap-2 cursor-pointer text-sm shadow-xs shrink-0"
+              className="p-2 sm:p-2.5 bg-slate-100 hover:bg-slate-200 text-[#0F172A] rounded-xl font-bold transition flex items-center gap-1.5 sm:gap-2 cursor-pointer text-xs sm:text-sm shadow-xs shrink-0"
               title="Back to Assigned Cases"
             >
-              <ArrowLeft size={18} />
+              <ArrowLeft size={16} className="sm:w-[18px] sm:h-[18px]" />
               <span>Back</span>
             </button>
-            <div className="min-w-0">
-              <div className="flex items-center gap-3">
-                <span className="bg-blue-50 text-[#2563EB] p-2 rounded-xl border border-blue-100 shadow-xs shrink-0">
-                  <Gavel size={20} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <span className="bg-blue-50 text-[#2563EB] p-1.5 sm:p-2 rounded-xl border border-blue-100 shadow-xs shrink-0">
+                  <Gavel size={18} className="sm:w-[20px] sm:h-[20px]" />
                 </span>
-                <h1 className="text-[#0F172A] font-extrabold text-xl sm:text-2xl tracking-tight truncate">
-                  {selectedCase.title}
+                <h1 className="text-[#0F172A] font-extrabold text-base sm:text-xl md:text-2xl tracking-tight break-words min-w-0">
+                  {caseDisplayTitle}
                 </h1>
               </div>
-              <p className="text-xs text-[#64748B] font-semibold uppercase tracking-wider mt-1.5 flex items-center gap-2 flex-wrap">
-                <span className="bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-md">
-                  Case #{selectedCase.caseNo || "N/A"}
+              <div className="text-[11px] sm:text-xs text-[#64748B] font-semibold uppercase tracking-wider mt-1 sm:mt-1.5 flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <span className="bg-slate-100 text-slate-700 px-2 sm:px-2.5 py-0.5 rounded-md">
+                  Case #{selectedCase.caseNo || selectedCase.case_no || "N/A"}
                 </span>
                 <span>•</span>
-                <span className="bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-md font-mono">
+                <span className="bg-blue-50 text-blue-700 px-2 sm:px-2.5 py-0.5 rounded-md font-mono">
                   ID: #{selectedCase.id}
                 </span>
-              </p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* ── Tab Bar ──────────────────────────────────────────────────────────── */}
-        <div className="border-b border-[#F1F5F9] bg-[#F8FAFC] p-2 sm:p-3 flex items-center gap-3">
-          <div className="flex overflow-x-auto no-scrollbar gap-1 sm:gap-1.5 scroll-smooth flex-1">
+        {/* ── Tab Bar Navigation ────────────────────────────────────────────────── */}
+        <div className="border-b border-[#F1F5F9] bg-[#F8FAFC] p-3 sm:p-4 w-full max-w-full min-w-0">
+          
+          {/* Mobile & Tablet Dropdown Selector (Visible on < 1024px) */}
+          <div className="block lg:hidden w-full min-w-0">
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">
+                Active Section ({TABS.findIndex(t => t.key === activeTab) + 1}/6):
+              </label>
+              <span className="text-[11px] font-extrabold text-[#2563EB] bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100 truncate">
+                {TABS.find(t => t.key === activeTab)?.label}
+              </span>
+            </div>
+            <select
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value)}
+              className="w-full rounded-xl border border-[#CBD5E1] bg-white px-3.5 py-2.5 text-xs sm:text-sm font-bold text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] shadow-xs cursor-pointer"
+            >
+              <option value="overview"> Case Overview</option>
+              <option value="documents"> Case Documents ({visibleDocs.length})</option>
+              <option value="hearings"> eCourts Hearings</option>
+              <option value="orders"> Orders &amp; Judgments</option>
+              <option value="notes">Advocate Notes ({caseNotes.length})</option>
+              <option value="billing"> Fee &amp; Billing</option>
+            </select>
+          </div>
+
+          {/* Desktop & Large Screen Tab Pills Strip (Visible on >= 1024px) */}
+          <div className="hidden lg:flex items-center gap-1.5 overflow-x-auto scroll-smooth w-full min-w-0 pb-1 scrollbar-thin scrollbar-thumb-slate-200">
             {TABS.map((tabObj) => (
               <button
                 key={tabObj.key}
                 onClick={() => setActiveTab(tabObj.key)}
-                className={`px-3.5 sm:px-5 py-2.5 sm:py-3 text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-colors relative cursor-pointer rounded-xl whitespace-nowrap shrink-0 ${
+                className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors relative cursor-pointer rounded-xl whitespace-nowrap shrink-0 ${
                   activeTab === tabObj.key
-                    ? "text-[#2563EB] bg-white shadow-sm font-extrabold border border-slate-200"
-                    : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100/50"
+                    ? "text-[#2563EB] bg-white shadow-xs font-extrabold border border-slate-300"
+                    : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-200/60"
                 }`}
               >
                 {tabObj.label}
@@ -504,39 +536,14 @@ export default function AssignedCaseDetailView({
               </button>
             ))}
           </div>
-
-          {/* Tab-contextual action buttons */}
-          {activeTab === "documents" && caseAllowsUpload(selectedCase) && (
-            <div className="shrink-0">
-              <input ref={fileInputRef} type="file" className="hidden" id="doc-upload-input" onChange={handleUploadFile} />
-              <label
-                htmlFor="doc-upload-input"
-                className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all shadow-sm ${
-                  uploadLoading ? "bg-[#E2E8F0] text-[#94A3B8]" : "bg-[#2563EB] text-white hover:bg-[#1d4ed8]"
-                }`}
-              >
-                <Upload size={14} />
-                {uploadLoading ? "Uploading..." : "Upload"}
-              </label>
-            </div>
-          )}
-          {activeTab === "hearings" && (
-            <button
-              onClick={handleOpenCreateAppearance}
-              className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer shrink-0"
-            >
-              <Plus size={14} />
-              <span className="hidden sm:inline">Log Appearance</span>
-            </button>
-          )}
         </div>
 
         {/* ── Tab Content ──────────────────────────────────────────────────────── */}
-        <div className="p-4 sm:p-6 md:p-8">
+        <div className="p-3.5 sm:p-5 md:p-8 w-full max-w-full min-w-0">
 
           {/* ══ OVERVIEW ══════════════════════════════════════════════════════ */}
           {activeTab === "overview" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
+            <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-200 w-full min-w-0">
 
               {/* Standby advocate alert */}
               {(() => {
@@ -545,11 +552,11 @@ export default function AssignedCaseDetailView({
                 const isStandby = normSec && (normSec === normUser || normUser.includes(normSec) || normSec.includes(normUser));
                 if (!isStandby) return null;
                 return (
-                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3.5 text-amber-900 shadow-xs">
-                    <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 text-xl font-bold">🛡️</div>
-                    <div>
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 text-amber-900 shadow-xs w-full max-w-full min-w-0">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 text-lg sm:text-xl font-bold">🛡️</div>
+                    <div className="min-w-0 flex-1">
                       <h4 className="text-xs font-extrabold uppercase tracking-wider text-amber-900">You are assigned as Standby / Backup Advocate</h4>
-                      <p className="text-xs text-amber-800 font-medium mt-0.5">
+                      <p className="text-xs text-amber-800 font-medium mt-0.5 leading-snug">
                         Primary Counsel: <span className="font-bold">{selectedCase.primaryAdvocate || selectedCase.advocate_name || "N/A"}</span>. Full proxy access to manage hearings, log appearances, and view records.
                       </p>
                     </div>
@@ -558,8 +565,8 @@ export default function AssignedCaseDetailView({
               })()}
 
               {/* Status row + update dropdown */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full max-w-full min-w-0">
+                <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
                   <StatusBadge status={selectedCase.status} />
                   <span className="text-xs text-[#94A3B8] font-semibold tracking-wide uppercase">
                     {selectedCase.court || ""}
@@ -574,7 +581,7 @@ export default function AssignedCaseDetailView({
                         handleStatusChange(selectedCase.id, e.target.value);
                       }
                     }}
-                    className="rounded-xl border border-[#E2E8F0] bg-white px-3 py-1.5 text-xs font-bold text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition cursor-pointer shadow-sm"
+                    className="rounded-xl border border-[#E2E8F0] bg-white px-3 py-1.5 text-xs font-bold text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition cursor-pointer shadow-xs max-w-[200px] sm:max-w-none"
                   >
                     {[
                       "Active","Client Consulting","Client Detail Collection","Document Data Collection",
@@ -587,9 +594,9 @@ export default function AssignedCaseDetailView({
               </div>
 
               {/* Info grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full max-w-full min-w-0">
                 {/* Case Details */}
-                <div className="bg-[#F8FAFC] rounded-2xl p-4 sm:p-5 border border-[#F1F5F9] space-y-4">
+                <div className="bg-[#F8FAFC] rounded-2xl p-4 sm:p-5 border border-[#F1F5F9] space-y-4 min-w-0 w-full">
                   <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Case Details</h4>
                   <InfoRow icon={<Hash size={14} />} label="Case Number" value={selectedCase.caseNo} />
                   <InfoRow icon={<Hash size={14} />} label="Assignment ID" value={`#${selectedCase.id}`} />
@@ -597,42 +604,125 @@ export default function AssignedCaseDetailView({
                 </div>
 
                 {/* Court Information */}
-                <div className="bg-[#F8FAFC] rounded-2xl p-4 sm:p-5 border border-[#F1F5F9] space-y-4">
+                <div className="bg-[#F8FAFC] rounded-2xl p-4 sm:p-5 border border-[#F1F5F9] space-y-4 min-w-0 w-full">
                   <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Court Information</h4>
                   <InfoRow icon={<Building2 size={14} />} label="Court / Forum" value={selectedCase.court} />
                   <InfoRow icon={<Calendar size={14} />} label="Next Hearing Date" value={selectedCase.hearing || "To be scheduled"} />
                 </div>
+              </div>
 
-                {/* Client & Counsel full-width */}
-                <div className="bg-[#F8FAFC] rounded-2xl p-4 sm:p-5 border border-[#F1F5F9] space-y-4 md:col-span-2">
-                  <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Client & Counsel</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <InfoRow
-                      icon={<User size={14} />}
-                      label="Client Name"
-                      value={isJuniorAdvocate && isSensitiveCase(selectedCase) ? "Confidential (Restricted)" : selectedCase.client}
-                    />
-                    <InfoRow
-                      icon={<Briefcase size={14} />}
-                      label="Primary Advocate"
-                      value={selectedCase.primaryAdvocate || selectedCase.advocate_name}
-                    />
-                    <InfoRow
-                      icon={<Briefcase size={14} />}
-                      label="Standby Advocate"
-                      value={selectedCase.secondaryAdvocate || selectedCase.secondary_advocate_name || "None"}
-                    />
+              {/* Parties & Legal Representatives (Integrated directly into Case Overview) */}
+              <div className="bg-[#F8FAFC] rounded-2xl p-4 sm:p-5 border border-[#F1F5F9] space-y-4 w-full max-w-full min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#E2E8F0]">
+                  <div>
+                    <h3 className="font-extrabold text-sm sm:text-base text-[#0F172A]">Parties &amp; Legal Representatives</h3>
+                    <p className="text-xs text-[#64748B] mt-0.5">Petitioner, respondent, opposing counsel, and bench officer.</p>
                   </div>
+                  <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200 self-start sm:self-auto shrink-0">
+                    Case #{selectedCase.caseNo || selectedCase.case_no || "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 w-full max-w-full min-w-0">
+                  {/* Petitioner Side */}
+                  <div className="bg-gradient-to-br from-[#F0F9FF] to-[#E0F2FE] rounded-2xl p-4 sm:p-5 border border-[#BAE6FD] space-y-3.5 shadow-xs relative overflow-hidden w-full max-w-full min-w-0">
+                    <div className="absolute top-0 right-0 bg-[#0284C7] text-white text-[9px] sm:text-[10px] font-black uppercase px-2.5 sm:px-3 py-1 rounded-bl-xl tracking-wider">
+                      Petitioner Side
+                    </div>
+                    <div className="flex items-center gap-3 mb-1 pr-20 sm:pr-24 min-w-0">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#0284C7] text-white flex items-center justify-center font-bold shrink-0">
+                        <User size={18} className="sm:w-[20px] sm:h-[20px]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold text-[#0369A1] uppercase tracking-wider">Client / Petitioner</p>
+                        <h4 className="text-sm sm:text-base font-extrabold text-[#0F172A] truncate">
+                          {isJuniorAdvocate && isSensitiveCase(selectedCase) ? "Confidential" : (selectedCase.client || ecourtsData?.petitioner || "Petitioner")}
+                        </h4>
+                      </div>
+                    </div>
+                    <div className="space-y-2.5 pt-2.5 border-t border-[#B9E6FE]">
+                      <div className="bg-white/80 rounded-xl p-3 border border-sky-100">
+                        <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Petitioner Advocate / Legal Counsel</p>
+                        <p className="text-xs font-bold text-[#0284C7] mt-0.5 break-words">
+                          {ecourtsData?.petitionerAdvocate || selectedCase.primaryAdvocate || selectedCase.advocate_name || "Advocate (On Record)"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Respondent Side */}
+                  <div className="bg-gradient-to-br from-[#FFF7ED] to-[#FFEDD5] rounded-2xl p-4 sm:p-5 border border-[#FDBA74] space-y-3.5 shadow-xs relative overflow-hidden w-full max-w-full min-w-0">
+                    <div className="absolute top-0 right-0 bg-[#EA580C] text-white text-[9px] sm:text-[10px] font-black uppercase px-2.5 sm:px-3 py-1 rounded-bl-xl tracking-wider">
+                      Respondent Side
+                    </div>
+                    <div className="flex items-center gap-3 mb-1 pr-20 sm:pr-24 min-w-0">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#EA580C] text-white flex items-center justify-center font-bold shrink-0">
+                        <User size={18} className="sm:w-[20px] sm:h-[20px]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold text-[#C2410C] uppercase tracking-wider">Respondent / Opposing Party</p>
+                        <h4 className="text-sm sm:text-base font-extrabold text-[#0F172A] truncate">
+                          {ecourtsData?.respondent || (selectedCase.title ? selectedCase.title.split(/ vs\.? | v\.? /i)[1] : "") || "State / Respondent"}
+                        </h4>
+                      </div>
+                    </div>
+                    <div className="space-y-2.5 pt-2.5 border-t border-[#FED7AA]">
+                      <div className="bg-white/80 rounded-xl p-3 border border-orange-100">
+                        <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Respondent Advocate / Opposing Counsel</p>
+                        <p className="text-xs font-bold text-[#C2410C] mt-0.5 break-words">
+                          {ecourtsData?.respondentAdvocate || "Government Pleader / Opposing Counsel"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Presiding Judicial Officer */}
+                <div className="bg-purple-50/60 border border-purple-100 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 min-w-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold shrink-0">
+                      <Gavel size={18} className="sm:w-[20px] sm:h-[20px]" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Presiding Judicial Officer</p>
+                      <h5 className="text-xs sm:text-sm font-extrabold text-[#0F172A]">
+                        {ecourtsData?.presidingJudge || "Hon'ble Presiding Judge"}
+                      </h5>
+                      <p className="text-xs text-[#64748B] mt-0.5">{selectedCase.court}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Client & Counsel Summary */}
+              <div className="bg-[#F8FAFC] rounded-2xl p-4 sm:p-5 border border-[#F1F5F9] space-y-4 w-full max-w-full min-w-0">
+                <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Assigned Advocates Summary</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full min-w-0">
+                  <InfoRow
+                    icon={<User size={14} />}
+                    label="Client Name"
+                    value={isJuniorAdvocate && isSensitiveCase(selectedCase) ? "Confidential (Restricted)" : selectedCase.client}
+                  />
+                  <InfoRow
+                    icon={<Briefcase size={14} />}
+                    label="Primary Advocate"
+                    value={selectedCase.primaryAdvocate || selectedCase.advocate_name}
+                  />
+                  <InfoRow
+                    icon={<Briefcase size={14} />}
+                    label="Standby Advocate"
+                    value={selectedCase.secondaryAdvocate || selectedCase.secondary_advocate_name || "None"}
+                  />
                 </div>
               </div>
 
               {/* Assignment / Strategy Notes */}
               {selectedCase.notes && (
-                <div className="border-l-4 border-amber-400 bg-amber-50/50 p-5 rounded-r-2xl border-y border-r border-amber-200/60 shadow-xs">
+                <div className="border-l-4 border-amber-400 bg-amber-50/50 p-4 sm:p-5 rounded-r-2xl border-y border-r border-amber-200/60 shadow-xs w-full max-w-full min-w-0">
                   <h4 className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                     <FileText size={13} /> Case Strategy &amp; Advocate Notes
                   </h4>
-                  <p className="text-[#334155] text-sm font-medium leading-relaxed italic">
+                  <p className="text-[#334155] text-xs sm:text-sm font-medium leading-relaxed italic break-words w-full">
                     &quot;{selectedCase.notes}&quot;
                   </p>
                 </div>
@@ -642,23 +732,44 @@ export default function AssignedCaseDetailView({
 
           {/* ══ DOCUMENTS ══════════════════════════════════════════════════════ */}
           {activeTab === "documents" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
+            <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-200 w-full max-w-full min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 w-full max-w-full min-w-0">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-extrabold text-base sm:text-lg text-[#0F172A]">Assigned Documents</h3>
+                  <p className="text-xs text-[#64748B] mt-0.5">View or upload documents shared for this case.</p>
+                </div>
+                {caseAllowsUpload(selectedCase) && (
+                  <div className="shrink-0 self-start sm:self-auto">
+                    <input ref={fileInputRef} type="file" className="hidden" id="doc-upload-input" onChange={handleUploadFile} />
+                    <label
+                      htmlFor="doc-upload-input"
+                      className={`flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all shadow-xs ${
+                        uploadLoading ? "bg-[#E2E8F0] text-[#94A3B8]" : "bg-[#2563EB] text-white hover:bg-[#1d4ed8]"
+                      }`}
+                    >
+                      <Upload size={14} />
+                      {uploadLoading ? "Uploading..." : "Upload Document"}
+                    </label>
+                  </div>
+                )}
+              </div>
+
               {uploadSuccess && (
-                <div className="flex items-center gap-2.5 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                <div className="flex items-center gap-2.5 bg-green-50 border border-green-200 rounded-xl px-4 py-3 w-full max-w-full min-w-0">
                   <CheckCircle size={18} className="text-green-600 shrink-0" />
-                  <p className="text-sm font-bold text-green-800">Document uploaded successfully!</p>
+                  <p className="text-xs sm:text-sm font-bold text-green-800">Document uploaded successfully!</p>
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 w-full max-w-full min-w-0">
                 {visibleDocs.length === 0 ? (
-                  <div className="col-span-full text-center py-14 px-4 bg-slate-50/60 rounded-2xl border border-dashed border-slate-200 space-y-3">
+                  <div className="col-span-full text-center py-10 sm:py-14 px-4 bg-slate-50/60 rounded-2xl border border-dashed border-slate-200 space-y-3 w-full max-w-full min-w-0">
                     <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
                       <FileText size={24} />
                     </div>
-                    <div>
+                    <div className="w-full max-w-full min-w-0 px-2">
                       <p className="text-slate-700 font-bold text-sm">No documents found</p>
-                      <p className="text-slate-400 text-xs mt-1 max-w-sm mx-auto">
+                      <p className="text-slate-400 text-xs sm:text-sm mt-1 max-w-full mx-auto break-words leading-relaxed">
                         {isJuniorAdvocate
                           ? "No PIN-protected documents have been shared with you yet."
                           : "No documents attached to this case assignment."}
@@ -672,27 +783,27 @@ export default function AssignedCaseDetailView({
                     return (
                       <div
                         key={idx}
-                        className={`rounded-2xl border p-4 transition-all flex items-center justify-between gap-4 ${
+                        className={`rounded-2xl border p-3.5 sm:p-4 transition-all flex items-center justify-between gap-3 sm:gap-4 w-full max-w-full min-w-0 ${
                           isLocked
                             ? "bg-slate-50/80 border-slate-200 hover:border-slate-300"
                             : isSelected
-                            ? "bg-blue-50/60 border-blue-200 shadow-sm"
+                            ? "bg-blue-50/60 border-blue-200 shadow-xs"
                             : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
                         }`}
                       >
-                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
                           {isLocked ? (
-                            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#2563EB] shrink-0 shadow-xs">
-                              <Lock size={18} />
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#2563EB] shrink-0 shadow-xs">
+                              <Lock size={16} className="sm:w-[18px] sm:h-[18px]" />
                             </div>
                           ) : (
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border shadow-xs ${isSelected ? "bg-blue-100 border-blue-200 text-[#2563EB]" : "bg-slate-100 border-slate-200 text-[#64748B]"}`}>
-                              <FileText size={18} />
+                            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 border shadow-xs ${isSelected ? "bg-blue-100 border-blue-200 text-[#2563EB]" : "bg-slate-100 border-slate-200 text-[#64748B]"}`}>
+                              <FileText size={16} className="sm:w-[18px] sm:h-[18px]" />
                             </div>
                           )}
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold truncate text-[#0F172A]">{doc.file}</p>
-                            <p className="text-xs text-[#64748B] mt-0.5">{doc.documentType}</p>
+                            <p className="text-xs sm:text-sm font-bold truncate text-[#0F172A]">{doc.file}</p>
+                            <p className="text-[11px] sm:text-xs text-[#64748B] mt-0.5 truncate">{doc.documentType}</p>
                           </div>
                         </div>
                         <button
@@ -705,11 +816,11 @@ export default function AssignedCaseDetailView({
                               handleViewDocument(doc);
                             }
                           }}
-                          className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                          className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0 ${
                             isLocked
                               ? "bg-[#EFF6FF] text-[#2563EB] border border-[#BFDBFE] hover:bg-[#DBEAFE]"
                               : isSelected
-                              ? "bg-[#2563EB] text-white shadow-sm hover:bg-blue-700"
+                              ? "bg-[#2563EB] text-white shadow-xs hover:bg-blue-700"
                               : "bg-slate-100 text-[#475569] hover:bg-slate-200"
                           }`}
                         >
@@ -725,42 +836,51 @@ export default function AssignedCaseDetailView({
 
           {/* ══ ECOURTS HEARINGS ════════════════════════════════════════════════ */}
           {activeTab === "hearings" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              {/* Header banner */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-blue-50 border border-blue-200 rounded-2xl p-4">
-                <div>
-                  <h4 className="text-sm font-bold text-blue-900">eCourts Hearing Timeline</h4>
-                  <p className="text-xs text-blue-700 mt-0.5">
-                    Case #{selectedCase.caseNo} • Next Hearing: {selectedCase.hearing || "To be scheduled"}
+            <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-200 w-full max-w-full min-w-0">
+              {/* Header banner with action buttons */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-blue-50 border border-blue-200 rounded-2xl p-4 w-full max-w-full min-w-0">
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-xs sm:text-sm font-bold text-blue-900">eCourts Hearing Timeline</h4>
+                  <p className="text-[11px] sm:text-xs text-blue-700 mt-0.5 truncate">
+                    Case #{selectedCase.caseNo || selectedCase.case_no} • Next Hearing: {selectedCase.hearing || "To be scheduled"}
                   </p>
                 </div>
-                <button
-                  onClick={fetchECourtsData}
-                  disabled={syncLoading}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-50 w-full sm:w-auto shrink-0"
-                >
-                  {syncLoading ? "Syncing..." : "Sync eCourts Now"}
-                </button>
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+                  <button
+                    onClick={fetchECourtsData}
+                    disabled={syncLoading}
+                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50 flex-1 sm:flex-none text-center"
+                  >
+                    {syncLoading ? "Syncing..." : "Sync eCourts"}
+                  </button>
+                  <button
+                    onClick={handleOpenCreateAppearance}
+                    className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded-xl transition shadow-xs cursor-pointer flex-1 sm:flex-none"
+                  >
+                    <Plus size={14} />
+                    <span>Log Appearance</span>
+                  </button>
+                </div>
               </div>
 
-              {/* Logged appearances as timeline (primary source) */}
+              {/* Logged appearances as timeline */}
               {(selectedCase.appearances || []).length > 0 ? (
-                <div className="relative pl-7 sm:pl-8 space-y-6 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                <div className="relative pl-6 sm:pl-8 space-y-4 sm:space-y-6 before:absolute before:left-2.5 sm:before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 w-full max-w-full min-w-0">
                   {(selectedCase.appearances || []).map((item, idx) => (
-                    <div key={idx} className="relative">
-                      <span className="absolute -left-[27px] sm:-left-[29px] top-1 w-6 h-6 rounded-full border-2 border-blue-500 bg-white flex items-center justify-center text-xs font-bold text-blue-600">
+                    <div key={idx} className="relative w-full max-w-full min-w-0">
+                      <span className="absolute -left-[23px] sm:-left-[29px] top-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-blue-500 bg-white flex items-center justify-center text-[10px] sm:text-xs font-bold text-blue-600">
                         {idx + 1}
                       </span>
-                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-xs">
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 sm:p-4 shadow-xs w-full max-w-full min-w-0">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
-                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200 self-start">
+                          <span className="px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200 self-start">
                             {item.stage || "Hearing"}
                           </span>
-                          <span className="text-xs font-bold text-slate-500">{item.appearanceDate}</span>
+                          <span className="text-[11px] sm:text-xs font-bold text-slate-500">{item.appearanceDate}</span>
                         </div>
-                        <h5 className="text-sm font-bold text-slate-900">{item.courtBench || selectedCase.court}</h5>
+                        <h5 className="text-xs sm:text-sm font-bold text-slate-900">{item.courtBench || selectedCase.court}</h5>
                         {item.summary && (
-                          <p className="text-xs text-slate-600 mt-1 leading-relaxed">&quot;{item.summary}&quot;</p>
+                          <p className="text-xs text-slate-600 mt-1 leading-relaxed break-words w-full">&quot;{item.summary}&quot;</p>
                         )}
                         {item.nextDate && (
                           <p className="text-[11px] font-semibold text-blue-600 mt-2 flex items-center gap-1">
@@ -775,18 +895,18 @@ export default function AssignedCaseDetailView({
                   ))}
                 </div>
               ) : ecourtsData?.timeline && ecourtsData.timeline.length > 0 ? (
-                <div className="relative pl-7 sm:pl-8 space-y-6 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                <div className="relative pl-6 sm:pl-8 space-y-4 sm:space-y-6 before:absolute before:left-2.5 sm:before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 w-full max-w-full min-w-0">
                   {ecourtsData.timeline.map((item, idx) => (
-                    <div key={idx} className="relative">
-                      <span className={`absolute -left-[27px] sm:-left-[29px] top-1 w-6 h-6 rounded-full border-2 bg-white flex items-center justify-center text-xs font-bold ${item.status === "Completed" ? "border-emerald-500 text-emerald-600" : "border-blue-500 text-blue-600 animate-pulse"}`}>
+                    <div key={idx} className="relative w-full max-w-full min-w-0">
+                      <span className={`absolute -left-[23px] sm:-left-[29px] top-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 bg-white flex items-center justify-center text-[10px] sm:text-xs font-bold ${item.status === "Completed" ? "border-emerald-500 text-emerald-600" : "border-blue-500 text-blue-600 animate-pulse"}`}>
                         {idx + 1}
                       </span>
-                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-xs">
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 sm:p-4 shadow-xs w-full max-w-full min-w-0">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
-                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200 self-start">{item.eventStage}</span>
-                          <span className="text-xs font-bold text-slate-500">{item.eventDate}</span>
+                          <span className="px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200 self-start">{item.eventStage}</span>
+                          <span className="text-[11px] sm:text-xs font-bold text-slate-500">{item.eventDate}</span>
                         </div>
-                        <h5 className="text-sm font-bold text-slate-900 mt-2">{item.title}</h5>
+                        <h5 className="text-xs sm:text-sm font-bold text-slate-900 mt-2">{item.title}</h5>
                         <p className="text-xs text-slate-600 mt-1">{item.description}</p>
                         {item.benchName && <p className="text-[11px] font-semibold text-slate-400 mt-2">Bench: {item.benchName} ({item.courtHall})</p>}
                       </div>
@@ -794,9 +914,9 @@ export default function AssignedCaseDetailView({
                   ))}
                 </div>
               ) : (
-                <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mx-auto text-blue-400">
-                    <Scale size={22} />
+                <div className="p-6 sm:p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 space-y-3 w-full max-w-full min-w-0">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-50 flex items-center justify-center mx-auto text-blue-400">
+                    <Scale size={20} className="sm:w-[22px] sm:h-[22px]" />
                   </div>
                   <p className="text-slate-500 text-xs font-medium">
                     No hearing timeline data yet. Log court appearances to build the timeline, or sync with eCourts.
@@ -805,13 +925,13 @@ export default function AssignedCaseDetailView({
               )}
 
               {/* Quick log footer */}
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-slate-100 w-full max-w-full min-w-0">
                 <p className="text-xs text-slate-500 font-medium">
                   {(selectedCase.appearances || []).length} court appearance{(selectedCase.appearances || []).length !== 1 ? "s" : ""} logged
                 </p>
                 <button
                   onClick={handleOpenCreateAppearance}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded-xl transition shadow-sm cursor-pointer"
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded-xl transition shadow-xs cursor-pointer"
                 >
                   <Plus size={13} /> Log Appearance
                 </button>
@@ -821,12 +941,12 @@ export default function AssignedCaseDetailView({
 
           {/* ══ ORDERS & JUDGMENTS ══════════════════════════════════════════════ */}
           {activeTab === "orders" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+            <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-200 w-full max-w-full min-w-0">
+              <h4 className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider">
                 Official Court Orders &amp; Judgment Documents
               </h4>
               {ecourtsData?.orders && ecourtsData.orders.length > 0 ? (
-                <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                <div className="w-full max-w-full overflow-x-auto min-w-0 border border-slate-200 rounded-xl">
                   <table className="w-full min-w-[620px] text-left text-xs">
                     <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-bold">
                       <tr>
@@ -861,108 +981,23 @@ export default function AssignedCaseDetailView({
                   </table>
                 </div>
               ) : (
-                <div className="p-10 text-center bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-                  <div className="w-14 h-14 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center mx-auto">
+                <div className="p-8 sm:p-10 text-center bg-slate-50 rounded-2xl border border-slate-200 space-y-3 w-full max-w-full min-w-0">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center mx-auto">
                     <Gavel size={22} className="text-purple-400" />
                   </div>
-                  <p className="text-slate-500 text-sm font-semibold">No court orders available yet</p>
+                  <p className="text-slate-500 text-xs sm:text-sm font-semibold">No court orders available yet</p>
                   <p className="text-slate-400 text-xs">Sync with eCourts to fetch official orders and judgments.</p>
                 </div>
               )}
             </div>
           )}
 
-          {/* ══ PARTIES & ADVOCATES ══════════════════════════════════════════════ */}
-          {activeTab === "parties" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#F1F5F9]">
-                <div>
-                  <h3 className="font-extrabold text-lg text-[#0F172A]">Parties &amp; Legal Representatives</h3>
-                  <p className="text-xs text-[#64748B] mt-0.5">Comprehensive overview of petitioner, respondent, opposing counsel, and bench officer.</p>
-                </div>
-                <span className="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-200 self-start sm:self-auto shrink-0">
-                  Case #{selectedCase.caseNo || "N/A"}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                {/* Petitioner Side */}
-                <div className="bg-gradient-to-br from-[#F0F9FF] to-[#E0F2FE] rounded-2xl p-5 sm:p-6 border border-[#BAE6FD] space-y-4 shadow-xs relative overflow-hidden">
-                  <div className="absolute top-0 right-0 bg-[#0284C7] text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl tracking-wider">
-                    Petitioner Side
-                  </div>
-                  <div className="flex items-center gap-3 mb-2 pr-24">
-                    <div className="w-10 h-10 rounded-xl bg-[#0284C7] text-white flex items-center justify-center font-bold shrink-0">
-                      <User size={20} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-bold text-[#0369A1] uppercase tracking-wider">Client / Petitioner</p>
-                      <h4 className="text-base font-extrabold text-[#0F172A] truncate">
-                        {isJuniorAdvocate && isSensitiveCase(selectedCase) ? "Confidential" : (selectedCase.client || ecourtsData?.petitioner || "Petitioner")}
-                      </h4>
-                    </div>
-                  </div>
-                  <div className="space-y-3 pt-3 border-t border-[#B9E6FE]">
-                    <div className="bg-white/80 rounded-xl p-3.5 border border-sky-100">
-                      <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Petitioner Advocate / Legal Counsel</p>
-                      <p className="text-xs font-bold text-[#0284C7] mt-0.5">
-                        {ecourtsData?.petitionerAdvocate || selectedCase.primaryAdvocate || selectedCase.advocate_name || "Advocate (On Record)"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Respondent Side */}
-                <div className="bg-gradient-to-br from-[#FFF7ED] to-[#FFEDD5] rounded-2xl p-5 sm:p-6 border border-[#FDBA74] space-y-4 shadow-xs relative overflow-hidden">
-                  <div className="absolute top-0 right-0 bg-[#EA580C] text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl tracking-wider">
-                    Respondent Side
-                  </div>
-                  <div className="flex items-center gap-3 mb-2 pr-24">
-                    <div className="w-10 h-10 rounded-xl bg-[#EA580C] text-white flex items-center justify-center font-bold shrink-0">
-                      <User size={20} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-bold text-[#C2410C] uppercase tracking-wider">Respondent / Opposing Party</p>
-                      <h4 className="text-base font-extrabold text-[#0F172A] truncate">
-                        {ecourtsData?.respondent || (selectedCase.title ? selectedCase.title.split(/ vs\.? | v\.? /i)[1] : "") || "State / Respondent"}
-                      </h4>
-                    </div>
-                  </div>
-                  <div className="space-y-3 pt-3 border-t border-[#FED7AA]">
-                    <div className="bg-white/80 rounded-xl p-3.5 border border-orange-100">
-                      <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Respondent Advocate / Opposing Counsel</p>
-                      <p className="text-xs font-bold text-[#C2410C] mt-0.5">
-                        {ecourtsData?.respondentAdvocate || "Government Pleader / Opposing Counsel"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Presiding Judicial Officer */}
-              <div className="bg-purple-50/60 border border-purple-100 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold shrink-0">
-                    <Gavel size={20} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Presiding Judicial Officer</p>
-                    <h5 className="text-sm font-extrabold text-[#0F172A]">
-                      {ecourtsData?.presidingJudge || "Hon'ble Presiding Judge"}
-                    </h5>
-                    <p className="text-xs text-[#64748B] mt-0.5">{selectedCase.court}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* ══ ADVOCATE NOTES ══════════════════════════════════════════════════ */}
           {activeTab === "notes" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#F1F5F9]">
+            <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-200 w-full max-w-full min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#F1F5F9] w-full max-w-full min-w-0">
                 <div>
-                  <h3 className="font-extrabold text-lg text-[#0F172A]">Advocate Notes &amp; Internal Tasks</h3>
+                  <h3 className="font-extrabold text-base sm:text-lg text-[#0F172A]">Advocate Notes &amp; Internal Tasks</h3>
                   <p className="text-xs text-[#64748B] mt-0.5">Private internal case notes and action items for advocates.</p>
                 </div>
                 <span className="text-xs font-bold text-purple-700 bg-purple-50 px-3 py-1.5 rounded-full border border-purple-200 self-start sm:self-auto shrink-0">
@@ -971,7 +1006,7 @@ export default function AssignedCaseDetailView({
               </div>
 
               {/* Add note form */}
-              <div className="bg-[#F8FAFC] rounded-2xl p-4 sm:p-5 border border-[#E2E8F0] space-y-4">
+              <div className="bg-[#F8FAFC] rounded-2xl p-4 sm:p-5 border border-[#E2E8F0] space-y-3.5 sm:space-y-4 w-full max-w-full min-w-0">
                 <h4 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider flex items-center gap-2">
                   <Pencil size={14} className="text-[#2563EB]" /> Add Internal Case Note
                 </h4>
@@ -979,7 +1014,7 @@ export default function AssignedCaseDetailView({
                   placeholder="Type internal case instructions, task details, or hearing preparation notes..."
                   value={newNoteText}
                   onChange={(e) => setNewNoteText(e.target.value)}
-                  className="w-full rounded-xl border border-[#E2E8F0] bg-white p-3.5 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition resize-y min-h-[90px]"
+                  className="w-full max-w-full min-w-0 rounded-xl border border-[#E2E8F0] bg-white p-3.5 text-xs sm:text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition resize-y min-h-[85px]"
                 />
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -998,7 +1033,7 @@ export default function AssignedCaseDetailView({
                   <button
                     onClick={handleAddNote}
                     disabled={!newNoteText.trim() || noteSaving}
-                    className="px-4 py-2.5 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition disabled:opacity-50 cursor-pointer shadow-sm w-full sm:w-auto shrink-0"
+                    className="px-4 py-2.5 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition disabled:opacity-50 cursor-pointer shadow-xs w-full sm:w-auto shrink-0"
                   >
                     <Send size={13} /> {noteSaving ? "Saving..." : "Save Note"}
                   </button>
@@ -1006,9 +1041,9 @@ export default function AssignedCaseDetailView({
               </div>
 
               {/* Notes feed */}
-              <div className="space-y-3">
+              <div className="space-y-3 w-full max-w-full min-w-0">
                 {notesLoading ? (
-                  <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-400 text-xs font-medium animate-pulse">
+                  <div className="p-6 sm:p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-400 text-xs font-medium animate-pulse">
                     Loading advocate notes…
                   </div>
                 ) : caseNotes.length > 0 ? (
@@ -1017,7 +1052,7 @@ export default function AssignedCaseDetailView({
                       ? new Date(note.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
                       : note.date || "—";
                     return (
-                      <div key={note.id} className="bg-white rounded-2xl p-4 sm:p-5 border border-[#E2E8F0] shadow-xs space-y-2 relative group hover:border-blue-200 transition">
+                      <div key={note.id} className="bg-white rounded-2xl p-4 sm:p-5 border border-[#E2E8F0] shadow-xs space-y-2 relative group hover:border-blue-200 transition w-full max-w-full min-w-0">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide border ${
@@ -1038,7 +1073,7 @@ export default function AssignedCaseDetailView({
                             <Trash2 size={14} />
                           </button>
                         </div>
-                        <p className="text-sm text-[#334155] leading-relaxed whitespace-pre-wrap">{note.text}</p>
+                        <p className="text-xs sm:text-sm text-[#334155] leading-relaxed whitespace-pre-wrap break-words w-full max-w-full">{note.text}</p>
                         <p className="text-[11px] text-[#64748B] font-medium pt-1 border-t border-slate-100 flex items-center gap-1">
                           <User size={11} /> Logged by: <span className="font-bold text-[#0F172A]">{note.author || "Advocate"}</span>
                         </p>
@@ -1046,7 +1081,7 @@ export default function AssignedCaseDetailView({
                     );
                   })
                 ) : (
-                  <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs font-medium">
+                  <div className="p-6 sm:p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs font-medium w-full max-w-full min-w-0">
                     No advocate notes logged yet for this case. Use the box above to record task notes!
                   </div>
                 )}
@@ -1056,14 +1091,14 @@ export default function AssignedCaseDetailView({
 
           {/* ══ BILLING ══════════════════════════════════════════════════════════ */}
           {activeTab === "billing" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
+            <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-200 w-full max-w-full min-w-0">
               {/* Header */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-[#F1F5F9]">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-[#F1F5F9] w-full max-w-full min-w-0">
                 <div>
-                  <h3 className="font-extrabold text-lg text-[#0F172A]">Fee &amp; Billing Overview</h3>
+                  <h3 className="font-extrabold text-base sm:text-lg text-[#0F172A]">Fee &amp; Billing Overview</h3>
                   <p className="text-xs text-[#64748B] mt-0.5">
                     Billing data from Finance Management — invoices matched for case{" "}
-                    <span className="font-bold text-[#0F172A]">{selectedCase.caseNo}</span>.
+                    <span className="font-bold text-[#0F172A]">{selectedCase.caseNo || selectedCase.case_no}</span>.
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -1089,46 +1124,46 @@ export default function AssignedCaseDetailView({
               </div>
 
               {feeLoading ? (
-                <div className="p-12 text-center text-slate-400 text-sm font-medium animate-pulse">Loading billing data…</div>
+                <div className="p-8 sm:p-12 text-center text-slate-400 text-sm font-medium animate-pulse">Loading billing data…</div>
               ) : (
                 <>
                   {/* Summary cards */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 sm:p-5 shadow-xs">
-                      <p className="text-[11px] font-bold text-blue-700 uppercase tracking-wider mb-2">Total Invoiced</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 sm:gap-5 w-full max-w-full min-w-0">
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 sm:p-5 shadow-xs min-w-0">
+                      <p className="text-[11px] font-bold text-blue-700 uppercase tracking-wider mb-1.5 sm:mb-2">Total Invoiced</p>
                       <h4 className="text-xl sm:text-2xl lg:text-3xl font-black text-blue-900">₹{totalBilled.toLocaleString("en-IN")}</h4>
-                      <p className="text-[11px] text-blue-600/80 font-medium mt-2">{caseInvoices.length} invoice{caseInvoices.length !== 1 ? "s" : ""} raised</p>
+                      <p className="text-[11px] text-blue-600/80 font-medium mt-1.5 sm:mt-2">{caseInvoices.length} invoice{caseInvoices.length !== 1 ? "s" : ""} raised</p>
                     </div>
-                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 sm:p-5 shadow-xs">
-                      <p className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider mb-2">Amount Received</p>
+                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 sm:p-5 shadow-xs min-w-0">
+                      <p className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider mb-1.5 sm:mb-2">Amount Received</p>
                       <h4 className="text-xl sm:text-2xl lg:text-3xl font-black text-emerald-900">₹{totalPaid.toLocaleString("en-IN")}</h4>
-                      <p className="text-[11px] text-emerald-600/80 font-medium mt-2">{caseInvoices.filter((inv) => inv.status === "Paid").length} paid invoice{caseInvoices.filter((inv) => inv.status === "Paid").length !== 1 ? "s" : ""}</p>
+                      <p className="text-[11px] text-emerald-600/80 font-medium mt-1.5 sm:mt-2">{caseInvoices.filter((inv) => inv.status === "Paid").length} paid invoice{caseInvoices.filter((inv) => inv.status === "Paid").length !== 1 ? "s" : ""}</p>
                     </div>
-                    <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 sm:p-5 shadow-xs sm:col-span-2 md:col-span-1">
-                      <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider mb-2">Pending / Due</p>
+                    <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 sm:p-5 shadow-xs sm:col-span-2 md:col-span-1 min-w-0">
+                      <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider mb-1.5 sm:mb-2">Pending / Due</p>
                       <h4 className="text-xl sm:text-2xl lg:text-3xl font-black text-amber-900">₹{totalPending.toLocaleString("en-IN")}</h4>
-                      <p className="text-[11px] text-amber-600/80 font-medium mt-2">{caseInvoices.filter((inv) => inv.status !== "Paid").length} outstanding invoice{caseInvoices.filter((inv) => inv.status !== "Paid").length !== 1 ? "s" : ""}</p>
+                      <p className="text-[11px] text-amber-600/80 font-medium mt-1.5 sm:mt-2">{caseInvoices.filter((inv) => inv.status !== "Paid").length} outstanding invoice{caseInvoices.filter((inv) => inv.status !== "Paid").length !== 1 ? "s" : ""}</p>
                     </div>
                   </div>
 
                   {/* Invoice table */}
-                  <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden">
-                    <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                  <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden w-full max-w-full min-w-0">
+                    <div className="px-4 sm:px-5 py-3.5 sm:py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                       <h4 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider">Invoice Records from Billing</h4>
                       <span className="text-xs font-bold text-slate-500">{caseInvoices.length} Invoice{caseInvoices.length !== 1 ? "s" : ""}</span>
                     </div>
                     {caseInvoices.length > 0 ? (
-                      <div className="overflow-x-auto">
-                        <table className="w-full min-w-[700px] text-left border-collapse">
+                      <div className="w-full max-w-full overflow-x-auto min-w-0">
+                        <table className="w-full min-w-[650px] text-left border-collapse">
                           <thead>
                             <tr className="bg-slate-50/50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                              <th className="px-5 py-3">Invoice #</th>
-                              <th className="px-5 py-3">Date</th>
-                              <th className="px-5 py-3">Client</th>
-                              <th className="px-5 py-3">Payment Mode</th>
-                              <th className="px-5 py-3">Advocate Fee</th>
-                              <th className="px-5 py-3 text-right">Grand Total (₹)</th>
-                              <th className="px-5 py-3 text-center">Status</th>
+                              <th className="px-4 sm:px-5 py-3">Invoice #</th>
+                              <th className="px-4 sm:px-5 py-3">Date</th>
+                              <th className="px-4 sm:px-5 py-3">Client</th>
+                              <th className="px-4 sm:px-5 py-3">Payment Mode</th>
+                              <th className="px-4 sm:px-5 py-3">Advocate Fee</th>
+                              <th className="px-4 sm:px-5 py-3 text-right">Grand Total (₹)</th>
+                              <th className="px-4 sm:px-5 py-3 text-center">Status</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 text-xs">
@@ -1143,15 +1178,15 @@ export default function AssignedCaseDetailView({
                                 : "bg-amber-50 text-amber-700 border-amber-200";
                               return (
                                 <tr key={inv.id} className="hover:bg-slate-50/80 transition">
-                                  <td className="px-5 py-3.5 font-bold text-blue-600">INV-{String(inv.id).padStart(4, "0")}</td>
-                                  <td className="px-5 py-3.5 text-slate-600 font-medium">{createdDate}</td>
-                                  <td className="px-5 py-3.5 text-slate-800 font-semibold">{inv.client_name || "—"}</td>
-                                  <td className="px-5 py-3.5 text-slate-600">{inv.payment_method || "—"}</td>
-                                  <td className="px-5 py-3.5 text-slate-700 font-semibold">
+                                  <td className="px-4 sm:px-5 py-3.5 font-bold text-blue-600">INV-{String(inv.id).padStart(4, "0")}</td>
+                                  <td className="px-4 sm:px-5 py-3.5 text-slate-600 font-medium">{createdDate}</td>
+                                  <td className="px-4 sm:px-5 py-3.5 text-slate-800 font-semibold">{inv.client_name || "—"}</td>
+                                  <td className="px-4 sm:px-5 py-3.5 text-slate-600">{inv.payment_method || "—"}</td>
+                                  <td className="px-4 sm:px-5 py-3.5 text-slate-700 font-semibold">
                                     {inv.advocate_fee_amount > 0 ? `₹${Number(inv.advocate_fee_amount).toLocaleString("en-IN")}` : "—"}
                                   </td>
-                                  <td className="px-5 py-3.5 text-right font-black text-slate-800">₹{Number(inv.grand_total || 0).toLocaleString("en-IN")}</td>
-                                  <td className="px-5 py-3.5 text-center">
+                                  <td className="px-4 sm:px-5 py-3.5 text-right font-black text-slate-800">₹{Number(inv.grand_total || 0).toLocaleString("en-IN")}</td>
+                                  <td className="px-4 sm:px-5 py-3.5 text-center">
                                     <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${statusColor}`}>{inv.status}</span>
                                   </td>
                                 </tr>
@@ -1161,11 +1196,11 @@ export default function AssignedCaseDetailView({
                         </table>
                       </div>
                     ) : (
-                      <div className="p-8 sm:p-10 text-center bg-slate-50">
-                        <p className="text-slate-500 text-sm font-semibold mb-1">No billing invoices found for this case</p>
-                        <p className="text-slate-400 text-xs">
+                      <div className="p-6 sm:p-10 text-center bg-slate-50 w-full max-w-full min-w-0">
+                        <p className="text-slate-500 text-xs sm:text-sm font-semibold mb-1">No billing invoices found for this case</p>
+                        <p className="text-slate-400 text-xs break-words">
                           Invoices with case number{" "}
-                          <span className="font-bold text-slate-600">{selectedCase.caseNo}</span>{" "}
+                          <span className="font-bold text-slate-600">{selectedCase.caseNo || selectedCase.case_no}</span>{" "}
                           will appear here once created in Finance Management.
                         </p>
                       </div>
@@ -1193,12 +1228,12 @@ export default function AssignedCaseDetailView({
       {docPasswordModal && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setDocPasswordModal(null)} />
-          <div className="relative bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl z-10 text-center space-y-4">
-            <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mx-auto shadow-sm">
-              <Lock size={24} className="text-[#2563EB]" />
+          <div className="relative bg-white rounded-2xl p-5 sm:p-6 max-w-xs sm:max-w-sm w-full shadow-2xl z-10 text-center space-y-4">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-blue-50 flex items-center justify-center mx-auto shadow-xs">
+              <Lock size={22} className="text-[#2563EB] sm:w-[24px] sm:h-[24px]" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-[#0F172A]">Enter Document PIN</h3>
+              <h3 className="text-base sm:text-lg font-bold text-[#0F172A]">Enter Document PIN</h3>
               <p className="text-xs text-[#64748B] mt-1">
                 Please enter the 6-digit PIN set by the senior advocate to view this file.
               </p>
@@ -1215,7 +1250,7 @@ export default function AssignedCaseDetailView({
                   setPasswordInput(val);
                   setPasswordError("");
                 }}
-                className="w-32 mx-auto rounded-xl border border-[#E2E8F0] px-4 py-3 text-center text-lg font-mono tracking-[0.75em] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition block"
+                className="w-32 mx-auto rounded-xl border border-[#E2E8F0] px-4 py-2.5 text-center text-base sm:text-lg font-mono tracking-[0.75em] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition block"
                 autoFocus
               />
               {passwordError && <p className="text-xs text-red-500 font-semibold">{passwordError}</p>}
@@ -1249,16 +1284,16 @@ export default function AssignedCaseDetailView({
 
       {/* ─── Log Court Appearance Modal ───────────────────────────────────────── */}
       {appearanceModal && typeof document !== "undefined" && createPortal(
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4">
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setAppearanceModal(false)} />
-          <div className="relative bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl z-10 space-y-6 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div className="relative bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 md:p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl z-10 space-y-5 sm:space-y-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3.5 sm:pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#2563EB]">
-                  <Scale size={20} />
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#2563EB] shrink-0">
+                  <Scale size={18} className="sm:w-[20px] sm:h-[20px]" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-[#0F172A]">
+                  <h3 className="text-base sm:text-lg font-bold text-[#0F172A]">
                     {editingAppearanceIdx !== null ? "Edit Court Appearance" : "Log Court Appearance"}
                   </h3>
                   <p className="text-xs text-[#64748B]">Record hearing details &amp; proceedings summary</p>
@@ -1266,14 +1301,14 @@ export default function AssignedCaseDetailView({
               </div>
               <button
                 onClick={() => setAppearanceModal(false)}
-                className="p-2 text-[#64748B] hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                className="p-1.5 text-[#64748B] hover:bg-slate-100 rounded-xl transition cursor-pointer"
               >
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleSaveAppearance} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1.5">Appearance Date *</label>
                   <CustomDatePicker
@@ -1296,7 +1331,7 @@ export default function AssignedCaseDetailView({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1.5">Court / Bench</label>
                   <input

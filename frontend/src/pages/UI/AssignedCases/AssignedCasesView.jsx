@@ -74,7 +74,7 @@ const getStatusBadgeClass = (status) => {
     case "Client Detail Collection":
     case "Document Data Collection":
     case "Court File":
-      return "bg-amber-50 text-amber-700 border border-amber-200 font-bold";
+      return "bg-amber-100 text-amber-700 border border-amber-200 font-bold";
     default:
       return "bg-slate-100 text-slate-700 border border-slate-200 font-bold";
   }
@@ -135,7 +135,6 @@ export default function AssignedCasesView() {
         });
       }
 
-
       const formattedCases = casesToShow.map((item) => ({
         id: item.id,
         caseId: item.case_id,
@@ -154,8 +153,6 @@ export default function AssignedCasesView() {
         secondary_advocate_name: item.secondaryAdvocateName || item.secondary_advocate_name || "",
         advocate_name: item.advocate_name || "",
       }));
-
-
 
       setCases(formattedCases);
     } catch (error) {
@@ -240,11 +237,11 @@ export default function AssignedCasesView() {
   // No view access
   if (!loading && !perms.view) {
     return (
-      <div className="w-full min-h-[400px] flex items-center justify-center">
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-10 max-w-sm text-center">
+      <div className="w-full min-h-[400px] flex items-center justify-center p-4">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 sm:p-10 max-w-sm w-full text-center">
           <div className="text-4xl mb-3">🔒</div>
-          <h2 className="text-xl font-bold text-slate-800">Access Restricted</h2>
-          <p className="text-slate-500 text-sm mt-2">You do not have permission to view Assigned Cases.</p>
+          <h2 className="text-lg sm:text-xl font-bold text-slate-800">Access Restricted</h2>
+          <p className="text-slate-500 text-xs sm:text-sm mt-2">You do not have permission to view Assigned Cases.</p>
         </div>
       </div>
     );
@@ -267,50 +264,50 @@ export default function AssignedCasesView() {
   }
 
   return (
-    <div className="w-full space-y-6 md:space-y-8">
+    <div className="w-full max-w-full min-w-0 space-y-4 sm:space-y-6 md:space-y-8 overflow-hidden">
       {/* Page Header */}
-      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-5 sm:p-6">
-        <h1 className="text-[#0F172A] font-bold text-2xl sm:text-3xl md:text-4xl" style={{ fontWeight: 700, lineHeight: 1.2 }}>
+      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-4 sm:p-5 md:p-6 w-full max-w-full min-w-0">
+        <h1 className="text-[#0F172A] font-bold text-xl sm:text-2xl md:text-3xl lg:text-4xl leading-tight">
           Assigned Cases
         </h1>
-        <p className="text-[#64748B] mt-1.5 text-xs sm:text-sm">
+        <p className="text-[#64748B] mt-1 text-xs sm:text-sm">
           View and manage your assigned legal cases
         </p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl p-6 border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow">
-          <h3 className="text-[#64748B] text-sm font-medium">Total Assigned Cases</h3>
-          <p className="text-3xl font-bold text-[#0F172A] mt-2">{cases.length}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-6 w-full max-w-full min-w-0">
+        <div className="bg-white rounded-xl p-4 sm:p-5 md:p-6 border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow min-w-0">
+          <h3 className="text-[#64748B] text-xs sm:text-sm font-medium">Total Assigned Cases</h3>
+          <p className="text-2xl sm:text-3xl font-bold text-[#0F172A] mt-1.5">{cases.length}</p>
         </div>
 
-        <div className="bg-white rounded-xl p-6 border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow">
-          <h3 className="text-[#64748B] text-sm font-medium">Active Cases</h3>
-          <p className="text-3xl font-bold text-[#16A34A] mt-2">
+        <div className="bg-white rounded-xl p-4 sm:p-5 md:p-6 border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow min-w-0">
+          <h3 className="text-[#64748B] text-xs sm:text-sm font-medium">Active Cases</h3>
+          <p className="text-2xl sm:text-3xl font-bold text-[#16A34A] mt-1.5">
             {cases.filter((c) => c.status === "Active").length}
           </p>
         </div>
 
-        <div className="bg-white rounded-xl p-6 border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow">
-          <h3 className="text-[#64748B] text-sm font-medium">Upcoming Hearings</h3>
-          <p className="text-3xl font-bold text-[#2563EB] mt-2">
+        <div className="bg-white rounded-xl p-4 sm:p-5 md:p-6 border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow min-w-0 sm:col-span-1">
+          <h3 className="text-[#64748B] text-xs sm:text-sm font-medium">Upcoming Hearings</h3>
+          <p className="text-2xl sm:text-3xl font-bold text-[#2563EB] mt-1.5">
             {cases.filter((c) => c.hearing !== "No hearing date").length}
           </p>
         </div>
       </div>
 
       {/* Cases Section (Grid vs List) */}
-      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-[#E2E8F0] flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <h2 className="text-lg font-bold text-[#0F172A] whitespace-nowrap">My Assigned Cases</h2>
+      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden w-full max-w-full min-w-0">
+        <div className="p-3.5 sm:p-5 border-b border-[#E2E8F0] flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4 w-full max-w-full min-w-0">
+          <h2 className="text-base sm:text-lg font-bold text-[#0F172A] whitespace-nowrap">My Assigned Cases</h2>
           
-          <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3 w-full md:w-auto">
-            <div className="flex flex-wrap w-full sm:w-auto items-center gap-3">
+          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3 w-full lg:w-auto min-w-0">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto min-w-0">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="border border-[#E2E8F0] rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all text-sm text-[#0F172A] cursor-pointer bg-white"
+                className="w-full sm:w-auto border border-[#E2E8F0] rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all text-xs sm:text-sm text-[#0F172A] cursor-pointer bg-white"
               >
                 <option value="All">All Statuses</option>
                 <option value="Active">Active</option>
@@ -319,98 +316,100 @@ export default function AssignedCasesView() {
               </select>
               <input
                 type="text"
-                placeholder="Search by title, case no, client..."
+                placeholder="Search title, case no, client..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full sm:w-64 border border-[#E2E8F0] rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
+                className="w-full sm:w-60 md:w-64 border border-[#E2E8F0] rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all text-xs sm:text-sm text-[#0F172A] placeholder:text-[#94A3B8]"
               />
             </div>
 
-            {/* View Mode Toggle (Grid vs List) */}
-            <div className="flex items-center gap-1 bg-[#F8FAFC] p-1 rounded-xl border border-[#E2E8F0] text-xs font-semibold">
-              <button
-                type="button"
-                onClick={() => setViewMode("grid")}
-                title="Grid View"
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-                  viewMode === "grid"
-                    ? "bg-white text-[#2563EB] font-bold shadow-xs border border-[#E2E8F0]"
-                    : "text-[#64748B] hover:text-[#0F172A]"
-                }`}
-              >
-                <LayoutGrid size={14} />
-                <span className="hidden sm:inline">Grid</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("list")}
-                title="List View"
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-                  viewMode === "list"
-                    ? "bg-white text-[#2563EB] font-bold shadow-xs border border-[#E2E8F0]"
-                    : "text-[#64748B] hover:text-[#0F172A]"
-                }`}
-              >
-                <List size={14} />
-                <span className="hidden sm:inline">List</span>
-              </button>
-            </div>
+            <div className="flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3 w-full sm:w-auto">
+              {/* View Mode Toggle (Grid vs List) */}
+              <div className="flex items-center gap-1 bg-[#F8FAFC] p-1 rounded-xl border border-[#E2E8F0] text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("grid")}
+                  title="Grid View"
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 ${
+                    viewMode === "grid"
+                      ? "bg-white text-[#2563EB] font-bold shadow-xs border border-[#E2E8F0]"
+                      : "text-[#64748B] hover:text-[#0F172A]"
+                  }`}
+                >
+                  <LayoutGrid size={14} />
+                  <span>Grid</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("list")}
+                  title="List View"
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 ${
+                    viewMode === "list"
+                      ? "bg-white text-[#2563EB] font-bold shadow-xs border border-[#E2E8F0]"
+                      : "text-[#64748B] hover:text-[#0F172A]"
+                  }`}
+                >
+                  <List size={14} />
+                  <span>List</span>
+                </button>
+              </div>
 
-            <span className="text-xs font-semibold text-[#64748B] bg-[#F1F5F9] px-3 py-1.5 rounded-full whitespace-nowrap">
-              {filteredCases.length} cases
-            </span>
+              <span className="text-xs font-semibold text-[#64748B] bg-[#F1F5F9] px-2.5 sm:px-3 py-1.5 rounded-full whitespace-nowrap">
+                {filteredCases.length} cases
+              </span>
+            </div>
           </div>
         </div>
 
         {/* GRID VIEW */}
         {viewMode === "grid" && (
-          <div className="p-5 bg-[#F8FAFC]/50">
+          <div className="p-3 sm:p-5 bg-[#F8FAFC]/50 w-full min-w-0">
             {filteredCases.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 w-full min-w-0">
                 {filteredCases.map((item, index) => (
                   <div
                     key={index}
-                    className="bg-white rounded-2xl border border-[#E2E8F0] p-4 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition-all space-y-4"
+                    className="bg-white rounded-2xl border border-[#E2E8F0] p-3.5 sm:p-4 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition-all space-y-3.5 min-w-0"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <span className="px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-mono font-extrabold border border-blue-200">
+                    <div className="flex items-start justify-between gap-2.5">
+                      <div className="min-w-0 flex-1">
+                        <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-mono font-extrabold border border-blue-200 inline-block">
                           {item.caseIdCode}
                         </span>
-                        <h3 className="font-bold text-[#0F172A] text-sm mt-2 leading-tight">
+                        <h3 className="font-bold text-[#0F172A] text-xs sm:text-sm mt-1.5 leading-snug break-words">
                           {item.title || item.caseTitle || "Assigned Case"}
                         </h3>
                       </div>
 
                       <span
-                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-xs shrink-0 ${getStatusBadgeClass(
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-xs shrink-0 whitespace-nowrap ${getStatusBadgeClass(
                           item.status
                         )}`}
                       >
-                        {item.status === "Won" ? "🏆 Case Won" : item.status === "Lost" ? "❌ Case Lost" : item.status}
+                        {item.status === "Won" ? "🏆 Won" : item.status === "Lost" ? "❌ Lost" : item.status}
                       </span>
                     </div>
 
-                    <div className="space-y-1.5 text-xs text-[#64748B] bg-[#F8FAFC] p-3 rounded-xl border border-[#E2E8F0]/60">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-semibold text-[#94A3B8]">Client:</span>
-                        <span className="font-bold text-[#0F172A] truncate max-w-[170px]">
+                    <div className="space-y-1.5 text-xs text-[#64748B] bg-[#F8FAFC] p-2.5 sm:p-3 rounded-xl border border-[#E2E8F0]/60 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-semibold text-[#94A3B8] shrink-0">Client:</span>
+                        <span className="font-bold text-[#0F172A] truncate">
                           {isJuniorAdvocate && isSensitiveCase(item)
                             ? "Confidential (Restricted)"
                             : item.client || "Not Specified"}
                         </span>
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-semibold text-[#94A3B8]">Court:</span>
-                        <span className="font-semibold text-[#475569] truncate max-w-[170px]" title={item.court}>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-semibold text-[#94A3B8] shrink-0">Court:</span>
+                        <span className="font-semibold text-[#475569] truncate" title={item.court}>
                           {item.court || "Court Not Specified"}
                         </span>
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-semibold text-[#94A3B8]">Next Hearing:</span>
-                        <span className="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-semibold text-[#94A3B8] shrink-0">Next Hearing:</span>
+                        <span className="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate">
                           {item.hearing || "No hearing date"}
                         </span>
                       </div>
@@ -429,7 +428,7 @@ export default function AssignedCasesView() {
                       {perms.delete && (
                         <button
                           onClick={() => setDeleteConfirm(item.id)}
-                          className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition text-xs font-bold flex items-center justify-center cursor-pointer"
+                          className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition text-xs font-bold flex items-center justify-center cursor-pointer shrink-0"
                           title="Delete Case"
                         >
                           <Trash2 size={14} />
@@ -440,7 +439,7 @@ export default function AssignedCasesView() {
                 ))}
               </div>
             ) : (
-              <div className="py-16 text-center flex flex-col items-center gap-2">
+              <div className="py-14 text-center flex flex-col items-center gap-2">
                 <FileText size={32} className="text-[#CBD5E1]" />
                 <p className="text-[#64748B] text-sm font-medium">No matching assigned cases found.</p>
               </div>
@@ -450,89 +449,154 @@ export default function AssignedCasesView() {
 
         {/* LIST VIEW */}
         {viewMode === "list" && (
-          <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-                <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Case ID</th>
-                <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Client</th>
-                <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Court</th>
-                <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Next Hearing</th>
-                <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Status</th>
-                <th className="px-5 py-3.5 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-[#F1F5F9]">
+          <div className="w-full max-w-full min-w-0">
+            {/* Mobile Card List (Visible on phones < 640px) */}
+            <div className="block sm:hidden divide-y divide-[#F1F5F9] w-full min-w-0">
               {filteredCases.length > 0 ? (
                 filteredCases.map((item, index) => (
-                  <tr
-                    key={index}
-                    className="hover:bg-[#F8FAFC] transition-colors duration-150 group"
-                  >
-                    <td className="px-5 py-4 text-sm font-semibold text-[#0F172A]">
-                      {item.caseIdCode}
-                    </td>
-
-                    <td className="px-5 py-4 text-sm text-[#475569] font-medium">
-                      {isJuniorAdvocate && isSensitiveCase(item) ? "Confidential (Restricted)" : (item.client || "Not Specified")}
-                    </td>
-
-                    <td className="px-5 py-4 text-sm text-[#475569]">
-                      {item.court}
-                    </td>
-
-                    <td className="px-5 py-4">
-                      <span className="text-xs font-semibold text-[#64748B] bg-[#F1F5F9] px-2.5 py-1 rounded-lg">
-                        {item.hearing}
+                  <div key={index} className="p-3.5 space-y-2.5 w-full min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-mono font-extrabold border border-blue-200">
+                        {item.caseIdCode}
                       </span>
-                    </td>
-
-                    <td className="px-5 py-4">
-                      <span className={`px-3 py-1.5 rounded-lg text-xs font-bold inline-block uppercase tracking-wider shadow-xs ${getStatusBadgeClass(item.status)}`}>
-                        {item.status === "Won" ? "🏆 Case Won" : item.status === "Lost" ? "❌ Case Lost" : item.status}
+                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${getStatusBadgeClass(item.status)}`}>
+                        {item.status === "Won" ? "🏆 Won" : item.status === "Lost" ? "❌ Lost" : item.status}
                       </span>
-                    </td>
+                    </div>
 
+                    <h4 className="font-bold text-[#0F172A] text-xs leading-snug break-words">
+                      {item.title || "Assigned Case"}
+                    </h4>
 
-                    <td className="px-5 py-4">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setSelectedCase(item)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#2563EB] bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer"
-                          title="See Case Details"
-                        >
-                          <Eye size={14} />
-                          View
-                        </button>
-
-                        {perms.delete && (
-                          <button
-                            onClick={() => setDeleteConfirm(item.id)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors cursor-pointer"
-                            title="Delete Case"
-                          >
-                            <Trash2 size={14} />
-                            Delete
-                          </button>
-                        )}
+                    <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                      <div>
+                        <span className="text-slate-400 font-medium block text-[10px]">Client</span>
+                        <span className="text-slate-800 font-semibold truncate block">
+                          {isJuniorAdvocate && isSensitiveCase(item) ? "Confidential" : (item.client || "N/A")}
+                        </span>
                       </div>
-                    </td>
-                  </tr>
+                      <div>
+                        <span className="text-slate-400 font-medium block text-[10px]">Court</span>
+                        <span className="text-slate-800 font-semibold truncate block">{item.court}</span>
+                      </div>
+                      <div className="col-span-2 pt-1 border-t border-slate-200/60 flex items-center justify-between">
+                        <span className="text-slate-400 font-medium text-[10px]">Next Hearing:</span>
+                        <span className="text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 text-[10px]">
+                          {item.hearing}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        onClick={() => setSelectedCase(item)}
+                        className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Eye size={14} />
+                        View Case Details
+                      </button>
+                      {perms.delete && (
+                        <button
+                          onClick={() => setDeleteConfirm(item.id)}
+                          className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold flex items-center justify-center cursor-pointer shrink-0"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 ))
               ) : (
-                <tr>
-                  <td colSpan="6" className="px-5 py-16 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <FileText size={32} className="text-[#CBD5E1]" />
-                      <p className="text-[#64748B] text-sm font-medium">No matching assigned cases found.</p>
-                    </div>
-                  </td>
-                </tr>
+                <div className="p-10 text-center text-slate-500 text-xs">
+                  No matching assigned cases found.
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
+            </div>
+
+            {/* Desktop / Tablet Table View (Visible on >= 640px) */}
+            <div className="hidden sm:block w-full max-w-full overflow-x-auto min-w-0">
+              <table className="w-full min-w-[620px] text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
+                    <th className="px-4 sm:px-5 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">Case ID</th>
+                    <th className="px-4 sm:px-5 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">Client</th>
+                    <th className="px-4 sm:px-5 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">Court</th>
+                    <th className="px-4 sm:px-5 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">Next Hearing</th>
+                    <th className="px-4 sm:px-5 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">Status</th>
+                    <th className="px-4 sm:px-5 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-[#F1F5F9]">
+                  {filteredCases.length > 0 ? (
+                    filteredCases.map((item, index) => (
+                      <tr
+                        key={index}
+                        className="hover:bg-[#F8FAFC] transition-colors duration-150 group"
+                      >
+                        <td className="px-4 sm:px-5 py-3.5 text-xs sm:text-sm font-semibold text-[#0F172A]">
+                          {item.caseIdCode}
+                        </td>
+
+                        <td className="px-4 sm:px-5 py-3.5 text-xs sm:text-sm text-[#475569] font-medium">
+                          {isJuniorAdvocate && isSensitiveCase(item) ? "Confidential (Restricted)" : (item.client || "Not Specified")}
+                        </td>
+
+                        <td className="px-4 sm:px-5 py-3.5 text-xs sm:text-sm text-[#475569]">
+                          {item.court}
+                        </td>
+
+                        <td className="px-4 sm:px-5 py-3.5">
+                          <span className="text-[11px] sm:text-xs font-semibold text-[#64748B] bg-[#F1F5F9] px-2.5 py-1 rounded-lg inline-block whitespace-nowrap">
+                            {item.hearing}
+                          </span>
+                        </td>
+
+                        <td className="px-4 sm:px-5 py-3.5">
+                          <span className={`px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-bold inline-block uppercase tracking-wider shadow-xs whitespace-nowrap ${getStatusBadgeClass(item.status)}`}>
+                            {item.status === "Won" ? "🏆 Case Won" : item.status === "Lost" ? "❌ Case Lost" : item.status}
+                          </span>
+                        </td>
+
+                        <td className="px-4 sm:px-5 py-3.5">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setSelectedCase(item)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#2563EB] bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer"
+                              title="See Case Details"
+                            >
+                              <Eye size={14} />
+                              View
+                            </button>
+
+                            {perms.delete && (
+                              <button
+                                onClick={() => setDeleteConfirm(item.id)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors cursor-pointer"
+                                title="Delete Case"
+                              >
+                                <Trash2 size={14} />
+                                Delete
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="6" className="px-5 py-16 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <FileText size={32} className="text-[#CBD5E1]" />
+                          <p className="text-[#64748B] text-sm font-medium">No matching assigned cases found.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
       </div>
 
@@ -540,25 +604,25 @@ export default function AssignedCasesView() {
       {deleteConfirm && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
-          <div className="relative bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl z-10 text-center">
-            <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
-              <Trash2 size={24} className="text-red-500" />
+          <div className="relative bg-white rounded-2xl p-5 sm:p-6 max-w-xs sm:max-w-sm w-full shadow-2xl z-10 text-center">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-3.5">
+              <Trash2 size={22} className="text-red-500 sm:w-[24px] sm:h-[24px]" />
             </div>
-            <h3 className="text-lg font-bold text-[#0F172A] mb-2">Delete Assigned Case?</h3>
-            <p className="text-sm text-[#64748B] mb-6">
+            <h3 className="text-base sm:text-lg font-bold text-[#0F172A] mb-1.5">Delete Assigned Case?</h3>
+            <p className="text-xs sm:text-sm text-[#64748B] mb-5">
               This action cannot be undone. The case assignment will be permanently removed.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setDeleteConfirm(null)}
-                className="flex-1 py-2.5 rounded-xl border border-[#E2E8F0] text-[#64748B] font-semibold text-sm hover:bg-[#F8FAFC] transition"
+                className="flex-1 py-2.5 rounded-xl border border-[#E2E8F0] text-[#64748B] font-semibold text-xs sm:text-sm hover:bg-[#F8FAFC] transition cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleDelete(deleteConfirm)}
                 disabled={deleteLoading}
-                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm transition disabled:opacity-70"
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-xs sm:text-sm transition disabled:opacity-70 cursor-pointer"
               >
                 {deleteLoading ? "Deleting..." : "Yes, Delete"}
               </button>

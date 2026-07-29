@@ -10,6 +10,8 @@ import {
   Calendar,
   FileText,
   FolderOpen,
+  User,
+  ArrowRight,
 } from "lucide-react";
 
 const ROLE_BADGE = {
@@ -28,12 +30,6 @@ export default function JunAdvDashView() {
   const [recentDocuments, setRecentDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCard, setSelectedCard] = useState(null);
-
-  const tasks = [
-    "Prepare case notes",
-    "Upload hearing documents",
-    "Review client affidavit",
-  ];
 
   useEffect(() => {
     const user = getLoggedInUser();
@@ -75,7 +71,6 @@ export default function JunAdvDashView() {
           });
         }
 
-
         // --- Stats ---
         const todayStr = new Date().toISOString().split("T")[0];
         const assignedCasesCount = casesToShow.length;
@@ -101,7 +96,6 @@ export default function JunAdvDashView() {
             const doc_type = doc.documentType || doc.document_type || "File";
             const uploaded_by = doc.advocate || doc.uploadedBy || doc.uploaded_by || item.advocate_name || "Unknown";
             
-            // Determine uploader role label
             const ul_lower = uploaded_by.toLowerCase();
             let role_label = "Advocate";
             if (ul_lower.includes("junior")) {
@@ -112,13 +106,11 @@ export default function JunAdvDashView() {
               role_label = "Senior Advocate";
             }
 
-            // Build file URL
             let file_url = doc.url || doc.file_url;
             if (!file_url && fname) {
               file_url = `${API_BASE_URL}/uploads/case_documents/${encodeURIComponent(fname)}`;
             }
 
-            // Fallback for timestamp display
             let timestampDisplay = "Recently";
             const rawTime = doc.uploaded_at || doc.created_at || doc.timestamp || item.updated_at || item.created_at;
             if (rawTime) {
@@ -156,11 +148,11 @@ export default function JunAdvDashView() {
           });
         });
 
-        // Take latest 8 documents and reverse
         const sortedDocs = juniorDocs.slice(-8).reverse();
         setRecentDocuments(sortedDocs);
 
         const formattedCases = casesToShow.map((item) => ({
+          id: item.id,
           title: item.case_title || item.case_name,
           hearing: item.due_date ? item.due_date.split("T")[0] : "No date",
           status: item.status || "Active",
@@ -169,8 +161,6 @@ export default function JunAdvDashView() {
           advocateName: item.advocate_name || "",
           secondaryAdvocateName: item.secondaryAdvocateName || item.secondary_advocate_name || "",
         }));
-
-
 
         setCases(formattedCases);
       } catch (error) {
@@ -185,7 +175,6 @@ export default function JunAdvDashView() {
 
   const hour = new Date().getHours();
   let greeting = "";
-
   if (hour >= 5 && hour < 12) {
     greeting = "Good Morning";
   } else if (hour >= 12 && hour < 17) {
@@ -212,37 +201,45 @@ export default function JunAdvDashView() {
     (c) => c.hearing !== "No date" && c.hearing >= todayStr
   );
 
+  const getSelectedList = () => {
+    if (selectedCard === "assignedCases") return assignedCasesList;
+    if (selectedCard === "activeCases") return activeCasesList;
+    if (selectedCard === "upcomingHearings") return upcomingHearingsList;
+    return [];
+  };
+
+  const selectedList = getSelectedList();
+
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5 space-y-4 lg:space-y-5 animate-in fade-in zoom-in-95 duration-500">
+    <div className="w-full max-w-full min-w-0 mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 animate-in fade-in duration-300 overflow-x-hidden">
 
       {/* Page Header */}
-      <div className="bg-white rounded-2xl shadow-md border border-[#E2E8F0] p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
+      <div className="bg-white rounded-2xl shadow-xs border border-[#E2E8F0] p-4 sm:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full min-w-0">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight truncate">
             {greeting}, {userName ? <span className="capitalize">{userName}</span> : ""}
           </h1>
-          <p className="text-[#64748B] mt-2 text-lg font-medium">
+          <p className="text-[#64748B] mt-1 text-sm sm:text-base font-medium truncate">
             Junior Advocate {userName ? <span className="capitalize">{userName}</span> : ""}
           </p>
         </div>
-        <div className="flex flex-col items-start lg:items-end gap-3 w-full lg:w-auto">
-          <div className="text-left md:text-right bg-[#F8FAFC] px-6 py-4 rounded-2xl border border-[#E2E8F0] w-full md:w-auto">
-            <p className="text-[#475569] font-bold text-sm uppercase tracking-wider">Today's Date</p>
-            <p className="text-[#0F172A] font-extrabold text-lg mt-1">{currentDate}</p>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center lg:items-end gap-3 w-full lg:w-auto">
+          <div className="text-left sm:text-right bg-[#F8FAFC] px-4 sm:px-5 py-3 rounded-2xl border border-[#E2E8F0] w-full sm:w-auto">
+            <p className="text-[#64748B] font-bold text-xs uppercase tracking-wider">Today&apos;s Date</p>
+            <p className="text-[#0F172A] font-extrabold text-sm sm:text-base mt-0.5">{currentDate}</p>
           </div>
-          <div className="flex items-center gap-2 flex-wrap justify-end w-full lg:w-auto">
-            <button
-              onClick={() => router.push("/junior-calendar")}
-              className="w-full lg:w-auto flex items-center justify-center gap-2 text-xs font-bold text-white bg-[#2563EB] hover:bg-[#1D4ED8] px-4 py-2.5 rounded-xl transition-all cursor-pointer"
-            >
-              View Calendar
-            </button>
-          </div>
+          <button
+            onClick={() => router.push("/junior-calendar")}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 text-xs font-extrabold text-white bg-[#2563EB] hover:bg-[#1D4ED8] px-4 py-3 rounded-xl transition-all cursor-pointer shadow-xs"
+          >
+            <Calendar size={15} />
+            <span>View Calendar</span>
+          </button>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-6 w-full min-w-0">
         <StatCard
           title="Assigned Cases"
           value={loading ? "—" : stats.assignedCases}
@@ -277,93 +274,82 @@ export default function JunAdvDashView() {
         />
       </div>
 
-      {/* Dynamic Detail Panel */}
+      {/* Dynamic Detail Panel (Stat Card Expansion) */}
       {selectedCard && (
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="flex justify-between items-center mb-8">
-            <h3 className="text-2xl font-extrabold text-[#0F172A]">
+        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xs border border-[#E2E8F0] p-4 sm:p-6 md:p-8 overflow-hidden animate-in fade-in duration-200 w-full min-w-0">
+          <div className="flex justify-between items-center mb-4 sm:mb-6">
+            <h3 className="text-lg sm:text-xl font-extrabold text-[#0F172A]">
               {selectedCard === "assignedCases" && "All Assigned Cases"}
               {selectedCard === "activeCases" && "Active Cases"}
               {selectedCard === "upcomingHearings" && "Upcoming Hearings"}
             </h3>
-            <span className="text-sm text-[#64748B] font-semibold">
-              {selectedCard === "assignedCases" && `${assignedCasesList.length} cases`}
-              {selectedCard === "activeCases" && `${activeCasesList.length} cases`}
-              {selectedCard === "upcomingHearings" && `${upcomingHearingsList.length} hearings`}
+            <span className="text-xs sm:text-sm text-[#64748B] font-bold bg-slate-100 px-3 py-1 rounded-full">
+              {selectedList.length} {selectedCard === "upcomingHearings" ? "hearings" : "cases"}
             </span>
           </div>
 
-          <div className="w-full overflow-x-auto rounded-2xl border border-[#E2E8F0]">
-            <table className="min-w-full divide-y divide-[#E2E8F0]">
+          {/* Mobile Native Card View (< 640px) for Stat Card Expansion */}
+          <div className="block sm:hidden space-y-3 w-full min-w-0">
+            {selectedList.length === 0 ? (
+              <p className="text-center py-6 text-slate-400 text-xs font-semibold">No cases found in this category.</p>
+            ) : (
+              selectedList.map((item, idx) => (
+                <div key={idx} className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2 w-full min-w-0">
+                  <div className="flex items-start justify-between gap-2 min-w-0">
+                    <h4 className="text-xs font-extrabold text-[#0F172A] break-words flex-1 min-w-0">{item.title}</h4>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border shrink-0 ${
+                      item.status === "Active" || item.status === "Hearing"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : "bg-amber-50 text-amber-700 border-amber-200"
+                    }`}>
+                      {item.status}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 font-medium">
+                    {selectedCard === "upcomingHearings" ? `Hearing: ${item.hearing}` : `Client: ${item.clientName}`}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop & Tablet Table (>= 640px) */}
+          <div className="hidden sm:block w-full overflow-x-auto rounded-2xl border border-[#E2E8F0] min-w-0">
+            <table className="min-w-full divide-y divide-[#E2E8F0] text-xs sm:text-sm">
               <thead className="bg-[#F8FAFC]">
                 <tr>
-                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case</th>
-                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">
+                  <th className="p-3.5 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case</th>
+                  <th className="p-3.5 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">
                     {selectedCard === "upcomingHearings" ? "Hearing Date" : "Client Name"}
                   </th>
-                  <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                  <th className="p-3.5 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8F0] bg-white">
-                {selectedCard === "assignedCases" &&
-                  assignedCasesList.map((item, index) => (
-                    <tr key={index} className="hover:bg-[#F8FAFC] transition-colors duration-150">
-                      <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">{item.title}</td>
-                      <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">{item.clientName}</td>
-                      <td className="p-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                          item.status === "Active" || item.status === "Hearing"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : "bg-amber-50 text-amber-700 border-amber-200"
-                        }`}>
-                          {item.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                }
-                {selectedCard === "activeCases" &&
-                  activeCasesList.map((item, index) => (
-                    <tr key={index} className="hover:bg-[#F8FAFC] transition-colors duration-150">
-                      <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">{item.title}</td>
-                      <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">{item.clientName}</td>
-                      <td className="p-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                          item.status === "Active" || item.status === "Hearing"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : "bg-amber-50 text-amber-700 border-amber-200"
-                        }`}>
-                          {item.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                }
-                {selectedCard === "upcomingHearings" &&
-                  upcomingHearingsList.map((item, index) => (
-                    <tr key={index} className="hover:bg-[#F8FAFC] transition-colors duration-150">
-                      <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">{item.title}</td>
-                      <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">{item.hearing}</td>
-                      <td className="p-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                          item.status === "Active" || item.status === "Hearing"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : "bg-amber-50 text-amber-700 border-amber-200"
-                        }`}>
-                          {item.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                }
-                {((selectedCard === "assignedCases" && assignedCasesList.length === 0) ||
-                  (selectedCard === "activeCases" && activeCasesList.length === 0) ||
-                  (selectedCard === "upcomingHearings" && upcomingHearingsList.length === 0)) && (
+                {selectedList.length === 0 ? (
                   <tr>
-                    <td colSpan="3" className="p-10 text-center text-[#94A3B8] font-medium text-sm">
+                    <td colSpan="3" className="p-8 text-center text-[#94A3B8] font-medium text-xs sm:text-sm">
                       No cases found for this category.
                     </td>
                   </tr>
+                ) : (
+                  selectedList.map((item, index) => (
+                    <tr key={index} className="hover:bg-[#F8FAFC] transition-colors">
+                      <td className="p-3.5 text-xs sm:text-sm font-bold text-[#0F172A] whitespace-nowrap">{item.title}</td>
+                      <td className="p-3.5 text-xs sm:text-sm text-[#475569] whitespace-nowrap font-medium">
+                        {selectedCard === "upcomingHearings" ? item.hearing : item.clientName}
+                      </td>
+                      <td className="p-3.5 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                          item.status === "Active" || item.status === "Hearing"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}>
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
@@ -371,113 +357,165 @@ export default function JunAdvDashView() {
         </div>
       )}
 
-      {/* Main Content */}
-      <div className="grid lg:grid-cols-12 gap-8">
+      {/* Main Content Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 w-full min-w-0">
 
-        {/* Cases Table */}
-        <div className="lg:col-span-12 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
+        {/* Assigned Cases Card Container */}
+        <div className="lg:col-span-12 bg-white rounded-2xl sm:rounded-3xl shadow-xs border border-[#E2E8F0] p-4 sm:p-6 md:p-8 w-full max-w-full min-w-0">
 
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl font-extrabold text-[#0F172A]">
+          <div className="flex items-center justify-between gap-3 mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-2xl font-extrabold text-[#0F172A]">
               Assigned Cases
             </h2>
 
             <button
               onClick={() => router.push("/assigned-cases")}
-              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-6 py-2.5 rounded-full font-bold uppercase tracking-wider text-xs transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 cursor-pointer"
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-4 sm:px-5 py-2 rounded-xl font-bold uppercase tracking-wider text-[11px] sm:text-xs transition-all shadow-xs cursor-pointer shrink-0"
             >
               View All
             </button>
           </div>
 
-          <div className="w-full overflow-x-auto rounded-2xl border border-[#E2E8F0]">
-            {loading ? (
-              <div className="p-8 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
-                  <p className="text-sm text-[#64748B] font-medium">Loading cases…</p>
-                </div>
+          {loading ? (
+            <div className="p-8 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-7 h-7 border-3 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+                <p className="text-xs text-[#64748B] font-medium">Loading cases…</p>
               </div>
-            ) : cases.length === 0 ? (
-              <div className="p-10 text-center text-[#94A3B8] font-medium text-sm">
-                No assigned cases found.
-              </div>
-            ) : (
-              <table className="min-w-full divide-y divide-[#E2E8F0]">
-                <thead className="bg-[#F8FAFC]">
-                  <tr>
-                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case</th>
-                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client Name</th>
-                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">My Role</th>
-                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
-                  </tr>
-                </thead>
+            </div>
+          ) : cases.length === 0 ? (
+            <div className="p-8 text-center text-[#94A3B8] font-medium text-xs sm:text-sm bg-slate-50 rounded-2xl border border-slate-100">
+              No assigned cases found.
+            </div>
+          ) : (
+            <>
+              {/* Mobile Native Card View (< 640px) */}
+              <div className="block sm:hidden space-y-3 w-full min-w-0">
+                {cases.map((item, index) => {
+                  const normUser = (userName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                  const normSec = (item.secondaryAdvocateName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                  const isStandby = normSec && (normSec === normUser || normUser.includes(normSec) || normSec.includes(normUser));
 
-                <tbody className="divide-y divide-[#E2E8F0] bg-white">
-                  {cases.map((item, index) => {
-                    const normUser = (userName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-                    const normSec = (item.secondaryAdvocateName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-                    const isStandby = normSec && (normSec === normUser || normUser.includes(normSec) || normSec.includes(normUser));
-
-                    return (
-                      <tr key={index} className="hover:bg-[#F8FAFC] transition-colors duration-150">
-                        <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => router.push("/assigned-cases")}
+                      className="p-3.5 bg-slate-50 hover:bg-blue-50/50 border border-slate-200/80 rounded-2xl space-y-2.5 transition cursor-pointer w-full min-w-0"
+                    >
+                      <div className="flex items-start justify-between gap-2 min-w-0">
+                        <h4 className="text-xs font-extrabold text-[#0F172A] break-words flex-1 min-w-0">
                           {item.title}
-                        </td>
-                        <td className="p-4 text-sm text-[#475569] whitespace-nowrap font-medium">
-                          {item.clientName}
-                        </td>
-                        <td className="p-4 whitespace-nowrap">
-                          {isStandby ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                              🛡️ Standby / Backup
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                              👤 Primary Counsel
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${item.status === "Active"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : "bg-amber-50 text-amber-700 border-amber-200"
-                            }`}>
-                            {item.status}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
+                        </h4>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider border shrink-0 ${
+                          item.status === "Active" || item.status === "Hearing"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}>
+                          {item.status}
+                        </span>
+                      </div>
 
-          </div>
+                      <div className="text-[11px] text-slate-600 space-y-1">
+                        <p className="flex items-center gap-1.5 truncate">
+                          <User size={12} className="text-slate-400 shrink-0" />
+                          <span>Client: <strong>{item.clientName}</strong></span>
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 text-[10px]">
+                        {isStandby ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold bg-amber-100 text-amber-800">
+                            🛡️ Standby Advocate
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold bg-blue-100 text-blue-800">
+                            👤 Primary Counsel
+                          </span>
+                        )}
+                        <span className="text-blue-600 font-bold flex items-center gap-0.5">
+                          View Details <ArrowRight size={10} />
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop & Tablet Table (>= 640px) */}
+              <div className="hidden sm:block w-full overflow-x-auto rounded-2xl border border-[#E2E8F0] min-w-0">
+                <table className="min-w-full divide-y divide-[#E2E8F0] text-xs sm:text-sm">
+                  <thead className="bg-[#F8FAFC]">
+                    <tr>
+                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case</th>
+                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client Name</th>
+                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">My Role</th>
+                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-[#E2E8F0] bg-white">
+                    {cases.map((item, index) => {
+                      const normUser = (userName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                      const normSec = (item.secondaryAdvocateName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                      const isStandby = normSec && (normSec === normUser || normUser.includes(normSec) || normSec.includes(normUser));
+
+                      return (
+                        <tr key={index} className="hover:bg-[#F8FAFC] transition-colors">
+                          <td className="p-3.5 sm:p-4 text-xs sm:text-sm font-bold text-[#0F172A] whitespace-nowrap">
+                            {item.title}
+                          </td>
+                          <td className="p-3.5 sm:p-4 text-xs sm:text-sm text-[#475569] whitespace-nowrap font-medium">
+                            {item.clientName}
+                          </td>
+                          <td className="p-3.5 sm:p-4 whitespace-nowrap">
+                            {isStandby ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                🛡️ Standby / Backup
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                👤 Primary Counsel
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3.5 sm:p-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                              item.status === "Active" || item.status === "Hearing"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : "bg-amber-50 text-amber-700 border-amber-200"
+                            }`}>
+                              {item.status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
         </div>
 
-
-
-
-
         {/* Recent Documents */}
-        <div className="lg:col-span-12 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-extrabold text-[#0F172A]">
+        <div className="lg:col-span-12 bg-white rounded-2xl sm:rounded-3xl shadow-xs border border-[#E2E8F0] p-4 sm:p-6 md:p-8 flex flex-col w-full min-w-0">
+          <div className="flex justify-between items-center mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-2xl font-extrabold text-[#0F172A]">
               Recent Documents
             </h2>
           </div>
 
-          <div className="space-y-4 flex-1 overflow-y-auto max-h-[350px] lg:max-h-[480px]">
+          <div className="space-y-3 sm:space-y-4 flex-1 overflow-y-auto max-h-[350px] lg:max-h-[480px]">
             {loading ? (
               <div className="flex items-center justify-center py-8">
-                <div className="w-6 h-6 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+                <div className="w-6 h-6 border-3 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : recentDocuments.length === 0 ? (
               <div className="text-center p-6 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">
                 <FileText className="w-8 h-8 text-[#CBD5E1] mx-auto mb-2" />
-                <p className="text-sm font-medium text-[#64748B]">No documents found.</p>
-                <p className="text-xs text-[#94A3B8] mt-1">Assigned case documents will appear here.</p>
+                <p className="text-xs sm:text-sm font-medium text-[#64748B]">No documents found.</p>
+                <p className="text-[11px] text-[#94A3B8] mt-0.5">Assigned case documents will appear here.</p>
               </div>
             ) : (
               recentDocuments.map((doc, index) => {
@@ -485,25 +523,23 @@ export default function JunAdvDashView() {
                 return (
                   <div
                     key={doc.id || index}
-                    className="p-4 rounded-2xl bg-[#F8FAFC] hover:bg-white border border-transparent hover:border-[#E2E8F0] hover:shadow-md transition-all duration-300 cursor-pointer group"
+                    className="p-3.5 sm:p-4 rounded-2xl bg-[#F8FAFC] hover:bg-white border border-transparent hover:border-[#E2E8F0] hover:shadow-xs transition-all cursor-pointer group space-y-2"
                     onClick={() => {
                       if (doc.file_url) window.open(doc.file_url, "_blank");
                     }}
                   >
-                    {/* Top row: icon + filename */}
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                         <FileText className="w-4 h-4" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[#1E293B] group-hover:text-[#2563EB] transition-colors leading-tight truncate">
+                        <p className="text-xs sm:text-sm font-bold text-[#1E293B] group-hover:text-[#2563EB] transition-colors truncate">
                           {doc.filename}
                         </p>
 
-                        {/* Doc type badge + View Case button */}
-                        <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
+                        <div className="flex items-center justify-between mt-1.5 flex-wrap gap-2">
                           {doc.document_type && doc.document_type !== "File" && (
-                            <span className="inline-flex text-[10px] font-semibold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                            <span className="inline-flex text-[10px] font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
                               {doc.document_type}
                             </span>
                           )}
@@ -512,7 +548,7 @@ export default function JunAdvDashView() {
                               e.stopPropagation();
                               router.push("/assigned-cases");
                             }}
-                            className="text-[10px] font-bold uppercase tracking-wider text-[#2563EB] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full hover:bg-blue-100 cursor-pointer"
+                            className="text-[10px] font-extrabold uppercase tracking-wider text-[#2563EB] bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full hover:bg-blue-100 cursor-pointer"
                           >
                             View Case
                           </button>
@@ -520,25 +556,23 @@ export default function JunAdvDashView() {
                       </div>
                     </div>
 
-                    {/* Case info */}
                     {doc.case_title && (
-                      <p className="text-[10px] text-[#475569] font-medium mt-2 truncate">
+                      <p className="text-[10.5px] text-[#475569] font-medium truncate pt-1 border-t border-slate-100">
                         📁 {doc.case_title}
                         {doc.case_no && <span className="text-[#94A3B8] ml-1">({doc.case_no})</span>}
                       </p>
                     )}
 
-                    {/* Uploader + time row */}
-                    <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
+                    <div className="flex items-center justify-between flex-wrap gap-2 text-[10px] text-slate-500">
                       <div className="flex items-center flex-wrap gap-1">
-                        <span className="text-[10px] text-[#94A3B8]">by</span>
-                        <span className="text-[10px] font-semibold text-[#0F172A]">{doc.uploaded_by}</span>
-                        <span className="text-[#CBD5E1] text-[10px]">·</span>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${roleBadgeClass}`}>
+                        <span>by</span>
+                        <span className="font-bold text-[#0F172A]">{doc.uploaded_by}</span>
+                        <span>•</span>
+                        <span className={`font-bold px-2 py-0.5 rounded-full ${roleBadgeClass}`}>
                           {doc.uploaded_by_role}
                         </span>
                       </div>
-                      <span className="text-[10px] text-[#94A3B8] font-medium">
+                      <span className="font-medium text-[#94A3B8]">
                         {doc.timestamp_display}
                       </span>
                     </div>
@@ -557,21 +591,21 @@ function StatCard({ title, value, icon, color, activeColor, isActive, onClick, l
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-2xl shadow-md border p-4 sm:p-5 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 cursor-pointer group ${
-        isActive ? activeColor : "border-[#E2E8F0] hover:shadow-slate-200/60"
+      className={`bg-white rounded-2xl shadow-xs border p-3.5 sm:p-5 hover:shadow-md transition-all cursor-pointer group ${
+        isActive ? activeColor : "border-[#E2E8F0]"
       }`}
     >
-      <div className={`w-10 h-10 ${color} rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-sm border`}>
+      <div className={`w-9 h-9 sm:w-10 sm:h-10 ${color} rounded-xl flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform border`}>
         {icon}
       </div>
 
-      <p className="text-[#475569] text-[10px] font-bold uppercase tracking-wider mb-1">
+      <p className="text-[#64748B] text-[10px] font-bold uppercase tracking-wider mb-0.5">
         {title}
       </p>
 
-      <h2 className="text-2xl font-black text-[#0F172A] tracking-tight">
+      <h2 className="text-xl sm:text-2xl font-black text-[#0F172A] tracking-tight">
         {loading ? (
-          <span className="inline-block w-12 h-8 rounded-lg bg-slate-100 animate-pulse" />
+          <span className="inline-block w-12 h-7 rounded-lg bg-slate-100 animate-pulse" />
         ) : (
           value
         )}
