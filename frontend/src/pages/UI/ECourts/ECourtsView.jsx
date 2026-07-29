@@ -234,61 +234,6 @@ export default function ECourtsView() {
         </div>
       </div>
 
-      {/* KPI Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {/* Today's Hearings */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform" />
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Today's Hearings</span>
-            <span className="p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
-              <Calendar className="w-5 h-5" />
-            </span>
-          </div>
-          <div className="text-3xl font-extrabold text-slate-900 mb-1">{metrics.todaysHearings}</div>
-          <p className="text-xs font-medium text-slate-500">Scheduled across active court halls today</p>
-        </div>
-
-        {/* Upcoming Hearings */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform" />
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Upcoming Hearings</span>
-            <span className="p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-100">
-              <Clock3 className="w-5 h-5" />
-            </span>
-          </div>
-          <div className="text-3xl font-extrabold text-slate-900 mb-1">{metrics.upcomingHearings}</div>
-          <p className="text-xs font-medium text-slate-500">Listed in next 30 days</p>
-        </div>
-
-        {/* Cases Updated Today */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform" />
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Cases Synced Today</span>
-            <span className="p-2 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
-              <CheckCircle className="w-5 h-5" />
-            </span>
-          </div>
-          <div className="text-3xl font-extrabold text-slate-900 mb-1">{metrics.casesUpdatedToday}</div>
-          <p className="text-xs font-medium text-slate-500">Auto-synchronized with eCourts</p>
-        </div>
-
-        {/* Orders Downloaded */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform" />
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Orders Downloaded</span>
-            <span className="p-2 rounded-xl bg-purple-50 text-purple-600 border border-purple-100">
-              <FileDown className="w-5 h-5" />
-            </span>
-          </div>
-          <div className="text-3xl font-extrabold text-slate-900 mb-1">{metrics.ordersDownloaded}</div>
-          <p className="text-xs font-medium text-slate-500">Certified court interim orders</p>
-        </div>
-      </div>
-
       {/* Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 mb-6 overflow-x-auto pb-1">
         <button
@@ -303,8 +248,6 @@ export default function ECourtsView() {
           CNR Quick Lookup & Timeline
         </button>
 
-
-
         <button
           onClick={() => setActiveTab("causelist")}
           className={`px-5 py-3 rounded-t-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer border-b-2 whitespace-nowrap ${
@@ -315,18 +258,6 @@ export default function ECourtsView() {
         >
           <Gavel className="w-4 h-4" />
           Daily Cause List Tracker
-        </button>
-
-        <button
-          onClick={() => setActiveTab("sync")}
-          className={`px-5 py-3 rounded-t-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer border-b-2 whitespace-nowrap ${
-            activeTab === "sync"
-              ? "border-blue-600 text-blue-600 bg-white shadow-sm"
-              : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100/50"
-          }`}
-        >
-          <Layers className="w-4 h-4" />
-          Case Import & Sync Hub ({registeredCases.length})
         </button>
       </div>
 
