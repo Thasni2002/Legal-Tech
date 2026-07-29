@@ -9,13 +9,14 @@ import {
   Search,
   Plus,
   Eye,
+  Download,
+  FileText,
   Pencil,
   Trash2,
   X,
   Scale,
   User,
   Building2,
-  FileText,
   Phone,
   Mail,
   Hash,
@@ -138,6 +139,17 @@ export default function CaseView() {
   const [viewMode, setViewMode] = useState("grid");
   const [deleteConfirm, setDeleteConfirm] = useState(null); // holds case id to delete
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [viewBriefModal, setViewBriefModal] = useState(null);
+
+  const getSavedBrief = (caseId) => {
+    if (typeof window === "undefined") return null;
+    try {
+      const briefs = JSON.parse(localStorage.getItem(`saved_briefs_${caseId}`) || "[]");
+      return briefs && briefs.length > 0 ? briefs[0] : null;
+    } catch (e) {
+      return null;
+    }
+  };
 
   const fetchCases = async () => {
     try {
@@ -410,6 +422,19 @@ export default function CaseView() {
                       >
                         <Eye size={14} /> View Case
                       </button>
+                      {(() => {
+                        const brief = getSavedBrief(item.id);
+                        if (!brief) return null;
+                        return (
+                          <button
+                            onClick={() => setViewBriefModal(brief)}
+                            className="py-2 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl transition font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer border border-emerald-200 shrink-0"
+                            title="View Downloaded AI Summary"
+                          >
+                            <FileText size={13} /> Summary
+                          </button>
+                        );
+                      })()}
                       {hasPermission("Case Management", "delete") && (
                         <button
                           onClick={() => setDeleteConfirm(item.id)}
@@ -496,6 +521,19 @@ export default function CaseView() {
                             >
                               <Eye size={15} />
                             </button>
+                            {(() => {
+                              const brief = getSavedBrief(item.id);
+                              if (!brief) return null;
+                              return (
+                                <button
+                                  onClick={() => setViewBriefModal(brief)}
+                                  title="View Downloaded AI Summary"
+                                  className="p-2 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition cursor-pointer border border-emerald-200"
+                                >
+                                  <FileText size={15} />
+                                </button>
+                              );
+                            })()}
                             {hasPermission("Case Management", "delete") && (
                               <button
                                 onClick={() => setDeleteConfirm(item.id)}
@@ -575,6 +613,18 @@ export default function CaseView() {
                       >
                         <Eye size={14} /> View Case
                       </button>
+                      {(() => {
+                        const brief = getSavedBrief(item.id);
+                        if (!brief) return null;
+                        return (
+                          <button
+                            onClick={() => setViewBriefModal(brief)}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-xs hover:bg-emerald-100 transition border border-emerald-200"
+                          >
+                            <FileText size={13} /> Summary
+                          </button>
+                        );
+                      })()}
                       {hasPermission("Case Management", "delete") && (
                         <button
                           onClick={() => setDeleteConfirm(item.id)}
@@ -659,6 +709,90 @@ export default function CaseView() {
         document.body
       )}
 
+    
+      {/* Modal: View Saved AI Strategic Brief */}
+      {viewBriefModal && typeof window !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewBriefModal(null)} />
+          
+          <div className="relative bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl z-10 border border-slate-200 flex flex-col">
+            {/* Modal Header */}
+            <div className="sticky top-0 z-20 bg-slate-900 text-white px-6 py-5 border-b border-slate-800 flex items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black text-[11px] uppercase tracking-wider">
+                    Downloaded Strategic Brief
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-extrabold text-[11px] border border-emerald-500/30">
+                    Win Likelihood: {viewBriefModal.winProbability || 75}%
+                  </span>
+                </div>
+                <h3 className="text-base sm:text-lg font-black text-white truncate max-w-md">📜 {viewBriefModal.fileName}</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Downloaded: {viewBriefModal.downloadedAt}</p>
+              </div>
+              <button
+                onClick={() => setViewBriefModal(null)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center font-bold text-sm transition cursor-pointer shrink-0"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-5 flex-1 overflow-y-auto bg-slate-50 font-mono text-xs text-slate-800">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs whitespace-pre-wrap leading-relaxed">
+                {viewBriefModal.fileContent || (
+                  <div>
+                    <h4 className="font-bold text-indigo-900 text-sm mb-2">I. KEY WINNING FORMULA</h4>
+                    <p className="mb-4 text-slate-700 font-sans">{viewBriefModal.winningFormula}</p>
+
+                    <h4 className="font-bold text-rose-900 text-sm mb-2">II. CRITICAL LOOPHOLES TO PATCH</h4>
+                    <ul className="list-disc pl-5 mb-4 text-slate-700 font-sans">
+                      {(viewBriefModal.keyLoopholes || []).map((l, i) => <li key={i}>{l}</li>)}
+                    </ul>
+
+                    <h4 className="font-bold text-blue-900 text-sm mb-2">III. MAIN LEGAL ARGUMENTS</h4>
+                    <ul className="list-disc pl-5 mb-4 text-slate-700 font-sans">
+                      {(viewBriefModal.mainArguments || []).map((a, i) => <li key={i}>{a}</li>)}
+                    </ul>
+
+                    <h4 className="font-bold text-slate-900 text-sm mb-2">IV. STATUTORY SECTIONS</h4>
+                    <p className="mb-4 text-slate-700 font-sans">{(viewBriefModal.importantActs || []).join(", ")}</p>
+
+                    <h4 className="font-bold text-purple-900 text-sm mb-2">V. TRIAL PLAYBOOK</h4>
+                    <p className="text-slate-700 font-sans">{viewBriefModal.advocateRecommendation}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4 flex items-center justify-between">
+              <button
+                onClick={() => {
+                  const element = document.createElement("a");
+                  const file = new Blob([viewBriefModal.fileContent], { type: "text/plain;charset=utf-8" });
+                  element.href = URL.createObjectURL(file);
+                  element.download = viewBriefModal.fileName;
+                  document.body.appendChild(element);
+                  element.click();
+                  document.body.removeChild(element);
+                }}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <Download size={14} /> Download File Again
+              </button>
+              <button
+                onClick={() => setViewBriefModal(null)}
+                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                Close Summary
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

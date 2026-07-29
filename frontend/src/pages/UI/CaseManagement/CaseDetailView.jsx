@@ -23,10 +23,14 @@ import {
   Send,
   EyeOff,
   Eye,
+  Download,
+  BookOpen,
+  Search,
 } from "lucide-react";
 import { usePermissions } from "@/utils/usePermissions";
 import { getLoggedInUser } from "@/utils/auth";
 import { isSensitiveCase } from "@/utils/caseSensitivity";
+import SimilarCasesClient from "@/app/case-management/similar-cases/[id]/SimilarCasesClient";
 
 // Helper to get status badge styling and icon
 function getStatusBadgeStyle(status) {
@@ -133,6 +137,7 @@ export default function CaseDetailView({ id }) {
   const [assignSuccess, setAssignSuccess] = useState(false);
   const [showPasswordIdx, setShowPasswordIdx] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [viewBriefModal, setViewBriefModal] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
   // Advocates already assigned to this specific case (via Lawfirm Management)
@@ -627,9 +632,9 @@ export default function CaseDetailView({ id }) {
 
   return (
     <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 animate-in fade-in zoom-in-95 duration-500">
-      {/* Page Header */}
-      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-4 sm:p-6 md:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6">
-        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+      {/* Page Header Card */}
+      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-4 sm:p-5 md:p-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4 sm:gap-5">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1 w-full">
           <button
             onClick={() => router.push("/case-management")}
             className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 transition cursor-pointer flex items-center justify-center shrink-0"
@@ -638,50 +643,79 @@ export default function CaseDetailView({ id }) {
             <ArrowLeft size={18} />
           </button>
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tight break-words">
+            <h1 className="text-base sm:text-xl md:text-2xl font-black text-[#0F172A] tracking-tight leading-snug break-words">
               {selectedCase.case_title}
             </h1>
-            <p className="text-xs sm:text-sm text-[#64748B] mt-1 font-mono uppercase tracking-wider">
+            <p className="text-xs text-[#64748B] mt-0.5 font-mono uppercase tracking-wider">
               Case #{selectedCase.case_no}
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-3 w-full lg:w-auto">
-          {/* Sync with eCourts button */}
+        {/* Action Buttons Bar - 100% Fluid & Responsive */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:flex xl:flex-wrap items-center gap-2 w-full xl:w-auto shrink-0">
+          {/* AI Strategic Tools Group */}
+          <button
+            id="btn-view-summary-header"
+            onClick={() => {
+              try {
+                const saved = JSON.parse(localStorage.getItem(`saved_briefs_${selectedCase.id}`) || "[]");
+                if (saved && saved.length > 0) {
+                  setViewBriefModal(saved[0]);
+                } else {
+                  router.push(`/case-management/similar-cases/${selectedCase.id}`);
+                }
+              } catch (e) {
+                router.push(`/case-management/similar-cases/${selectedCase.id}`);
+              }
+            }}
+            className="flex items-center justify-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-xs hover:shadow active:scale-95 cursor-pointer text-center min-w-0"
+          >
+            <Eye size={14} className="shrink-0" />
+            <span className="truncate">View Summary</span>
+          </button>
+
+          <button
+            id="btn-similar-cases-header"
+            onClick={() => router.push(`/case-management/similar-cases/${selectedCase.id}`)}
+            className="flex items-center justify-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white text-xs font-extrabold transition shadow-xs hover:shadow active:scale-95 cursor-pointer text-center min-w-0"
+          >
+            <Search size={14} className="shrink-0" />
+            <span className="truncate">View Similar Cases</span>
+          </button>
+
+          {/* Court & Firm Operations Group */}
           <button
             onClick={handleSyncWithECourts}
             disabled={syncLoading}
-            className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-bold transition shadow-sm hover:shadow active:scale-95 cursor-pointer disabled:opacity-50 text-center"
+            className="flex items-center justify-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition shadow-xs disabled:opacity-50 cursor-pointer text-center min-w-0"
           >
             <Gavel size={14} className={syncLoading ? "animate-spin shrink-0" : "shrink-0"} />
             <span className="truncate">{syncLoading ? "Syncing..." : "Sync eCourts"}</span>
           </button>
 
-          {/* Direct Assign Advocate button */}
           <button
             onClick={() => router.push(`/lawfirm-management/assign-advocate?directCaseId=${selectedCase.id}`)}
-            className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold transition shadow-sm hover:shadow active:scale-95 cursor-pointer text-center"
+            className="flex items-center justify-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-xs hover:shadow active:scale-95 cursor-pointer text-center min-w-0"
           >
             <UserCheck size={14} className="shrink-0" />
             <span className="truncate">Direct Assign</span>
           </button>
 
-          {/* Edit btn */}
+          {/* Management Tools Group */}
           {hasPermission("Case Management", "edit") && (
             <button
               onClick={() => router.push(`/case-management/edit/${selectedCase.id}`)}
-              className="flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition cursor-pointer shadow-sm text-center"
+              className="flex items-center justify-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition cursor-pointer shadow-2xs text-center min-w-0"
             >
               <Pencil size={13} className="text-slate-500 shrink-0" /> Edit
             </button>
           )}
 
-          {/* Delete btn */}
           {hasPermission("Case Management", "delete") && (
             <button
               onClick={() => setDeleteConfirm(true)}
-              className="flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 hover:bg-red-100 text-red-600 text-xs font-bold transition cursor-pointer shadow-sm text-center"
+              className="flex items-center justify-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-600 text-xs font-bold transition cursor-pointer shadow-2xs text-center min-w-0"
             >
               <Trash2 size={13} className="shrink-0" /> Delete
             </button>
@@ -691,9 +725,36 @@ export default function CaseDetailView({ id }) {
 
       {/* Main Content Layout */}
       <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] overflow-hidden flex flex-col min-h-[500px]">
-        {/* Tabs */}
-        <div className="border-b border-[#F1F5F9] bg-[#F8FAFC] p-2 sm:p-3">
-          <div className="flex overflow-x-auto no-scrollbar gap-1 sm:gap-1.5 scroll-smooth">
+        {/* Tabs Section (Mobile Dropdown Select + Desktop Horizontal Tabs) */}
+        <div className="border-b border-[#F1F5F9] bg-[#F8FAFC] p-2.5 sm:p-3">
+          {/* Mobile View: Dropdown Select Menu (< 640px) */}
+          <div className="block sm:hidden">
+            <label className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider block mb-1">
+              Select View Section:
+            </label>
+            <select
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value)}
+              className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-black text-[#0F172A] shadow-xs focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] cursor-pointer"
+            >
+              {[
+                { key: "overview", label: "📋 Case Overview" },
+                { key: "documents", label: "📁 Case Documents" },
+                { key: "hearings", label: "⚖️ eCourts Hearings" },
+                { key: "orders", label: "📜 Orders & Judgments" },
+                { key: "parties", label: "👥 Parties & Advocates" },
+                { key: "notes", label: "📝 Advocate Notes" },
+                { key: "fees", label: "💳 Billing" },
+              ].map((t) => (
+                <option key={t.key} value={t.key}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Desktop/Tablet View: Horizontal Tab Bar (>= 640px) */}
+          <div className="hidden sm:flex overflow-x-auto no-scrollbar gap-1 sm:gap-1.5 scroll-smooth">
             {[
               { key: "overview", label: "Case Overview" },
               { key: "documents", label: "Case Documents" },
@@ -850,6 +911,104 @@ export default function CaseDetailView({ id }) {
                   </div>
                 );
               })()}
+
+              {/* ── Previous Similar Case History ──────────────────── */}
+              <div className="bg-gradient-to-br from-indigo-50 via-purple-50/50 to-violet-50/30 border border-indigo-200 rounded-2xl p-5 sm:p-6 shadow-sm mt-6 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0 shadow-md">
+                      <BookOpen size={18} className="text-white" />
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-indigo-900 text-sm">Previous Similar Case History</h4>
+                      <p className="text-xs text-indigo-600 mt-0.5">
+                        View real comparable cases from our firm &amp; live eCourts database — with AI-powered win/loss analysis, loopholes, and key sections.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    id="btn-similar-cases"
+                    onClick={() => router.push(`/case-management/similar-cases/${selectedCase.id}`)}
+                    className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white text-xs font-extrabold transition shadow-md hover:shadow-lg active:scale-95 cursor-pointer w-full sm:w-auto shrink-0"
+                  >
+                    <Search size={14} />
+                    View Similar Cases
+                  </button>
+                </div>
+
+                {/* Quick stats preview */}
+                <div className="grid grid-cols-3 gap-3 pt-3 border-t border-indigo-200/60">
+                  {[
+                    { label: "Case Type", value: selectedCase.case_type || "—", color: "text-indigo-800" },
+                    { label: "Court", value: selectedCase.court_name || "—", color: "text-purple-800" },
+                    { label: "Status", value: selectedCase.status || "Active", color: "text-violet-800" },
+                  ].map((item) => (
+                    <div key={item.label} className="bg-white/70 rounded-xl p-3 border border-indigo-100 text-center">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.label}</p>
+                      <p className={`text-xs font-extrabold mt-0.5 ${item.color} truncate`}>{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Saved / Downloaded Strategic Briefs Section */}
+                {(() => {
+                  if (typeof window === "undefined") return null;
+                  try {
+                    const savedBriefs = JSON.parse(localStorage.getItem(`saved_briefs_${selectedCase.id}`) || "[]");
+                    if (!savedBriefs || savedBriefs.length === 0) return null;
+
+                    return (
+                      <div className="pt-4 border-t border-indigo-200/80 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h5 className="text-xs font-extrabold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
+                            <FileText size={14} className="text-indigo-600" />
+                            Downloaded AI Strategic Briefs ({savedBriefs.length})
+                          </h5>
+                          <span className="text-[10px] font-bold text-indigo-600 bg-white px-2.5 py-0.5 rounded-full border border-indigo-200">
+                            Saved in History
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          {savedBriefs.slice(0, 3).map((brief, bIdx) => (
+                            <div key={bIdx} className="bg-white rounded-xl p-3.5 border border-indigo-100 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-xs font-extrabold text-slate-900 truncate">📜 {brief.fileName}</p>
+                                <p className="text-[11px] text-slate-500 mt-0.5">
+                                  Downloaded: <span className="font-semibold text-slate-700">{brief.downloadedAt}</span> · Win Likelihood: <span className="font-extrabold text-emerald-600">{brief.winProbability}%</span>
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                  onClick={() => setViewBriefModal(brief)}
+                                  className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                                >
+                                  <Eye size={13} /> View Summary
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const element = document.createElement("a");
+                                    const file = new Blob([brief.fileContent], { type: "text/plain;charset=utf-8" });
+                                    element.href = URL.createObjectURL(file);
+                                    element.download = brief.fileName;
+                                    document.body.appendChild(element);
+                                    element.click();
+                                    document.body.removeChild(element);
+                                  }}
+                                  className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                                >
+                                  <Download size={13} /> Download File
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  } catch (e) {
+                    return null;
+                  }
+                })()}
+              </div>
             </div>
           )}
 
@@ -1090,6 +1249,8 @@ export default function CaseDetailView({ id }) {
             </div>
           )}
 
+
+
           {/* TAB: ECOURTS HEARINGS & TIMELINE */}
           {activeTab === "hearings" && (
             <div className="space-y-6">
@@ -1138,6 +1299,8 @@ export default function CaseDetailView({ id }) {
               )}
             </div>
           )}
+
+
 
           {/* TAB: ORDERS & JUDGMENTS */}
           {activeTab === "orders" && (
@@ -1194,6 +1357,8 @@ export default function CaseDetailView({ id }) {
               )}
             </div>
           )}
+
+
 
           {/* TAB: PARTIES & ADVOCATES */}
           {activeTab === "parties" && (
@@ -1558,6 +1723,13 @@ export default function CaseDetailView({ id }) {
             </div>
           )}
 
+          {/* TAB: SIMILAR PRECEDENTS */}
+          {activeTab === "similar_cases" && selectedCase && (
+            <div className="space-y-6">
+              <SimilarCasesClient caseId={selectedCase.id} />
+            </div>
+          )}
+
         </div>
       </div>
 
@@ -1663,6 +1835,175 @@ export default function CaseDetailView({ id }) {
                 className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm transition disabled:opacity-70 cursor-pointer"
               >
                 {deleteLoading ? "Deleting..." : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      
+      {viewBriefModal && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewBriefModal(null)} />
+          
+          <div className="relative bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl z-10 border border-slate-200 flex flex-col">
+            {/* Modal Header */}
+            <div className="sticky top-0 z-20 bg-slate-900 text-white px-6 py-5 border-b border-slate-800 flex items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black text-[11px] uppercase tracking-wider">
+                    Saved Strategic Brief
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-extrabold text-[11px] border border-emerald-500/30">
+                    Win Likelihood: {viewBriefModal.winProbability || 75}%
+                  </span>
+                </div>
+                <h3 className="text-base sm:text-lg font-black text-white truncate max-w-md">📜 {viewBriefModal.fileName}</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Downloaded: {viewBriefModal.downloadedAt}</p>
+              </div>
+              <button
+                onClick={() => setViewBriefModal(null)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center font-bold text-sm transition cursor-pointer shrink-0"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-5 flex-1 overflow-y-auto bg-slate-50 font-mono text-xs text-slate-800">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs whitespace-pre-wrap leading-relaxed">
+                {viewBriefModal.fileContent || (
+                  <div>
+                    <h4 className="font-bold text-indigo-900 text-sm mb-2">I. KEY WINNING FORMULA</h4>
+                    <p className="mb-4 text-slate-700 font-sans">{viewBriefModal.winningFormula}</p>
+
+                    <h4 className="font-bold text-rose-900 text-sm mb-2">II. CRITICAL LOOPHOLES TO PATCH</h4>
+                    <ul className="list-disc pl-5 mb-4 text-slate-700 font-sans">
+                      {(viewBriefModal.keyLoopholes || []).map((l, i) => <li key={i}>{l}</li>)}
+                    </ul>
+
+                    <h4 className="font-bold text-blue-900 text-sm mb-2">III. MAIN LEGAL ARGUMENTS</h4>
+                    <ul className="list-disc pl-5 mb-4 text-slate-700 font-sans">
+                      {(viewBriefModal.mainArguments || []).map((a, i) => <li key={i}>{a}</li>)}
+                    </ul>
+
+                    <h4 className="font-bold text-slate-900 text-sm mb-2">IV. STATUTORY SECTIONS</h4>
+                    <p className="mb-4 text-slate-700 font-sans">{(viewBriefModal.importantActs || []).join(", ")}</p>
+
+                    <h4 className="font-bold text-purple-900 text-sm mb-2">V. TRIAL PLAYBOOK</h4>
+                    <p className="text-slate-700 font-sans">{viewBriefModal.advocateRecommendation}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4 flex items-center justify-between">
+              <button
+                onClick={() => {
+                  const element = document.createElement("a");
+                  const file = new Blob([viewBriefModal.fileContent], { type: "text/plain;charset=utf-8" });
+                  element.href = URL.createObjectURL(file);
+                  element.download = viewBriefModal.fileName;
+                  document.body.appendChild(element);
+                  element.click();
+                  document.body.removeChild(element);
+                }}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <Download size={14} /> Download File Again
+              </button>
+              <button
+                onClick={() => setViewBriefModal(null)}
+                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                Close Summary
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+    
+      {/* Modal: View Saved AI Strategic Brief */}
+      {viewBriefModal && typeof window !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewBriefModal(null)} />
+          
+          <div className="relative bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl z-10 border border-slate-200 flex flex-col">
+            {/* Modal Header */}
+            <div className="sticky top-0 z-20 bg-slate-900 text-white px-6 py-5 border-b border-slate-800 flex items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black text-[11px] uppercase tracking-wider">
+                    Saved Strategic Brief
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-extrabold text-[11px] border border-emerald-500/30">
+                    Win Likelihood: {viewBriefModal.winProbability || 75}%
+                  </span>
+                </div>
+                <h3 className="text-base sm:text-lg font-black text-white truncate max-w-md">📜 {viewBriefModal.fileName}</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Downloaded: {viewBriefModal.downloadedAt}</p>
+              </div>
+              <button
+                onClick={() => setViewBriefModal(null)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center font-bold text-sm transition cursor-pointer shrink-0"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-5 flex-1 overflow-y-auto bg-slate-50 font-mono text-xs text-slate-800">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs whitespace-pre-wrap leading-relaxed">
+                {viewBriefModal.fileContent || (
+                  <div>
+                    <h4 className="font-bold text-indigo-900 text-sm mb-2">I. KEY WINNING FORMULA</h4>
+                    <p className="mb-4 text-slate-700 font-sans">{viewBriefModal.winningFormula}</p>
+
+                    <h4 className="font-bold text-rose-900 text-sm mb-2">II. CRITICAL LOOPHOLES TO PATCH</h4>
+                    <ul className="list-disc pl-5 mb-4 text-slate-700 font-sans">
+                      {(viewBriefModal.keyLoopholes || []).map((l, i) => <li key={i}>{l}</li>)}
+                    </ul>
+
+                    <h4 className="font-bold text-blue-900 text-sm mb-2">III. MAIN LEGAL ARGUMENTS</h4>
+                    <ul className="list-disc pl-5 mb-4 text-slate-700 font-sans">
+                      {(viewBriefModal.mainArguments || []).map((a, i) => <li key={i}>{a}</li>)}
+                    </ul>
+
+                    <h4 className="font-bold text-slate-900 text-sm mb-2">IV. STATUTORY SECTIONS</h4>
+                    <p className="mb-4 text-slate-700 font-sans">{(viewBriefModal.importantActs || []).join(", ")}</p>
+
+                    <h4 className="font-bold text-purple-900 text-sm mb-2">V. TRIAL PLAYBOOK</h4>
+                    <p className="text-slate-700 font-sans">{viewBriefModal.advocateRecommendation}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4 flex items-center justify-between">
+              <button
+                onClick={() => {
+                  const element = document.createElement("a");
+                  const file = new Blob([viewBriefModal.fileContent], { type: "text/plain;charset=utf-8" });
+                  element.href = URL.createObjectURL(file);
+                  element.download = viewBriefModal.fileName;
+                  document.body.appendChild(element);
+                  element.click();
+                  document.body.removeChild(element);
+                }}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <Download size={14} /> Download File Again
+              </button>
+              <button
+                onClick={() => setViewBriefModal(null)}
+                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                Close Summary
               </button>
             </div>
           </div>

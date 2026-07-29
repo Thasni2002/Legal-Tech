@@ -88,9 +88,9 @@ export default function LayoutWrapper({ children }) {
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]">
       <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
-      <div className={`flex-1 flex flex-col transition-[padding] duration-300 ease-in-out ${isCollapsed ? "md:pl-[72px]" : "md:pl-[302px]"} min-h-screen`}>
+      <div className={`flex-1 flex flex-col transition-[padding] duration-300 ease-in-out ${isCollapsed ? "pl-[72px]" : "pl-[72px] md:pl-[302px]"} min-h-screen min-w-0`}>
         <Navbar />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 overflow-x-hidden">{children}</main>
+        <main className="flex-1 p-2 sm:p-4 md:p-6 lg:p-8 min-w-0 overflow-x-hidden">{children}</main>
       </div>
       <FloatingAIIcon />
     </div>
