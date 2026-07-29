@@ -1,12 +1,50 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Upload, Eye, Trash, FileText, Download, ExternalLink, X } from "lucide-react";
+import { Upload, Eye, Trash, FileText, Download, ExternalLink, X, ClipboardList } from "lucide-react";
 import useModulePermission from "@/utils/useModulePermission";
 import { getLoggedInUser } from "@/utils/auth";
 import { API_BASE_URL } from "@/utils/api";
 import { createPortal } from "react-dom";
 import DocumentViewerModal from "@/components/common/DocumentViewerModal";
+import DocumentFormatGenerateView from "./ClientDocumentFormatGenerateView";
+
+const documentCategories = {
+  "Pleadings": [
+    "Petition", "Plaint", "Written Statement", "Counter Affidavit", "Reply Statement",
+    "Objection", "Rejoinder", "Replication", "Appeal Memorandum", "Revision Petition", "Review Petition"
+  ],
+  "Affidavits": [
+    "Affidavit", "Supporting Affidavit", "Counter Affidavit", "Proof Affidavit", "Additional Affidavit"
+  ],
+  "Applications": [
+    "Interlocutory Application (IA)", "Miscellaneous Application", "Bail Application",
+    "Anticipatory Bail Application", "Stay Petition", "Delay Condonation Petition",
+    "Restoration Petition", "Amendment Petition", "Impleading Petition", "Execution Petition"
+  ],
+  "Evidence/Documents": [
+    "Sale Deed", "Title Deed", "Agreement", "Will", "Power of Attorney", "Legal Notice",
+    "Reply Notice", "FIR", "Charge Sheet", "Final Report", "Medical Certificate",
+    "Postmortem Report", "Accident Report", "Insurance Policy", "Tax Receipt",
+    "Property Tax Receipt", "Encumbrance Certificate (EC)", "Possession Certificate",
+    "Birth Certificate", "Death Certificate", "Marriage Certificate", "Aadhaar Card",
+    "PAN Card", "Passport", "Driving Licence", "Ration Card", "Voter ID", "Photographs",
+    "Bank Statement", "Passbook Copy", "Bills/Invoices", "Receipts", "Email/Chat Printouts",
+    "Call Records", "CCTV Images", "Audio Recording Transcript", "Video Recording Transcript"
+  ],
+  "Court Documents": [
+    "Summons", "Notice", "Warrant", "Court Order", "Interim Order", "Judgment", "Decree",
+    "Commission Report", "Advocate Commission Report", "Court Fee Receipt", "Filing Receipt",
+    "Certified Copy", "Cause List"
+  ],
+  "Advocate Documents": [
+    "Vakalatnama", "Memo of Appearance", "Memo", "Case Diary", "Case Notes", "Brief Notes",
+    "Written Arguments", "Synopsis", "List of Witnesses", "List of Documents"
+  ],
+  "Witness Documents": [
+    "Witness Statement", "Chief Examination", "Cross Examination", "Re-Examination", "Expert Opinion"
+  ]
+};
 
 const AccessDenied = ({ action }) => (
   <div className="inline-flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-semibold">
@@ -17,7 +55,9 @@ const AccessDenied = ({ action }) => (
 
 export default function ClientDocuments() {
   const { perms, loading, user } = useModulePermission("Documents");
+  const [activeTab, setActiveTab] = useState("my-documents"); // "my-documents" | "document-format"
 
+  const [documentCategory, setDocumentCategory] = useState("");
   const [documentName, setDocumentName] = useState("");
   const [documentType, setDocumentType] = useState("");
   const [file, setFile] = useState(null);
@@ -109,8 +149,9 @@ export default function ClientDocuments() {
       alert("You do not have permission to upload documents.");
       return;
     }
-    if (!documentType || !file || !selectedCaseId) {
-      alert("Please select a case, document type and choose a file");
+    const finalDocType = documentType || documentCategory;
+    if (!finalDocType || !file || !selectedCaseId) {
+      alert("Please select a case, document category, document type and choose a file");
       return;
     }
 
@@ -140,7 +181,7 @@ export default function ClientDocuments() {
 
       // 2. Put the metadata payload with the file URL into case management
       const newDoc = {
-        documentType: documentType,
+        documentType: finalDocType,
         advocate: targetCase.selected_advocate || "",
         file: file.name,
         url: uploadedUrl,
@@ -194,6 +235,7 @@ export default function ClientDocuments() {
 
       if (response.ok) {
         setUploadSuccess(true);
+        setDocumentCategory("");
         setDocumentType("");
         setFile(null);
         fetchClientDocs();
@@ -301,170 +343,339 @@ export default function ClientDocuments() {
   }
 
   return (
-    <div className="w-full space-y-6 md:space-y-8">
+    <div className="w-full max-w-full min-w-0 space-y-4 sm:space-y-6 md:space-y-8 animate-in fade-in duration-200 overflow-hidden">
 
-      {/* Page Header */}
-      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6">
-        <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
-          Documents
-        </h1>
-        <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
-          Upload and manage documents for your advocate
-        </p>
-      </div>
-
-      {/* Upload Section — only shown if add is allowed */}
-      <div className="bg-white rounded-xl border-[#E2E8F0] p-6 shadow-sm">
-        <h2 className="text-xl font-bold mb-4">Upload New Document</h2>
-
-        {perms.add ? (
-          <>
-            <div className="grid md:grid-cols-3 gap-4">
-              <select
-                value={selectedCaseId}
-                onChange={(e) => setSelectedCaseId(e.target.value)}
-                className="border border-[#E2E8F0] rounded-lg p-3 bg-white"
-              >
-                <option value="">Select Associated Case</option>
-                {matchedCases.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.case_title} ({item.case_no})
-                  </option>
-                ))}
-              </select>
-              <select
-                value={documentType}
-                onChange={(e) => setDocumentType(e.target.value)}
-                className="border border-[#E2E8F0] rounded-lg p-3"
-              >
-                <option value="">Select Document Type</option>
-                <option>Agreement</option>
-                <option>ID Proof</option>
-                <option>Evidence</option>
-                <option>Affidavit</option>
-                <option>Case File</option>
-                <option>Audio Recording</option>
-                <option>Video Footage</option>
-                <option>Written Document</option>
-                <option>Other</option>
-              </select>
-              <input
-                type="file"
-                onChange={(e) => setFile(e.target.files[0])}
-                className="border border-[#E2E8F0] rounded-lg p-2"
-              />
+      {/* ── Page Header & Tab Bar ────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xs p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 w-full max-w-full min-w-0">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2.5 mb-1">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold shrink-0 border border-blue-100 shadow-xs">
+              <FileText size={18} className="sm:w-[20px] sm:h-[20px]" />
             </div>
-            {matchedCases.length === 0 && (
-              <p className="text-xs text-red-500 mt-2">
-                ⚠️ No cases found linked to your account. Please contact your advocate to create a case for you.
-              </p>
-            )}
-            <button
-              onClick={handleUpload}
-              disabled={uploading}
-              className={`mt-5 bg-[#2563EB] text-white px-5 py-2 rounded-lg flex items-center gap-2 ${uploading ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
-            >
-              {uploading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Upload size={18} />
-                  Upload Document
-                </>
-              )}
-            </button>
-          </>
-        ) : (
-          <AccessDenied action="Uploading" />
-        )}
-      </div>
-
-      {/* Documents Table */}
-      <div className="bg-white rounded-xl border-[#E2E8F0] p-6 shadow-sm overflow-x-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Uploaded Documents</h2>
-          {/* Filter by Case Title */}
-          {documents.length > 0 && (
-            <select
-              value={filterCaseTitle}
-              onChange={(e) => setFilterCaseTitle(e.target.value)}
-              className="border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm bg-white text-slate-700 min-w-[200px]"
-            >
-              <option value="">All Cases</option>
-              {[...new Set(documents.map((d) => d.caseTitle))].map((title) => (
-                <option key={title} value={title}>{title}</option>
-              ))}
-            </select>
-          )}
+            <h1 className="text-[#0F172A] font-extrabold text-xl sm:text-2xl md:text-3xl tracking-tight truncate">
+              Client Documents
+            </h1>
+          </div>
+          <p className="text-xs sm:text-sm text-[#64748B] font-medium leading-relaxed break-words">
+            Upload, track, and verify case documents and required format checklists
+          </p>
         </div>
 
-        {loadingDocs ? (
-          <div className="py-8 text-center text-slate-500">Loading documents...</div>
-        ) : documents.length === 0 ? (
-          <div className="py-8 text-center text-slate-500">No documents found.</div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[#E2E8F0] bg-[#F1F5F9]">
-                <th className="text-left p-3">Case Title</th>
-                <th className="text-left p-3">File Name</th>
-                <th className="text-left p-3">Uploaded Date</th>
-                <th className="text-left p-3">Status</th>
-                <th className="text-left p-3">Actions</th>
-              </tr>
-            </thead>
+        {/* Mobile Dropdown Tab Selector (Visible on < 768px) */}
+        <div className="block md:hidden w-full min-w-0">
+          <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider block mb-1">
+            Active Section:
+          </label>
+          <select
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value)}
+            className="w-full rounded-xl border border-[#CBD5E1] bg-white px-3.5 py-2.5 text-xs font-bold text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] shadow-xs cursor-pointer"
+          >
+            <option value="my-documents">My Documents</option>
+            <option value="document-format">Document Format & Checklist</option>
+          </select>
+        </div>
 
-            <tbody>
-              {documents
-                .filter((doc) => !filterCaseTitle || doc.caseTitle === filterCaseTitle)
-                .map((doc) => (
-                <tr key={doc.id} className="border-b border-[#E2E8F0]">
-                  <td className="p-3 font-semibold text-slate-800">{doc.caseTitle}</td>
-                  <td className="p-3 text-slate-600 font-mono text-xs">{doc.fileName}</td>
-                  <td className="p-3 text-slate-500">{doc.date}</td>
-
-                  <td className="p-3">
-                    <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
-                      {doc.status}
-                    </span>
-                  </td>
-
-                  <td className="p-3 flex gap-3 items-center">
-                    {/* View — always shown if view=true */}
-                    {perms.view && (
-                      <button
-                        onClick={() => setSelectedDoc({ fileUrl: doc.fileUrl, title: doc.fileName || doc.name, badge: doc.type })}
-                        className="text-[#2563EB] hover:text-[#1d4ed8] cursor-pointer bg-transparent border-0 p-0 flex items-center"
-                        title="View Document"
-                      >
-                        <Eye size={18} />
-                      </button>
-                    )}
-
-                    {/* Delete */}
-                    {perms.delete ? (
-                      <button
-                        onClick={() => handleDelete(doc.id)}
-                        className="text-[#DC2626] hover:text-[#991b1b] cursor-pointer"
-                        title="Delete Document"
-                      >
-                        <Trash size={18} />
-                      </button>
-                    ) : (
-                      <span className="text-slate-300" title="Delete not permitted">
-                        <Trash size={18} />
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        {/* Desktop & Tablet Tab Pills Strip (Visible on >= 768px) */}
+        <div className="hidden md:flex items-center gap-1.5 bg-[#F8FAFC] p-1.5 rounded-xl border border-[#E2E8F0] shrink-0">
+          <button
+            onClick={() => setActiveTab("my-documents")}
+            className={`px-4 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-2 ${
+              activeTab === "my-documents"
+                ? "bg-white text-[#2563EB] shadow-xs border border-[#CBD5E1]"
+                : "text-[#64748B] hover:text-[#0F172A]"
+            }`}
+          >
+            <FileText size={14} className="shrink-0" />
+            <span>My Documents</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("document-format")}
+            className={`px-4 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-2 ${
+              activeTab === "document-format"
+                ? "bg-white text-[#2563EB] shadow-xs border border-[#CBD5E1]"
+                : "text-[#64748B] hover:text-[#0F172A]"
+            }`}
+          >
+            <ClipboardList size={14} className="shrink-0" />
+            <span>Document Format & Checklist</span>
+          </button>
+        </div>
       </div>
+
+      {/* ── TAB 1: MY DOCUMENTS ── */}
+      {activeTab === "my-documents" && (
+        <div className="space-y-4 sm:space-y-6 md:space-y-8 animate-in fade-in duration-200 w-full max-w-full min-w-0">
+          
+          {/* Upload Section — only shown if add is allowed */}
+          <div className="bg-white rounded-2xl border border-[#E2E8F0] p-4 sm:p-6 shadow-xs space-y-4 w-full max-w-full min-w-0">
+            <div className="pb-2 border-b border-[#F1F5F9]">
+              <h2 className="text-base sm:text-lg md:text-xl font-extrabold text-[#0F172A]">Upload New Document</h2>
+            </div>
+
+            {perms.add ? (
+              <div className="space-y-4 w-full max-w-full min-w-0">
+                {/* Associated Case Select */}
+                <div className="w-full min-w-0">
+                  <label className="block text-[11px] sm:text-xs font-extrabold text-[#64748B] uppercase tracking-wider mb-1.5">
+                    Associated Case <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={selectedCaseId}
+                    onChange={(e) => setSelectedCaseId(e.target.value)}
+                    className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition cursor-pointer shadow-xs"
+                  >
+                    <option value="">Select Associated Case</option>
+                    {matchedCases.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.case_title} ({item.case_no})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 items-start w-full max-w-full min-w-0">
+                  {/* Document Category Select */}
+                  <div className="w-full min-w-0">
+                    <label className="block text-[11px] sm:text-xs font-extrabold text-[#64748B] uppercase tracking-wider mb-1.5">
+                      Document Category <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      value={documentCategory}
+                      onChange={(e) => {
+                        setDocumentCategory(e.target.value);
+                        setDocumentType("");
+                      }}
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition cursor-pointer shadow-xs"
+                    >
+                      <option value="">Select Category</option>
+                      {Object.keys(documentCategories).map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Document Type Select */}
+                  <div className="w-full min-w-0">
+                    <label className="block text-[11px] sm:text-xs font-extrabold text-[#64748B] uppercase tracking-wider mb-1.5 truncate">
+                      {documentCategory === "Affidavits" ? "Affidavit Type" : "Document Type"} <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      value={documentType}
+                      onChange={(e) => setDocumentType(e.target.value)}
+                      disabled={!documentCategory}
+                      className={`w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition cursor-pointer shadow-xs ${
+                        !documentCategory ? "bg-slate-50 cursor-not-allowed text-slate-400 opacity-60" : ""
+                      }`}
+                    >
+                      <option value="">
+                        {documentCategory === "Affidavits" ? "Select Affidavit Type" : "Select Document Type"}
+                      </option>
+                      {documentCategory &&
+                        documentCategories[documentCategory]?.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  {/* File Upload Field */}
+                  <div className="w-full min-w-0 sm:col-span-2 lg:col-span-1">
+                    <label className="block text-[11px] sm:text-xs font-extrabold text-[#64748B] uppercase tracking-wider mb-1.5">
+                      Upload File <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="file"
+                      onChange={(e) => setFile(e.target.files[0] || null)}
+                      className="w-full max-w-full min-w-0 rounded-xl border border-[#E2E8F0] bg-white px-2.5 py-2 text-xs text-slate-600 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-[#2563EB] hover:file:bg-blue-100 cursor-pointer shadow-xs transition truncate"
+                    />
+                  </div>
+                </div>
+
+                {matchedCases.length === 0 && (
+                  <p className="text-xs text-red-500 font-semibold bg-red-50 p-2.5 rounded-xl border border-red-100">
+                    ⚠️ No cases found linked to your account. Please contact your advocate to create a case for you.
+                  </p>
+                )}
+
+                <div className="pt-2 flex justify-start">
+                  <button
+                    onClick={handleUpload}
+                    disabled={uploading}
+                    className={`w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-6 py-2.5 sm:py-3 rounded-xl font-extrabold text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-xs ${
+                      uploading ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
+                    }`}
+                  >
+                    {uploading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={16} />
+                        <span>Upload Document</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <AccessDenied action="Uploading" />
+            )}
+          </div>
+
+          {/* Uploaded Documents Section */}
+          <div className="bg-white rounded-2xl border border-[#E2E8F0] p-4 sm:p-6 shadow-xs space-y-4 w-full max-w-full min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#F1F5F9] w-full">
+              <div>
+                <h2 className="text-base sm:text-lg md:text-xl font-extrabold text-[#0F172A]">Uploaded Documents</h2>
+                <p className="text-xs text-[#64748B] mt-0.5">Documents uploaded for your advocate to review.</p>
+              </div>
+
+              {/* Filter by Case Title */}
+              {documents.length > 0 && (
+                <div className="w-full sm:w-auto min-w-[200px]">
+                  <select
+                    value={filterCaseTitle}
+                    onChange={(e) => setFilterCaseTitle(e.target.value)}
+                    className="w-full rounded-xl border border-[#E2E8F0] px-3.5 py-2 text-xs sm:text-sm font-semibold bg-white text-slate-700 focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none cursor-pointer shadow-xs"
+                  >
+                    <option value="">All Cases ({documents.length})</option>
+                    {[...new Set(documents.map((d) => d.caseTitle))].map((title) => (
+                      <option key={title} value={title}>{title}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {loadingDocs ? (
+              <div className="py-10 text-center text-slate-500 font-semibold text-xs sm:text-sm">Loading documents...</div>
+            ) : documents.length === 0 ? (
+              <div className="py-10 sm:py-14 text-center bg-slate-50/60 rounded-2xl border border-dashed border-slate-200 p-4 space-y-2">
+                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+                  <FileText size={20} />
+                </div>
+                <p className="text-slate-700 font-bold text-xs sm:text-sm">No documents found</p>
+                <p className="text-slate-400 text-xs">Upload a document above to share it with your legal counsel.</p>
+              </div>
+            ) : (
+              <>
+                {/* Desktop & Tablet Table View (Visible on >= 768px) */}
+                <div className="hidden md:block overflow-x-auto rounded-xl border border-[#E2E8F0] w-full">
+                  <table className="w-full text-left text-xs sm:text-sm">
+                    <thead>
+                      <tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
+                        <th className="p-3.5">Case Title</th>
+                        <th className="p-3.5">File Name</th>
+                        <th className="p-3.5">Uploaded Date</th>
+                        <th className="p-3.5">Status</th>
+                        <th className="p-3.5 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#F1F5F9] font-medium text-slate-700">
+                      {documents
+                        .filter((doc) => !filterCaseTitle || doc.caseTitle === filterCaseTitle)
+                        .map((doc) => (
+                          <tr key={doc.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="p-3.5 font-bold text-[#0F172A]">{doc.caseTitle}</td>
+                            <td className="p-3.5 font-mono text-xs text-slate-600 truncate max-w-[200px]" title={doc.fileName}>{doc.fileName}</td>
+                            <td className="p-3.5 text-slate-500 font-semibold">{doc.date}</td>
+                            <td className="p-3.5">
+                              <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-extrabold border border-emerald-200">
+                                {doc.status}
+                              </span>
+                            </td>
+                            <td className="p-3.5 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {perms.view && (
+                                  <button
+                                    onClick={() => setSelectedDoc({ fileUrl: doc.fileUrl, title: doc.fileName || doc.name, badge: doc.type })}
+                                    className="p-1.5 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-lg transition cursor-pointer border border-blue-100"
+                                    title="View Document"
+                                  >
+                                    <Eye size={16} />
+                                  </button>
+                                )}
+                                {perms.delete ? (
+                                  <button
+                                    onClick={() => handleDelete(doc.id)}
+                                    className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition cursor-pointer border border-rose-100"
+                                    title="Delete Document"
+                                  >
+                                    <Trash size={16} />
+                                  </button>
+                                ) : (
+                                  <span className="p-1.5 text-slate-300">
+                                    <Trash size={16} />
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Cards Stack View (Visible on < 768px) */}
+                <div className="block md:hidden space-y-3 w-full max-w-full min-w-0">
+                  {documents
+                    .filter((doc) => !filterCaseTitle || doc.caseTitle === filterCaseTitle)
+                    .map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="bg-white rounded-xl border border-[#E2E8F0] p-3.5 space-y-2.5 shadow-xs"
+                      >
+                        <div className="flex items-start justify-between gap-2 border-b border-[#F1F5F9] pb-2">
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-extrabold text-xs text-[#0F172A] truncate">{doc.caseTitle}</h4>
+                            <p className="text-[11px] text-slate-500 font-mono mt-0.5 truncate">{doc.fileName}</p>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-extrabold border border-emerald-200 shrink-0">
+                            {doc.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                          <span className="font-semibold">Uploaded: {doc.date}</span>
+                          <div className="flex items-center gap-2">
+                            {perms.view && (
+                              <button
+                                onClick={() => setSelectedDoc({ fileUrl: doc.fileUrl, title: doc.fileName || doc.name, badge: doc.type })}
+                                className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-[#2563EB] font-bold rounded-lg text-xs flex items-center gap-1 border border-blue-100 cursor-pointer"
+                              >
+                                <Eye size={12} /> View
+                              </button>
+                            )}
+                            {perms.delete && (
+                              <button
+                                onClick={() => handleDelete(doc.id)}
+                                className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs border border-rose-100 cursor-pointer"
+                              >
+                                <Trash size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB 2: DOCUMENT FORMAT & CHECKLIST ── */}
+      {activeTab === "document-format" && (
+        <div className="animate-in fade-in duration-200 w-full max-w-full min-w-0">
+          <DocumentFormatGenerateView hideHeader={true} />
+        </div>
+      )}
 
       {selectedDoc && (
         <DocumentViewerModal
