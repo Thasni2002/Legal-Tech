@@ -378,7 +378,7 @@ export default function ClerkFormatPhysicalFile() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Cabinet</label>
                 <select
@@ -423,8 +423,8 @@ export default function ClerkFormatPhysicalFile() {
           <div className="flex gap-2">
             <button
               type="submit"
-              className={`w-full font-bold text-xs uppercase tracking-wider py-4 rounded-xl transition duration-200 shadow-md flex items-center justify-center gap-2 ${
-                editingFileId ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-[#0F172A] hover:bg-[#1E293B] text-white"
+              className={`w-full font-bold text-xs uppercase tracking-wider py-4 rounded-xl transition duration-200 shadow-md flex items-center justify-center gap-2 cursor-pointer ${
+                editingFileId ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20" : "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 active:scale-[0.99]"
               }`}
             >
               {editingFileId ? <Save size={16} /> : <Plus size={16} />}
@@ -450,44 +450,47 @@ export default function ClerkFormatPhysicalFile() {
             </div>
           </div>
 
-          <div className="overflow-x-auto flex-1">
-            <table className="w-full">
+          {/* Desktop Table View (hidden on mobile & tablet) */}
+          <div className="hidden md:block overflow-x-auto flex-1 w-full">
+            <table className="w-full text-left border-collapse">
               <thead className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
                 <tr>
-                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B]">File Number</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Case Title</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Location</th>
-                  <th className="px-6 py-4 text-center text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Actions</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B] whitespace-nowrap">File Number</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B] whitespace-nowrap">Case Title</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B] whitespace-nowrap">Location</th>
+                  <th className="px-6 py-4 text-center text-[10px] font-bold uppercase tracking-widest text-[#64748B] whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F1F5F9]">
                 {filteredFiles.map((file) => (
                   <tr key={file.id} className="hover:bg-slate-50/50 transition">
-                    <td className="px-6 py-4 text-sm font-bold text-slate-800">{file.fileNumber}</td>
-                    <td className="px-6 py-4 text-sm font-semibold text-slate-700">{file.caseTitle}</td>
-                    <td className="px-6 py-4 text-xs font-semibold text-slate-500">
-                      <span className="bg-slate-100 px-2.5 py-1 rounded-md text-slate-600 mr-1.5">{file.cabinet}</span>
-                      <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md">{file.shelf}</span>
+                    <td className="px-6 py-4 text-sm font-bold text-slate-800 whitespace-nowrap">{file.fileNumber}</td>
+                    <td className="px-6 py-4 text-sm font-semibold text-slate-700 max-w-[240px] leading-snug">{file.caseTitle}</td>
+                    <td className="px-6 py-4 text-xs font-semibold text-slate-500 whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1.5">
+                        <span className="bg-slate-100 px-2.5 py-1 rounded-md text-slate-600 border border-slate-200/60 font-semibold">{file.cabinet}</span>
+                        <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md border border-emerald-200/60 font-bold">{file.shelf}</span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => setActiveLabelFile(file)}
-                          className="bg-[#0F172A] hover:bg-[#1E293B] text-white p-2 rounded-lg transition"
+                          className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition cursor-pointer shadow-sm shadow-blue-600/20"
                           title="View Spine Sticker Label & Location"
                         >
                           <PrinterCheck size={16} />
                         </button>
                         <button
                           onClick={() => handleEdit(file)}
-                          className="bg-amber-50 hover:bg-amber-100 text-amber-700 p-2 rounded-lg border border-amber-200 transition"
+                          className="bg-amber-50 hover:bg-amber-100 text-amber-700 p-2 rounded-lg border border-amber-200 transition cursor-pointer"
                           title="Edit File Record"
                         >
                           <Edit2 size={16} />
                         </button>
                         <button
                           onClick={() => setDeleteConfirmFile(file)}
-                          className="bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-lg border border-red-200 transition"
+                          className="bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-lg border border-red-200 transition cursor-pointer"
                           title="Delete File Record"
                         >
                           <Trash2 size={16} />
@@ -503,6 +506,53 @@ export default function ClerkFormatPhysicalFile() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile & Tablet Responsive Card View (visible on mobile & tablet) */}
+          <div className="block md:hidden p-4 space-y-3.5 bg-slate-50/50 flex-1">
+            {filteredFiles.map((file) => (
+              <div key={file.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-3">
+                <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                  <span className="font-extrabold text-xs text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">
+                    {file.fileNumber}
+                  </span>
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold">
+                    <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">{file.cabinet}</span>
+                    <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200">{file.shelf}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-sm text-slate-900 leading-snug">{file.caseTitle}</h4>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button
+                    onClick={() => setActiveLabelFile(file)}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-md shadow-blue-600/20"
+                  >
+                    <PrinterCheck size={14} /> Sticker Label
+                  </button>
+                  <button
+                    onClick={() => handleEdit(file)}
+                    className="bg-amber-50 hover:bg-amber-100 text-amber-700 px-3 py-2 rounded-xl text-xs font-bold border border-amber-200 transition cursor-pointer"
+                    title="Edit File"
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                  <button
+                    onClick={() => setDeleteConfirmFile(file)}
+                    className="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-xl text-xs font-bold border border-red-200 transition cursor-pointer"
+                    title="Delete File"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {filteredFiles.length === 0 && (
+              <div className="p-8 text-center text-slate-400 font-medium text-xs">No matching physical files found.</div>
+            )}
           </div>
         </div>
       </div>

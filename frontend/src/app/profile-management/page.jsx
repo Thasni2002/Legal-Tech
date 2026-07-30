@@ -73,10 +73,20 @@ const Page = () => {
         }
 
         if (initialLocal) {
+          if (user?.role?.toLowerCase() === "clerk" && initialLocal.advocateName) {
+            initialLocal.advocateName = initialLocal.advocateName.replace(/\s+Advocate$/i, "");
+          }
           setProfile(initialLocal);
           setIsSubmitted(true);
         } else {
-          const defaultName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.username || "User";
+          let cleanLastName = (user.lastName || "").trim();
+          if (user?.role?.toLowerCase() === "clerk" && cleanLastName.toLowerCase() === "advocate") {
+            cleanLastName = "";
+          }
+          let defaultName = `${user.firstName || ""} ${cleanLastName}`.trim() || user.username || "User";
+          if (user?.role?.toLowerCase() === "clerk") {
+            defaultName = defaultName.replace(/\s+Advocate$/i, "");
+          }
           setProfile({
             advocateName: defaultName,
             emailAddress: user.email || "",
@@ -98,14 +108,24 @@ const Page = () => {
     try {
       const user = getLoggedInUser();
       const userKey = (user?.email || user?.username || "").toLowerCase().trim();
-      const userEmail = user?.email || updatedProfile.emailAddress || "";
-      const defaultName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || user?.username || "User";
+      const userEmail = updatedProfile.emailAddress || user?.email || "";
+      const userRole = updatedProfile.role || user?.role || "Client";
+      let cleanLastName = (user?.lastName || "").trim();
+      if (userRole.toLowerCase() === "clerk" && cleanLastName.toLowerCase() === "advocate") {
+        cleanLastName = "";
+      }
+      let defaultName = `${user?.firstName || ""} ${cleanLastName}`.trim() || user?.username || "User";
+      
+      let cleanAdvName = updatedProfile.advocateName || defaultName;
+      if (userRole.toLowerCase() === "clerk") {
+        cleanAdvName = cleanAdvName.replace(/\s+Advocate$/i, "");
+      }
 
       const payload = {
         ...updatedProfile,
-        role: updatedProfile.role || user?.role || "Client",
+        role: userRole,
         emailAddress: userEmail,
-        advocateName: updatedProfile.advocateName || defaultName,
+        advocateName: cleanAdvName,
       };
 
       // Clean empty strings for Pydantic validation
@@ -155,6 +175,21 @@ const Page = () => {
           localStorage.setItem(`advocate_profile_${userKey}`, JSON.stringify(finalProfile));
         }
         localStorage.setItem("advocate_profile", JSON.stringify(finalProfile));
+        
+        // Sync logged-in user in localStorage if matching
+        const currentUser = getLoggedInUser();
+        if (currentUser) {
+          const parts = (finalProfile.advocateName || "").split(" ");
+          const updatedUserObj = {
+            ...currentUser,
+            firstName: parts[0] || currentUser.firstName,
+            lastName: parts.slice(1).join(" ") || "",
+            email: finalProfile.emailAddress || currentUser.email,
+            phone: finalProfile.phoneNumber || currentUser.phone,
+          };
+          localStorage.setItem("user", JSON.stringify(updatedUserObj));
+        }
+
         window.dispatchEvent(new Event("permissions_updated"));
       } catch (e) {
         console.warn("localStorage quota or write error:", e);
