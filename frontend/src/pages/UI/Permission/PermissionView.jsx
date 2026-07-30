@@ -362,31 +362,31 @@ export default function PermissionView() {
   const activeGroups = getGroupsForRole(selectedRole);
 
   return (
-    <div className="w-full space-y-6 md:space-y-8">
+    <div className="w-full space-y-4 sm:space-y-6 md:space-y-8">
       {/* Toast Notification */}
       {notification && (
         <div
-          className={`fixed bottom-5 right-5 z-50 flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl transition-all duration-300 border animate-bounce ${
+          className={`fixed bottom-4 sm:bottom-5 right-4 sm:right-5 left-4 sm:left-auto z-50 flex items-center gap-3 px-4 sm:px-5 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl shadow-2xl transition-all duration-300 border animate-bounce max-w-sm ${
             notification.type === "error"
               ? "bg-red-50 border-red-200 text-red-800"
               : "bg-emerald-50 border-emerald-200 text-emerald-800"
           }`}
         >
           {notification.type === "error" ? (
-            <AlertTriangle size={20} className="text-red-500" />
+            <AlertTriangle size={20} className="text-red-500 flex-shrink-0" />
           ) : (
-            <CheckSquare size={20} className="text-emerald-600" />
+            <CheckSquare size={20} className="text-emerald-600 flex-shrink-0" />
           )}
-          <span className="font-semibold text-sm">{notification.message}</span>
+          <span className="font-semibold text-xs sm:text-sm leading-snug">{notification.message}</span>
         </div>
       )}
 
       {/* Page Header */}
-      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-6">
-        <h1 className="text-[#0F172A] font-bold" style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1.2 }}>
+      <div className="bg-white rounded-2xl sm:rounded-3xl border border-[#E2E8F0] shadow-sm p-4 sm:p-6 md:p-8">
+        <h1 className="text-[#0F172A] font-extrabold text-2xl sm:text-3xl lg:text-4xl tracking-tight leading-tight">
           Permissions Management
         </h1>
-        <p className="text-[#64748B] mt-1.5" style={{ fontSize: '18px' }}>
+        <p className="text-[#64748B] text-xs sm:text-sm md:text-base mt-1.5 font-medium leading-relaxed">
           Assign detailed module access rules and security level clearances per user role or specific users.
         </p>
       </div>
@@ -396,7 +396,7 @@ export default function PermissionView() {
         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
           Select Role to Configure
         </label>
-        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2.5 sm:gap-4">
           {roles.map((role) => {
             const active = selectedRole === role.name;
 
@@ -405,7 +405,7 @@ export default function PermissionView() {
                 key={role.id}
                 type="button"
                 onClick={() => setSelectedRole(role.name)}
-                className={`flex flex-col text-left p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${
+                className={`flex flex-col text-left p-3.5 sm:p-5 rounded-xl sm:rounded-2xl border transition-all duration-200 cursor-pointer ${
                   active
                     ? "border-[#2563EB] bg-blue-50/25 ring-2 ring-[#2563EB]/10 shadow-sm"
                     : "border-slate-100 hover:border-slate-200 bg-white hover:bg-slate-50/50"
@@ -413,7 +413,7 @@ export default function PermissionView() {
               >
                 <div className="flex items-center justify-between w-full">
                   <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center ${
                       active ? "bg-[#2563EB] text-white" : "bg-slate-100 text-slate-500"
                     }`}
                   >
@@ -421,10 +421,10 @@ export default function PermissionView() {
                   </div>
                 </div>
 
-                <h3 className="font-extrabold text-slate-900 mt-4 text-sm truncate w-full">
+                <h3 className="font-extrabold text-slate-900 mt-2.5 sm:mt-4 text-xs sm:text-sm truncate w-full">
                   {role.name}
                 </h3>
-                <p className="text-slate-400 text-xxs mt-1 font-semibold truncate w-full">
+                <p className="text-slate-400 text-[10px] sm:text-xs mt-0.5 sm:mt-1 font-semibold truncate w-full">
                   {role.description || "No description provided"}
                 </p>
               </button>
@@ -435,41 +435,117 @@ export default function PermissionView() {
 
       {/* Permissions Matrix Panel */}
       {selectedRole ? (
-        <div className="bg-white rounded-[24px] border border-[#E2E8F0] p-8 shadow-xl shadow-slate-200/40">
+        <div className="bg-white rounded-2xl sm:rounded-[24px] border border-[#E2E8F0] p-4 sm:p-6 md:p-8 shadow-xl shadow-slate-200/40">
           {/* Title and Save button */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-[#E2E8F0] pb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4 mb-4 sm:mb-6 border-b border-[#E2E8F0] pb-4 sm:pb-6">
             <div>
-              <h2 className="text-2xl font-extrabold text-[#0F172A] flex items-center gap-2">
-                <div className="p-2 bg-blue-50 rounded-xl text-[#2563EB]">
-                  <ShieldAlert size={22} />
+              <h2 className="text-lg sm:text-xl md:text-2xl font-extrabold text-[#0F172A] flex items-center gap-2">
+                <div className="p-1.5 sm:p-2 bg-blue-50 rounded-xl text-[#2563EB] shrink-0">
+                  <ShieldAlert size={20} className="sm:w-[22px] sm:h-[22px]" />
                 </div>
-                <span>Default Permissions: {selectedRole}</span>
+                <span className="truncate">Default Permissions: {selectedRole}</span>
               </h2>
-              <p className="text-sm text-[#64748B] mt-1.5">
+              <p className="text-xs sm:text-sm text-[#64748B] mt-1 font-medium leading-relaxed">
                 Configure specific module rights and clearance levels. Click &quot;Save Permissions&quot; to commit changes.
               </p>
             </div>
             <button
               onClick={handleSavePermissions}
-              className="bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-bold uppercase py-3.5 px-8 rounded-full cursor-pointer tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] flex items-center gap-2"
+              className="w-full sm:w-auto bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-bold uppercase py-3 sm:py-3.5 px-6 sm:px-8 rounded-full cursor-pointer tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] flex items-center justify-center gap-2 shrink-0"
             >
               <Save size={16} />
               <span>Save Permissions</span>
             </button>
           </div>
 
-          {/* Grouped Table Matrix */}
-          <div className="overflow-x-auto rounded-2xl border border-[#E2E8F0] bg-white">
-            <table className="w-full border-collapse text-left">
+          {/* ─── Mobile View: Native Cards (< 640px) ─── */}
+          <div className="block sm:hidden space-y-4">
+            {activeGroups.map(({ category, modules }) => (
+              <div key={category} className="space-y-3">
+                <div className="bg-slate-100/90 px-3.5 py-2 rounded-xl border border-slate-200/80">
+                  <span className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">
+                    {category}
+                  </span>
+                </div>
+
+                <div className="space-y-2.5">
+                  {modules.map(({ key, label }) => {
+                    const modPerms = activeMatrix[key] || { view: false, add: false, edit: false, delete: false };
+                    const allSelected = ACTIONS.every((act) => modPerms[act]);
+                    return (
+                      <div
+                        key={key}
+                        className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-3.5 space-y-3 hover:bg-white transition-all"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+                            <span className="font-bold text-slate-900 text-xs sm:text-sm truncate">
+                              {label}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleModuleAll(key)}
+                            className={`text-[10px] font-bold px-3 py-1 rounded-full transition-all cursor-pointer shrink-0 ${
+                              allSelected
+                                ? "bg-white text-red-600 border border-red-200"
+                                : "bg-white text-blue-600 border border-blue-200"
+                            }`}
+                          >
+                            {allSelected ? "DESELECT" : "SELECT ALL"}
+                          </button>
+                        </div>
+
+                        {/* 4 Action Checkbox Chips */}
+                        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200/60">
+                          {ACTIONS.map((action) => {
+                            const isChecked = !!modPerms[action];
+                            return (
+                              <button
+                                type="button"
+                                key={action}
+                                onClick={() => handlePermissionToggle(key, action)}
+                                className={`flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
+                                  isChecked
+                                    ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                                    : "bg-white text-slate-700 border-slate-200 hover:border-slate-300"
+                                }`}
+                              >
+                                <span className="capitalize">{action}</span>
+                                <div
+                                  className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${
+                                    isChecked
+                                      ? "border-white bg-white/20"
+                                      : "border-slate-300 bg-slate-50"
+                                  }`}
+                                >
+                                  {isChecked && <Check size={12} className="text-white stroke-[3]" />}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* ─── Desktop & Tablet View: Table Matrix (>= 640px) ─── */}
+          <div className="hidden sm:block overflow-x-auto rounded-2xl border border-[#E2E8F0] bg-white">
+            <table className="w-full border-collapse text-left min-w-[650px]">
               <thead>
                 <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-                  <th className="py-4 px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest">Module Name</th>
+                  <th className="py-3.5 px-4 lg:px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest">Module Name</th>
                   {ACTIONS.map((action) => (
-                    <th key={action} className="py-4 px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest text-center w-28">
+                    <th key={action} className="py-3.5 px-4 lg:px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest text-center w-24 lg:w-28">
                       {action}
                     </th>
                   ))}
-                  <th className="py-4 px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest text-center w-28">All</th>
+                  <th className="py-3.5 px-4 lg:px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest text-center w-28">All</th>
                 </tr>
               </thead>
               <tbody>
@@ -479,7 +555,7 @@ export default function PermissionView() {
                     <tr>
                       <td
                         colSpan={6}
-                        className="py-3 px-6 font-bold text-[11px] uppercase tracking-[0.2em] text-[#64748B] bg-gradient-to-r from-[#F8FAFC] to-white border-y border-[#E2E8F0] border-l-4 border-l-[#2563EB]"
+                        className="py-3 px-4 lg:px-6 font-bold text-[11px] uppercase tracking-[0.2em] text-[#64748B] bg-gradient-to-r from-[#F8FAFC] to-white border-y border-[#E2E8F0] border-l-4 border-l-[#2563EB]"
                       >
                         {category}
                       </td>
@@ -490,12 +566,12 @@ export default function PermissionView() {
                       const allSelected = ACTIONS.every(act => modPerms[act]);
                       return (
                         <tr key={key} className="hover:bg-[#F8FAFC] transition-colors duration-200 border-b border-[#F1F5F9] group/row">
-                          <td className="py-4 px-6 font-semibold text-[#1E293B] text-sm pl-8 flex items-center gap-3">
+                          <td className="py-3.5 px-4 lg:px-6 font-semibold text-[#1E293B] text-xs sm:text-sm pl-6 lg:pl-8 flex items-center gap-2.5 sm:gap-3">
                             <div className="w-1.5 h-1.5 rounded-full bg-[#CBD5E1] group-hover/row:bg-[#2563EB] transition-colors" />
                             {label}
                           </td>
                           {ACTIONS.map((action) => (
-                            <td key={action} className="py-4 px-6 text-center">
+                            <td key={action} className="py-3.5 px-4 lg:px-6 text-center">
                               <label className="relative inline-flex items-center justify-center cursor-pointer group/check">
                                 <input
                                   type="checkbox"
@@ -513,11 +589,11 @@ export default function PermissionView() {
                               </label>
                             </td>
                           ))}
-                          <td className="py-4 px-6 text-center">
+                          <td className="py-3.5 px-4 lg:px-6 text-center">
                             <button
                               type="button"
                               onClick={() => handleToggleModuleAll(key)}
-                              className={`text-[11px] font-bold px-4 py-1.5 rounded-full transition-all duration-200 cursor-pointer shadow-sm
+                              className={`text-[10px] sm:text-[11px] font-bold px-3 sm:px-4 py-1 sm:py-1.5 rounded-full transition-all duration-200 cursor-pointer shadow-sm
                                 ${allSelected
                                   ? "bg-white text-[#EF4444] hover:bg-red-50 border border-red-200"
                                   : "bg-white text-[#2563EB] hover:bg-blue-50 border border-blue-200"
@@ -536,9 +612,9 @@ export default function PermissionView() {
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-3xl border border-slate-100 p-12 text-center shadow-sm">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-100 p-8 sm:p-12 text-center shadow-sm">
           <HelpCircle size={40} className="mx-auto text-slate-300 mb-3" />
-          <h3 className="font-bold text-slate-700 text-base">Select a user role</h3>
+          <h3 className="font-bold text-slate-700 text-sm sm:text-base">Select a user role</h3>
           <p className="text-slate-400 text-xs mt-1">
             Please click on any of the role cards above to configure permissions.
           </p>
