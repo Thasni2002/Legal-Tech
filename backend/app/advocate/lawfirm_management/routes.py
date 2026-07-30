@@ -107,7 +107,7 @@ async def add_advocate(
                 if existing_adv.advocate_name:
                     parts = existing_adv.advocate_name.strip().split(" ")
                     u_rec.first_name = parts[0] if parts else u_rec.first_name
-                    u_rec.last_name = " ".join(parts[1:]) if len(parts) > 1 else u_rec.last_name
+                    u_rec.last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
                 db.commit()
         except Exception:
             pass
@@ -361,7 +361,7 @@ def edit_advocate(
             if updated.advocate_name:
                 name_parts = (updated.advocate_name or "").strip().split(" ")
                 user.first_name = name_parts[0] if name_parts else user.first_name
-                user.last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else user.last_name
+                user.last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
             db.commit()
             db.refresh(user)
     except Exception as sync_err:

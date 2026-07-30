@@ -64,7 +64,9 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
   const [showResetModal, setShowResetModal] = useState(false);
 
   const [user, setUser] = useState(null);
-  const isClient = user?.role?.toLowerCase() === "client";
+  const roleLower = (user?.role || "").toLowerCase();
+  const isClient = roleLower === "client";
+  const isClerk = roleLower === "clerk";
   const [existingAdvocates, setExistingAdvocates] = useState([]);
 
   useEffect(() => {
@@ -85,12 +87,27 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
     fetchAdvocates();
   }, []);
 
+  useEffect(() => {
+    if (initialData && Object.keys(initialData).length > 0) {
+      const clean = Object.fromEntries(
+        Object.entries(initialData).map(([k, v]) => [k, v === null ? "" : v])
+      );
+      if (isClerk && clean.advocateName) {
+        clean.advocateName = clean.advocateName.replace(/\s+Advocate$/i, "");
+      }
+      setFormData((prev) => ({
+        ...prev,
+        ...clean,
+      }));
+    }
+  }, [initialData, isClerk]);
+
   /* ── Profile validation ── */
   function validateField(name, value) {
     switch (name) {
-      case "advocateName": if (!value.trim()) return isClient ? "Full Name is required" : "Advocate Name is required"; return "";
+      case "advocateName": if (!value.trim()) return isClient ? "Full Name is required" : isClerk ? "Clerk Name is required" : "Advocate Name is required"; return "";
       case "barCouncilId":
-        if (!isClient) {
+        if (!isClient && !isClerk) {
           if (!value.trim()) return "Bar Council ID is required";
           if (!/^[A-Z]{1,5}\/\d{1,6}\/\d{4}$/i.test(value.trim())) {
             return "Invalid Bar Council ID format (e.g., K/1234/2023)";
@@ -111,7 +128,7 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
         return "";
       case "phoneNumber": if (value && !/^\d{10}$/.test(value)) return "Phone Number must be 10 digits"; return "";
       case "emailAddress": if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Invalid email address"; return "";
-      case "practiceCourt": if (!isClient && !value.trim()) return "Practice Court is required"; return "";
+      case "practiceCourt": if (!isClient && !isClerk && !value.trim()) return "Practice Court is required"; return "";
       case "city": return "";      
       case "state": return "";
       case "pincode": if (value && !/^\d{6}$/.test(value)) return "Pincode must be 6 digits"; return "";
@@ -122,7 +139,7 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
   }
 
   function validateAll() {
-    const fields = ["advocateName", "barCouncilId",  "phoneNumber", "emailAddress", "practiceCourt", "yearsOfExperience"];
+    const fields = ["advocateName", ...(isClient || isClerk ? [] : ["barCouncilId", "practiceCourt"]), "phoneNumber", "emailAddress", "yearsOfExperience"];
     const newErrors = {};
     const newTouched = {};
     let valid = true;
@@ -251,8 +268,8 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             <div>
               <InputField
-                label={isClient ? "Full Name" : "Advocate Name"}
-                placeholder={isClient ? "Enter Full Name" : "Enter Advocate Name"}
+                label={isClient ? "Full Name" : isClerk ? "Clerk Name" : "Advocate Name"}
+                placeholder={isClient ? "Enter Full Name" : isClerk ? "Enter Clerk Name" : "Enter Advocate Name"}
                 name="advocateName"
                 value={formData.advocateName}
                 onChange={handleChange}
@@ -262,7 +279,7 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
               )}
             </div>
 
-            {!isClient && (
+            {!isClient && !isClerk && (
               <>
                 <div>
                   <InputField label="Bar Council ID" placeholder="e.g. K/1234/2023" name="barCouncilId" value={formData.barCouncilId} onChange={handleChange} />
@@ -288,7 +305,7 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
         </div>
 
         {/* Professional Information */}
-        {!isClient && (
+        {!isClient && !isClerk && (
           <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
             <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
               <span className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">⚖️</span>
@@ -361,12 +378,12 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
           </div>
           <div className="mt-8">
             <label className="block mb-2 text-sm font-medium text-[#0F172A]">
-              {isClient ? "Residential Address (Optional)" : "Chambers Address (Optional)"}
+              {isClient ? "Residential Address (Optional)" : isClerk ? "Office / Residential Address (Optional)" : "Chambers Address (Optional)"}
             </label>
             <div>
               <textarea
                 rows="4"
-                placeholder={isClient ? "Enter Residential Address" : "Enter Chambers Address"}
+                placeholder={isClient ? "Enter Residential Address" : isClerk ? "Enter Office / Residential Address" : "Enter Chambers Address"}
                 className={`w-full rounded-xl border px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 outline-none transition-all duration-200 ${touched.chambersAddress && errors.chambersAddress ? "border-red-500 focus:ring-red-500/20" : "border-[#E2E8F0] focus:ring-[#2563EB]/20 focus:border-[#2563EB]"}`}
                 name="chambersAddress"
                 value={formData.chambersAddress}

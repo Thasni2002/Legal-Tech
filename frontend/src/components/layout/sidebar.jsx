@@ -70,12 +70,15 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
     }
   };
 
-  useEffect(() => {
+  const loadSidebarUser = () => {
     const loggedIn = getLoggedInUser();
     setUser(loggedIn);
-    setIsOpen(false);
 
-    const savedProfile = localStorage.getItem("advocate_profile");
+    const userKey = (loggedIn?.email || loggedIn?.username || "").toLowerCase().trim();
+    const savedUserLocal = typeof window !== "undefined" && userKey ? localStorage.getItem(`advocate_profile_${userKey}`) : null;
+    const savedGlobal = typeof window !== "undefined" ? localStorage.getItem("advocate_profile") : null;
+    const savedProfile = savedUserLocal || savedGlobal;
+
     if (savedProfile) {
       try {
         const parsed = JSON.parse(savedProfile);
@@ -84,13 +87,25 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         }
       } catch (e) {}
     }
+  };
 
+  useEffect(() => {
+    loadSidebarUser();
+    setIsOpen(false);
     fetchPermissions();
   }, [pathname]);
 
   useEffect(() => {
-    window.addEventListener("permissions_updated", fetchPermissions);
-    return () => window.removeEventListener("permissions_updated", fetchPermissions);
+    const handleUpdate = () => {
+      loadSidebarUser();
+      fetchPermissions();
+    };
+    window.addEventListener("permissions_updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("permissions_updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
   }, []);
 
   const hasViewPermission = (moduleKey) => {
@@ -397,7 +412,27 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
           {user && (
             <div className="p-3.5 border-t border-[#E2E8F0] bg-slate-50/60 font-poppins">
               <div className="flex items-center justify-between text-[11px] text-slate-500">
-                <span className="font-medium truncate max-w-[130px]">{user.username}</span>
+                <span className="font-medium truncate max-w-[130px]">
+                  {(() => {
+                    let name = user.username;
+                    try {
+                      const userKey = (user.email || user.username || "").toLowerCase().trim();
+                      const savedUserLocal = typeof window !== "undefined" && userKey ? localStorage.getItem(`advocate_profile_${userKey}`) : null;
+                      const savedGlobal = typeof window !== "undefined" ? localStorage.getItem("advocate_profile") : null;
+                      const savedProfile = savedUserLocal || savedGlobal;
+                      if (savedProfile) {
+                        const parsed = JSON.parse(savedProfile);
+                        if (parsed.advocateName || parsed.advocate_name) {
+                          name = parsed.advocateName || parsed.advocate_name;
+                        }
+                      }
+                    } catch (e) {}
+                    if ((user.role || "").toLowerCase() === "clerk" && name) {
+                      name = name.replace(/\s+Advocate$/i, "");
+                    }
+                    return name;
+                  })()}
+                </span>
                 <span className="text-[9px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-bold border border-blue-100 capitalize">
                   {user.role}
                 </span>

@@ -1,10 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
 import { API_BASE_URL } from "@/utils/api";
 
 export default function ProfileView({ profile = {}, onEdit }) {
+  const router = useRouter();
   const [user, setUser] = useState(null);
   const [googleConnected, setGoogleConnected] = useState(false);
   const [googleEmail, setGoogleEmail] = useState("");
@@ -73,14 +76,37 @@ export default function ProfileView({ profile = {}, onEdit }) {
     }
   };
 
-  const isClient = user?.role?.toLowerCase() === "client";
-  const isJuniorAdvocate = user?.role?.toLowerCase()?.replace(" ", "") === "junioradvocate";
+  const roleLower = (user?.role || "").toLowerCase();
+  const isClient = roleLower === "client";
+  const isClerk = roleLower === "clerk";
+  const isJuniorAdvocate = roleLower.replace(" ", "") === "junioradvocate";
+
+  const handleBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push(isClerk ? "/clerk/dashboard" : isClient ? "/client-dashboard" : "/adv-dashboard");
+    }
+  };
 
   // Full name: prefer firstName+lastName from JWT (always accurate), then
   // profile.advocateName as fallback (may contain system username like "admin").
+  const rawLastName = (user?.lastName || "").trim();
+  const cleanedLastName =
+    isClerk && rawLastName.toLowerCase() === "advocate"
+      ? ""
+      : isClient && (rawLastName.toLowerCase() === "advocate" || rawLastName.toLowerCase() === "clerk")
+      ? ""
+      : rawLastName;
+
   const userFullName = user
-    ? [user.firstName, user.lastName].filter(Boolean).join(" ") || user.username
+    ? [user.firstName, cleanedLastName].filter(Boolean).join(" ") || user.username
     : null;
+
+  let headerDisplayName = profile.advocateName || profile.clientName || userFullName || (isClient ? "Client Name" : isClerk ? "Clerk Name" : "Advocate Name");
+  if (isClerk && headerDisplayName) {
+    headerDisplayName = headerDisplayName.replace(/\s+Advocate$/i, "");
+  }
 
   // Resolve profile image: API record first, then localStorage cache (keeps
   // navbar and profile page in sync), then ui-avatars initials fallback.
@@ -98,9 +124,23 @@ export default function ProfileView({ profile = {}, onEdit }) {
 
   const roleLabel = isClient
     ? "Client"
+    : isClerk
+    ? "Clerk"
     : profile.practiceCourt || "Advocate";
+
   return (
     <div className="w-full space-y-8 max-w-6xl mx-auto">
+        {/* Top Back Navigation Bar */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={handleBack}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#E2E8F0] bg-white hover:bg-slate-50 text-[#64748B] hover:text-[#0F172A] text-sm font-semibold transition-all active:scale-[0.98] cursor-pointer shadow-sm"
+          >
+            <ArrowLeft size={16} />
+            Back
+          </button>
+        </div>
+
         {/* Google Status Alert Banners */}
         {googleStatusMessage && (
           <div className={`p-4 rounded-xl border flex items-center justify-between transition-all duration-300 ${
@@ -127,7 +167,7 @@ export default function ProfileView({ profile = {}, onEdit }) {
               {/* Profile Image */}
               <div className="shrink-0">
                 <img
-                  src={resolvedProfileImage || (user ? `https://ui-avatars.com/api/?name=${encodeURIComponent(userFullName || user.firstName || user.username)}&background=2563EB&color=fff&rounded=true&bold=true&size=150` : "https://ui-avatars.com/api/?name=?&background=E2E8F0&color=64748B&rounded=true&bold=true&size=150")}
+                  src={resolvedProfileImage || (user ? `https://ui-avatars.com/api/?name=${encodeURIComponent(headerDisplayName || user.firstName || user.username)}&background=2563EB&color=fff&rounded=true&bold=true&size=150` : "https://ui-avatars.com/api/?name=?&background=E2E8F0&color=64748B&rounded=true&bold=true&size=150")}
                   alt="Profile"
                   className="w-36 h-36 rounded-full object-cover border-[6px] border-white shadow-xl shadow-slate-300/50 bg-white"
                 />
@@ -136,7 +176,7 @@ export default function ProfileView({ profile = {}, onEdit }) {
               {/* Profile Info */}
               <div className="flex-1">
                 <h1 className="text-[#0F172A] font-extrabold text-4xl tracking-tight">
-                  {userFullName || profile.advocateName || profile.clientName || (isClient ? "Client Name" : "Advocate Name")}
+                  {headerDisplayName}
                 </h1>
 
                 {/* Role badge */}
@@ -171,8 +211,8 @@ export default function ProfileView({ profile = {}, onEdit }) {
           </div>
         </div>
 
-        {/* Details */}
-        <div className="grid lg:grid-cols-2 gap-8">
+        {/* Details Grid (Balanced 2 Columns for all roles) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Personal Information */}
           <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
             <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
@@ -190,8 +230,8 @@ export default function ProfileView({ profile = {}, onEdit }) {
             </div>
           </div>
 
-          {/* Professional Information */}
-          {!isClient && (
+          {/* Professional Information (Advocates Only) */}
+          {!isClient && !isClerk && (
             <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
               <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
                 <span className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">⚖️</span>
@@ -205,19 +245,19 @@ export default function ProfileView({ profile = {}, onEdit }) {
               </div>
             </div>
           )}
-        </div>
 
-        {/* Address */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
-          <h2 className="text-xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-3">
-            <span className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">🏢</span>
-            {isClient ? "Residential Address" : "Chambers Address"}
-          </h2>
+          {/* Address Information (Right column for Clerks/Clients, or Full row below for Advocates) */}
+          <div className={`bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 ${!isClient && !isClerk ? "lg:col-span-2" : ""}`}>
+            <h2 className="text-xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-3">
+              <span className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">🏢</span>
+              {isClient ? "Residential Address" : isClerk ? "Office / Residential Address" : "Chambers Address"}
+            </h2>
 
-          <div className="bg-[#F8FAFC] rounded-2xl p-6 border border-[#E2E8F0]">
-            <p className="text-[#334155] font-medium text-sm leading-relaxed whitespace-pre-wrap">
-              {profile.chambersAddress || (isClient ? "No residential address provided." : "No chambers address provided.")}
-            </p>
+            <div className="bg-[#F8FAFC] rounded-2xl p-6 border border-[#E2E8F0]">
+              <p className="text-[#334155] font-medium text-sm leading-relaxed whitespace-pre-wrap">
+                {profile.chambersAddress || (isClient ? "No residential address provided." : isClerk ? "No address provided." : "No chambers address provided.")}
+              </p>
+            </div>
           </div>
         </div>
 

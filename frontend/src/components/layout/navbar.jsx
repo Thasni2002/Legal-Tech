@@ -10,6 +10,7 @@ export default function Navbar() {
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [user, setUser] = useState(null);
+  const [displayName, setDisplayName] = useState("");
   const [profileImage, setProfileImage] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [loadingNotifs, setLoadingNotifs] = useState(false);
@@ -18,23 +19,55 @@ export default function Navbar() {
   const profileRef = useRef(null);
   const notificationRef = useRef(null);
 
-  useEffect(() => {
+  const loadUserData = useCallback(() => {
     const loggedInUser = getLoggedInUser();
     setUser(loggedInUser);
 
-    const savedProfile = localStorage.getItem("advocate_profile");
+    let name = "";
+    let img = null;
+
+    const userKey = (loggedInUser?.email || loggedInUser?.username || "").toLowerCase().trim();
+    const savedUserLocal = typeof window !== "undefined" && userKey ? localStorage.getItem(`advocate_profile_${userKey}`) : null;
+    const savedGlobal = typeof window !== "undefined" ? localStorage.getItem("advocate_profile") : null;
+    const savedProfile = savedUserLocal || savedGlobal;
+
     if (savedProfile) {
       try {
         const parsed = JSON.parse(savedProfile);
         if (parsed.profileImage) {
-          setProfileImage(parsed.profileImage);
+          img = parsed.profileImage;
+        }
+        if (parsed.advocateName || parsed.advocate_name) {
+          name = parsed.advocateName || parsed.advocate_name;
         }
       } catch (e) {}
     }
 
+    if (!name && loggedInUser) {
+      name = [loggedInUser.firstName, loggedInUser.lastName].filter(Boolean).join(" ") || loggedInUser.username;
+    }
+
+    if ((loggedInUser?.role || "").toLowerCase() === "clerk" && name) {
+      name = name.replace(/\s+Advocate$/i, "");
+    }
+
+    setDisplayName(name || loggedInUser?.username || "Guest User");
+    setProfileImage(img);
+
     if (loggedInUser) {
       fetchNotifications(loggedInUser);
     }
+  }, []);
+
+  useEffect(() => {
+    loadUserData();
+
+    const handleProfileUpdate = () => {
+      loadUserData();
+    };
+
+    window.addEventListener("permissions_updated", handleProfileUpdate);
+    window.addEventListener("storage", handleProfileUpdate);
 
     const handleClickOutside = (event) => {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
@@ -46,8 +79,12 @@ export default function Navbar() {
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    return () => {
+      window.removeEventListener("permissions_updated", handleProfileUpdate);
+      window.removeEventListener("storage", handleProfileUpdate);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [loadUserData]);
 
   const fetchNotifications = async (loggedInUser) => {
     setLoadingNotifs(true);
@@ -284,7 +321,7 @@ export default function Navbar() {
           >
             {user ? (
               <img
-                src={profileImage || `https://ui-avatars.com/api/?name=${user.firstName || user.username}&background=2563EB&color=fff&rounded=true&bold=true&size=150`}
+                src={profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName || user.firstName || user.username)}&background=2563EB&color=fff&rounded=true&bold=true&size=150`}
                 alt="Profile"
                 className="w-9 h-9 rounded-full object-cover ring-2 ring-blue-100 shadow-sm transition-transform group-hover:scale-105"
               />
@@ -296,7 +333,7 @@ export default function Navbar() {
 
             <div className="text-left hidden sm:block">
               <h4 className="font-semibold text-sm text-[#0F172A] capitalize">
-                {user ? user.username : "Guest User"}
+                {displayName}
               </h4>
               <p className="text-xs text-[#64748B]">
                 {user ? user.role : "Viewer"}
