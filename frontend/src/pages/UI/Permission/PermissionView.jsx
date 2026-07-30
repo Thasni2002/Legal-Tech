@@ -451,7 +451,7 @@ export default function PermissionView() {
             </div>
             <button
               onClick={handleSavePermissions}
-              className="w-full sm:w-auto bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-bold uppercase py-3 sm:py-3.5 px-6 sm:px-8 rounded-full cursor-pointer tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] flex items-center justify-center gap-2 shrink-0"
+              className="w-full sm:w-auto bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-bold uppercase py-3 sm:py-3.5 px-6 sm:px-8 rounded-full cursor-pointer tracking-wider transition-all shadow-md shadow-blue-200/50 hover:shadow-xl active:scale-[0.98] flex items-center justify-center gap-2 shrink-0"
             >
               <Save size={16} />
               <span>Save Permissions</span>
