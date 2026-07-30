@@ -264,6 +264,14 @@ export default function UsersView() {
     return null;
   };
 
+  const getUserDisplayName = (u) => {
+    if (!u) return "";
+    const fn = (u.firstName || u.first_name || "").trim();
+    const ln = (u.lastName || u.last_name || "").trim();
+    const full = [fn, ln].filter(Boolean).join(" ").trim();
+    return full || u.username || "User";
+  };
+
   // Generate random password helper
   const generateRandomPassword = () => {
     const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
@@ -503,8 +511,9 @@ export default function UsersView() {
   // Modal actions — fetch fresh role permissions every time modal opens
   const handleOpenDetails = async (user) => {
     setActiveUser(user);
-    setEditFirstName(user.firstName || "");
-    setEditLastName(user.lastName || "");
+    const fullName = [user.firstName || user.first_name, user.lastName || user.last_name].filter(Boolean).join(" ").trim() || user.username || "";
+    setEditFirstName(fullName);
+    setEditLastName(user.lastName || user.last_name || "");
     setEditPhone(user.phone || "");
     setEditUsername(user.username || "");
     setEditEmail(user.email || "");
@@ -597,12 +606,16 @@ export default function UsersView() {
         }
       }
 
+      const nameParts = editFirstName.trim().split(" ");
+      const fName = nameParts[0] || editFirstName.trim();
+      const lName = nameParts.slice(1).join(" ") || editLastName.trim();
+
       const res = await fetch(`${API_BASE_URL}/permissions/users/${activeUser.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          firstName: editFirstName.trim(),
-          lastName: editLastName.trim(),
+          firstName: fName,
+          lastName: lName,
           phone: editPhone.trim(),
           username: editUsername.trim(),
           email: editEmail.trim(),
@@ -706,7 +719,7 @@ export default function UsersView() {
                   type="button"
                   onClick={() => setSelectedRole(role.name)}
                   className={`px-4 sm:px-5 py-2.5 sm:py-3 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${active
-                    ? "bg-black text-white shadow-md"
+                    ? "bg-[#2563EB] text-white shadow-md shadow-blue-200/50 hover:bg-blue-700"
                     : "bg-slate-100 hover:bg-slate-200 text-slate-600"
                     }`}
                 >
@@ -1025,7 +1038,7 @@ export default function UsersView() {
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4 border-t border-slate-50">
             <button
               type="submit"
-              className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-3.5 bg-black text-white hover:bg-slate-800 text-xs font-bold uppercase rounded-full cursor-pointer tracking-wider transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 text-center"
+              className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-3.5 bg-[#2563EB] text-white hover:bg-blue-700 text-xs font-bold uppercase rounded-full cursor-pointer tracking-wider transition-all shadow-md shadow-blue-200/50 active:scale-95 flex items-center justify-center gap-2 text-center"
             >
               <Check size={16} />
               <span>Provision {getRoleDisplayName(selectedRole)}</span>
@@ -1111,7 +1124,7 @@ export default function UsersView() {
                         <div
                           className={`w-11 h-11 rounded-full ${avatarBg} text-white flex items-center justify-center font-bold shrink-0 text-sm`}
                         >
-                          {(user.firstName || user.username || "?")
+                          {getUserDisplayName(user)
                             .charAt(0)
                             .toUpperCase()}
                         </div>
@@ -1119,7 +1132,7 @@ export default function UsersView() {
 
                       <div className="min-w-0">
                         <p className="font-bold text-slate-900 text-sm truncate">
-                          {user.firstName || user.username}
+                          {getUserDisplayName(user)}
                         </p>
                         <p className="text-xs text-slate-400 truncate">@{user.username}</p>
                         <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100 mt-1">
@@ -1218,7 +1231,7 @@ export default function UsersView() {
                               <div
                                 className={`w-10 h-10 rounded-full ${avatarBg} text-white flex items-center justify-center font-bold shrink-0`}
                               >
-                                {(user.firstName || user.username || "?")
+                                {getUserDisplayName(user)
                                   .charAt(0)
                                   .toUpperCase()}
                               </div>
@@ -1227,7 +1240,7 @@ export default function UsersView() {
 
                           <div>
                             <p className="font-bold text-slate-900 text-sm">
-                              {user.firstName || user.username}
+                              {getUserDisplayName(user)}
                             </p>
                             <p className="text-xs text-slate-400">@{user.username}</p>
                             <p className="text-xs font-semibold text-blue-600 mt-0.5">{user.role}</p>
@@ -1303,9 +1316,10 @@ export default function UsersView() {
                         />
                       );
                     }
+                    const modalFullName = [editFirstName, editLastName].filter(Boolean).join(" ").trim() || editUsername;
                     return (
                       <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white text-lg sm:text-xl font-bold shrink-0">
-                        {(editFirstName || editUsername || "?")
+                        {(modalFullName || "?")
                           .charAt(0)
                           .toUpperCase()}
                       </div>
@@ -1314,7 +1328,7 @@ export default function UsersView() {
 
                   <div>
                     <h3 className="text-white font-bold text-xl sm:text-2xl">
-                      {editFirstName || editUsername}
+                      {[editFirstName, editLastName].filter(Boolean).join(" ") || editUsername}
                     </h3>
                     <p className="text-slate-400 text-xs sm:text-sm">@{editUsername}</p>
 
@@ -1528,7 +1542,7 @@ export default function UsersView() {
 
               <button
                 onClick={handleSaveModal}
-                className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-3.5 rounded-full bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] text-center"
+                className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-3.5 rounded-full bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] text-center"
               >
                 Save Changes
               </button>

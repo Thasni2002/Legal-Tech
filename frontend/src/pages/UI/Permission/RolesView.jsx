@@ -211,7 +211,7 @@ export default function RolesView() {
         {/* Create / Edit Form */}
         <div className="lg:col-span-1 bg-white rounded-2xl sm:rounded-3xl border border-slate-100 p-4 sm:p-6 shadow-sm h-fit">
           <div className="flex items-center gap-3 sm:gap-3.5 mb-5 sm:mb-6">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-slate-900 text-white rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#2563EB] text-white rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
               <Shield size={18} className="sm:w-5 sm:h-5" />
             </div>
             <div>
@@ -255,7 +255,7 @@ export default function RolesView() {
             <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 pt-2">
               <button
                 type="submit"
-                className="w-full sm:flex-1 bg-black text-white hover:bg-slate-800 text-xs font-bold uppercase py-3 sm:py-3.5 px-4 sm:px-6 rounded-full cursor-pointer tracking-wider transition-all shadow-md active:scale-95 text-center"
+                className="w-full sm:flex-1 bg-[#2563EB] text-white hover:bg-blue-700 text-xs font-bold uppercase py-3 sm:py-3.5 px-4 sm:px-6 rounded-full cursor-pointer tracking-wider transition-all shadow-md shadow-blue-200/50 active:scale-95 text-center"
               >
                 {editingRole ? "Save Changes" : "Create Role"}
               </button>

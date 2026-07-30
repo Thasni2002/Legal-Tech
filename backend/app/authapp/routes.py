@@ -170,19 +170,29 @@ def get_notifications(
     """
     Returns dynamic in-app notifications for the logged-in user
     by fetching directly from existing models (Invoice, Consultation, Case, Document).
-    No new database table is used. Alerts automatically disappear after 48 hours
-    (except hearing and consultation calendar reminders which are strictly date-based).
+    No new database table is used. Alerts automatically disappear after 48 hours.
     """
     from app.advocate.finance_management.models import Invoice
     from app.advocate.consultations.models import Consultation
     from app.advocate.case_management.models import Case, CaseDocumentWorkflow
     from app.advocate.client_management.models import Document
     from app.advocate.lawfirm_management.models import AssignedCase
+    from app.advocate.tasks.models import Task
+    from app.clerk.dashboard.models import ClerkTask
 
     notifications = []
     now = datetime.utcnow()
     cutoff = now - timedelta(hours=48)  # Recent events threshold
     today = date.today()
+
+    def parse_date_str(d_str):
+        if not d_str:
+            return None
+        try:
+            clean = str(d_str).strip().split()[0].split("T")[0]
+            return datetime.strptime(clean, "%Y-%m-%d").date()
+        except Exception:
+            return None
 
     # Load logged-in user profile details for name comparisons
     user = db.query(User).filter(User.id == user_id).first() if user_id else None
@@ -197,8 +207,6 @@ def get_notifications(
             (user.first_name and user.first_name.lower() in adv_lower) or
             (user.last_name and user.last_name.lower() in adv_lower)
         )
-
-
 
     # Helper comparisons for Clients
     def is_client_owner(case_obj):
@@ -222,6 +230,7 @@ def get_notifications(
     is_senior = role and role.lower() == "senior advocate"
     is_junior = role and role.lower() == "junior advocate"
     is_client = role and role.lower() == "client"
+    is_clerk = role and role.lower() == "clerk"
 
     # ─── A. SENIOR ADVOCATE NOTIFICATIONS ──────────────────────────────────────────
     if is_senior:
@@ -256,7 +265,7 @@ def get_notifications(
                 "created_at": doc.created_at.isoformat()
             })
 
-        # 3. New consultations booked
+        # 3. New meeting scheduled (renamed from consultation)
         new_consults = db.query(Consultation).filter(
             Consultation.created_at >= cutoff,
             Consultation.status == "Pending"
@@ -265,14 +274,14 @@ def get_notifications(
             notifications.append({
                 "id": f"new_consult_{c.id}",
                 "icon": "📅",
-                "title": f"New consultation scheduled by {c.client_name} on {c.date} at {c.time}.",
+                "title": f"New meeting scheduled by {c.client_name} on {c.date} at {c.time}.",
                 "time": _time_ago(c.created_at),
                 "color": "text-blue-600",
                 "bg": "bg-blue-50",
                 "created_at": c.created_at.isoformat()
             })
 
-        # 4. Consultation Rescheduled
+        # 4. Meeting Rescheduled (renamed from consultation)
         rescheduled_consults = db.query(Consultation).filter(
             Consultation.status == "Rescheduled",
             Consultation.updated_at >= cutoff
@@ -281,7 +290,7 @@ def get_notifications(
             notifications.append({
                 "id": f"resched_consult_{c.id}",
                 "icon": "♻️",
-                "title": f"Consultation with {c.client_name} rescheduled to {c.date} at {c.time}.",
+                "title": f"Meeting with {c.client_name} rescheduled to {c.date} at {c.time}.",
                 "time": _time_ago(c.updated_at or c.created_at),
                 "color": "text-amber-600",
                 "bg": "bg-amber-50",
@@ -289,7 +298,6 @@ def get_notifications(
             })
 
         # 5. Overdue Invoices
-        # Define overdue as: status is Overdue OR Pending/Sent and created > 7 days ago (max 30 days old to avoid noise)
         overdue_cutoff = now - timedelta(days=7)
         overdue_invoices = db.query(Invoice).filter(
             or_(
@@ -347,7 +355,7 @@ def get_notifications(
                     "created_at": doc.created_at.isoformat()
                 })
 
-        # 8. Consultation Cancellation Alerts
+        # 8. Meeting Cancellation Alerts (renamed from consultation)
         cancelled_consults = db.query(Consultation).filter(
             Consultation.status == "Cancelled",
             Consultation.updated_at >= cutoff
@@ -356,7 +364,7 @@ def get_notifications(
             notifications.append({
                 "id": f"cancel_consult_{c.id}",
                 "icon": "❌",
-                "title": f"Consultation scheduled with {c.client_name} on {c.date} has been cancelled.",
+                "title": f"Meeting scheduled with {c.client_name} on {c.date} has been cancelled.",
                 "time": _time_ago(c.updated_at or c.created_at),
                 "color": "text-rose-600",
                 "bg": "bg-rose-50",
@@ -380,6 +388,24 @@ def get_notifications(
                 "bg": "bg-blue-50",
                 "created_at": doc.updated_at.isoformat()
             })
+
+        # 10. Task Overdue Warning for Senior Advocate
+        overdue_tasks = db.query(Task).filter(
+            Task.status != "completed"
+        ).all()
+        for t in overdue_tasks:
+            if user and t.senior_advocate_id == user.id:
+                d = parse_date_str(t.due_date)
+                if d and d < today:
+                    notifications.append({
+                        "id": f"task_overdue_{t.id}",
+                        "icon": "⏰",
+                        "title": f"Task Overdue: Delegated task '{t.title}' assigned to {t.junior_name or 'Assignee'} passed its due date ({t.due_date}).",
+                        "time": "Overdue",
+                        "color": "text-rose-600",
+                        "bg": "bg-rose-50",
+                        "created_at": (t.updated_at or t.created_at).isoformat()
+                    })
 
     # ─── B. JUNIOR ADVOCATE NOTIFICATIONS ──────────────────────────────────────────
 
@@ -435,9 +461,6 @@ def get_notifications(
                         "created_at": doc.created_at.isoformat()
                     })
 
-  
-
-
         # Helper comparisons for Junior Advocates in lawfirm management
         def is_junior_assigned_firm_case(ac):
             if not user or not ac.advocate_name:
@@ -449,7 +472,7 @@ def get_notifications(
                 (user.last_name and user.last_name.lower() in adv_lower)
             )
 
-        # 5. Senior Advocate Instructions / Tasks
+        # 4. Senior Advocate Instructions / Tasks
         tasks = db.query(AssignedCase).filter(
             AssignedCase.status == "Active"
         ).all()
@@ -465,7 +488,7 @@ def get_notifications(
                     "created_at": now.isoformat()
                 })
 
-        # 6. Case Document Approval updates for Juniors
+        # 5. Case Document Approval updates for Juniors
         my_review_docs = db.query(CaseDocumentWorkflow).filter(
             CaseDocumentWorkflow.junior_id == user.id,
             CaseDocumentWorkflow.status.in_(["Approved", "Needs Correction"]),
@@ -493,6 +516,24 @@ def get_notifications(
                     "created_at": doc.updated_at.isoformat()
                 })
 
+        # 6. Upcoming Task Due Reminder (within 24 Hours) for Junior Advocate
+        jr_tasks = db.query(Task).filter(
+            Task.junior_advocate_id == user.id,
+            Task.status != "completed"
+        ).all()
+        for t in jr_tasks:
+            d = parse_date_str(t.due_date)
+            if d and 0 <= (d - today).days <= 1:
+                notifications.append({
+                    "id": f"task_due_soon_{t.id}",
+                    "icon": "⏳",
+                    "title": f"Upcoming Task Due: '{t.title}' is due within 24 hours (Due: {t.due_date}).",
+                    "time": "Due Soon",
+                    "color": "text-amber-600",
+                    "bg": "bg-amber-50",
+                    "created_at": now.isoformat()
+                })
+
     # ─── C. CLIENT NOTIFICATIONS ──────────────────────────────────────────────────
 
     elif is_client and user:
@@ -511,7 +552,7 @@ def get_notifications(
                         "created_at": case.updated_at.isoformat()
                     })
 
-        # 2. Consultation Rescheduled
+        # 2. Meeting Rescheduled (renamed from consultation)
         client_rescheduled = db.query(Consultation).filter(
             Consultation.status == "Rescheduled",
             Consultation.updated_at >= cutoff
@@ -521,14 +562,14 @@ def get_notifications(
                 notifications.append({
                     "id": f"client_resched_{c.id}",
                     "icon": "♻️",
-                    "title": f"Your consultation has been rescheduled to {c.date} at {c.time}.",
+                    "title": f"Your meeting has been rescheduled to {c.date} at {c.time}.",
                     "time": _time_ago(c.updated_at or c.created_at),
                     "color": "text-amber-600",
                     "bg": "bg-amber-50",
                     "created_at": (c.updated_at or c.created_at).isoformat()
                 })
 
-        # 3. Consultation scheduled by advocate (Pending or Scheduled)
+        # 3. Meeting scheduled by advocate (renamed from consultation)
         client_new_consults = db.query(Consultation).filter(
             Consultation.created_at >= cutoff
         ).all()
@@ -537,14 +578,14 @@ def get_notifications(
                 notifications.append({
                     "id": f"client_consult_sched_{c.id}",
                     "icon": "📅",
-                    "title": f"New consultation scheduled on {c.date} at {c.time}.",
+                    "title": f"New meeting scheduled on {c.date} at {c.time}.",
                     "time": _time_ago(c.created_at),
                     "color": "text-indigo-600",
                     "bg": "bg-indigo-50",
                     "created_at": c.created_at.isoformat()
                 })
 
-        # 4. Consultation reminder (Day before scheduled consultation)
+        # 4. Meeting reminder (renamed from consultation)
         tomorrow = today + timedelta(days=1)
         upcoming_consults = db.query(Consultation).filter(
             Consultation.date == tomorrow,
@@ -555,7 +596,7 @@ def get_notifications(
                 notifications.append({
                     "id": f"client_consult_remind_{c.id}",
                     "icon": "🔔",
-                    "title": f"Reminder: Consultation scheduled tomorrow at {c.time}.",
+                    "title": f"Reminder: Meeting scheduled tomorrow at {c.time}.",
                     "time": "Tomorrow",
                     "color": "text-blue-600",
                     "bg": "bg-blue-50",
@@ -629,14 +670,91 @@ def get_notifications(
                         "created_at": doc.created_at.isoformat()
                     })
 
-    # ─── D. HEARING DATE REMINDERS (Shared Calendar Scanners) ──────────────────────
-    # Fits rules: 5 days before, 2 days before, morning of
-    if is_senior or is_junior or is_client:
+        # 8. Action Required / Document Requested
+        req_docs = db.query(Document).filter(
+            Document.created_at >= cutoff
+        ).all()
+        for doc in req_docs:
+            if doc.case_no:
+                assoc_case = db.query(Case).filter(Case.case_no == doc.case_no).first()
+                if assoc_case and is_client_owner(assoc_case):
+                    notifications.append({
+                        "id": f"client_doc_req_{doc.id}",
+                        "icon": "📑",
+                        "title": f"Action Required: Advocate requested evidence / ID proof / affidavit for case '{assoc_case.case_title}'.",
+                        "time": _time_ago(doc.created_at),
+                        "color": "text-purple-600",
+                        "bg": "bg-purple-50",
+                        "created_at": doc.created_at.isoformat()
+                    })
+
+        # 9. Upcoming Invoice Payment Reminder (3 days before due date)
+        inv_reminders = db.query(Invoice).filter(
+            Invoice.status.in_(["Sent", "Pending"]),
+            Invoice.created_at >= now - timedelta(days=10)
+        ).all()
+        for inv in inv_reminders:
+            is_owner = False
+            if user:
+                inv_email = (inv.email or "").lower()
+                inv_client = (inv.client_name or "").lower()
+                if user.email.lower() == inv_email or user.username.lower() in inv_client:
+                     is_owner = True
+            if is_owner:
+                days_old = (now - inv.created_at).days
+                if days_old == 4:
+                    notifications.append({
+                        "id": f"client_invoice_remind_3d_{inv.id}",
+                        "icon": "💳",
+                        "title": f"Upcoming Payment Reminder: Invoice #{inv.id} for ₹{inv.grand_total:.2f} is due in 3 days.",
+                        "time": "Due in 3 days",
+                        "color": "text-amber-600",
+                        "bg": "bg-amber-50",
+                        "created_at": now.isoformat()
+                    })
+
+        # 10. Next Hearing Date Fixed
+        updated_client_cases = db.query(Case).filter(
+            Case.updated_at >= cutoff,
+            Case.created_at != Case.updated_at,
+            Case.next_hearing_date.isnot(None)
+        ).all()
+        for case in updated_client_cases:
+            if is_client_owner(case):
+                notifications.append({
+                    "id": f"client_next_hearing_fixed_{case.id}",
+                    "icon": "📌",
+                    "title": f"Next Hearing Date Fixed: Immediate notification for case '{case.case_title}' scheduled on {case.next_hearing_date}.",
+                    "time": _time_ago(case.updated_at),
+                    "color": "text-indigo-600",
+                    "bg": "bg-indigo-50",
+                    "created_at": case.updated_at.isoformat()
+                })
+
+    # ─── D. CLERK NOTIFICATIONS ────────────────────────────────────────────────────
+
+    elif is_clerk and user:
+        # 1. New Clerk Task Assignment
+        clerk_tasks = db.query(ClerkTask).filter(
+            ClerkTask.created_at >= cutoff
+        ).all()
+        for ct in clerk_tasks:
+            notifications.append({
+                "id": f"clerk_task_assign_{ct.id}",
+                "icon": "📋",
+                "title": f"New Clerk Task Assigned: '{ct.text}'.",
+                "time": _time_ago(ct.created_at),
+                "color": "text-indigo-600",
+                "bg": "bg-indigo-50",
+                "created_at": ct.created_at.isoformat()
+            })
+
+    # ─── E. HEARING DATE REMINDERS (Shared Calendar Scanners) ──────────────────────
+    if is_senior or is_junior or is_client or is_clerk:
         cases = db.query(Case).filter(Case.next_hearing_date.isnot(None)).all()
         for case in cases:
-            # Check context scope target
             should_include = False
-            if is_senior:
+            if is_senior or is_clerk:
                 should_include = True
             elif is_junior and is_junior_assigned(case):
                 should_include = True
@@ -654,7 +772,6 @@ def get_notifications(
                 hearing_date = datetime.strptime(date_str, "%Y-%m-%d").date()
                 days_left = (hearing_date - today).days
 
-                # Custom wording for Client vs Advocate
                 subj_name = "Your case" if is_client else f"Case '{case.case_title}'"
 
                 if days_left == 5:

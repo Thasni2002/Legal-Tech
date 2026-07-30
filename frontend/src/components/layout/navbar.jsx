@@ -4,11 +4,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getLoggedInUser } from "@/utils/auth";
 import { API_BASE_URL } from "@/utils/api";
-import { Bell, ChevronDown, LoaderCircle, CheckCheck } from "lucide-react";
+import { Bell, ChevronDown, LoaderCircle, CheckCheck, X } from "lucide-react";
 
 export default function Navbar() {
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifFilter, setNotifFilter] = useState("all");
   const [user, setUser] = useState(null);
   const [displayName, setDisplayName] = useState("");
   const [profileImage, setProfileImage] = useState(null);
@@ -44,7 +45,7 @@ export default function Navbar() {
     }
 
     if (!name && loggedInUser) {
-      name = [loggedInUser.firstName, loggedInUser.lastName].filter(Boolean).join(" ") || loggedInUser.username;
+      name = [loggedInUser.firstName || loggedInUser.first_name, loggedInUser.lastName || loggedInUser.last_name].filter(Boolean).join(" ") || loggedInUser.username;
     }
 
     if ((loggedInUser?.role || "").toLowerCase() === "clerk" && name) {
@@ -221,88 +222,190 @@ export default function Navbar() {
 
           {/* Notification Dropdown */}
           {showNotifications && (
-            <div className="absolute right-0 mt-3 w-80 md:w-96 bg-white border border-[#E2E8F0] rounded-3xl shadow-xl shadow-slate-200/50 z-50 overflow-hidden transform origin-top-right transition-all animate-in fade-in zoom-in-95 duration-200">
-              <div className="px-6 py-4 border-b border-[#F1F5F9] flex justify-between items-center bg-slate-50">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-extrabold text-[16px] text-[#0F172A] tracking-tight">
-                    Notifications
-                  </h3>
-                  {unreadCount > 0 && (
-                    <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                      {unreadCount} New
-                    </span>
-                  )}
+            <div className="absolute right-0 mt-3 w-88 sm:w-[420px] bg-white border border-slate-200/90 rounded-2xl shadow-2xl shadow-slate-300/40 z-50 overflow-hidden transform origin-top-right transition-all animate-in fade-in zoom-in-95 duration-200">
+              {/* Header matching requested style */}
+              <div className="p-4 border-b border-slate-100 bg-white">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h3 className="font-extrabold text-xl text-slate-900 tracking-tight">
+                      Notifications
+                    </h3>
+                    <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mt-0.5">
+                      {unreadCount} UNREAD MESSAGES
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={markAllAsRead}
+                        className="w-8 h-8 rounded-xl bg-slate-100/80 hover:bg-slate-200/80 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-all cursor-pointer"
+                        title="Mark all as read"
+                      >
+                        <CheckCheck size={16} />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowNotifications(false)}
+                      className="w-8 h-8 rounded-xl bg-slate-100/80 hover:bg-slate-200/80 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-all cursor-pointer"
+                      title="Close"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
                 </div>
-                {unreadCount > 0 && (
+
+                {/* Filter Pill Tabs */}
+                <div className="flex bg-slate-100/80 p-1 rounded-2xl">
                   <button
-                    onClick={markAllAsRead}
-                    className="flex items-center gap-1 text-xs text-[#0F172A] font-semibold hover:text-[#64748B] transition-colors"
-                    title="Mark all as read"
+                    onClick={() => setNotifFilter("all")}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all duration-200 cursor-pointer ${
+                      notifFilter === "all"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
                   >
-                    <CheckCheck size={14} />
-                    Mark all read
+                    All
                   </button>
-                )}
+                  <button
+                    onClick={() => setNotifFilter("unread")}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all duration-200 cursor-pointer ${
+                      notifFilter === "unread"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    Unread
+                  </button>
+                  <button
+                    onClick={() => setNotifFilter("read")}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all duration-200 cursor-pointer ${
+                      notifFilter === "read"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    Read
+                  </button>
+                </div>
               </div>
 
-              <div className="max-h-[380px] overflow-y-auto p-2 space-y-1">
+              {/* Body list */}
+              <div className="max-h-[390px] overflow-y-auto p-2.5 space-y-2 divide-y divide-transparent">
                 {loadingNotifs ? (
-                  <div className="flex items-center justify-center py-8 gap-2 text-slate-400 text-sm">
-                    <LoaderCircle size={16} className="animate-spin" />
-                    <span>Loading notifications...</span>
-                  </div>
-                ) : notifications.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-10 text-slate-400">
-                    <Bell size={32} className="mb-2 opacity-30" />
-                    <p className="text-sm font-medium">No new notifications</p>
+                  <div className="flex items-center justify-center py-10 gap-2 text-slate-400 text-xs font-medium">
+                    <LoaderCircle size={16} className="animate-spin text-blue-600" />
+                    <span>Fetching latest alerts...</span>
                   </div>
                 ) : (
-                  notifications.map((item) => {
-                    const isRead = item.is_read;
-                    return (
-                      <div
-                        key={item.id}
-                        onClick={() => !isRead && markAsRead(item.id)}
-                        className={`flex items-start gap-4 p-3 rounded-2xl transition-colors duration-200 group ${
-                          isRead
-                            ? "bg-slate-50 opacity-60"
-                            : "hover:bg-slate-100/80 cursor-pointer"
-                        }`}
-                      >
+                  (() => {
+                    const displayList = notifications.filter((n) => {
+                      if (notifFilter === "unread") return !n.is_read;
+                      if (notifFilter === "read") return n.is_read;
+                      return true;
+                    });
+
+                    if (displayList.length === 0) {
+                      return (
+                        <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                          <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-2">
+                            <Bell size={20} className="text-slate-300" />
+                          </div>
+                          <p className="text-xs font-semibold text-slate-500">No notifications found</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">Nothing to display for this filter</p>
+                        </div>
+                      );
+                    }
+
+                    return displayList.map((item) => {
+                      const isRead = item.is_read;
+
+                      const titleText = item.title || "";
+                      const tLower = titleText.toLowerCase();
+
+                      let badge = { label: "ALERT", bg: "bg-slate-100 text-slate-600 border-slate-200" };
+                      if (tLower.includes("hearing today")) {
+                        badge = { label: "HEARING TODAY", bg: "bg-rose-100 text-rose-700 border-rose-200" };
+                      } else if (tLower.includes("hearing in")) {
+                        badge = { label: "HEARING UPCOMING", bg: "bg-amber-100 text-amber-800 border-amber-200" };
+                      } else if (tLower.includes("status changed") || tLower.includes("status updated")) {
+                        badge = { label: "CASE STATUS", bg: "bg-emerald-100 text-emerald-700 border-emerald-200" };
+                      } else if (tLower.includes("meeting scheduled") || tLower.includes("meeting with")) {
+                        badge = { label: "MEETING", bg: "bg-blue-100 text-blue-700 border-blue-200" };
+                      } else if (tLower.includes("meeting cancelled")) {
+                        badge = { label: "CANCELLED", bg: "bg-rose-100 text-rose-700 border-rose-200" };
+                      } else if (tLower.includes("payment")) {
+                        badge = { label: "PAYMENT", bg: "bg-emerald-100 text-emerald-700 border-emerald-200" };
+                      } else if (tLower.includes("overdue")) {
+                        badge = { label: "OVERDUE", bg: "bg-rose-100 text-rose-700 border-rose-200" };
+                      } else if (tLower.includes("action required") || tLower.includes("requested")) {
+                        badge = { label: "ACTION REQ", bg: "bg-purple-100 text-purple-700 border-purple-200" };
+                      } else if (tLower.includes("task due")) {
+                        badge = { label: "TASK DUE", bg: "bg-amber-100 text-amber-700 border-amber-200" };
+                      } else if (tLower.includes("clerk task") || tLower.includes("task assigned")) {
+                        badge = { label: "TASK", bg: "bg-indigo-100 text-indigo-700 border-indigo-200" };
+                      } else if (tLower.includes("document") || tLower.includes("file")) {
+                        badge = { label: "DOCUMENT", bg: "bg-purple-100 text-purple-700 border-purple-200" };
+                      }
+
+                      const cleanedTitle = titleText.replace(/\s*[X\*\-]{3,}\s*\([^)]*\)/gi, "");
+
+                      return (
                         <div
-                          className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-lg shadow-sm transition-transform duration-200 ${
-                            isRead ? "opacity-60" : "group-hover:scale-110"
-                          } ${item.bg} ${item.color}`}
+                          key={item.id}
+                          onClick={() => !isRead && markAsRead(item.id)}
+                          className={`flex items-start gap-3.5 p-3 rounded-xl border transition-all duration-150 relative group ${
+                            isRead
+                              ? "bg-slate-50/60 border-slate-100/80 opacity-75 hover:opacity-100 hover:bg-white"
+                              : "bg-gradient-to-r from-blue-50/50 via-indigo-50/20 to-white border-blue-200/80 shadow-2xs hover:border-blue-300 hover:shadow-xs cursor-pointer"
+                          }`}
                         >
-                          {item.icon}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p
-                            className={`text-sm leading-tight transition-colors ${
-                              isRead
-                                ? "font-normal text-[#64748B]"
-                                : "font-bold text-[#1E293B] group-hover:text-[#0F172A]"
-                            }`}
+                          <div
+                            className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center text-base shadow-2xs mt-0.5 transition-transform duration-200 group-hover:scale-105 ${item.bg} ${item.color}`}
                           >
-                            {item.title}
-                          </p>
-                          <p className="text-xs font-medium text-[#94A3B8] mt-1">
-                            {item.time}
-                          </p>
+                            {item.icon}
+                          </div>
+
+                          <div className="flex-1 min-w-0 pr-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span
+                                className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border uppercase tracking-wider ${badge.bg}`}
+                              >
+                                {badge.label}
+                              </span>
+                              <span className="text-[11px] font-medium text-slate-400">
+                                {item.time}
+                              </span>
+                            </div>
+
+                            <p
+                              className={`text-xs leading-snug transition-colors ${
+                                isRead
+                                  ? "font-normal text-slate-600"
+                                  : "font-semibold text-slate-900 group-hover:text-blue-900"
+                              } line-clamp-2`}
+                              title={cleanedTitle}
+                            >
+                              {cleanedTitle}
+                            </p>
+                          </div>
+
+                          {!isRead && (
+                            <span
+                              className="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-2 animate-pulse shadow-xs"
+                              title="Unread"
+                            />
+                          )}
                         </div>
-                        {/* Unread indicator dot */}
-                        {!isRead && (
-                          <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0 animate-pulse" />
-                        )}
-                      </div>
-                    );
-                  })
+                      );
+                    });
+                  })()
                 )}
               </div>
 
-              {/* Footer: all read */}
+              {/* Footer */}
               {notifications.length > 0 && unreadCount === 0 && (
-                <div className="px-6 py-3 border-t border-[#F1F5F9] text-center bg-slate-50">
+                <div className="px-5 py-2.5 border-t border-slate-100 text-center bg-slate-50/70">
                   <p className="text-xs text-slate-400 font-medium flex items-center justify-center gap-1">
                     <CheckCheck size={13} className="text-emerald-500" />
                     All caught up!

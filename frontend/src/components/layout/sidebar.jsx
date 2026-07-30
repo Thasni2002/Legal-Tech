@@ -328,7 +328,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
                 <img
                   src={
                     profileImage ||
-                    `https://ui-avatars.com/api/?name=${user.firstName || user.username}&background=2563EB&color=fff&rounded=true&bold=true&size=150`
+                    `https://ui-avatars.com/api/?name=${encodeURIComponent([user.firstName || user.first_name, user.lastName || user.last_name].filter(Boolean).join(" ") || user.username)}&background=2563EB&color=fff&rounded=true&bold=true&size=150`
                   }
                   alt="Profile"
                   className="w-9 h-9 rounded-full object-cover ring-2 ring-slate-700 group-hover:scale-105 transition-transform"
