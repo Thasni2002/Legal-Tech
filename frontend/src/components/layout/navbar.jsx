@@ -294,7 +294,7 @@ export default function Navbar() {
               </div>
             )}
 
-            <div className="text-left">
+            <div className="text-left hidden sm:block">
               <h4 className="font-semibold text-sm text-[#0F172A] capitalize">
                 {user ? user.username : "Guest User"}
               </h4>
