@@ -71,23 +71,70 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
     }
   };
 
-  const loadSidebarUser = () => {
+  const loadSidebarUser = async () => {
     const loggedIn = getLoggedInUser();
     setUser(loggedIn);
 
-    const userKey = (loggedIn?.email || loggedIn?.username || "").toLowerCase().trim();
-    const savedUserLocal = typeof window !== "undefined" && userKey ? localStorage.getItem(`advocate_profile_${userKey}`) : null;
-    const savedGlobal = typeof window !== "undefined" ? localStorage.getItem("advocate_profile") : null;
-    const savedProfile = savedUserLocal || savedGlobal;
+    if (!loggedIn) return;
 
-    if (savedProfile) {
+    const userKey = (loggedIn?.email || loggedIn?.username || "").toLowerCase().trim();
+    const uEmail = (loggedIn?.email || "").toLowerCase().trim();
+    const uName = (loggedIn?.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const uFull = `${loggedIn?.firstName || ""} ${loggedIn?.lastName || ""}`.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+    const savedUserLocal = typeof window !== "undefined" && userKey ? localStorage.getItem(`advocate_profile_${userKey}`) : null;
+    
+    let savedProfileData = null;
+    if (savedUserLocal) {
       try {
-        const parsed = JSON.parse(savedProfile);
-        if (parsed.profileImage) {
-          setProfileImage(parsed.profileImage);
+        savedProfileData = JSON.parse(savedUserLocal);
+      } catch (e) {}
+    } else if (typeof window !== "undefined") {
+      const savedGlobal = localStorage.getItem("advocate_profile");
+      if (savedGlobal) {
+        try {
+          const parsed = JSON.parse(savedGlobal);
+          const pEmail = (parsed.emailAddress || parsed.email_address || "").toLowerCase().trim();
+          const pName = (parsed.advocateName || parsed.advocate_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+          if (
+            (uEmail && pEmail && pEmail === uEmail) ||
+            (uName && pName && (pName === uName || uName.includes(pName))) ||
+            (uFull && pName && (pName === uFull || uFull.includes(pName)))
+          ) {
+            savedProfileData = parsed;
+          }
+        } catch (e) {}
+      }
+    }
+
+    let img = savedProfileData?.profileImage || null;
+
+    if (!img) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/lawfirm-management/`);
+        if (res.ok) {
+          const advocates = await res.json();
+          const myAdvocate = advocates.find((adv) => {
+            const advEmail = (adv.emailAddress || adv.email_address || "").toLowerCase().trim();
+            const advName = (adv.advocateName || adv.advocate_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            return (
+              (uEmail && advEmail && advEmail === uEmail) ||
+              (uName && advName && (advName === uName || advName.includes(uName))) ||
+              (uFull && advName && (uFull === advName || advName.includes(uFull)))
+            );
+          });
+
+          if (myAdvocate && myAdvocate.profileImage) {
+            img = myAdvocate.profileImage;
+            if (userKey) {
+              localStorage.setItem(`advocate_profile_${userKey}`, JSON.stringify(myAdvocate));
+            }
+          }
         }
       } catch (e) {}
     }
+
+    setProfileImage(img);
   };
 
   useEffect(() => {
