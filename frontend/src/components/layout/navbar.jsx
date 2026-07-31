@@ -20,28 +20,83 @@ export default function Navbar() {
   const profileRef = useRef(null);
   const notificationRef = useRef(null);
 
-  const loadUserData = useCallback(() => {
+  const loadUserData = useCallback(async () => {
     const loggedInUser = getLoggedInUser();
     setUser(loggedInUser);
+
+    if (!loggedInUser) return;
 
     let name = "";
     let img = null;
 
     const userKey = (loggedInUser?.email || loggedInUser?.username || "").toLowerCase().trim();
-    const savedUserLocal = typeof window !== "undefined" && userKey ? localStorage.getItem(`advocate_profile_${userKey}`) : null;
-    const savedGlobal = typeof window !== "undefined" ? localStorage.getItem("advocate_profile") : null;
-    const savedProfile = savedUserLocal || savedGlobal;
+    const uEmail = (loggedInUser?.email || "").toLowerCase().trim();
+    const uName = (loggedInUser?.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const uFull = `${loggedInUser?.firstName || ""} ${loggedInUser?.lastName || ""}`.toLowerCase().replace(/[^a-z0-9]/g, "");
 
-    if (savedProfile) {
+    const savedUserLocal = typeof window !== "undefined" && userKey ? localStorage.getItem(`advocate_profile_${userKey}`) : null;
+    
+    let savedProfileData = null;
+    if (savedUserLocal) {
       try {
-        const parsed = JSON.parse(savedProfile);
-        if (parsed.profileImage) {
-          img = parsed.profileImage;
-        }
-        if (parsed.advocateName || parsed.advocate_name) {
-          name = parsed.advocateName || parsed.advocate_name;
-        }
+        savedProfileData = JSON.parse(savedUserLocal);
       } catch (e) {}
+    } else if (typeof window !== "undefined") {
+      const savedGlobal = localStorage.getItem("advocate_profile");
+      if (savedGlobal) {
+        try {
+          const parsed = JSON.parse(savedGlobal);
+          const pEmail = (parsed.emailAddress || parsed.email_address || "").toLowerCase().trim();
+          const pName = (parsed.advocateName || parsed.advocate_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+          if (
+            (uEmail && pEmail && pEmail === uEmail) ||
+            (uName && pName && (pName === uName || uName.includes(pName))) ||
+            (uFull && pName && (pName === uFull || uFull.includes(pName)))
+          ) {
+            savedProfileData = parsed;
+          }
+        } catch (e) {}
+      }
+    }
+
+    if (savedProfileData) {
+      if (savedProfileData.profileImage) {
+        img = savedProfileData.profileImage;
+      }
+      if (savedProfileData.advocateName || savedProfileData.advocate_name) {
+        name = savedProfileData.advocateName || savedProfileData.advocate_name;
+      }
+    }
+
+    // Fetch from backend DB if missing local image/profile
+    if (!img || !name) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/lawfirm-management/`);
+        if (res.ok) {
+          const advocates = await res.json();
+          const myAdvocate = advocates.find((adv) => {
+            const advEmail = (adv.emailAddress || adv.email_address || "").toLowerCase().trim();
+            const advName = (adv.advocateName || adv.advocate_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            return (
+              (uEmail && advEmail && advEmail === uEmail) ||
+              (uName && advName && (advName === uName || advName.includes(uName))) ||
+              (uFull && advName && (uFull === advName || advName.includes(uFull)))
+            );
+          });
+
+          if (myAdvocate) {
+            if (!img && myAdvocate.profileImage) img = myAdvocate.profileImage;
+            if (!name && (myAdvocate.advocateName || myAdvocate.advocate_name)) {
+              name = myAdvocate.advocateName || myAdvocate.advocate_name;
+            }
+            if (userKey) {
+              localStorage.setItem(`advocate_profile_${userKey}`, JSON.stringify(myAdvocate));
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Navbar: Could not fetch advocate profile from backend —", e?.message || e);
+      }
     }
 
     if (!name && loggedInUser) {
