@@ -90,7 +90,12 @@ export default function AssignAdv({ isOpen, onClose }) {
         );
 
         const data = await res.json();
-        setAdvocates(data);
+        const list = Array.isArray(data) ? data : [];
+        const advocateOnlyList = list.filter((adv) => {
+          const role = (adv.role || "").toLowerCase().trim();
+          return role !== "clerk" && role !== "client";
+        });
+        setAdvocates(advocateOnlyList);
       } catch (error) {
         console.error("Error fetching advocates:", error);
       }
@@ -305,6 +310,9 @@ export default function AssignAdv({ isOpen, onClose }) {
   }
 
   const filteredAdvocates = advocates.filter((adv) => {
+    const role = (adv.role || "").toLowerCase().trim();
+    if (role === "clerk" || role === "client") return false;
+
     const advCourt = (adv.practiceCourt || adv.practice_court || "").trim();
     const advCity = (adv.city || "").trim();
     const selectedCourt = (formData.courtName || "").trim();
