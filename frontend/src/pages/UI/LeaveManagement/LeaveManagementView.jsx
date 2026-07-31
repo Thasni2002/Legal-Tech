@@ -285,7 +285,7 @@ export default function LeaveManagementView({
       <div className="min-h-screen bg-[#F8FAFC] p-3.5 sm:p-5 md:p-8 w-full max-w-full min-w-0 overflow-x-hidden">
         <form
           onSubmit={handleApplySubmit}
-          className="bg-white rounded-2xl sm:rounded-3xl border border-[#E2E8F0] p-4 sm:p-6 md:p-8 shadow-xs max-w-3xl mx-auto w-full min-w-0 space-y-6"
+          className="bg-white rounded-2xl sm:rounded-3xl border border-[#E2E8F0] p-5 sm:p-8 md:p-10 shadow-xs max-w-6xl mx-auto w-full min-w-0 space-y-6"
         >
           {/* Header Title */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
@@ -493,11 +493,11 @@ export default function LeaveManagementView({
                 Reason for Absence (Optional)
               </label>
               <textarea
-                rows={3}
+                rows={4}
                 placeholder="Provide a detailed reason..."
                 value={applyForm.description}
                 onChange={(e) => setApplyForm({ ...applyForm, description: e.target.value })}
-                className="w-full p-3.5 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 outline-none focus:border-blue-600 transition resize-y"
+                className="w-full p-3.5 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 outline-none focus:border-blue-600 transition resize-y min-h-[120px]"
               />
             </div>
 
