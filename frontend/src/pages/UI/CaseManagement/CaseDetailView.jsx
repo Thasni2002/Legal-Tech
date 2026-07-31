@@ -26,6 +26,14 @@ import {
   Download,
   BookOpen,
   Search,
+  Sparkles,
+  Copy,
+  Save,
+  Bot,
+  RefreshCw,
+  FileCheck,
+  Check,
+  History,
 } from "lucide-react";
 import { usePermissions } from "@/utils/usePermissions";
 import { getLoggedInUser } from "@/utils/auth";
@@ -162,6 +170,259 @@ export default function CaseDetailView({ id }) {
   // Case Fee & Billing State — real data from Finance Management
   const [caseInvoices, setCaseInvoices] = useState([]);
   const [feeLoading, setFeeLoading] = useState(false);
+
+  // Document Generation Tab State
+  const [docGenPrompt, setDocGenPrompt] = useState("");
+  const [docGenLoading, setDocGenLoading] = useState(false);
+  const [docGenError, setDocGenError] = useState(null);
+  const [generatedDocContent, setGeneratedDocContent] = useState("");
+  const [docGenEditMode, setDocGenEditMode] = useState(false);
+  const [docGenEditedContent, setDocGenEditedContent] = useState("");
+  const [docGenTitle, setDocGenTitle] = useState("Bail Application");
+  const [docGenHistory, setDocGenHistory] = useState([]);
+  const [docGenHistoryLoading, setDocGenHistoryLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [saveCaseDocLoading, setSaveCaseDocLoading] = useState(false);
+  const [saveCaseDocSuccess, setSaveCaseDocSuccess] = useState(false);
+  const [activeDocHistoryId, setActiveDocHistoryId] = useState(null);
+  const [savingDocEdit, setSavingDocEdit] = useState(false);
+  const [saveEditSuccess, setSaveEditSuccess] = useState(false);
+
+  const fetchCaseDocHistory = async (caseId) => {
+    if (!caseId) return;
+    setDocGenHistoryLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/case-management/ai-documents/history?case_id=${caseId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setDocGenHistory(data);
+      }
+    } catch (err) {
+      console.error("Error fetching case doc history:", err);
+    } finally {
+      setDocGenHistoryLoading(false);
+    }
+  };
+
+  const handleSaveDocEdit = async () => {
+    setGeneratedDocContent(docGenEditedContent);
+
+    if (activeDocHistoryId) {
+      setSavingDocEdit(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/case-management/ai-documents/history/${activeDocHistoryId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: docGenEditedContent })
+        });
+
+        if (res.ok) {
+          const updatedItem = await res.json();
+          setDocGenHistory(prev =>
+            prev.map(item => (item.id === activeDocHistoryId ? { ...item, content: updatedItem.content || docGenEditedContent } : item))
+          );
+        }
+      } catch (err) {
+        console.error("Error saving document edit to backend:", err);
+      } finally {
+        setSavingDocEdit(false);
+      }
+    }
+
+    setDocGenEditMode(false);
+    setSaveEditSuccess(true);
+    setTimeout(() => setSaveEditSuccess(false), 2500);
+  };
+
+  const [deleteDocHistoryId, setDeleteDocHistoryId] = useState(null);
+  const [deleteDocHistoryLoading, setDeleteDocHistoryLoading] = useState(false);
+
+  const confirmDeleteDocHistory = async () => {
+    if (!deleteDocHistoryId) return;
+    setDeleteDocHistoryLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/case-management/ai-documents/history/${deleteDocHistoryId}`, {
+        method: "DELETE"
+      });
+
+      if (res.ok) {
+        setDocGenHistory(prev => prev.filter(item => item.id !== deleteDocHistoryId));
+        setDeleteDocHistoryId(null);
+      } else {
+        alert("Failed to delete document history item.");
+      }
+    } catch (err) {
+      console.error("Delete document history error:", err);
+      alert("Error deleting document history item.");
+    } finally {
+      setDeleteDocHistoryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "generate_doc" && selectedCase?.id) {
+      fetchCaseDocHistory(selectedCase.id);
+    }
+  }, [activeTab, selectedCase?.id]);
+
+  const handleGenerateCaseDocument = async (customPrompt = null, docTypeLabel = null) => {
+    const promptToUse = customPrompt || docGenPrompt;
+    if (!selectedCase || !promptToUse || !promptToUse.trim()) {
+      setDocGenError("Please enter prompt instructions or click a template.");
+      return;
+    }
+    if (docTypeLabel) setDocGenTitle(docTypeLabel);
+    setDocGenLoading(true);
+    setDocGenError(null);
+    setSaveCaseDocSuccess(false);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/case-management/${selectedCase.id}/generate-document`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: promptToUse })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || "Failed to generate legal document.");
+      }
+
+      const data = await res.json();
+      setGeneratedDocContent(data.document || "");
+      setDocGenEditedContent(data.document || "");
+      setActiveDocHistoryId(data.id || null);
+      setDocGenEditMode(false);
+      fetchCaseDocHistory(selectedCase.id);
+    } catch (err) {
+      setDocGenError(err.message);
+    } finally {
+      setDocGenLoading(false);
+    }
+  };
+
+  const handleSaveToCaseDocuments = async () => {
+    const contentToSave = docGenEditMode ? docGenEditedContent : generatedDocContent;
+    if (!selectedCase || !contentToSave) return;
+    setSaveCaseDocLoading(true);
+
+    try {
+      const docName = `${(docGenTitle || "Generated_Document").replace(/[^a-zA-Z0-9_]/g, "_")}_${selectedCase.case_no}.txt`;
+      const newDocObj = {
+        documentType: docGenTitle || "AI Legal Document",
+        advocate: getLoggedInUser()?.username || selectedCase.selected_advocate || "Advocate",
+        file: docName,
+        url: "",
+        password: ""
+      };
+
+      const updatedDocuments = [...(selectedCase.documents || []), newDocObj];
+
+      const res = await fetch(`${API_BASE_URL}/case-management/${selectedCase.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caseId: selectedCase.case_id,
+          cnrNumber: selectedCase.cnr_number,
+          caseTitle: selectedCase.case_title,
+          caseNo: selectedCase.case_no,
+          caseType: selectedCase.case_type,
+          caseDes: selectedCase.case_description,
+          clientName: selectedCase.client_name,
+          contactNumber: selectedCase.contact_number,
+          emailId: selectedCase.email_id,
+          courtName: selectedCase.court_name,
+          courtType: selectedCase.court_type,
+          status: selectedCase.status,
+          selectedAdvocate: selectedCase.selected_advocate,
+          documents: updatedDocuments,
+          nextHearingDate: selectedCase.next_hearing_date
+        })
+      });
+
+      if (!res.ok) throw new Error("Failed to save document to case files.");
+
+      setSelectedCase(prev => ({
+        ...prev,
+        documents: updatedDocuments
+      }));
+      setSaveCaseDocSuccess(true);
+      setTimeout(() => setSaveCaseDocSuccess(false), 3000);
+    } catch (err) {
+      console.error("Save to Case Documents error:", err);
+      alert(err.message || "Failed to save document to case files.");
+    } finally {
+      setSaveCaseDocLoading(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    const content = docGenEditMode ? docGenEditedContent : generatedDocContent;
+    if (!content || !selectedCase) return;
+
+    try {
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF();
+      const margin = 15;
+      const pageWidth = doc.internal.pageSize.getWidth() - margin * 2;
+      const pageHeight = doc.internal.pageSize.getHeight();
+
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text((docGenTitle || "Generated Document").toUpperCase(), margin, 20);
+
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Case Title: ${selectedCase.case_title}`, margin, 27);
+      doc.text(`Case No: ${selectedCase.case_no} | CNR: ${selectedCase.cnr_number || "N/A"} | Court: ${selectedCase.court_name || "N/A"}`, margin, 33);
+      doc.text(`Client: ${selectedCase.client_name} | Date: ${new Date().toLocaleDateString("en-IN")}`, margin, 39);
+
+      doc.setLineWidth(0.5);
+      doc.setDrawColor(200, 200, 200);
+      doc.line(margin, 43, margin + pageWidth, 43);
+
+      doc.setFontSize(10);
+      const cleanContent = content.replace(/[#*`_~]/g, "");
+      const splitLines = doc.splitTextToSize(cleanContent, pageWidth);
+
+      let cursorY = 51;
+      splitLines.forEach((line) => {
+        if (cursorY > pageHeight - 20) {
+          doc.addPage();
+          cursorY = 20;
+        }
+        doc.text(line, margin, cursorY);
+        cursorY += 5.5;
+      });
+
+      const fileName = `${(docGenTitle || "Doc").replace(/[^a-zA-Z0-9]/g, "_")}_Case_${selectedCase.case_no}.pdf`;
+      doc.save(fileName);
+    } catch (err) {
+      console.error("PDF generation error:", err);
+      alert("Error generating PDF document.");
+    }
+  };
+
+  const handleDownloadTxt = () => {
+    const content = docGenEditMode ? docGenEditedContent : generatedDocContent;
+    if (!content || !selectedCase) return;
+    const element = document.createElement("a");
+    const file = new Blob([content], { type: "text/plain" });
+    element.href = URL.createObjectURL(file);
+    element.download = `${(docGenTitle || "Doc").replace(/[^a-zA-Z0-9]/g, "_")}_Case_${selectedCase.case_no}.txt`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
+  const handleCopyContent = () => {
+    const content = docGenEditMode ? docGenEditedContent : generatedDocContent;
+    if (!content) return;
+    navigator.clipboard.writeText(content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const fetchCaseInvoices = async (caseNo, clientEmail) => {
     if (!caseNo && !clientEmail) return;
@@ -733,9 +994,9 @@ export default function CaseDetailView({ id }) {
                 { key: "overview", label: "📋 Case Overview" },
                 { key: "documents", label: "📁 Case Documents" },
                 { key: "hearings", label: "⚖️ eCourts Hearings" },
-                { key: "orders", label: "📜 Orders & Judgments" },
                 { key: "notes", label: "📝 Advocate Notes" },
                 { key: "fees", label: "💳 Billing" },
+                { key: "generate_doc", label: "✨ Generate Document" },
               ].map((t) => (
                 <option key={t.key} value={t.key}>
                   {t.label}
@@ -750,9 +1011,9 @@ export default function CaseDetailView({ id }) {
               { key: "overview", label: "Case Overview" },
               { key: "documents", label: "Case Documents" },
               { key: "hearings", label: "eCourts Hearings" },
-              { key: "orders", label: "Orders & Judgments" },
               { key: "notes", label: "Advocate Notes" },
               { key: "fees", label: "Billing" },
+              { key: "generate_doc", label: "✨ Generate Document" },
             ].map((tabObj) => (
               <button
                 key={tabObj.key}
@@ -1386,62 +1647,6 @@ export default function CaseDetailView({ id }) {
 
 
 
-          {/* TAB: ORDERS & JUDGMENTS */}
-          {activeTab === "orders" && (
-            <div className="space-y-6">
-              <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-                Official Court Orders & Judgment Documents
-              </h4>
-              {ecourtsData?.orders && ecourtsData.orders.length > 0 ? (
-                <div className="overflow-x-auto border border-slate-200 rounded-xl">
-                  <table className="w-full min-w-[620px] text-left text-xs">
-                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-bold">
-                      <tr>
-                        <th className="py-3 px-4">Order Date</th>
-                        <th className="py-3 px-4">Type</th>
-                        <th className="py-3 px-4">Presiding Judge</th>
-                        <th className="py-3 px-4">Order Summary</th>
-                        <th className="py-3 px-4 text-right">Download</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-                      {ecourtsData.orders.map((ord) => (
-                        <tr key={ord.id} className="hover:bg-slate-50">
-                          <td className="py-3 px-4 font-mono font-bold text-slate-900">{ord.orderDate}</td>
-                          <td className="py-3 px-4">
-                            <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 font-bold border border-purple-200">
-                              {ord.orderType}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4">{ord.judgeName}</td>
-                          <td className="py-3 px-4">{ord.summary}</td>
-                          <td className="py-3 px-4 text-right">
-                            {ord.fileUrl ? (
-                              <a
-                                href={ord.fileUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1 transition cursor-pointer"
-                              >
-                                PDF ({ord.fileSize})
-                              </a>
-                            ) : (
-                              <span className="text-slate-400 font-semibold">N/A</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs font-medium">
-                  No court order documents uploaded yet for CNR Number {selectedCase.cnr_number || "this case"}.
-                </div>
-              )}
-            </div>
-          )}
-
 
 
           {/* TAB: ADVOCATE NOTES & TASKS */}
@@ -1715,6 +1920,303 @@ export default function CaseDetailView({ id }) {
           {activeTab === "similar_cases" && selectedCase && (
             <div className="space-y-6">
               <SimilarCasesClient caseId={selectedCase.id} />
+            </div>
+          )}
+
+          {/* TAB: GENERATE DOCUMENT FOR THIS CASE */}
+          {activeTab === "generate_doc" && selectedCase && (
+            <div className="space-y-6">
+              {/* Header Context Banner */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50/50 to-slate-50 border border-blue-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shrink-0">
+                    <Sparkles size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-[#0F172A] text-base">
+                      AI Legal Document Generator
+                    </h3>
+                    <p className="text-xs text-[#64748B] mt-0.5">
+                      Generating document specifically for <span className="font-bold text-[#0F172A]">{selectedCase.case_title}</span> (Case #{selectedCase.case_no})
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600 bg-white/80 backdrop-blur-sm p-2 rounded-xl border border-slate-200">
+                  <span className="px-2 py-1 bg-slate-100 rounded-md">CNR: {selectedCase.cnr_number || "N/A"}</span>
+                  <span className="px-2 py-1 bg-slate-100 rounded-md">Court: {selectedCase.court_name || "N/A"}</span>
+                  <span className="px-2 py-1 bg-slate-100 rounded-md">Client: {selectedCase.client_name || "N/A"}</span>
+                </div>
+              </div>
+
+              {/* Document Generation Input Box & Presets */}
+              <div className="bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0] p-4 sm:p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-[#0F172A] uppercase tracking-wider mb-2">
+                    Select Template / Document Type Quick Presets:
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { label: "📜 Bail Application", prompt: `Draft an urgent Bail Application for case #${selectedCase.case_no} (${selectedCase.case_title}) pending before ${selectedCase.court_name}.` },
+                      { label: "⚖️ Written Statement", prompt: `Draft a Written Statement / Reply for case #${selectedCase.case_no} (${selectedCase.case_title}) on behalf of client ${selectedCase.client_name}.` },
+                      { label: "📢 Legal Notice", prompt: `Draft a Legal Notice for case #${selectedCase.case_no} (${selectedCase.case_title}) concerning ${selectedCase.case_description || "legal dispute"}.` },
+                      { label: "📄 Affidavit", prompt: `Draft a sworn Affidavit for client ${selectedCase.client_name} in case #${selectedCase.case_no} (${selectedCase.case_title}) before ${selectedCase.court_name}.` },
+                      { label: "🏛️ Writ Petition", prompt: `Draft a Writ Petition for case #${selectedCase.case_no} (${selectedCase.case_title}) under appropriate constitutional / legal jurisdiction.` },
+                      { label: "📝 Case Summary & Arguments", prompt: `Generate a comprehensive Case Summary and Legal Arguments overview for case #${selectedCase.case_no} (${selectedCase.case_title}).` }
+                    ].map((preset, pIdx) => (
+                      <button
+                        key={pIdx}
+                        onClick={() => {
+                          setDocGenPrompt(preset.prompt);
+                          handleGenerateCaseDocument(preset.prompt, preset.label.replace(/^[^a-zA-Z0-9]+/, "").trim());
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-white border border-[#E2E8F0] hover:border-blue-300 hover:bg-blue-50/50 text-xs font-bold text-[#0F172A] transition cursor-pointer shadow-2xs"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#0F172A] uppercase tracking-wider mb-1.5">
+                    Custom Prompt Instructions for Case #{selectedCase.case_no}:
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={docGenPrompt}
+                    onChange={(e) => setDocGenPrompt(e.target.value)}
+                    placeholder={`Enter specific instructions to generate document for ${selectedCase.case_title}...`}
+                    className="w-full rounded-xl border border-[#E2E8F0] bg-white p-3 text-xs font-medium text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  />
+                </div>
+
+                {docGenError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs font-bold text-red-700">
+                    {docGenError}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-[#64748B]">
+                    AI models will automatically inject case facts, CNR, court name & client details.
+                  </span>
+                  <button
+                    onClick={() => handleGenerateCaseDocument()}
+                    disabled={docGenLoading}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-50 text-white font-bold text-xs transition cursor-pointer shadow-sm"
+                  >
+                    {docGenLoading ? (
+                      <>
+                        <RefreshCw size={14} className="animate-spin" />
+                        Generating Document...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={14} />
+                        Generate Document
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Generated Document Display Section */}
+              {(generatedDocContent || docGenLoading) && (
+                <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden space-y-0">
+                  {/* Top Bar / Toolbar */}
+                  <div className="bg-[#F8FAFC] border-b border-[#E2E8F0] px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText size={16} className="text-[#2563EB] shrink-0" />
+                      <h4 className="font-extrabold text-[#0F172A] text-sm truncate">
+                        {docGenTitle || "Generated Legal Document"} — Case #{selectedCase.case_no}
+                      </h4>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* Download PDF */}
+                      <button
+                        onClick={handleDownloadPDF}
+                        disabled={!generatedDocContent}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs transition cursor-pointer disabled:opacity-50"
+                        title="Download as formatted PDF"
+                      >
+                        <Download size={13} /> PDF
+                      </button>
+
+                      {/* Download TXT */}
+                      <button
+                        onClick={handleDownloadTxt}
+                        disabled={!generatedDocContent}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs transition cursor-pointer disabled:opacity-50"
+                        title="Download text file"
+                      >
+                        <FileText size={13} /> TXT
+                      </button>
+
+                      {/* Save to Case Documents */}
+                      <button
+                        onClick={handleSaveToCaseDocuments}
+                        disabled={saveCaseDocLoading || !generatedDocContent}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer border ${
+                          saveCaseDocSuccess
+                            ? "bg-emerald-600 text-white border-emerald-600"
+                            : "bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200"
+                        }`}
+                        title="Save directly into Case Documents folder for this case"
+                      >
+                        {saveCaseDocSuccess ? (
+                          <>
+                            <Check size={13} /> Saved to Case!
+                          </>
+                        ) : saveCaseDocLoading ? (
+                          <>
+                            <RefreshCw size={13} className="animate-spin" /> Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save size={13} /> Save to Case
+                          </>
+                        )}
+                      </button>
+
+                      {/* Copy */}
+                      <button
+                        onClick={handleCopyContent}
+                        disabled={!generatedDocContent}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs transition cursor-pointer disabled:opacity-50"
+                      >
+                        {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                        {copied ? "Copied!" : "Copy"}
+                      </button>
+
+                      {/* Toggle Edit / Save Edit Mode */}
+                      {docGenEditMode ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={handleSaveDocEdit}
+                            disabled={savingDocEdit}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-xs disabled:opacity-50"
+                            title="Save edits permanently to document and history"
+                          >
+                            <Check size={13} /> {savingDocEdit ? "Saving..." : "Save Edit"}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setDocGenEditedContent(generatedDocContent);
+                              setDocGenEditMode(false);
+                            }}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          {saveEditSuccess && (
+                            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200 animate-in fade-in duration-200">
+                              ✓ Edit Saved!
+                            </span>
+                          )}
+                          <button
+                            onClick={() => {
+                              setDocGenEditedContent(generatedDocContent);
+                              setDocGenEditMode(true);
+                            }}
+                            disabled={!generatedDocContent}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer disabled:opacity-50"
+                          >
+                            <Pencil size={13} /> Edit Document
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-5">
+                    {docGenLoading ? (
+                      <div className="py-12 flex flex-col items-center justify-center gap-3">
+                        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                        <p className="text-xs font-bold text-slate-600">Generating legal document using case context...</p>
+                      </div>
+                    ) : docGenEditMode ? (
+                      <textarea
+                        rows={16}
+                        value={docGenEditedContent}
+                        onChange={(e) => setDocGenEditedContent(e.target.value)}
+                        className="w-full p-4 font-mono text-xs text-[#0F172A] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      />
+                    ) : (
+                      <div className="prose prose-slate max-w-none text-xs font-sans whitespace-pre-wrap leading-relaxed text-[#0F172A] bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                        {generatedDocContent}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Case-specific History Section */}
+              <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b border-[#F1F5F9] pb-3">
+                  <div className="flex items-center gap-2">
+                    <History size={16} className="text-[#2563EB]" />
+                    <h4 className="font-extrabold text-[#0F172A] text-sm">
+                      Generated Documents History for Case #{selectedCase.case_no}
+                    </h4>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
+                    {docGenHistory.length} saved
+                  </span>
+                </div>
+
+                {docGenHistoryLoading ? (
+                  <p className="text-xs text-slate-500 text-center py-4">Loading history for this case...</p>
+                ) : docGenHistory.length === 0 ? (
+                  <p className="text-xs text-slate-400 text-center py-6">
+                    No generated documents saved for this case yet. Click "Generate Document" above to create one.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {docGenHistory.map((hItem) => (
+                      <div
+                        key={hItem.id}
+                        onClick={() => {
+                          setGeneratedDocContent(hItem.content || "");
+                          setDocGenEditedContent(hItem.content || "");
+                          setActiveDocHistoryId(hItem.id || null);
+                          setDocGenTitle(hItem.prompt ? hItem.prompt.substring(0, 30) : "Generated Document");
+                          setDocGenEditMode(false);
+                        }}
+                        className="group relative p-3.5 bg-slate-50 hover:bg-blue-50/60 border border-slate-200 hover:border-blue-300 rounded-xl transition cursor-pointer space-y-1.5"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-xs text-[#0F172A] truncate flex-1 min-w-0">
+                            {hItem.prompt || "Generated Legal Document"}
+                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {hItem.created_at ? new Date(hItem.created_at).toLocaleDateString("en-IN") : ""}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteDocHistoryId(hItem.id);
+                              }}
+                              className="p-1 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                              title="Delete this history item"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-slate-500 line-clamp-2">
+                          {hItem.content ? hItem.content.replace(/[#*`_~]/g, "").substring(0, 120) + "..." : ""}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -1992,6 +2494,56 @@ export default function CaseDetailView({ id }) {
                 className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition cursor-pointer"
               >
                 Close Summary
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Delete AI Document History Modal (Full-Screen Portal covering sidebar & navbar) */}
+      {deleteDocHistoryId !== null && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          {/* Backdrop covering sidebar & navbar */}
+          <div
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+            onClick={() => setDeleteDocHistoryId(null)}
+          />
+
+          {/* Modal Container */}
+          <div className="relative bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl z-10 animate-in fade-in zoom-in-95 duration-200 border border-slate-100 text-center space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto text-rose-600 shadow-xs">
+              <Trash2 size={26} />
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-lg font-extrabold text-[#0F172A]">Delete History Item</h3>
+              <p className="text-xs text-[#64748B] font-medium leading-relaxed">
+                Are you sure you want to delete this generated document history item? This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setDeleteDocHistoryId(null)}
+                className="flex-1 py-2.5 rounded-xl border border-[#E2E8F0] text-[#64748B] font-bold text-xs hover:bg-[#F8FAFC] transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteDocHistory}
+                disabled={deleteDocHistoryLoading}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {deleteDocHistoryLoading ? (
+                  <>
+                    <RefreshCw size={13} className="animate-spin" /> Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={13} /> Delete Document
+                  </>
+                )}
               </button>
             </div>
           </div>

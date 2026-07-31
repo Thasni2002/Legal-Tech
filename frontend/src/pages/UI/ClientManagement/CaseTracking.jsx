@@ -117,6 +117,58 @@ export default function CaseTracking() {
     return Object.values(map);
   }, [cases]);
 
+  // ── auto-select targeted case when navigating via "Track Case" ──
+  useEffect(() => {
+    if (!clients || clients.length === 0) return;
+
+    let targetParam = null;
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      targetParam = params.get("case_id");
+    }
+
+    let storedData = null;
+    try {
+      const raw = localStorage.getItem("trackCaseData");
+      if (raw) storedData = JSON.parse(raw);
+    } catch (e) {}
+
+    const searchTarget = (
+      targetParam ||
+      storedData?.case_id ||
+      storedData?.case_no ||
+      storedData?.dbId ||
+      ""
+    )
+      .toString()
+      .trim()
+      .toLowerCase();
+
+    if (searchTarget) {
+      for (const cl of clients) {
+        const match = cl.cases.find((cItem) => {
+          const idStr = (cItem.id || "").toString().toLowerCase();
+          const dbIdStr = (cItem.dbId || "").toString().toLowerCase();
+          const caseNoStr = (cItem.case_no || "").toString().toLowerCase();
+          const nameStr = (cItem.name || "").toString().toLowerCase();
+          return (
+            idStr === searchTarget ||
+            dbIdStr === searchTarget ||
+            caseNoStr === searchTarget ||
+            (searchTarget.length > 3 && nameStr.includes(searchTarget))
+          );
+        });
+
+        if (match) {
+          setExpandedClient(cl.id);
+          setSelectedCase(match);
+          if (storedData) localStorage.removeItem("trackCaseData");
+          break;
+        }
+      }
+    }
+  }, [clients]);
+
   // ── search filter — matches on client name or case title/id ──
   const filteredClients = useMemo(() => {
     if (!searchTerm.trim()) return clients;
