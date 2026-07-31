@@ -684,15 +684,7 @@ export default function CaseDetailView({ id }) {
             <span className="truncate">View Similar Cases</span>
           </button>
 
-          {/* Court & Firm Operations Group */}
-          <button
-            onClick={handleSyncWithECourts}
-            disabled={syncLoading}
-            className="flex items-center justify-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition shadow-xs disabled:opacity-50 cursor-pointer text-center min-w-0"
-          >
-            <Gavel size={14} className={syncLoading ? "animate-spin shrink-0" : "shrink-0"} />
-            <span className="truncate">{syncLoading ? "Syncing..." : "Sync eCourts"}</span>
-          </button>
+
 
           <button
             onClick={() => router.push(`/lawfirm-management/assign-advocate?directCaseId=${selectedCase.id}`)}

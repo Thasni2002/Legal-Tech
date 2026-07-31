@@ -502,7 +502,7 @@ export default function TaskFormModal({ onClose, onSaved, editTask = null }) {
           borderRadius: "20px",
           boxShadow: "0 25px 60px rgba(0,0,0,0.18)",
           width: "100%",
-          maxWidth: "540px",
+          maxWidth: "780px",
           maxHeight: "92vh",
           overflow: "hidden",
           display: "flex",
