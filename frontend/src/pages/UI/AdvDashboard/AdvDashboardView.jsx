@@ -315,25 +315,27 @@ export default function AdvDashboardView() {
     ];
 
     return (
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5 space-y-4 lg:space-y-5 animate-in fade-in zoom-in-95 duration-500">
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 animate-in fade-in zoom-in-95 duration-500">
             {/* Page Header */}
-            <div className="bg-white rounded-2xl shadow-md border border-[#E2E8F0] p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">                <div>
-                <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
-                    {greeting}, {displayName}
-                </h1>
-                <p className="text-[#64748B] mt-2 text-lg font-medium">
-                    {displayRole}
-                </p>
-            </div>
-                <div className="flex flex-col items-start lg:items-end gap-3 w-full lg:w-auto">                  <div className="text-left md:text-right bg-[#F8FAFC] px-6 py-4 rounded-2xl border border-[#E2E8F0]">
-                    <p className="text-[#475569] font-bold text-sm uppercase tracking-wider">Today's Date</p>
-                    <p className="text-[#0F172A] font-extrabold text-lg mt-1">{currentDate}</p>
+            <div className="bg-white rounded-2xl shadow-md border border-[#E2E8F0] p-4 sm:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-xl sm:text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight break-words">
+                        {greeting}, {displayName}
+                    </h1>
+                    <p className="text-[#64748B] mt-1 sm:mt-2 text-base sm:text-lg font-medium">
+                        {displayRole}
+                    </p>
                 </div>
-                    <div className="flex items-center gap-2 flex-wrap justify-end">
+                <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-3 w-full lg:w-auto">
+                    <div className="text-left lg:text-right bg-[#F8FAFC] px-4 py-3 sm:px-6 sm:py-4 rounded-2xl border border-[#E2E8F0] flex-1 sm:flex-none">
+                        <p className="text-[#475569] font-bold text-xs sm:text-sm uppercase tracking-wider">Today's Date</p>
+                        <p className="text-[#0F172A] font-extrabold text-base sm:text-lg mt-0.5 sm:mt-1">{currentDate}</p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap justify-start lg:justify-end">
                         {/* View Calendar button */}
                         <button
                             onClick={() => router.push("/calendar")}
-                            className="w-full sm:w-auto flex items-center justify-center gap-2 text-xs font-bold text-white bg-[#2563EB] hover:bg-[#1D4ED8] px-4 py-2.5 rounded-xl transition-all"
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 text-xs sm:text-sm font-bold text-white bg-[#2563EB] hover:bg-[#1D4ED8] px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-sm"
                         >
                             View Calendar
                         </button>
@@ -342,7 +344,7 @@ export default function AdvDashboardView() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
                 {stats.map((item, index) => {
                     const Icon = item.icon;
                     const colors = [
@@ -364,11 +366,11 @@ export default function AdvDashboardView() {
                                 <Icon className={`w-5 h-5 ${color.text}`} />
                             </div>
 
-                            <p className="text-[#475569] text-[10px] font-bold uppercase tracking-wider mb-1">
+                            <p className="text-[#475569] text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1">
                                 {item.title}
                             </p>
 
-                            <h2 className="text-2xl font-black text-[#0F172A] tracking-tight">
+                            <h2 className="text-2xl sm:text-3xl font-black text-[#0F172A] tracking-tight">
                                 {item.value}
                             </h2>
                         </div>
@@ -382,18 +384,35 @@ export default function AdvDashboardView() {
                     {/* Total Advocates */}
                     {selectedCard === "advocates" && (
                         <>
-                            <div className="px-6 py-4 border-b border-[#F1F5F9] bg-slate-50 flex items-center justify-between">
-                                <h3 className="text-sm font-bold text-[#0F172A] uppercase tracking-wider">All Advocates</h3>
+                            <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-[#F1F5F9] bg-slate-50 flex items-center justify-between">
+                                <h3 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider">All Advocates</h3>
                                 <span className="text-xs text-[#64748B] font-medium">{data?.advocates?.length || 0} total</span>
                             </div>
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-[#E2E8F0]">
+
+                            {/* Mobile Card List */}
+                            <div className="block sm:hidden divide-y divide-[#E2E8F0] bg-white">
+                                {data?.advocates?.length > 0 ? data.advocates.map((adv, i) => (
+                                    <div key={`adv-card-${i}`} className="p-4 space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm font-semibold text-[#0F172A] capitalize">{adv.username || adv.name || "—"}</span>
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${ROLE_BADGE[adv.role] || "bg-slate-100 text-slate-600"}`}>{adv.role}</span>
+                                        </div>
+                                        <p className="text-xs text-[#64748B]">{adv.email || "—"}</p>
+                                    </div>
+                                )) : (
+                                    <div className="p-6 text-center text-sm text-[#94A3B8]">No advocates found.</div>
+                                )}
+                            </div>
+
+                            {/* Desktop Table View */}
+                            <div className="hidden sm:block w-full">
+                                <table className="w-full divide-y divide-[#E2E8F0]">
                                     <thead className="bg-[#F8FAFC]">
                                         <tr>
-                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">#</th>
-                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Name</th>
-                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Role</th>
-                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Email</th>
+                                            <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#64748B]">#</th>
+                                            <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#64748B]">Name</th>
+                                            <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#64748B]">Role</th>
+                                            <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#64748B]">Email</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[#F1F5F9] bg-white">
@@ -418,19 +437,40 @@ export default function AdvDashboardView() {
                     {/* Active Cases */}
                     {selectedCard === "activeCases" && (
                         <>
-                            <div className="px-6 py-4 border-b border-[#F1F5F9] bg-slate-50 flex items-center justify-between">
-                                <h3 className="text-sm font-bold text-[#0F172A] uppercase tracking-wider">Active Cases</h3>
+                            <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-[#F1F5F9] bg-slate-50 flex items-center justify-between">
+                                <h3 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider">Active Cases</h3>
                                 <span className="text-xs text-[#64748B] font-medium">{data?.activeCases?.length || 0} cases</span>
                             </div>
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-[#E2E8F0]">
+
+                            {/* Mobile Card List */}
+                            <div className="block sm:hidden divide-y divide-[#E2E8F0] bg-white">
+                                {data?.activeCases?.length > 0 ? data.activeCases.map((c, i) => (
+                                    <div key={`active-card-${i}`} className="p-4 space-y-2">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span className="text-xs font-mono font-bold text-[#64748B]">{c.case_id || c.case_no || "—"}</span>
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${c.status === "Active" ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"}`}>{c.status}</span>
+                                        </div>
+                                        <p className="text-sm font-semibold text-[#0F172A]">{c.client_name || "—"}</p>
+                                        <div className="flex items-center justify-between text-xs text-[#475569]">
+                                            <span>{c.case_type || "—"}</span>
+                                            <span>{c.court_name || "—"}</span>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="p-6 text-center text-sm text-[#94A3B8]">No active cases found.</div>
+                                )}
+                            </div>
+
+                            {/* Desktop Table View */}
+                            <div className="hidden sm:block w-full">
+                                <table className="w-full divide-y divide-[#E2E8F0]">
                                     <thead className="bg-[#F8FAFC]">
                                         <tr>
-                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Case ID</th>
-                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Client</th>
-                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Type</th>
-                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Court</th>
-                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Status</th>
+                                            <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#64748B]">Case ID</th>
+                                            <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#64748B]">Client</th>
+                                            <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#64748B]">Type</th>
+                                            <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#64748B]">Court</th>
+                                            <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#64748B]">Status</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[#F1F5F9] bg-white">
@@ -457,18 +497,36 @@ export default function AdvDashboardView() {
                     {/* Upcoming Hearings */}
                     {selectedCard === "hearings" && (
                         <>
-                            <div className="px-6 py-4 border-b border-[#F1F5F9] bg-slate-50 flex items-center justify-between">
-                                <h3 className="text-sm font-bold text-[#0F172A] uppercase tracking-wider">Upcoming Hearings</h3>
+                            <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-[#F1F5F9] bg-slate-50 flex items-center justify-between">
+                                <h3 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider">Upcoming Hearings</h3>
                                 <span className="text-xs text-[#64748B] font-medium">{data?.hearings?.length || 0} scheduled</span>
                             </div>
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-[#E2E8F0]">
+
+                            {/* Mobile Card List */}
+                            <div className="block sm:hidden divide-y divide-[#E2E8F0] bg-white">
+                                {data?.hearings?.length > 0 ? data.hearings.map((h, i) => (
+                                    <div key={`hearing-card-${i}`} className="p-4 space-y-2">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span className="text-xs font-bold bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full">{h.date}</span>
+                                            <span className="text-xs text-[#475569]">{h.court || "—"}</span>
+                                        </div>
+                                        <p className="text-sm font-semibold text-[#0F172A]">{h.case_title || "—"}</p>
+                                        {h.advocate_name && <p className="text-xs text-[#64748B]">👤 {h.advocate_name}</p>}
+                                    </div>
+                                )) : (
+                                    <div className="p-6 text-center text-sm text-[#94A3B8]">No upcoming hearings found.</div>
+                                )}
+                            </div>
+
+                            {/* Desktop Table View */}
+                            <div className="hidden sm:block w-full">
+                                <table className="w-full divide-y divide-[#E2E8F0]">
                                     <thead className="bg-[#F8FAFC]">
                                         <tr>
-                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Date</th>
-                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Case Title</th>
-                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Court</th>
-                                            <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Advocate</th>
+                                            <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#64748B]">Date</th>
+                                            <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#64748B]">Case Title</th>
+                                            <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#64748B]">Court</th>
+                                            <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#64748B]">Advocate</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[#F1F5F9] bg-white">
@@ -494,18 +552,53 @@ export default function AdvDashboardView() {
 
             {/* Case Overview */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-
-                <div className="col-span-12 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
-                    <div className="flex justify-between items-center mb-8">
-                        <h2 className="text-2xl font-extrabold text-[#0F172A]">
+                <div className="col-span-12 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
+                    <div className="flex justify-between items-center mb-6 sm:mb-8">
+                        <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F172A]">
                             Case Overview
                         </h2>
-                        <button className="text-xs font-bold text-[#2563EB] uppercase tracking-wider hover:text-[#1d4ed8] transition-colors">
+                        <button className="text-xs font-bold text-[#2563EB] uppercase tracking-wider hover:text-[#1d4ed8] transition-colors cursor-pointer">
                             View All
                         </button>
                     </div>
 
-                    <div className="w-full overflow-hidden rounded-2xl border border-[#E2E8F0]">
+                    {/* Mobile Card List */}
+                    <div className="block sm:hidden space-y-3">
+                        {data && data.cases.length > 0 ? (
+                            data.cases.slice(casesPage * 5, (casesPage + 1) * 5).map((c, index) => (
+                                <div
+                                    key={`case-overview-card-${index}`}
+                                    className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2.5"
+                                >
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="text-xs font-extrabold text-[#0F172A] tracking-tight">{c.case_id}</span>
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${c.status === "Hearing"
+                                            ? "bg-blue-50 text-blue-700 border-blue-200"
+                                            : c.status === "Active"
+                                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                                : "bg-amber-50 text-amber-700 border-amber-200"
+                                            }`}>
+                                            {c.status}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-bold text-[#1E293B]">{c.client_name}</p>
+                                        <p className="text-xs text-[#475569] font-medium">{c.type}</p>
+                                        <p className="text-xs text-[#64748B] flex items-center gap-1">
+                                            🏛️ <span>{c.court}</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="p-6 text-center text-sm font-medium text-[#64748B] bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">
+                                No cases found.
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden sm:block w-full rounded-2xl border border-[#E2E8F0] overflow-hidden">
                         <table className="w-full table-auto divide-y divide-[#E2E8F0]">
                             <thead className="bg-[#F8FAFC]">
                                 <tr>
@@ -574,54 +667,80 @@ export default function AdvDashboardView() {
                         </div>
                     )}
                 </div>
-
-
             </div>
 
             {/* Upcoming Hearings + Recent Documents */}
-            <div className="grid grid-cols-12 gap-8">
-
-                <div className="col-span-12 lg:col-span-8 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
-                    <div className="flex justify-between items-center mb-8">
-                        <h2 className="text-2xl font-extrabold text-[#0F172A]">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+                <div className="col-span-1 lg:col-span-8 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-4 sm:p-6 md:p-8 lg:p-10 flex flex-col justify-between overflow-hidden">
+                    <div className="flex justify-between items-center mb-6 sm:mb-8">
+                        <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F172A]">
                             Upcoming Hearings
                         </h2>
                     </div>
 
-                    <div className="w-full overflow-hidden rounded-2xl border border-[#E2E8F0]">
-                        <table className="w-full table-fixed divide-y divide-[#E2E8F0]">
+                    {/* Mobile Card List */}
+                    <div className="block sm:hidden space-y-3">
+                        {data && data.hearings.length > 0 ? (
+                            data.hearings.slice(hearingsPage * 5, (hearingsPage + 1) * 5).map((h, index) => (
+                                <div
+                                    key={`hearing-card-${index}`}
+                                    className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2.5"
+                                >
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="bg-[#F1F5F9] px-2.5 py-1 rounded-lg text-xs font-bold text-[#0F172A] border border-[#E2E8F0]">
+                                            {h.date}
+                                        </div>
+                                        <span className="text-xs text-[#475569] font-semibold">{h.court}</span>
+                                    </div>
+                                    <p className="text-sm font-bold text-[#0F172A]">{h.case_title}</p>
+                                    {h.advocate_name && (
+                                        <p className="text-xs text-[#64748B]">👤 {h.advocate_name}</p>
+                                    )}
+                                </div>
+                            ))
+                        ) : (
+                            <div className="p-6 text-center text-sm font-medium text-[#64748B] bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">
+                                No upcoming hearings found.
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden sm:flex flex-col flex-1 w-full rounded-2xl border border-[#E2E8F0] overflow-hidden min-h-[340px]">
+                        <table className="w-full h-full table-auto divide-y divide-[#E2E8F0]">
                             <thead className="bg-[#F8FAFC]">
                                 <tr>
-                                    <th className="w-28 p-4 text-left text-xs font-bold text-[#475569] uppercase">Date</th>
-                                    <th className="w-[45%] p-4 text-left text-xs font-bold text-[#475569] uppercase">Case</th>
-                                    <th className="w-[25%] p-4 text-left text-xs font-bold text-[#475569] uppercase">Court</th>
-                                    <th className="w-[20%] p-4 text-left text-xs font-bold text-[#475569] uppercase">Advocate</th>
+                                    <th className="p-4 sm:px-5 sm:py-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
+                                    <th className="p-4 sm:px-5 sm:py-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case</th>
+                                    <th className="p-4 sm:px-5 sm:py-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Court</th>
+                                    <th className="p-4 sm:px-5 sm:py-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Advocate</th>
                                 </tr>
-                            </thead><tbody className="divide-y divide-[#E2E8F0] bg-white">
+                            </thead>
+                            <tbody className="divide-y divide-[#E2E8F0] bg-white h-full">
                                 {data && data.hearings.length > 0 ? (
                                     data.hearings.slice(hearingsPage * 5, (hearingsPage + 1) * 5).map((h, index) => (
                                         <tr
                                             key={index}
                                             className="hover:bg-[#F8FAFC] transition-colors duration-150"
                                         >
-                                            <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">
+                                            <td className="p-4 sm:px-5 sm:py-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">
                                                 <div className="bg-[#F1F5F9] px-3 py-1.5 rounded-lg inline-block text-center border border-[#E2E8F0]">
                                                     {h.date}
                                                 </div>
                                             </td>
-                                            <td className="p-4 text-sm text-[#475569] font-medium break-words">
+                                            <td className="p-4 sm:px-5 sm:py-4 text-sm text-[#475569] font-medium break-words">
                                                 {h.case_title}
                                             </td>
-                                            <td className="p-4 text-sm text-[#475569] break-words">
+                                            <td className="p-4 sm:px-5 sm:py-4 text-sm text-[#475569] break-words">
                                                 {h.court}</td>
-                                            <td className="p-4 text-sm text-[#475569] break-words">
+                                            <td className="p-4 sm:px-5 sm:py-4 text-sm text-[#475569] break-words">
                                                 {h.advocate_name}
                                             </td>
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="5" className="p-8 text-center text-sm font-medium text-[#64748B]">
+                                        <td colSpan="4" className="py-20 px-6 text-center text-sm font-medium text-[#64748B]">
                                             No upcoming hearings found.
                                         </td>
                                     </tr>
@@ -655,42 +774,44 @@ export default function AdvDashboardView() {
                 </div>
 
                 {/* ─── Recent Documents Panel ─── */}
-                <div className="col-span-12 lg:col-span-4 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">                    <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-extrabold text-[#0F172A]">
-                        Recent Documents
-                    </h2>
-                    {isRefreshing && (
-                        <RefreshCw className="w-4 h-4 text-[#2563EB] animate-spin" />
-                    )}
-                </div>
+                <div className="col-span-1 lg:col-span-4 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-4 sm:p-6 md:p-8 lg:p-10 flex flex-col">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F172A]">
+                            Recent Documents
+                        </h2>
+                        {isRefreshing && (
+                            <RefreshCw className="w-4 h-4 text-[#2563EB] animate-spin" />
+                        )}
+                    </div>
 
-                    <div className="space-y-3 flex-1 overflow-y-auto max-h-[350px] lg:max-h-[480px]">
+                    <div className="space-y-3 flex-1 overflow-y-auto max-h-[350px] lg:max-h-[480px] pr-1">
                         {data && data.documents.length > 0 ? (
                             data.documents.map((doc, index) => {
                                 const roleBadgeClass = ROLE_BADGE[doc.uploaded_by_role] || "bg-slate-100 text-slate-600";
                                 return (
                                     <div
                                         key={doc.id || index}
-                                        className="p-4 rounded-2xl bg-[#F8FAFC] hover:bg-white border border-transparent hover:border-[#E2E8F0] hover:shadow-md transition-all duration-300 cursor-pointer group"
+                                        className="p-3.5 sm:p-4 rounded-2xl bg-[#F8FAFC] hover:bg-white border border-transparent hover:border-[#E2E8F0] hover:shadow-md transition-all duration-300 cursor-pointer group"
                                     >
-                                        {/* Top row: icon + filename + view button */}
+                                        {/* Top row: icon + filename */}
                                         <div className="flex items-start gap-3">
-                                            <div className="w-9 h-9 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                                                 <FileText className="w-4 h-4" />
                                             </div>
-                                            <div className="flex-1 min-w-0 pr-3">
-                                                <p className="text-sm font-semibold text-[#1E293B] group-hover:text-[#2563EB] transition-colors leading-tight">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-xs sm:text-sm font-semibold text-[#1E293B] group-hover:text-[#2563EB] transition-colors leading-tight break-words">
                                                     {doc.filename}
                                                 </p>
 
-                                                {/* Doc type badge */}
-                                                <div className="flex items-center justify-between mt-2">
-
-                                                {doc.document_type && doc.document_type !== "File" && (
-                                                    <span className="inline-flex mt-0.5 text-[10px] font-semibold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-                                                        {doc.document_type}
-                                                    </span>
-                                                            )}
+                                                {/* Doc type badge & View button */}
+                                                <div className="flex items-center justify-between flex-wrap gap-2 mt-2">
+                                                    {doc.document_type && doc.document_type !== "File" ? (
+                                                        <span className="inline-flex text-[10px] font-semibold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                                                            {doc.document_type}
+                                                        </span>
+                                                    ) : (
+                                                        <span />
+                                                    )}
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
@@ -705,15 +826,12 @@ export default function AdvDashboardView() {
 
                                                             router.push("/client-management/view-history");
                                                         }}
-                                                        className="ml-2 text-[10px] font-bold uppercase tracking-wider text-[#2563EB] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full hover:bg-blue-100"
+                                                        className="text-[10px] font-bold uppercase tracking-wider text-[#2563EB] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full hover:bg-blue-100 cursor-pointer transition-colors"
                                                     >
                                                         View Case
                                                     </button>
-                                                    </div>
-                                               
+                                                </div>
                                             </div>
-
-
                                         </div>
 
                                         {/* Case name */}
@@ -756,43 +874,106 @@ export default function AdvDashboardView() {
                                 );
                             })
                         ) : (
-                            <div className="text-center p-8 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">
-                                <FileText className="w-10 h-10 text-[#CBD5E1] mx-auto mb-2" />
-                                <p className="text-sm font-medium text-[#64748B]">No documents uploaded yet.</p>
-                                <p className="text-xs text-[#94A3B8] mt-1">Documents uploaded via cases will appear here.</p>
+                            <div className="text-center p-6 sm:p-8 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">
+                                <FileText className="w-8 h-8 sm:w-10 sm:h-10 text-[#CBD5E1] mx-auto mb-2" />
+                                <p className="text-xs sm:text-sm font-medium text-[#64748B]">No documents uploaded yet.</p>
+                                <p className="text-[10px] sm:text-xs text-[#94A3B8] mt-1">Documents uploaded via cases will appear here.</p>
                             </div>
                         )}
                     </div>
-
-                    
                 </div>
+            </div>
 
-                {/* ─── Upcoming Case Discussions ─── */}
-                <div className="col-span-12 lg:col-span-12 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 overflow-hidden">
-                    <div className="flex justify-between items-center mb-8">
-                        <h2 className="text-2xl font-extrabold text-[#0F172A]">
+            {/* ─── Upcoming Case Discussions ─── */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+                <div className="col-span-1 lg:col-span-12 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
+                    <div className="flex justify-between items-center mb-6 sm:mb-8">
+                        <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F172A]">
                             Upcoming Case Discussions
                         </h2>
                         <button
                             onClick={() => router.push("/consultations")}
-                            className="flex items-center gap-1 text-sm font-bold text-[#2563EB] hover:text-[#1D4ED8] hover:underline bg-transparent border-0 p-0 cursor-pointer transition-colors"
+                            className="flex items-center gap-1 text-xs sm:text-sm font-bold text-[#2563EB] hover:text-[#1D4ED8] hover:underline bg-transparent border-0 p-0 cursor-pointer transition-colors"
                         >
                             <span>Go to</span>
                             <span>→</span>
                         </button>
                     </div>
 
-                    <div className="w-full overflow-x-auto rounded-2xl border border-[#E2E8F0]">
-                        <table className="w-full table-fixed divide-y divide-[#E2E8F0]">                            
-                            <thead className="bg-[#F8FAFC]">
-                            <tr>
+                    {/* Mobile Card List */}
+                    <div className="block sm:hidden space-y-3">
+                        {data && data.discussions && data.discussions.length > 0 ? (
+                            data.discussions.slice(discussionsPage * 5, (discussionsPage + 1) * 5).map((d, index) => (
+                                <div
+                                    key={`discussion-card-${d.id || index}`}
+                                    className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2.5"
+                                >
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-semibold text-[#475569]">{d.date_formatted}</span>
+                                            <span className="text-xs font-bold text-[#2563EB]">{d.time}</span>
+                                        </div>
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${d.status.toLowerCase() === "approved" || d.status.toLowerCase() === "completed" || d.status.toLowerCase() === "scheduled"
+                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                            : d.status.toLowerCase() === "rescheduled"
+                                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                                : d.status.toLowerCase() === "pending"
+                                                    ? "bg-slate-50 text-slate-700 border-slate-200"
+                                                    : "bg-blue-50 text-blue-700 border-blue-200"
+                                            }`}>
+                                            {d.status}
+                                        </span>
+                                    </div>
+                                    <p className="text-sm font-bold text-[#0F172A]">{d.client_name}</p>
+                                    <div>
+                                        {d.type.toLowerCase().includes("video") ? (
+                                            d.meeting_link ? (
+                                                <a
+                                                    href={d.meeting_link.startsWith("http") ? d.meeting_link : `https://${d.meeting_link}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition"
+                                                >
+                                                    🎥 Video (Join Meet)
+                                                </a>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50/50 border border-emerald-100">
+                                                    🎥 Video Call
+                                                </span>
+                                            )
+                                        ) : d.type.toLowerCase().includes("chat") ? (
+                                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200">
+                                                💬 Chat
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-purple-700 bg-purple-50 border border-purple-200">
+                                                🤝 Person to Person
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="p-6 text-center text-sm font-medium text-[#64748B] bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">
+                                No upcoming case discussions found.
+                            </div>
+                        )}
+                    </div>
 
-                                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
-                                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client</th>
-                                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
-                                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type / Link</th>
-                                <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
-                            </tr></thead><tbody className="divide-y divide-[#E2E8F0] bg-white">
+                    {/* Desktop Table View */}
+                    <div className="hidden sm:block w-full rounded-2xl border border-[#E2E8F0] overflow-hidden">
+                        <table className="w-full table-auto divide-y divide-[#E2E8F0]">
+                            <thead className="bg-[#F8FAFC]">
+                                <tr>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Time</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type / Link</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[#E2E8F0] bg-white">
                                 {data && data.discussions && data.discussions.length > 0 ? (
                                     data.discussions.slice(discussionsPage * 5, (discussionsPage + 1) * 5).map((d, index) => (
                                         <tr
@@ -881,9 +1062,7 @@ export default function AdvDashboardView() {
                         </div>
                     )}
                 </div>
-
             </div>
-
         </div>
     );
 }
