@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getLoggedInUser } from "@/utils/auth";
 import {
@@ -25,6 +25,7 @@ import {
 import { API_BASE_URL } from "@/utils/api";
 
 export default function Sidebar({ isCollapsed, setIsCollapsed }) {
+  const router = useRouter();
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false); // Mobile drawer overlay state
   const [activeModuleId, setActiveModuleId] = useState("advocate");
@@ -237,6 +238,29 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
     setActiveModuleId(modId);
     if (isCollapsed) {
       setIsCollapsed(false); // Expand secondary drawer when module is clicked
+    }
+
+    const targetMod = filteredModules.find((m) => m.id === modId);
+    if (targetMod && targetMod.items && targetMod.items.length > 0) {
+      // Check if current pathname is already part of the target module's items
+      const isAlreadyInModule = targetMod.items.some(
+        (item) =>
+          item.path === pathname ||
+          (item.path !== "/" &&
+            item.path !== "/permissions" &&
+            pathname?.startsWith(item.path + "/"))
+      );
+      if (!isAlreadyInModule) {
+        // Find dashboard item or fallback to first item
+        const dashboardItem =
+          targetMod.items.find((item) =>
+            item.name.toLowerCase().includes("dashboard")
+          ) || targetMod.items[0];
+
+        if (dashboardItem && dashboardItem.path) {
+          router.push(dashboardItem.path);
+        }
+      }
     }
   };
 
