@@ -109,12 +109,32 @@ export default function AssignAdv({ isOpen, onClose }) {
   useEffect(() => {
     const fetchCases = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/case-management/`);
-        if (res.ok) {
-          const data = await res.json();
+        const [casesRes, assignedRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/case-management/`),
+          fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases`).catch(() => null),
+        ]);
+
+        let assignedList = [];
+        if (assignedRes && assignedRes.ok) {
+          try {
+            assignedList = await assignedRes.json();
+          } catch (e) {}
+        }
+
+        if (casesRes.ok) {
+          const data = await casesRes.json();
           const mappedCases = data.map((c) => {
             const courtName = c.court_name || "";
             const district = c.client_district || c.district || findDistrictForCourt(courtName);
+
+            const assigned = (Array.isArray(assignedList) ? assignedList : []).find(
+              (ac) =>
+                (ac.case_number && c.case_no && String(ac.case_number).trim().toLowerCase() === String(c.case_no).trim().toLowerCase()) ||
+                (ac.case_name && c.case_title && String(ac.case_name).trim().toLowerCase() === String(c.case_title).trim().toLowerCase()) ||
+                (ac.case_title && c.case_title && String(ac.case_title).trim().toLowerCase() === String(c.case_title).trim().toLowerCase()) ||
+                (ac.case_id && (ac.case_id === c.id || String(ac.case_id) === String(c.id)))
+            );
+
             return {
               id: c.id,
               name: c.case_title || `Case ${c.id}`,
@@ -123,6 +143,8 @@ export default function AssignAdv({ isOpen, onClose }) {
               clientName: c.client_name || "",
               district: district,
               courtName: courtName,
+              isAssigned: !!assigned,
+              assignedTo: assigned ? (assigned.advocate_name || assigned.advocateName || "Advocate") : null,
             };
           });
           setCases(mappedCases);
@@ -385,11 +407,17 @@ export default function AssignAdv({ isOpen, onClose }) {
                   required
                 >
                   <option value="">Select Case</option>
-                  {cases.map((item, index) => (
-                    <option key={`${item.caseNumber}-${index}`} value={item.name}>
-                      {item.name}
-                    </option>
-                  ))}
+                  {cases.filter((item) => !item.isAssigned).length === 0 ? (
+                    <option value="" disabled>No unassigned cases available</option>
+                  ) : (
+                    cases
+                      .filter((item) => !item.isAssigned)
+                      .map((item, index) => (
+                        <option key={`${item.caseNumber}-${index}`} value={item.name}>
+                          {item.name}
+                        </option>
+                      ))
+                  )}
                 </select>
               )}
             </div>

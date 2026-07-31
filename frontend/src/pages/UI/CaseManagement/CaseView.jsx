@@ -188,7 +188,9 @@ export default function CaseView() {
         const resolvedStatus = (assigned && assigned.status) ? assigned.status : (c.status || "Active");
         return {
           ...c,
-          status: resolvedStatus
+          status: resolvedStatus,
+          isAssigned: !!assigned,
+          assignedTo: assigned ? (assigned.advocate_name || assigned.advocateName || "Advocate") : null,
         };
       });
 
@@ -382,7 +384,14 @@ export default function CaseView() {
                             </span>
                           )}
                         </div>
-                        <StatusBadge status={item.status} />
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <StatusBadge status={item.status} />
+                          {item.isAssigned && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200" title={`Assigned to ${item.assignedTo || 'Advocate'}`}>
+                              <UserCheck size={11} /> Assigned
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div>
@@ -412,6 +421,12 @@ export default function CaseView() {
                             {item.court_name || "Unassigned"}
                           </span>
                         </div>
+                        {item.isAssigned && item.assignedTo && (
+                          <div className="flex items-center justify-between pt-1 border-t border-[#E2E8F0]/40">
+                            <span className="text-[11px] font-semibold text-purple-600">Assigned To:</span>
+                            <span className="font-bold text-purple-900 truncate max-w-[160px]">{item.assignedTo}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -510,7 +525,14 @@ export default function CaseView() {
                         </td>
                         <td className="px-5 py-4 text-sm text-[#475569]">{item.court_name}</td>
                         <td className="px-5 py-4">
-                          <StatusBadge status={item.status} />
+                          <div className="flex flex-col gap-1 items-start">
+                            <StatusBadge status={item.status} />
+                            {item.isAssigned && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200" title={`Assigned to ${item.assignedTo || 'Advocate'}`}>
+                                <UserCheck size={10} /> Assigned
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-2">

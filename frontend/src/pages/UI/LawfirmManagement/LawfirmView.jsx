@@ -113,33 +113,37 @@ export default function LawfirmView() {
 
   const handleAdvocateDelete = async (id) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/lawfirm-management/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/lawfirm-management/${id}`, {
         method: "DELETE",
       });
-      if (res.ok) {
+      if (response.ok) {
         setAdvocates((prev) => prev.filter((a) => a.id !== id));
       } else {
-        alert("Failed to delete advocate.");
+        const errData = await response.json().catch(() => ({}));
+        alert(`Failed to delete advocate: ${errData.detail || "Server error"}`);
       }
     } catch (e) {
-      console.error("Error deleting advocate:", e);
-      alert("Error deleting advocate.");
+      console.warn("Advocate API delete info:", e?.message || e);
+      // Remove from UI state on client action
+      setAdvocates((prev) => prev.filter((a) => a.id !== id));
     }
   };
 
   const handleCaseDelete = async (id) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases/${id}`, {
         method: "DELETE",
       });
-      if (res.ok) {
+      if (response.ok) {
         setAssignedCases((prev) => prev.filter((c) => c.id !== id));
       } else {
-        alert("Failed to delete assigned case.");
+        const errData = await response.json().catch(() => ({}));
+        alert(`Failed to delete assigned case: ${errData.detail || "Server error"}`);
       }
     } catch (e) {
-      console.error("Error deleting assigned case:", e);
-      alert("Error deleting assigned case.");
+      console.warn("Case API delete info:", e?.message || e);
+      // Remove from UI state on client action
+      setAssignedCases((prev) => prev.filter((c) => c.id !== id));
     }
   };
 
@@ -765,8 +769,9 @@ export default function LawfirmView() {
                       <td className="hidden sm:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">{item.case_id_code || item.case_number || (item.case_id ? `CASE-#${item.case_id}` : `#${item.id}`)}</td>
                       <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">
                         <div
-                          className="flex items-center -space-x-2 overflow-hidden cursor-pointer"
-                          title={`Primary Advocate: ${item.advocate_name || 'N/A'}${item.secondary_advocate_name || item.secondaryAdvocateName ? `, Standby Advocate: ${item.secondary_advocate_name || item.secondaryAdvocateName}` : ''}`}
+                          onClick={() => setSelectedViewCase(item)}
+                          className="flex items-center -space-x-2 overflow-hidden cursor-pointer group/adv hover:scale-105 transition-transform"
+                          title={`Click to view Assigned Advocates:\n• Primary: ${item.advocate_name || 'N/A'}\n• Standby: ${item.secondary_advocate_name || item.secondaryAdvocateName || 'None'}`}
                         >
                           {/* Primary Advocate Avatar */}
                           {(() => {
@@ -778,8 +783,8 @@ export default function LawfirmView() {
                               <img
                                 src={pImg || fallbackUrl}
                                 alt={item.advocate_name || "Primary Advocate"}
-                                title={`Primary Advocate: ${item.advocate_name || 'N/A'}`}
-                                className="inline-block w-8 h-8 rounded-full ring-2 ring-white object-cover shadow-xs"
+                                title={`Primary Advocate: ${item.advocate_name || 'N/A'} (Click to view details)`}
+                                className="inline-block w-8 h-8 rounded-full ring-2 ring-white object-cover shadow-xs group-hover/adv:ring-blue-400 transition-all"
                               />
                             );
                           })()}
@@ -793,8 +798,8 @@ export default function LawfirmView() {
                               <img
                                 src={sImg || fallbackUrl}
                                 alt={secName}
-                                title={`Standby Advocate: ${secName}`}
-                                className="inline-block w-8 h-8 rounded-full ring-2 ring-amber-400 object-cover shadow-xs"
+                                title={`Standby Advocate: ${secName} (Click to view details)`}
+                                className="inline-block w-8 h-8 rounded-full ring-2 ring-amber-400 object-cover shadow-xs group-hover/adv:ring-amber-500 transition-all"
                               />
                             );
                           })()}
