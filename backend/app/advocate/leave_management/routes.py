@@ -86,6 +86,7 @@ def update_leave_status(
 
 
 @router.delete("/{leave_id}", response_model=LeaveOutSchema)
+@router.put("/{leave_id}/cancel", response_model=LeaveOutSchema)
 def cancel_leave(
     leave_id: int,
     db: Session = Depends(get_db),

@@ -9,7 +9,7 @@ class LeaveApplySchema(BaseModel):
     description: str
     from_date: date
     to_date: date
-    total_days: Optional[float] = 1.0
+    total_days: Optional[float] = None
     is_half_day: Optional[str] = "None"
 
 

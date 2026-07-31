@@ -73,10 +73,7 @@ def get_leave_requests(
 
     role_norm = (current_user.role or "").lower().replace(" ", "")
 
-    if view_mode == "senior" or scope == "all":
-        # Allow viewing all firm leave requests for task assignment and senior overview
-        pass
-    elif view_mode == "junior" or role_norm not in ["senioradvocate", "clerk", "admin"]:
+    if view_mode == "junior" or role_norm == "junioradvocate":
         query = query.filter(LeaveRequest.user_id == current_user.id)
     elif view_mode == "clerk":
         if scope == "own":
@@ -84,7 +81,11 @@ def get_leave_requests(
         elif scope == "team":
             # Clerk reviewing Junior Advocate requests
             query = query.filter(LeaveRequest.user_id != current_user.id)
-    # senior view_mode gets all requests
+    elif view_mode == "senior":
+        # Senior overview gets all requests
+        pass
+    elif role_norm not in ["senioradvocate", "admin"]:
+        query = query.filter(LeaveRequest.user_id == current_user.id)
 
     if status_filter and status_filter.lower() != "all":
         query = query.filter(LeaveRequest.status.ilike(status_filter))
@@ -102,9 +103,15 @@ def apply_leave(db: Session, current_user: User, data: LeaveApplySchema) -> Leav
     # Ensure balance record exists
     get_or_create_user_balance(db, current_user.id)
 
-    # Calculate days if not supplied
-    delta_days = (data.to_date - data.from_date).days + 1
-    total_days = data.total_days if data.total_days and data.total_days > 0 else float(max(1, delta_days))
+    # Calculate days if not supplied or invalid
+    is_half = data.is_half_day and data.is_half_day != "None"
+    if is_half:
+        calculated_days = 0.5
+    else:
+        delta = (data.to_date - data.from_date).days + 1
+        calculated_days = float(max(1, delta))
+
+    total_days = data.total_days if (data.total_days is not None and data.total_days > 0) else calculated_days
 
     new_request = LeaveRequest(
         user_id=current_user.id,
@@ -263,10 +270,13 @@ def cancel_leave(db: Session, current_user: User, leave_id: int) -> LeaveRequest
     if not leave_req:
         raise ValueError("Leave request not found.")
 
-    if leave_req.user_id != current_user.id:
-        role_norm = (current_user.role or "").lower().replace(" ", "")
-        if role_norm not in ["senioradvocate", "admin"]:
-            raise PermissionError("You can only cancel your own leave requests.")
+    role_norm = (current_user.role or "").lower().replace(" ", "")
+
+    if leave_req.user_id != current_user.id and role_norm not in ["senioradvocate", "admin"]:
+        raise PermissionError("You can only delete your own leave requests.")
+
+    if leave_req.status in ["Approved", "Rejected"] and role_norm not in ["senioradvocate", "admin"]:
+        raise PermissionError("Only pending leave requests can be deleted.")
 
     if leave_req.status == "Approved":
         balance = get_or_create_user_balance(db, leave_req.user_id)
@@ -278,7 +288,6 @@ def cancel_leave(db: Session, current_user: User, leave_id: int) -> LeaveRequest
         elif "floater" in lt_lower:
             balance.floater_leave_used = max(0.0, balance.floater_leave_used - leave_req.total_days)
 
-    leave_req.status = "Cancelled"
+    db.delete(leave_req)
     db.commit()
-    db.refresh(leave_req)
     return leave_req

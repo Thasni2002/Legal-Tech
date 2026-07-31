@@ -20,6 +20,7 @@ import {
   Building,
   Users,
   ArrowLeft,
+  Trash2,
 } from "lucide-react";
 import { API_BASE_URL } from "@/utils/api";
 import { getLoggedInUser } from "@/utils/auth";
@@ -75,6 +76,14 @@ export default function LeaveManagementView({
   const [selectedLeave, setSelectedLeave] = useState(null);
   const [actionType, setActionType] = useState("Approved"); // Approved or Rejected
   const [rejectionReason, setRejectionReason] = useState("");
+  const [deleteLeaveId, setDeleteLeaveId] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const [alertModal, setAlertModal] = useState({ show: false, title: "", message: "", type: "info" });
+
+  const showAlert = (message, title = "Notice", type = "error") => {
+    setAlertModal({ show: true, title, message, type });
+  };
 
   // Apply Form State
   const [applyForm, setApplyForm] = useState({
@@ -132,8 +141,11 @@ export default function LeaveManagementView({
     fetchData();
   }, [fetchData]);
 
-  // Filter leaves locally by search input
+  // Filter leaves locally by search input & user scope
   const filteredLeaves = leaves.filter((item) => {
+    if (viewMode === "junior" && user?.id) {
+      if (item.user_id !== user.id) return false;
+    }
     if (!search.trim()) return true;
     const term = search.toLowerCase();
     return (
@@ -144,16 +156,51 @@ export default function LeaveManagementView({
     );
   });
 
+  // Helper to format duration display dynamically
+  const getDurationDisplay = (req) => {
+    const isHalf = req.is_half_day && req.is_half_day !== "None" && req.is_half_day !== "false";
+    if (isHalf) {
+      return req.is_half_day === "First Half" || req.is_half_day === "Second Half"
+        ? `Half Day (${req.is_half_day})`
+        : "Half Day";
+    }
+
+    if (req.from_date && req.to_date) {
+      const start = new Date(req.from_date + "T00:00:00");
+      const end = new Date(req.to_date + "T00:00:00");
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+        const diffTime = Math.abs(end.getTime() - start.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        if (diffDays === 1) return "1 day";
+        return `${diffDays} days`;
+      }
+    }
+
+    const days = req.total_days || 1;
+    return days === 1 ? "1 day" : `${days} days`;
+  };
+
   // Handle Apply Form submission
   const handleApplySubmit = async (e) => {
     e.preventDefault();
     if (!applyForm.description.trim()) {
-      alert("Please provide a description for your leave request.");
+      showAlert("Please provide a description for your leave request.", "Validation Error", "error");
       return;
     }
     if (!applyForm.from_date || !applyForm.to_date) {
-      alert("Please select both From Date and To Date.");
+      showAlert("Please select both From Date and To Date.", "Validation Error", "error");
       return;
+    }
+
+    let computedDays = 1.0;
+    if (duration === "Half Day" || applyForm.is_half_day !== "None") {
+      computedDays = 0.5;
+    } else if (applyForm.from_date && applyForm.to_date) {
+      const start = new Date(applyForm.from_date + "T00:00:00");
+      const end = new Date(applyForm.to_date + "T00:00:00");
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+        computedDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      }
     }
 
     setSubmitting(true);
@@ -165,7 +212,10 @@ export default function LeaveManagementView({
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(applyForm),
+        body: JSON.stringify({
+          ...applyForm,
+          total_days: computedDays,
+        }),
       });
 
       if (res.ok) {
@@ -179,12 +229,13 @@ export default function LeaveManagementView({
           is_half_day: "None",
         });
         fetchData();
+        showAlert("Your leave request has been submitted successfully!", "Leave Submitted", "success");
       } else {
         const errJson = await res.json();
-        alert(errJson.detail || "Failed to submit leave request.");
+        showAlert(errJson.detail || "Failed to submit leave request.", "Submission Error", "error");
       }
     } catch (err) {
-      alert("Error submitting request: " + err.message);
+      showAlert("Error submitting request: " + err.message, "Network Error", "error");
     } finally {
       setSubmitting(false);
     }
@@ -216,38 +267,50 @@ export default function LeaveManagementView({
         fetchData();
 
         if (resJson.reassigned_cases_count && resJson.reassigned_cases_count > 0) {
-          alert(
+          showAlert(
             `Leave Approved!\n\n${resJson.reassigned_cases_count} case hearing(s) falling on the approved leave dates were automatically transferred to Secondary Junior Advocates:\n\n` +
-              (resJson.reassigned_details || []).map((d) => `• ${d}`).join("\n")
+              (resJson.reassigned_details || []).map((d) => `• ${d}`).join("\n"),
+            "Hearing Auto-Reassigned",
+            "success"
           );
+        } else {
+          showAlert(`Leave request successfully ${actionType.toLowerCase()}!`, "Status Updated", "success");
         }
       } else {
         const errJson = await res.json();
-        alert(errJson.detail || "Failed to update leave status.");
+        showAlert(errJson.detail || "Failed to update leave status.", "Action Failed", "error");
       }
     } catch (err) {
-      alert("Error updating status: " + err.message);
+      showAlert("Error updating status: " + err.message, "Network Error", "error");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleCancelLeave = async (leaveId) => {
-    if (!window.confirm("Are you sure you want to cancel this leave application?")) return;
+  const confirmDeleteLeave = async () => {
+    if (!deleteLeaveId) return;
+    setDeleteLoading(true);
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`${API_BASE_URL}/leaves/${leaveId}/cancel`, {
-        method: "PUT",
+      const res = await fetch(`${API_BASE_URL}/leaves/${deleteLeaveId}`, {
+        method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
+        setDeleteLeaveId(null);
         fetchData();
+        showAlert("Leave application deleted successfully.", "Deleted", "success");
       } else {
-        alert("Failed to cancel leave request.");
+        const errJson = await res.json().catch(() => ({}));
+        setDeleteLeaveId(null);
+        showAlert(errJson.detail || "Failed to delete leave request.", "Permission Denied", "error");
       }
     } catch (err) {
-      console.error("Error cancelling leave:", err);
-      alert("Error cancelling leave request.");
+      console.error("Error deleting leave:", err);
+      setDeleteLeaveId(null);
+      showAlert("Error deleting leave request.", "Action Failed", "error");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -680,7 +743,7 @@ export default function LeaveManagementView({
                     <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-1.5 text-xs text-slate-700">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-slate-900">{req.leave_type}</span>
-                        <span className="font-mono text-slate-500 font-bold">{req.total_days} {req.total_days === 1 ? "day" : "days"}</span>
+                        <span className="font-mono text-slate-500 font-bold">{getDurationDisplay(req)}</span>
                       </div>
                       <p className="text-slate-600 text-[11px] font-medium leading-relaxed">{req.description || "No description provided."}</p>
                       <div className="text-[11px] text-blue-600 font-semibold pt-1 border-t border-slate-200/60">
@@ -709,12 +772,14 @@ export default function LeaveManagementView({
                           </button>
                         </div>
                       )}
-                      {isOwnRequest && req.status === "Pending" && (
+                      {req.status === "Pending" && (isOwnRequest || viewMode === "junior") && (
                         <button
-                          onClick={() => handleCancelLeave(req.id)}
-                          className="px-2.5 py-1 border border-slate-300 text-slate-600 rounded-lg text-[11px] font-bold"
+                          onClick={() => setDeleteLeaveId(req.id)}
+                          className="px-2.5 py-1 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px] transition cursor-pointer flex items-center gap-1"
+                          title="Delete Pending Leave Request"
                         >
-                          Cancel
+                          <Trash2 size={12} />
+                          <span>Delete</span>
                         </button>
                       )}
                     </div>
@@ -764,7 +829,7 @@ export default function LeaveManagementView({
                           <div className="text-[10px] text-slate-400">to {req.to_date}</div>
                         </td>
                         <td className="py-3.5 px-4 font-bold text-slate-900">
-                          {req.total_days} {req.total_days === 1 ? "day" : "days"}
+                          {getDurationDisplay(req)}
                         </td>
                         <td className="py-3.5 px-4">
                           <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${statusColor}`}>
@@ -801,12 +866,14 @@ export default function LeaveManagementView({
                                 </button>
                               </>
                             )}
-                            {isOwnRequest && req.status === "Pending" && (
+                            {req.status === "Pending" && (isOwnRequest || viewMode === "junior") && (
                               <button
-                                onClick={() => handleCancelLeave(req.id)}
-                                className="px-2.5 py-1 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-600 font-bold text-xs transition cursor-pointer"
+                                onClick={() => setDeleteLeaveId(req.id)}
+                                className="px-2.5 py-1 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                                title="Delete Pending Leave Request"
                               >
-                                Cancel
+                                <Trash2 size={13} />
+                                <span>Delete</span>
                               </button>
                             )}
                           </div>
@@ -871,6 +938,94 @@ export default function LeaveManagementView({
                 </button>
               </div>
             </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {mounted && deleteLeaveId && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl border border-slate-200 p-6 sm:p-8 animate-in zoom-in-95 duration-200 text-center">
+            
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-rose-100 flex items-center justify-center shadow-inner">
+                <Trash2 className="w-8 h-8 text-rose-600" />
+              </div>
+            </div>
+
+            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900">
+              Confirm Delete
+            </h2>
+
+            <p className="text-xs sm:text-sm text-slate-500 mt-2 leading-relaxed font-medium">
+              Are you sure you want to delete this pending leave application? This action cannot be undone.
+            </p>
+
+            <div className="flex justify-center items-center gap-3 mt-6 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteLeaveId(null)}
+                disabled={deleteLoading}
+                className="flex-1 py-3 rounded-xl border border-slate-300 bg-white text-slate-700 font-bold text-xs hover:bg-slate-50 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmDeleteLeave}
+                disabled={deleteLoading}
+                className="flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs transition shadow-md cursor-pointer disabled:opacity-50"
+              >
+                {deleteLoading ? "Deleting..." : "Delete Leave"}
+              </button>
+            </div>
+
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Custom Alert / Notification Modal */}
+      {mounted && alertModal.show && createPortal(
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl border border-slate-200 p-6 sm:p-8 animate-in zoom-in-95 duration-200 text-center">
+            
+            <div className="flex justify-center mb-4">
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center shadow-inner ${
+                alertModal.type === "error" ? "bg-rose-100 text-rose-600" :
+                alertModal.type === "success" ? "bg-emerald-100 text-emerald-600" :
+                "bg-blue-100 text-blue-600"
+              }`}>
+                {alertModal.type === "error" ? (
+                  <AlertCircle className="w-8 h-8" />
+                ) : alertModal.type === "success" ? (
+                  <CheckCircle className="w-8 h-8" />
+                ) : (
+                  <AlertCircle className="w-8 h-8" />
+                )}
+              </div>
+            </div>
+
+            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900">
+              {alertModal.title}
+            </h2>
+
+            <p className="text-xs sm:text-sm text-slate-600 mt-2.5 leading-relaxed font-medium whitespace-pre-line">
+              {alertModal.message}
+            </p>
+
+            <div className="flex justify-center items-center mt-6 pt-2">
+              <button
+                type="button"
+                onClick={() => setAlertModal({ show: false, title: "", message: "", type: "info" })}
+                className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs transition shadow-md cursor-pointer"
+              >
+                OK
+              </button>
+            </div>
+
           </div>
         </div>,
         document.body
