@@ -39,6 +39,8 @@ import { usePermissions } from "@/utils/usePermissions";
 import { getLoggedInUser } from "@/utils/auth";
 import { isSensitiveCase } from "@/utils/caseSensitivity";
 import SimilarCasesClient from "@/app/case-management/similar-cases/[id]/SimilarCasesClient";
+import OCRPanel from "./OCRPanel";
+import DocumentViewerModal from "@/components/common/DocumentViewerModal";
 
 // Helper to get status badge styling and icon
 function getStatusBadgeStyle(status) {
@@ -155,6 +157,100 @@ export default function CaseDetailView({ id }) {
   const [docAssignLoading, setDocAssignLoading] = useState(false);
   const [docAssignedSet, setDocAssignedSet] = useState(new Set());
   const [docAssignModal, setDocAssignModal] = useState(null);
+  const [viewingDocument, setViewingDocument] = useState(null);
+
+  const handleSaveOcrToCaseDocuments = async (extractedText, originalFilename) => {
+    if (!selectedCase || !extractedText) return;
+    try {
+      const cleanName = (originalFilename || "Document").replace(/\.[^/.]+$/, "");
+      const docName = `OCR_${cleanName.replace(/[^a-zA-Z0-9_]/g, "_")}.txt`;
+      const textBase64 = `data:text/plain;charset=utf-8;base64,${btoa(unescape(encodeURIComponent(extractedText)))}`;
+
+      const newDocObj = {
+        documentType: "OCR Extracted Text",
+        advocate: getLoggedInUser()?.username || selectedCase.selected_advocate || "Advocate",
+        file: docName,
+        url: textBase64,
+        password: ""
+      };
+
+      const updatedDocuments = [...(selectedCase.documents || []), newDocObj];
+
+      const res = await fetch(`${API_BASE_URL}/case-management/${selectedCase.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caseId: selectedCase.case_id,
+          cnrNumber: selectedCase.cnr_number,
+          caseTitle: selectedCase.case_title,
+          caseNo: selectedCase.case_no,
+          caseType: selectedCase.case_type,
+          caseDes: selectedCase.case_description,
+          clientName: selectedCase.client_name,
+          contactNumber: selectedCase.contact_number,
+          emailId: selectedCase.email_id,
+          courtName: selectedCase.court_name,
+          courtType: selectedCase.court_type,
+          status: selectedCase.status,
+          selectedAdvocate: selectedCase.selected_advocate,
+          documents: updatedDocuments,
+          nextHearingDate: selectedCase.next_hearing_date
+        })
+      });
+
+      if (!res.ok) throw new Error("Failed to save OCR document to case files.");
+
+      setSelectedCase(prev => ({
+        ...prev,
+        documents: updatedDocuments
+      }));
+    } catch (err) {
+      console.error("Save OCR Document error:", err);
+      alert(err.message || "Failed to save OCR document.");
+    }
+  };
+
+  const handleDeleteCaseDocument = async (docIndex) => {
+    if (!selectedCase || !selectedCase.documents) return;
+    const docToDelete = selectedCase.documents[docIndex];
+    if (!window.confirm(`Are you sure you want to delete "${docToDelete?.file || "this document"}"?`)) return;
+
+    try {
+      const updatedDocuments = selectedCase.documents.filter((_, i) => i !== docIndex);
+
+      const res = await fetch(`${API_BASE_URL}/case-management/${selectedCase.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caseId: selectedCase.case_id,
+          cnrNumber: selectedCase.cnr_number,
+          caseTitle: selectedCase.case_title,
+          caseNo: selectedCase.case_no,
+          caseType: selectedCase.case_type,
+          caseDes: selectedCase.case_description,
+          clientName: selectedCase.client_name,
+          contactNumber: selectedCase.contact_number,
+          emailId: selectedCase.email_id,
+          courtName: selectedCase.court_name,
+          courtType: selectedCase.court_type,
+          status: selectedCase.status,
+          selectedAdvocate: selectedCase.selected_advocate,
+          documents: updatedDocuments,
+          nextHearingDate: selectedCase.next_hearing_date
+        })
+      });
+
+      if (!res.ok) throw new Error("Failed to delete document from case files.");
+
+      setSelectedCase(prev => ({
+        ...prev,
+        documents: updatedDocuments
+      }));
+    } catch (err) {
+      console.error("Delete Case Document error:", err);
+      alert(err.message || "Failed to delete document.");
+    }
+  };
 
   // eCourts State
   const [ecourtsData, setEcourtsData] = useState(null);
@@ -1479,6 +1575,11 @@ export default function CaseDetailView({ id }) {
                 )}
               </div>
 
+              {/* OCR Extract Text from Document */}
+              <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-5">
+                <OCRPanel caseId={selectedCase?.id} onSaveToDocuments={handleSaveOcrToCaseDocuments} />
+              </div>
+
               {/* Documents list table */}
               {selectedCase.documents && selectedCase.documents.length > 0 ? (
                 <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-x-auto">
@@ -1494,7 +1595,19 @@ export default function CaseDetailView({ id }) {
                     <tbody className="divide-y divide-[#F1F5F9] text-sm">
                       {selectedCase.documents.map((doc, idx) => (
                         <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                          <td className="py-4 px-5 font-semibold text-slate-700">{doc.file || "Unnamed File"}</td>
+                          <td className="py-4 px-5 font-semibold text-slate-700">
+                            <button
+                              type="button"
+                              onClick={() => setViewingDocument(doc)}
+                              className="flex items-center gap-2 text-left font-bold text-[#0F172A] hover:text-[#2563EB] transition-colors cursor-pointer group"
+                              title="Click to view document content"
+                            >
+                              <FileText size={15} className="text-[#94A3B8] group-hover:text-[#2563EB] shrink-0" />
+                              <span className="underline decoration-slate-200 underline-offset-4 group-hover:decoration-[#2563EB]">
+                                {doc.file || "Unnamed File"}
+                              </span>
+                            </button>
+                          </td>
                           <td className="py-4 px-5">
                             <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
                               {doc.documentType && doc.documentType.includes(": ")
@@ -1553,25 +1666,49 @@ export default function CaseDetailView({ id }) {
                           </td>
                           {/* Action column */}
                           <td className="py-4 px-5">
-                            {docAssignedSet.has(doc.file) && doc.password && doc.password.trim().length === 6 ? (
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default select-none">
-                                <CheckCircle size={12} />
-                                Assigned
-                              </span>
-                            ) : (
+                            <div className="flex items-center gap-2">
+                              {/* View Button */}
                               <button
-                                onClick={() => {
-                                  setDocAssignModal(idx);
-                                  setDocAssignAdvocate("");
-                                }}
-                                disabled={caseAssignedAdvocates.length === 0}
-                                title={caseAssignedAdvocates.length === 0 ? "No advocates assigned to this case yet" : "Assign this document to a junior advocate"}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-[#2563EB] hover:bg-[#1d4ed8] text-white transition shadow-sm active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                type="button"
+                                onClick={() => setViewingDocument(doc)}
+                                title="View document content"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-blue-600 bg-slate-100 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 transition cursor-pointer"
                               >
-                                <Send size={11} />
-                                Assign
+                                <Eye size={13} />
+                                View
                               </button>
-                            )}
+
+                              {/* Assign Button */}
+                              {docAssignedSet.has(doc.file) && doc.password && doc.password.trim().length === 6 ? (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default select-none">
+                                  <CheckCircle size={12} />
+                                  Assigned
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setDocAssignModal(idx);
+                                    setDocAssignAdvocate("");
+                                  }}
+                                  disabled={caseAssignedAdvocates.length === 0}
+                                  title={caseAssignedAdvocates.length === 0 ? "No advocates assigned to this case yet" : "Assign this document to a junior advocate"}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-[#2563EB] hover:bg-[#1d4ed8] text-white transition shadow-sm active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                  <Send size={11} />
+                                  Assign
+                                </button>
+                              )}
+
+                              {/* Delete Button */}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCaseDocument(idx)}
+                                title="Delete document from case"
+                                className="inline-flex items-center justify-center p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition cursor-pointer"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -2549,6 +2686,16 @@ export default function CaseDetailView({ id }) {
           </div>
         </div>,
         document.body
+      )}
+
+      {/* Document Viewer Modal */}
+      {viewingDocument && (
+        <DocumentViewerModal
+          fileUrl={viewingDocument.url}
+          title={viewingDocument.file}
+          badge={viewingDocument.documentType}
+          onClose={() => setViewingDocument(null)}
+        />
       )}
     </div>
   );

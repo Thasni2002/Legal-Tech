@@ -31,6 +31,10 @@ from app.clerk.court_visit import router as clerk_court_visit_router
 from app.clerk.efiling.models import ClerkEFilingRecord
 from app.clerk.efiling import router as clerk_efiling_router
 
+# OCR module
+from app.ocr.models import OcrResult
+from app.ocr import router as ocr_router
+
 
 
 
@@ -183,4 +187,5 @@ app.include_router(clerk_court_visit_router)
 app.include_router(clerk_efiling_router)
 app.include_router(leave_router, prefix="/leaves", tags=["Leave Management"])
 app.include_router(ecourts_router)
+app.include_router(ocr_router)
 
