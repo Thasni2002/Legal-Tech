@@ -471,9 +471,10 @@ export default function ClientView() {
                             router.push("/client-management/view-history");
                           }}
                           className="flex-1 py-1.5 px-3 bg-[#F1F5F9] hover:bg-blue-50 text-[#0F172A] hover:text-[#2563EB] rounded-xl transition border border-[#E2E8F0] flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer"
+                          title="View Client"
                         >
                           <Eye size={13} />
-                          History
+                          View
                         </button>
 
                         {hasPermission("Client Management", "edit") && (
@@ -619,11 +620,11 @@ export default function ClientView() {
                               }));
                               router.push("/client-management/view-history");
                             }}
-                            title="View History"
+                            title="View Client"
                             className="p-1.5 bg-[#F1F5F9] hover:bg-blue-50 text-[#0F172A] hover:text-[#2563EB] rounded-lg cursor-pointer transition border border-[#E2E8F0] flex items-center gap-1 text-[11px] font-bold"
                           >
                             <Eye size={12} />
-                            History
+                            View
                           </button>
 
                           {hasPermission("Client Management", "edit") && (
@@ -745,10 +746,11 @@ export default function ClientView() {
                         );
                         router.push("/client-management/view-history");
                       }}
-                      className="flex-1 py-1.5 bg-[#F1F5F9] hover:bg-blue-50 text-[#0F172A] hover:text-[#2563EB] rounded-lg font-bold text-xs transition border border-[#E2E8F0] flex items-center justify-center gap-1"
+                      title="View Client"
+                      className="flex-1 py-1.5 bg-[#F1F5F9] hover:bg-blue-50 text-[#0F172A] hover:text-[#2563EB] rounded-lg font-bold text-xs transition border border-[#E2E8F0] flex items-center justify-center gap-1 cursor-pointer"
                     >
                       <Eye size={12} />
-                      History
+                      View
                     </button>
 
                     {hasPermission("Client Management", "edit") && (

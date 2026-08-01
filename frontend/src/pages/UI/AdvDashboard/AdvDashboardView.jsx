@@ -669,9 +669,9 @@ export default function AdvDashboardView() {
                 </div>
             </div>
 
-            {/* Upcoming Hearings + Recent Documents */}
+            {/* Upcoming Hearings */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-                <div className="col-span-1 lg:col-span-8 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-4 sm:p-6 md:p-8 lg:p-10 flex flex-col justify-between overflow-hidden">
+                <div className="col-span-1 lg:col-span-12 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-4 sm:p-6 md:p-8 lg:p-10 flex flex-col justify-between overflow-hidden">
                     <div className="flex justify-between items-center mb-6 sm:mb-8">
                         <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F172A]">
                             Upcoming Hearings
@@ -771,116 +771,6 @@ export default function AdvDashboardView() {
                             </button>
                         </div>
                     )}
-                </div>
-
-                {/* ─── Recent Documents Panel ─── */}
-                <div className="col-span-1 lg:col-span-4 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-4 sm:p-6 md:p-8 lg:p-10 flex flex-col">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F172A]">
-                            Recent Documents
-                        </h2>
-                        {isRefreshing && (
-                            <RefreshCw className="w-4 h-4 text-[#2563EB] animate-spin" />
-                        )}
-                    </div>
-
-                    <div className="space-y-3 flex-1 overflow-y-auto max-h-[350px] lg:max-h-[480px] pr-1">
-                        {data && data.documents.length > 0 ? (
-                            data.documents.map((doc, index) => {
-                                const roleBadgeClass = ROLE_BADGE[doc.uploaded_by_role] || "bg-slate-100 text-slate-600";
-                                return (
-                                    <div
-                                        key={doc.id || index}
-                                        className="p-3.5 sm:p-4 rounded-2xl bg-[#F8FAFC] hover:bg-white border border-transparent hover:border-[#E2E8F0] hover:shadow-md transition-all duration-300 cursor-pointer group"
-                                    >
-                                        {/* Top row: icon + filename */}
-                                        <div className="flex items-start gap-3">
-                                            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                                                <FileText className="w-4 h-4" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs sm:text-sm font-semibold text-[#1E293B] group-hover:text-[#2563EB] transition-colors leading-tight break-words">
-                                                    {doc.filename}
-                                                </p>
-
-                                                {/* Doc type badge & View button */}
-                                                <div className="flex items-center justify-between flex-wrap gap-2 mt-2">
-                                                    {doc.document_type && doc.document_type !== "File" ? (
-                                                        <span className="inline-flex text-[10px] font-semibold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-                                                            {doc.document_type}
-                                                        </span>
-                                                    ) : (
-                                                        <span />
-                                                    )}
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-
-                                                            localStorage.setItem(
-                                                                "clientData",
-                                                                JSON.stringify({
-                                                                    clientId: doc.client_name,
-                                                                    fullName: doc.client_name,
-                                                                })
-                                                            );
-
-                                                            router.push("/client-management/view-history");
-                                                        }}
-                                                        className="text-[10px] font-bold uppercase tracking-wider text-[#2563EB] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full hover:bg-blue-100 cursor-pointer transition-colors"
-                                                    >
-                                                        View Case
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Case name */}
-                                        {doc.case_title && (
-                                            <p className="text-[10px] text-[#475569] font-medium mt-2 truncate">
-                                                📁 {doc.case_title}
-                                                {doc.case_no && <span className="text-[#94A3B8] ml-1">({doc.case_no})</span>}
-                                            </p>
-                                        )}
-
-                                        {/* Uploader + time row */}
-                                        <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
-                                            <div className="flex items-center flex-wrap gap-1">
-                                                <span className="text-[10px] text-[#94A3B8]">
-                                                    by
-                                                </span>
-
-                                                <span className="text-[10px] font-semibold text-[#0F172A]">
-                                                    {doc.uploaded_by && doc.uploaded_by !== "Unknown"
-                                                        ? doc.uploaded_by
-                                                        : "Unknown"}
-                                                </span>
-
-                                                <span className="text-[#CBD5E1] text-[10px]">
-                                                    ·
-                                                </span>
-
-                                                <span
-                                                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${roleBadgeClass}`}
-                                                >
-                                                    {doc.uploaded_by_role || "Advocate"}
-                                                </span>
-                                            </div>
-
-                                            <span className="text-[10px] text-[#94A3B8] font-medium">
-                                                {doc.timestamp_display || "Recently"}
-                                            </span>
-                                        </div>
-                                    </div>
-                                );
-                            })
-                        ) : (
-                            <div className="text-center p-6 sm:p-8 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">
-                                <FileText className="w-8 h-8 sm:w-10 sm:h-10 text-[#CBD5E1] mx-auto mb-2" />
-                                <p className="text-xs sm:text-sm font-medium text-[#64748B]">No documents uploaded yet.</p>
-                                <p className="text-[10px] sm:text-xs text-[#94A3B8] mt-1">Documents uploaded via cases will appear here.</p>
-                            </div>
-                        )}
-                    </div>
                 </div>
             </div>
 

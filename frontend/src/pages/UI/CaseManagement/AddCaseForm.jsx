@@ -6,6 +6,7 @@ import { DISTRICT_COURTS } from "@/utils/districtCourts";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, X, Eye, CheckCircle, Edit3, Loader2 } from "lucide-react";
+import OCRPanel from "./OCRPanel";
 
 const keralaCaseCategories = {
   "Civil Cases": [
@@ -1249,11 +1250,11 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
             uploaded_at: doc.uploadedAt || doc.uploaded_at || new Date().toISOString(),
           });
         } else {
-          // If doc.file is already uploaded previously (it won't be an instance of File), keep as-is
+          // If doc.file is already uploaded previously or generated via OCR, keep as-is
           processedDocs.push({
             documentType: combinedType,
             advocate: selectedAdvocate || "",
-            file: doc.file ? doc.file.name : null,
+            file: doc.file ? (typeof doc.file === "string" ? doc.file : (doc.file.name || "Document")) : null,
             url: doc.url || null,
             password: doc.password || "",
             uploadedAt: doc.uploadedAt || doc.uploaded_at || new Date().toISOString(),
@@ -1458,6 +1459,58 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Top Field: CNR Number (Normal Design) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">
+                  CNR Number
+                </label>
+                <button
+                  type="button"
+                  onClick={() => handleFetchFromECourts(null, false)}
+                  disabled={ecourtsLoading}
+                  className="px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-lg transition-colors flex items-center gap-1 cursor-pointer border border-blue-200"
+                >
+                  {ecourtsLoading ? (
+                    <>
+                      <Loader2 size={12} className="animate-spin" /> Fetching...
+                    </>
+                  ) : (
+                    "✨ Fetch from eCourts"
+                  )}
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  name="cnrNumber"
+                  placeholder="e.g. KLAL010012342026"
+                  value={formData.cnrNumber || ""}
+                  onChange={handleChange}
+                  className={`${baseInputClass} ${getBorderClass("cnrNumber")}`}
+                />
+                {ecourtsLoading && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs text-blue-600 font-medium bg-white px-2 py-1 rounded">
+                    <Loader2 size={14} className="animate-spin" /> Auto-fetching eCourts...
+                  </div>
+                )}
+              </div>
+              {autoFetchedCnr && autoFetchedCnr === (formData.cnrNumber || "").trim().toUpperCase() && !ecourtsLoading && !ecourtsError && (
+                <p className="mt-1 text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                  <CheckCircle size={12} /> Auto-fetched & synced with eCourts
+                </p>
+              )}
+              {ecourtsError && (
+                <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 leading-relaxed flex items-start gap-2">
+                  <span className="mt-0.5 flex-shrink-0 w-4 h-4 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center font-bold text-[10px]">!</span>
+                  <span>{ecourtsError}</span>
+                </div>
+              )}
+              {touched.cnrNumber && errors.cnrNumber && <ErrorMsg message={errors.cnrNumber} />}
+            </div>
+          </div>
+
           {/* Client Information */}
           <div className="space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1661,53 +1714,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                 {touched.caseTitle && errors.caseTitle && <ErrorMsg message={errors.caseTitle} />}
               </div>
 
-              {/* CNR Number */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">CNR Number</label>
-                  <button
-                    type="button"
-                    onClick={() => handleFetchFromECourts(null, false)}
-                    disabled={ecourtsLoading}
-                    className="px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-lg transition-colors flex items-center gap-1 cursor-pointer border border-blue-200"
-                  >
-                    {ecourtsLoading ? (
-                      <>
-                        <Loader2 size={12} className="animate-spin" /> Fetching...
-                      </>
-                    ) : (
-                      "✨ Fetch from eCourts"
-                    )}
-                  </button>
-                </div>
-                <div className="relative">
-                  <input
-                    type="text"
-                    name="cnrNumber"
-                    placeholder="e.g. KLAL010012342026"
-                    value={formData.cnrNumber || ""}
-                    onChange={handleChange}
-                    className={`${baseInputClass} ${getBorderClass("cnrNumber")}`}
-                  />
-                  {ecourtsLoading && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs text-blue-600 font-medium bg-white px-2 py-1 rounded">
-                      <Loader2 size={14} className="animate-spin" /> Auto-fetching eCourts...
-                    </div>
-                  )}
-                </div>
-                {autoFetchedCnr && autoFetchedCnr === (formData.cnrNumber || "").trim().toUpperCase() && !ecourtsLoading && !ecourtsError && (
-                  <p className="mt-1 text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
-                    <CheckCircle size={12} /> Auto-fetched & synced with eCourts
-                  </p>
-                )}
-                {ecourtsError && (
-                  <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 leading-relaxed flex items-start gap-2">
-                    <span className="mt-0.5 flex-shrink-0 w-4 h-4 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center font-bold text-[10px]">!</span>
-                    <span>{ecourtsError}</span>
-                  </div>
-                )}
-                {touched.cnrNumber && errors.cnrNumber && <ErrorMsg message={errors.cnrNumber} />}
-              </div>
+
 
               {/* Case Category */}
               <div>
@@ -1857,10 +1864,37 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
             </div>
           </div>
 
-          {/* Document Upload Section */}
+          {/* Document Upload & OCR Section */}
           <div className="space-y-6 pt-4 border-t border-[#F1F5F9]">
-            <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">Document Upload</h3>
+            <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">Document Upload & OCR</h3>
 
+            {/* OCR Extract Text from Document */}
+            <div className="border border-[#E2E8F0] p-5 rounded-2xl bg-white shadow-xs">
+              <OCRPanel
+                onSaveToDocuments={(extractedText, filename) => {
+                  const cleanName = (filename || "Document").replace(/\.[^/.]+$/, "");
+                  const docName = `OCR_${cleanName.replace(/[^a-zA-Z0-9_]/g, "_")}.txt`;
+                  const textBase64 = `data:text/plain;charset=utf-8;base64,${btoa(unescape(encodeURIComponent(extractedText)))}`;
+
+                  const newDocObj = {
+                    documentCategory: "Evidence/Documents",
+                    documentType: "OCR Extracted Text",
+                    file: docName,
+                    url: textBase64,
+                    password: ""
+                  };
+
+                  setDocuments((prev) => [...prev, newDocObj]);
+
+                  if (!formData.facts || formData.facts.trim().length === 0) {
+                    setFormData(prev => ({
+                      ...prev,
+                      facts: extractedText
+                    }));
+                  }
+                }}
+              />
+            </div>
 
             {/* Document rows */}
             {documents.map((doc, index) => (
@@ -1944,7 +1978,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                     {doc.file ? (
                       <div className="flex items-center justify-between w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2 text-sm h-10">
                         <span className="text-[#0F172A] font-medium truncate max-w-[180px]">
-                          {doc.file.name}
+                          {typeof doc.file === "string" ? doc.file : (doc.file?.name || "Uploaded File")}
                         </span>
                         <label
                           htmlFor={`file-upload-${index}`}
