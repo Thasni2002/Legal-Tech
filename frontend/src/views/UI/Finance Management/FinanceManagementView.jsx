@@ -10,6 +10,7 @@ import {
 import { jsPDF } from "jspdf";
 import InvoiceHistoryView from "./InvoiceHistoryView";
 import { usePermissions } from "@/utils/usePermissions";
+import ConfirmModal from "@/components/common/ConfirmModal";
 
 
 export default function CourtFeeCalView() {
@@ -30,6 +31,8 @@ export default function CourtFeeCalView() {
   // Modal states
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [deleteConfirmInvoiceId, setDeleteConfirmInvoiceId] = useState(null);
+  const [deletingInvoice, setDeletingInvoice] = useState(false);
 
   // Client Details state
   const [clientName, setClientName] = useState("");
@@ -244,10 +247,15 @@ export default function CourtFeeCalView() {
     }
   };
 
-  const handleDeleteInvoice = async (invoiceId) => {
-    if (!confirm("Are you sure you want to delete this invoice?")) return;
+  const handleDeleteInvoice = (invoiceId) => {
+    setDeleteConfirmInvoiceId(invoiceId);
+  };
+
+  const executeDeleteInvoice = async () => {
+    if (!deleteConfirmInvoiceId) return;
+    setDeletingInvoice(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/finance/invoices/${invoiceId}`, {
+      const res = await fetch(`http://127.0.0.1:8000/finance/invoices/${deleteConfirmInvoiceId}`, {
         method: "DELETE"
       });
       if (res.ok) {
@@ -257,6 +265,9 @@ export default function CourtFeeCalView() {
       }
     } catch (err) {
       console.error("Error deleting invoice:", err);
+    } finally {
+      setDeletingInvoice(false);
+      setDeleteConfirmInvoiceId(null);
     }
   };
 
@@ -360,14 +371,26 @@ export default function CourtFeeCalView() {
 
   if (isHistoryOpen) {
     return (
-      <InvoiceHistoryView
-        invoices={invoices}
-        handleUpdateStatus={handleUpdateStatus}
-        handleDownloadInvoicePDF={handleDownloadInvoicePDF}
-        handleDeleteInvoice={handleDeleteInvoice}
-        onBack={() => setIsHistoryOpen(false)}
-        hasPermission={hasPermission}
-      />
+      <>
+        <InvoiceHistoryView
+          invoices={invoices}
+          handleUpdateStatus={handleUpdateStatus}
+          handleDownloadInvoicePDF={handleDownloadInvoicePDF}
+          handleDeleteInvoice={handleDeleteInvoice}
+          onBack={() => setIsHistoryOpen(false)}
+          hasPermission={hasPermission}
+        />
+        <ConfirmModal
+          isOpen={!!deleteConfirmInvoiceId}
+          title="Delete Invoice"
+          message={`Are you sure you want to delete invoice #${deleteConfirmInvoiceId}? This action cannot be undone.`}
+          confirmText="Delete Invoice"
+          variant="danger"
+          loading={deletingInvoice}
+          onConfirm={executeDeleteInvoice}
+          onClose={() => setDeleteConfirmInvoiceId(null)}
+        />
+      </>
     );
   }
 
@@ -734,6 +757,18 @@ export default function CourtFeeCalView() {
         </div>,
         document.body
       )}
+
+      {/* Delete Invoice Confirm Modal */}
+      <ConfirmModal
+        isOpen={!!deleteConfirmInvoiceId}
+        title="Delete Invoice"
+        message={`Are you sure you want to delete invoice #${deleteConfirmInvoiceId}? This action cannot be undone.`}
+        confirmText="Delete Invoice"
+        variant="danger"
+        loading={deletingInvoice}
+        onConfirm={executeDeleteInvoice}
+        onClose={() => setDeleteConfirmInvoiceId(null)}
+      />
     </div>
   );
 }
