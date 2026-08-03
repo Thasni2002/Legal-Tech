@@ -45,7 +45,7 @@ async def extract_text(
     selected_lang = lang or ALL_LANGUAGES
 
     try:
-        result = run_ocr(file_bytes, content_type, lang=selected_lang)
+        result = run_ocr(file_bytes, content_type, lang=selected_lang, filename=file.filename or "")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"OCR Processing Error: {str(e)}")
 
@@ -57,6 +57,9 @@ async def extract_text(
         original_filename=file.filename or "uploaded_file",
         file_type="pdf" if content_type == "application/pdf" else "image",
         extracted_text=result.get("extracted_text", ""),
+        digitized_html=result.get("digitized_html", ""),
+        document_type=result.get("document_type", "Legal Document"),
+        structured_fields=result.get("structured_fields", "{}"),
         languages_used=result.get("languages_used", selected_lang),
         page_count=result.get("page_count", 1),
     )

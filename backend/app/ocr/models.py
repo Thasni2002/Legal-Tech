@@ -20,6 +20,9 @@ class OcrResult(Base):
     original_filename = Column(String(255), nullable=False)
     file_type = Column(String(50), nullable=True)   # "image" | "pdf"
     extracted_text = Column(Text, nullable=True)
+    digitized_html = Column(Text, nullable=True)
+    document_type = Column(String(100), nullable=True)
+    structured_fields = Column(Text, nullable=True)
     languages_used = Column(String(255), nullable=True)  # e.g. "eng+mal+hin"
     page_count = Column(Integer, default=1)
     created_at = Column(DateTime, default=datetime.utcnow)
