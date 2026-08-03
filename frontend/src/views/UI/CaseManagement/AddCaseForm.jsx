@@ -2155,14 +2155,17 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
             {/* OCR Extract Text from Document */}
             <div className="border border-[#E2E8F0] p-5 rounded-2xl bg-white shadow-xs">
               <OCRPanel
-                onSaveToDocuments={(extractedText, filename) => {
+                showEditLayout={false}
+                showPrint={false}
+                showSaveToDocuments={false}
+                onTextExtracted={(extractedText, filename, detectedDocType) => {
                   const cleanName = (filename || "Document").replace(/\.[^/.]+$/, "");
                   const docName = `OCR_${cleanName.replace(/[^a-zA-Z0-9_]/g, "_")}.txt`;
                   const textBase64 = `data:text/plain;charset=utf-8;base64,${btoa(unescape(encodeURIComponent(extractedText)))}`;
 
                   const newDocObj = {
                     documentCategory: "Evidence/Documents",
-                    documentType: "OCR Extracted Text",
+                    documentType: detectedDocType || "OCR Extracted Text",
                     file: docName,
                     url: textBase64,
                     password: ""

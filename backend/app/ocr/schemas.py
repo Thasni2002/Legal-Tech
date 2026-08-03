@@ -9,6 +9,9 @@ class OcrResultOut(BaseModel):
     original_filename: str
     file_type: Optional[str] = None
     extracted_text: Optional[str] = None
+    digitized_html: Optional[str] = None
+    document_type: Optional[str] = None
+    structured_fields: Optional[str] = None
     languages_used: Optional[str] = None
     page_count: int
     created_at: datetime

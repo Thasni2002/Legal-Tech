@@ -159,7 +159,7 @@ export default function CaseDetailView({ id }) {
   const [docAssignModal, setDocAssignModal] = useState(null);
   const [viewingDocument, setViewingDocument] = useState(null);
 
-  const handleSaveOcrToCaseDocuments = async (extractedText, originalFilename) => {
+  const handleSaveOcrToCaseDocuments = async (extractedText, originalFilename, detectedDocType) => {
     if (!selectedCase || !extractedText) return;
     try {
       const cleanName = (originalFilename || "Document").replace(/\.[^/.]+$/, "");
@@ -167,7 +167,7 @@ export default function CaseDetailView({ id }) {
       const textBase64 = `data:text/plain;charset=utf-8;base64,${btoa(unescape(encodeURIComponent(extractedText)))}`;
 
       const newDocObj = {
-        documentType: "OCR Extracted Text",
+        documentType: detectedDocType || "OCR Extracted Text",
         advocate: getLoggedInUser()?.username || selectedCase.selected_advocate || "Advocate",
         file: docName,
         url: textBase64,
