@@ -17,6 +17,7 @@ export default function ClientEdit({ onSave, onCancel }) {
     fullName: "",
     email: "",
     phone: "",
+    altPhone: "",
   });
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -32,6 +33,7 @@ export default function ClientEdit({ onSave, onCancel }) {
           fullName: parsed.fullName || "",
           email: parsed.email || "",
           phone: parsed.phone || "",
+          altPhone: parsed.altPhone || "",
         });
         setOriginalName(parsed.fullName || "");
       } catch (err) {
@@ -65,7 +67,8 @@ export default function ClientEdit({ onSave, onCancel }) {
         original_name: originalName,
         full_name: formData.fullName,
         email: formData.email,
-        phone: formData.phone
+        phone: formData.phone,
+        alt_phone: formData.altPhone || null,
       };
 
       const res = await fetch(`${API_BASE_URL}/clients/${formData.clientId}`, {
@@ -164,8 +167,29 @@ export default function ClientEdit({ onSave, onCancel }) {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
+              maxLength={10}
               className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
               placeholder="Enter Mobile Number"
+            />
+          </div>
+
+          {/* Alt Phone */}
+          <div>
+            <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">
+              Alternative Mobile No.
+            </label>
+
+            <input
+              type="text"
+              name="altPhone"
+              value={formData.altPhone || ""}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                setFormData(prev => ({ ...prev, altPhone: val }));
+              }}
+              maxLength={10}
+              className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+              placeholder="e.g. 9123456789 (optional)"
             />
           </div>
         </div>

@@ -1,4 +1,4 @@
-import ClientCaseTrackingView from "@/pages/UI/ClientCaseTracking/ClientCaseTrackingView";
+import ClientCaseTrackingView from "@/views/UI/ClientCaseTracking/ClientCaseTrackingView";
 
 export default function Page() {
   return <ClientCaseTrackingView />;

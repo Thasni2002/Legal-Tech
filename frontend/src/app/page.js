@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getLoggedInUser } from '@/utils/auth'
-import AdvDashboardView from '@/pages/UI/AdvDashboard/AdvDashboardView'
+import AdvDashboardView from '@/views/UI/AdvDashboard/AdvDashboardView'
 
 export default function Home() {
   const router = useRouter();

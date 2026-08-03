@@ -1,4 +1,4 @@
-import ClientView from "@/pages/UI/ClientManagement/ClientView";
+import ClientView from "@/views/UI/ClientManagement/ClientView";
 
 export default function Page() {
   return (

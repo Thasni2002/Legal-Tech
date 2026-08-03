@@ -2,9 +2,9 @@
 import { API_BASE_URL } from "@/utils/api";
 
 import { useEffect, useState } from "react";
-import LawfirmAdd from "@/pages/UI/LawfirmManagement/LawfirmAdd";
-import AssignAdv from "@/pages/UI/LawfirmManagement/AssignAdv";
-import LawfirmTableView from "@/pages/UI/LawfirmManagement/lawfirmtableview";
+import LawfirmAdd from "@/views/UI/LawfirmManagement/LawfirmAdd";
+import AssignAdv from "@/views/UI/LawfirmManagement/AssignAdv";
+import LawfirmTableView from "@/views/UI/LawfirmManagement/lawfirmtableview";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export default function LawfirmManagementClient({

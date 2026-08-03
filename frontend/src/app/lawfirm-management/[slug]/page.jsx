@@ -19,4 +19,4 @@ export default async function Page({ params }) {
       <LawfirmManagementClient slug={slug} />
     </Suspense>
   );
-}
+}

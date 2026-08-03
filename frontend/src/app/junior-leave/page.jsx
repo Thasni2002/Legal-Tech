@@ -1,5 +1,5 @@
 import React from "react";
-import LeaveManagementView from "@/pages/UI/LeaveManagement/LeaveManagementView";
+import LeaveManagementView from "@/views/UI/LeaveManagement/LeaveManagementView";
 
 export default function Page() {
   return (

@@ -1,4 +1,4 @@
-import MeetingHistory from "@/pages/UI/Consultations/MeetingHistory";
+import MeetingHistory from "@/views/UI/Consultations/MeetingHistory";
 
 export const metadata = {
   title: "Meeting History | LegalTech",

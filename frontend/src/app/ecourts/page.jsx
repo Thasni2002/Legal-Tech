@@ -1,4 +1,4 @@
-import ECourtsView from "@/pages/UI/ECourts/ECourtsView";
+import ECourtsView from "@/views/UI/ECourts/ECourtsView";
 
 export default function ECourtsPage() {
   return <ECourtsView />;

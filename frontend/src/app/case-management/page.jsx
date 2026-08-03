@@ -1,5 +1,5 @@
 import React from 'react'
-import CaseManagement from "@/pages/UI/CaseManagement/CaseView"
+import CaseManagement from "@/views/UI/CaseManagement/CaseView"
 
 
 const page = () => {

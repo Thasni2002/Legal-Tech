@@ -22,6 +22,7 @@ class ClientResponse(BaseModel):
     full_name: str
     email: str
     phone: str
+    alt_phone: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -195,6 +196,8 @@ def update_client(client_id: str, client: ClientUpdate, db: Session = Depends(ge
         db_client.full_name = client.full_name
         db_client.email = client.email
         db_client.phone = client.phone
+        if hasattr(db_client, 'alt_phone'):
+            db_client.alt_phone = client.alt_phone
         db.commit()
         db.refresh(db_client)
         updated_any = True
@@ -206,11 +209,17 @@ def update_client(client_id: str, client: ClientUpdate, db: Session = Depends(ge
         from app.advocate.consultations.models import Consultation
 
         # Update Case Management Cases
-        cases_updated = db.query(CaseMgmtCase).filter(CaseMgmtCase.client_name == client.original_name).update({
+        case_update_dict = {
             CaseMgmtCase.client_name: client.full_name,
             CaseMgmtCase.contact_number: client.phone,
             CaseMgmtCase.email_id: client.email
-        }, synchronize_session=False)
+        }
+        if client.alt_phone is not None:
+            case_update_dict[CaseMgmtCase.alt_contact_number] = client.alt_phone
+
+        cases_updated = db.query(CaseMgmtCase).filter(CaseMgmtCase.client_name == client.original_name).update(
+            case_update_dict, synchronize_session=False
+        )
 
         # Update Invoices
         db.query(Invoice).filter(Invoice.client_name == client.original_name).update({
@@ -235,7 +244,8 @@ def update_client(client_id: str, client: ClientUpdate, db: Session = Depends(ge
         client_id=client_id,
         full_name=client.full_name,
         email=client.email,
-        phone=client.phone
+        phone=client.phone,
+        alt_phone=client.alt_phone
     )
 
 

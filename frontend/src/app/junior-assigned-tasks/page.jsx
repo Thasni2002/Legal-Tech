@@ -1,4 +1,4 @@
-import AssignedTasksView from "@/pages/UI/AssignedTasks/AssignedTasksView";
+import AssignedTasksView from "@/views/UI/AssignedTasks/AssignedTasksView";
 
 export default function Page() {
   return <AssignedTasksView isJuniorView={true} />;
