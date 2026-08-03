@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 
 class DocumentResponse(BaseModel):
     id: int
@@ -14,14 +15,16 @@ class ClientCreate(BaseModel):
     full_name: str
     email: str
     phone: str
+    alt_phone: Optional[str] = None
 
-from typing import Optional
+
 
 class ClientUpdate(BaseModel):
     original_name: Optional[str] = None
     full_name: str
     email: str
     phone: str
+    alt_phone: Optional[str] = None
 
 class ClientResponse(BaseModel):
     id: int
@@ -29,6 +32,7 @@ class ClientResponse(BaseModel):
     full_name: str
     email: str
     phone: str
+    alt_phone: Optional[str] = None
 
     class Config:
         from_attributes = True

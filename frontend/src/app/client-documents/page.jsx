@@ -1,4 +1,4 @@
-import ClientDocuments from '@/pages/UI/ClientDocument/ClientDocumentView'
+import ClientDocuments from '@/views/UI/ClientDocument/ClientDocumentView'
 import React from 'react'
 
 const page = () => {

@@ -106,6 +106,7 @@ export default function ClientView() {
               clientId: `CUST-${String(idCounter).padStart(4, '0')}`,
               clientName: matchedProfile.advocateName || name,
               contactNumber: matchedProfile.phoneNumber || c.contact_number || "N/A",
+              altPhone: c.alt_contact_number || "",
               emailId: matchedProfile.emailAddress || c.email_id || "N/A",
               profileImage: matchedProfile.profileImage || null,
               activeCases: 1,
@@ -484,7 +485,8 @@ export default function ClientView() {
                                 clientId: client.clientId,
                                 fullName: client.clientName,
                                 email: client.emailId,
-                                phone: client.contactNumber
+                                phone: client.contactNumber,
+                                altPhone: client.altPhone || ""
                               }));
                               setShowEditModal(true);
                             }}
@@ -634,7 +636,8 @@ export default function ClientView() {
                                   clientId: client.clientId,
                                   fullName: client.clientName,
                                   email: client.emailId,
-                                  phone: client.contactNumber
+                                  phone: client.contactNumber,
+                                  altPhone: client.altPhone || ""
                                 }));
                                 setShowEditModal(true);
                               }}
@@ -763,6 +766,7 @@ export default function ClientView() {
                               fullName: client.clientName,
                               email: client.emailId,
                               phone: client.contactNumber,
+                              altPhone: client.altPhone || "",
                             })
                           );
                           setShowEditModal(true);

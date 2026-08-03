@@ -1,4 +1,4 @@
-import AssignedCasesView from "@/pages/UI/AssignedCases/AssignedCasesView";
+import AssignedCasesView from "@/views/UI/AssignedCases/AssignedCasesView";
 
 export default function Page() {
   return <AssignedCasesView />;

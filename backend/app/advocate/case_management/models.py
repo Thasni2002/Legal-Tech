@@ -21,6 +21,7 @@ class Case(Base):
 
     client_name = Column(String(255))
     contact_number = Column(String(50))
+    alt_contact_number = Column(String(50), nullable=True)  # Alternative mobile number
     email_id = Column(String(255))
     client_role = Column(String(50), nullable=True)
     client_address = Column(Text, nullable=True)

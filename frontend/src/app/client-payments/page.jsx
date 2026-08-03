@@ -1,4 +1,4 @@
-import ClientPayments from '@/pages/UI/ClientPayments/ClientPaymentsView'
+import ClientPayments from '@/views/UI/ClientPayments/ClientPaymentsView'
 import React from 'react'
 
 const page = () => {

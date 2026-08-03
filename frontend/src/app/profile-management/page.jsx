@@ -1,8 +1,8 @@
 "use client";
 import { API_BASE_URL } from "@/utils/api";
 
-import ProfileManagement from '@/pages/UI/ProfileManagement/ProfileManagmentView'
-import ProfileView from "@/pages/UI/ProfileManagement/profileView";
+import ProfileManagement from '@/views/UI/ProfileManagement/ProfileManagmentView'
+import ProfileView from "@/views/UI/ProfileManagement/profileView";
 import React, { useState, useEffect } from 'react'
 import { getLoggedInUser } from "@/utils/auth";
 

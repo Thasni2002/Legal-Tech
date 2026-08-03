@@ -1,5 +1,5 @@
 
-import ClientConsultationView from '@/pages/UI/ClientConsultation/ClientConsultationView'
+import ClientConsultationView from '@/views/UI/ClientConsultation/ClientConsultationView'
 import React from 'react'
 
 const page = () => {

@@ -667,7 +667,8 @@ export default function ClientHistory() {
                             clientId: client.clientId,
                             fullName: client.fullName || client.clientName,
                             email: client.email || client.emailId,
-                            phone: client.phone || client.contactNumber
+                            phone: client.phone || client.contactNumber,
+                            altPhone: client.altPhone || client.altContactNumber || ""
                           }));
                           setShowEditModal(true);
                         }}

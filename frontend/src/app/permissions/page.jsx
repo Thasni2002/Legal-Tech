@@ -1,4 +1,4 @@
-import Permission from '@/pages/UI/Permission/PermissionView'
+import Permission from '@/views/UI/Permission/PermissionView'
 import React from 'react'
 
 const page = () => {

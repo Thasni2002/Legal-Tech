@@ -3,10 +3,10 @@
 import React from "react";
 import Link from "next/link";
 
-import CaseTracking from "@/pages/UI/ClientManagement/CaseTracking";
-import ClientHistory from "@/pages/UI/ClientManagement/ClientHistory";
+import CaseTracking from "@/views/UI/ClientManagement/CaseTracking";
+import ClientHistory from "@/views/UI/ClientManagement/ClientHistory";
 
-import ClientEdit from "@/pages/UI/ClientManagement/ClientEdit";
+import ClientEdit from "@/views/UI/ClientManagement/ClientEdit";
 
 export default function ClientSlugClient({ slug }) {
   // 1. Render Client Add

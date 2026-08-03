@@ -1,4 +1,4 @@
-import JuniorCalendarView from "@/pages/UI/JuniorCalendar/JuniorCalendarView";
+import JuniorCalendarView from "@/views/UI/JuniorCalendar/JuniorCalendarView";
 
 export default function Page() {
   return <JuniorCalendarView />;

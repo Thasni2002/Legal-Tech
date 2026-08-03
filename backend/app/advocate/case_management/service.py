@@ -27,6 +27,7 @@ def create_case(db: Session, data: CaseCreate):
 
         client_name=data.clientName,
         contact_number=data.contactNumber,
+        alt_contact_number=data.altContactNumber,
         email_id=data.emailId,
         client_role=data.clientRole,
         client_address=data.clientAddress,
@@ -107,6 +108,8 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
         case.client_name = data.clientName
     if data.contactNumber is not None:
         case.contact_number = data.contactNumber
+    if data.altContactNumber is not None:
+        case.alt_contact_number = data.altContactNumber
     if data.emailId is not None:
         case.email_id = data.emailId
     if data.clientRole is not None:

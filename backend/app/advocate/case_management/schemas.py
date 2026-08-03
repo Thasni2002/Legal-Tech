@@ -44,6 +44,7 @@ class CaseCreate(BaseModel):
 
     clientName: str
     contactNumber: str
+    altContactNumber: Optional[str] = None
     emailId: str
     clientRole: Optional[str] = None
     clientAddress: Optional[str] = None
@@ -70,6 +71,7 @@ class CaseUpdate(BaseModel):
 
     clientName: Optional[str] = None
     contactNumber: Optional[str] = None
+    altContactNumber: Optional[str] = None
     emailId: Optional[str] = None
     clientRole: Optional[str] = None
     clientAddress: Optional[str] = None

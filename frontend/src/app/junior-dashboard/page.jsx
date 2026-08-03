@@ -1,5 +1,5 @@
 import React from 'react'
-import JunAdvDashboard from "@/pages/UI/JuniorDashboard/junAdvDashboard"
+import JunAdvDashboard from "@/views/UI/JuniorDashboard/junAdvDashboard"
 
 
 const page = () => {

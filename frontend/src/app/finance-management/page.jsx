@@ -1,4 +1,4 @@
-import CourtFeeCalView from '@/pages/UI/Finance Management/FinanceManagementView'
+import CourtFeeCalView from '@/views/UI/Finance Management/FinanceManagementView'
 import React from 'react'
 
 const page = () => {

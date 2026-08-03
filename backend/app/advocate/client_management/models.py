@@ -13,6 +13,7 @@ class Client(Base):
     full_name = Column(String(100))
     email = Column(String(150))
     phone = Column(String(20))
+    alt_phone = Column(String(20), nullable=True)
 
     documents = relationship("ClientDocument", back_populates="client")
 
