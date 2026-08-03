@@ -22,6 +22,8 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
   const loggedInUser = typeof window !== "undefined" ? getLoggedInUser() : null;
   const isJunior = loggedInUser && (loggedInUser.role || "").toLowerCase().replace(/\s+/g, "") === "junioradvocate";
 
+  const cleanTitle = (title || "").replace(/[\/\\]/g, "_");
+
   const normalizeUrl = (url) => {
     if (!url) return "";
     if (typeof window !== "undefined") {
@@ -34,63 +36,103 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
     return url;
   };
 
-  const effectiveUrl = fileUrl || (title && (title.includes(".") || title.toLowerCase().endsWith(".pdf") || title.toLowerCase().endsWith(".jpg") || title.toLowerCase().endsWith(".png") || title.toLowerCase().endsWith(".jpeg")) ? `${API_BASE_URL}/uploads/${title}` : "");
+  const getEffectiveUrl = () => {
+    if (fileUrl) {
+      if (fileUrl.startsWith("data:") || fileUrl.startsWith("blob:")) return fileUrl;
+      if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) return fileUrl;
+      if (fileUrl.startsWith("/")) return `${API_BASE_URL}${fileUrl}`;
+      return `${API_BASE_URL}/uploads/${encodeURIComponent(fileUrl)}`;
+    }
+    if (cleanTitle) {
+      return `${API_BASE_URL}/uploads/${encodeURIComponent(cleanTitle)}`;
+    }
+    return "";
+  };
+
+  const effectiveUrl = getEffectiveUrl();
   const normalizedUrl = normalizeUrl(effectiveUrl);
 
   useEffect(() => {
     if (!effectiveUrl) return;
 
-    // Detect file type
+    // Detect data: URLs (Base64 encoded text or binary files)
     if (effectiveUrl.startsWith("data:")) {
       const mime = effectiveUrl.split(";")[0].split(":")[1] || "";
+      const isTextData =
+        mime.startsWith("text/") ||
+        mime.includes("markdown") ||
+        mime.includes("json") ||
+        (cleanTitle && (cleanTitle.endsWith(".txt") || cleanTitle.endsWith(".md")));
+
       setIsImage(mime.startsWith("image/"));
       setIsPdf(mime === "application/pdf");
       setIsAudio(mime.startsWith("audio/"));
       setIsVideo(mime.startsWith("video/"));
 
-      try {
-        const parts = effectiveUrl.split(",");
-        const mimeType = parts[0].match(/:(.*?);/)[1];
-        const bstr = atob(parts[1]);
-        let n = bstr.length;
-        const u8arr = new Uint8Array(n);
-        while (n--) {
-          u8arr[n] = bstr.charCodeAt(n);
+      if (isTextData) {
+        setIsMarkdown(true);
+        setLoadingContent(false);
+        try {
+          const parts = effectiveUrl.split(",");
+          const base64Str = parts[1] || "";
+          const decodedText = decodeURIComponent(escape(atob(base64Str)));
+          setMarkdownContent(decodedText || "*(Empty Document)*");
+        } catch (err) {
+          setMarkdownContent("*(Unable to decode document content)*");
         }
-        const blob = new Blob([u8arr], { type: mimeType });
-        const bUrl = URL.createObjectURL(blob);
-        setViewerUrl(bUrl);
-        return () => {
-          URL.revokeObjectURL(bUrl);
-        };
-      } catch (e) {
-        console.error("Failed to parse base64 for preview:", e);
         setViewerUrl(effectiveUrl);
+      } else {
+        try {
+          const parts = effectiveUrl.split(",");
+          const mimeType = parts[0].match(/:(.*?);/)[1];
+          const bstr = atob(parts[1]);
+          let n = bstr.length;
+          const u8arr = new Uint8Array(n);
+          while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+          }
+          const blob = new Blob([u8arr], { type: mimeType });
+          const bUrl = URL.createObjectURL(blob);
+          setViewerUrl(bUrl);
+          return () => {
+            URL.revokeObjectURL(bUrl);
+          };
+        } catch (e) {
+          setViewerUrl(effectiveUrl);
+        }
       }
     } else {
       let ext = (effectiveUrl || "").split(".").pop().toLowerCase().split("?")[0];
       if (effectiveUrl.startsWith("blob:") || ext.length > 5) {
-        ext = (title || "").split(".").pop().toLowerCase().split("?")[0];
+        ext = (cleanTitle || "").split(".").pop().toLowerCase().split("?")[0];
       }
+
       setIsImage(["jpg", "jpeg", "png", "webp", "gif", "bmp", "svg"].includes(ext));
       setIsPdf(ext === "pdf");
       setIsAudio(["mp3", "wav", "ogg", "aac", "m4a", "wma", "flac"].includes(ext));
       setIsVideo(["mp4", "webm", "ogg", "mov", "avi", "mkv", "3gp"].includes(ext));
       
-      const isMd = ext === "md" || ext === "txt";
+      const isMd = ext === "md" || ext === "txt" || ext === "json" || ext === "log";
       setIsMarkdown(isMd);
       setViewerUrl(normalizedUrl);
 
       if (isMd && normalizedUrl) {
         setLoadingContent(true);
         fetch(normalizedUrl)
-          .then((res) => res.text())
-          .then((text) => {
+          .then(async (res) => {
+            if (!res.ok) {
+              throw new Error(`HTTP ${res.status}`);
+            }
+            const text = await res.text();
+            if (text.includes('"detail":') && (text.includes("Not Found") || text.includes("not found"))) {
+              throw new Error("File not found on server");
+            }
             setMarkdownContent(text);
           })
-          .catch((err) => {
-            console.error("Failed to load markdown/text file:", err);
-            setMarkdownContent("Failed to load document content.");
+          .catch(() => {
+            setMarkdownContent(
+              `### ⚠️ Document File Not Found\n\nThe requested document **\`${cleanTitle || "Document"}\`** is not available on the server. If this document was generated earlier without a saved text link, please regenerate or re-save it.`
+            );
           })
           .finally(() => {
             setLoadingContent(false);
@@ -113,7 +155,6 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
 
   const handleUnlock = () => {
     setIsLocked(false);
-    // Explicitly reset display properties so React rendering is in control again
     const bodyEl = document.getElementById("secure-viewer-body");
     const overlayEl = document.getElementById("secure-blackout-overlay");
     if (bodyEl) {
@@ -129,33 +170,17 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
     if (!isJunior) return;
 
     const handleKeyDown = (e) => {
-      // 1. Check PrintScreen key
       if (e.key === "PrintScreen" || e.keyCode === 44) {
         e.preventDefault();
         forceBlackout();
         setIsLocked(true);
       }
-
-      // 2. Check Ctrl+P / Cmd+P
       if ((e.ctrlKey || e.metaKey) && e.key === "p") {
         e.preventDefault();
         forceBlackout();
         setIsLocked(true);
       }
-
-      // 3. Check Ctrl+S / Cmd+S
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
-        e.preventDefault();
-        forceBlackout();
-        setIsLocked(true);
-      }
-
-      // 4. Check DevTools: F12 or Ctrl+Shift+I / Cmd+Opt+I
-      if (
-        e.key === "F12" ||
-        ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "I") ||
-        ((e.ctrlKey || e.metaKey) && e.altKey && e.key === "i")
-      ) {
         e.preventDefault();
         forceBlackout();
         setIsLocked(true);
@@ -163,7 +188,6 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
     };
 
     const handleKeyUp = (e) => {
-      // PrintScreen can fire keyup on Windows
       if (e.key === "PrintScreen" || e.keyCode === 44) {
         e.preventDefault();
         forceBlackout();
@@ -172,7 +196,6 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
     };
 
     const handleBlur = () => {
-      // Synchronously black out DOM immediately as Snipping Tool or screenshot overlay takes focus
       forceBlackout();
       setIsLocked(true);
     };
@@ -200,7 +223,6 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
   const handleDownload = () => {
     if (!normalizedUrl) return;
 
-    // Junior Advocates are blocked from downloading confidential files
     if (isJunior) {
       alert("Downloading confidential files is restricted for Junior Advocates.");
       return;
@@ -220,7 +242,7 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
         const blobUrl = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = blobUrl;
-        a.download = title || "document";
+        a.download = cleanTitle || "document";
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -271,7 +293,7 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
               <FileText size={16} />
             </div>
             <div>
-              <h3 className="font-bold text-slate-800 text-sm leading-tight">{title || "Document"}</h3>
+              <h3 className="font-bold text-slate-800 text-sm leading-tight">{cleanTitle || "Document"}</h3>
               {badge && (
                 <span className="text-[10px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
                   {badge}
@@ -288,10 +310,12 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
                 >
                   <Download size={13} /> Download
                 </button>
-                <a href={normalizedUrl} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-lg transition">
-                  <ExternalLink size={13} /> Open in Tab
-                </a>
+                {normalizedUrl && (
+                  <a href={normalizedUrl} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-lg transition">
+                    <ExternalLink size={13} /> Open in Tab
+                  </a>
+                )}
               </>
             )}
             <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer">
@@ -345,22 +369,27 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
                 </div>
               </div>
             ) : isPdf ? (
-              <iframe src={viewerUrl} className="w-full h-full min-h-[600px] border-0" title={title || "Document"} />
+              <iframe src={viewerUrl} className="w-full h-full min-h-[600px] border-0" title={cleanTitle || "Document"} />
             ) : isMarkdown ? (
-              <div className="w-full h-full p-8 overflow-auto bg-white flex flex-col justify-start items-start select-text">
+              <div className="w-full h-full p-6 md:p-8 overflow-auto bg-[#FFFDF5] flex flex-col justify-start items-start select-text border border-amber-200/40">
                 {loadingContent ? (
                   <div className="flex items-center justify-center w-full h-full py-8 text-slate-400 font-semibold">
                     Loading content...
                   </div>
+                ) : (/<[a-z][\s\S]*>/i.test(markdownContent) || (cleanTitle && cleanTitle.endsWith(".html"))) ? (
+                  <div
+                    className="prose max-w-none text-[#0F172A] font-serif leading-relaxed text-sm w-full"
+                    dangerouslySetInnerHTML={{ __html: markdownContent }}
+                  />
                 ) : (
-                  <div className="prose prose-slate max-w-none text-slate-800 leading-relaxed text-sm w-full">
+                  <div className="prose prose-slate max-w-none text-slate-800 leading-relaxed text-sm w-full font-serif whitespace-pre-wrap">
                     <ReactMarkdown>{markdownContent}</ReactMarkdown>
                   </div>
                 )}
               </div>
             ) : isImage ? (
               <div className="p-6">
-                <img src={viewerUrl} alt={title || "Document"} className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-lg" />
+                <img src={viewerUrl} alt={cleanTitle || "Document"} className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-lg" />
               </div>
             ) : isAudio ? (
               <div className="p-12 flex flex-col items-center justify-center gap-4 bg-white rounded-xl border border-slate-200 w-full max-w-md mx-auto my-8 shadow-sm">
@@ -369,7 +398,7 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                   </svg>
                 </div>
-                <p className="font-bold text-slate-700 text-sm text-center truncate max-w-full">{title}</p>
+                <p className="font-bold text-slate-700 text-sm text-center truncate max-w-full">{cleanTitle}</p>
                 <audio controls src={viewerUrl} className="w-full mt-2 focus:outline-none" />
               </div>
             ) : isVideo ? (

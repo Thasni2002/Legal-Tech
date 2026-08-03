@@ -126,11 +126,12 @@ export default function OCRPanel({
       setSelectedDocType(data.document_type || "Legal Document");
       setViewTab("digitized");
 
-      if (onTextExtracted && data.extracted_text) {
+      if (onTextExtracted && (data.extracted_text || data.digitized_html)) {
         onTextExtracted(
           data.extracted_text,
           file.name,
-          data.document_type || "OCR Extracted Text"
+          data.document_type || "OCR Extracted Text",
+          data.digitized_html || ""
         );
       }
     } catch (e) {
@@ -410,7 +411,8 @@ export default function OCRPanel({
                       onSaveToDocuments(
                         result.extracted_text,
                         result.original_filename,
-                        selectedDocType || result.document_type || "OCR Extracted Text"
+                        selectedDocType || result.document_type || "OCR Extracted Text",
+                        editedHtml || result.digitized_html || ""
                       );
                       setSavedToDocs(true);
                       setTimeout(() => setSavedToDocs(false), 2500);

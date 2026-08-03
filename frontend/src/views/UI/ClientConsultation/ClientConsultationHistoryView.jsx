@@ -20,9 +20,12 @@ import {
 } from "lucide-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import ConfirmModal from "@/components/common/ConfirmModal";
 
 export default function ClientConsultationHistoryView() {
   const [history, setHistory] = useState([]);
+  const [deleteConsultationId, setDeleteConsultationId] = useState(null);
+  const [deletingConsultation, setDeletingConsultation] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -249,12 +252,15 @@ export default function ClientConsultationHistoryView() {
     }
   };
 
-  const handleDeleteConsultation = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this consultation?")) {
-      return;
-    }
+  const handleDeleteConsultation = (id) => {
+    setDeleteConsultationId(id);
+  };
+
+  const executeDeleteConsultation = async () => {
+    if (!deleteConsultationId) return;
+    setDeletingConsultation(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/consultations/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/consultations/${deleteConsultationId}`, {
         method: "DELETE",
       });
 
@@ -267,6 +273,9 @@ export default function ClientConsultationHistoryView() {
     } catch (err) {
       console.error("Error deleting:", err);
       triggerSuccess("Error connecting to server", "error");
+    } finally {
+      setDeletingConsultation(false);
+      setDeleteConsultationId(null);
     }
   };
 
@@ -635,6 +644,18 @@ export default function ClientConsultationHistoryView() {
           </button>
         </div>
       )}
+
+      {/* Delete Consultation Confirm Modal */}
+      <ConfirmModal
+        isOpen={!!deleteConsultationId}
+        title="Delete Consultation"
+        message="Are you sure you want to delete this consultation history entry? This action cannot be undone."
+        confirmText="Delete Consultation"
+        variant="danger"
+        loading={deletingConsultation}
+        onConfirm={executeDeleteConsultation}
+        onClose={() => setDeleteConsultationId(null)}
+      />
     </div>
   );
 }

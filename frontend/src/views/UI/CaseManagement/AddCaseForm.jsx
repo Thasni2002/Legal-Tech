@@ -2158,10 +2158,13 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                 showEditLayout={false}
                 showPrint={false}
                 showSaveToDocuments={false}
-                onTextExtracted={(extractedText, filename, detectedDocType) => {
+                onTextExtracted={(extractedText, filename, detectedDocType, digitizedHtml) => {
                   const cleanName = (filename || "Document").replace(/\.[^/.]+$/, "");
-                  const docName = `OCR_${cleanName.replace(/[^a-zA-Z0-9_]/g, "_")}.txt`;
-                  const textBase64 = `data:text/plain;charset=utf-8;base64,${btoa(unescape(encodeURIComponent(extractedText)))}`;
+                  const contentToSave = digitizedHtml || extractedText;
+                  const ext = digitizedHtml ? "html" : "txt";
+                  const mime = digitizedHtml ? "text/html" : "text/plain";
+                  const docName = `OCR_${cleanName.replace(/[^a-zA-Z0-9_]/g, "_")}.${ext}`;
+                  const textBase64 = `data:${mime};charset=utf-8;base64,${btoa(unescape(encodeURIComponent(contentToSave)))}`;
 
                   const newDocObj = {
                     documentCategory: "Evidence/Documents",

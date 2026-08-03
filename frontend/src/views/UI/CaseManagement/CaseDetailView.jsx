@@ -159,12 +159,15 @@ export default function CaseDetailView({ id }) {
   const [docAssignModal, setDocAssignModal] = useState(null);
   const [viewingDocument, setViewingDocument] = useState(null);
 
-  const handleSaveOcrToCaseDocuments = async (extractedText, originalFilename, detectedDocType) => {
-    if (!selectedCase || !extractedText) return;
+  const handleSaveOcrToCaseDocuments = async (extractedText, originalFilename, detectedDocType, digitizedHtml) => {
+    if (!selectedCase || (!extractedText && !digitizedHtml)) return;
     try {
       const cleanName = (originalFilename || "Document").replace(/\.[^/.]+$/, "");
-      const docName = `OCR_${cleanName.replace(/[^a-zA-Z0-9_]/g, "_")}.txt`;
-      const textBase64 = `data:text/plain;charset=utf-8;base64,${btoa(unescape(encodeURIComponent(extractedText)))}`;
+      const contentToSave = digitizedHtml || extractedText;
+      const ext = digitizedHtml ? "html" : "txt";
+      const mime = digitizedHtml ? "text/html" : "text/plain";
+      const docName = `OCR_${cleanName.replace(/[^a-zA-Z0-9_]/g, "_")}.${ext}`;
+      const textBase64 = `data:${mime};charset=utf-8;base64,${btoa(unescape(encodeURIComponent(contentToSave)))}`;
 
       const newDocObj = {
         documentType: detectedDocType || "OCR Extracted Text",
@@ -404,12 +407,16 @@ export default function CaseDetailView({ id }) {
     setSaveCaseDocLoading(true);
 
     try {
-      const docName = `${(docGenTitle || "Generated_Document").replace(/[^a-zA-Z0-9_]/g, "_")}_${selectedCase.case_no}.txt`;
+      const safeCaseNo = (selectedCase.case_no || "").replace(/[^a-zA-Z0-9_]/g, "_");
+      const cleanDocTitle = (docGenTitle || "Generated_Document").replace(/[^a-zA-Z0-9_]/g, "_");
+      const docName = `${cleanDocTitle}_${safeCaseNo}.txt`;
+      const textBase64 = `data:text/plain;charset=utf-8;base64,${btoa(unescape(encodeURIComponent(contentToSave)))}`;
+
       const newDocObj = {
         documentType: docGenTitle || "AI Legal Document",
         advocate: getLoggedInUser()?.username || selectedCase.selected_advocate || "Advocate",
         file: docName,
-        url: "",
+        url: textBase64,
         password: ""
       };
 
