@@ -7,7 +7,12 @@ import { getLoggedInUser } from "@/utils/auth";
 import { API_BASE_URL } from "@/utils/api";
 import ReactMarkdown from "react-markdown";
 
-export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) {
+export default function DocumentViewerModal({ document: docProp, fileUrl, title, badge, onClose }) {
+  // Support both `document={docObj}` and `fileUrl={url}` prop styles
+  const rawFileUrl = fileUrl || docProp?.url || docProp?.fileUrl || (typeof docProp?.file === "string" && (docProp.file.startsWith("data:") || docProp.file.startsWith("http")) ? docProp.file : null);
+  const rawTitle = title || docProp?.file || docProp?.title || docProp?.name || "Document";
+  const effectiveBadge = badge || docProp?.documentType || docProp?.badge;
+
   const [viewerUrl, setViewerUrl] = useState("");
   const [isPdf, setIsPdf] = useState(false);
   const [isImage, setIsImage] = useState(false);
@@ -22,7 +27,7 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
   const loggedInUser = typeof window !== "undefined" ? getLoggedInUser() : null;
   const isJunior = loggedInUser && (loggedInUser.role || "").toLowerCase().replace(/\s+/g, "") === "junioradvocate";
 
-  const cleanTitle = (title || "").replace(/[\/\\]/g, "_");
+  const cleanTitle = (rawTitle || "").replace(/[\/\\]/g, "_");
 
   const normalizeUrl = (url) => {
     if (!url) return "";
@@ -37,13 +42,14 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
   };
 
   const getEffectiveUrl = () => {
-    if (fileUrl) {
-      if (fileUrl.startsWith("data:") || fileUrl.startsWith("blob:")) return fileUrl;
-      if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) return fileUrl;
-      if (fileUrl.startsWith("/")) return `${API_BASE_URL}${fileUrl}`;
-      return `${API_BASE_URL}/uploads/${encodeURIComponent(fileUrl)}`;
+    if (rawFileUrl) {
+      if (rawFileUrl.startsWith("data:") || rawFileUrl.startsWith("blob:")) return rawFileUrl;
+      if (rawFileUrl.startsWith("http://") || rawFileUrl.startsWith("https://")) return rawFileUrl;
+      if (rawFileUrl.startsWith("/")) return `${API_BASE_URL}${rawFileUrl}`;
+      return `${API_BASE_URL}/uploads/${encodeURIComponent(rawFileUrl)}`;
     }
     if (cleanTitle) {
+      if (cleanTitle.startsWith("data:") || cleanTitle.startsWith("http")) return cleanTitle;
       return `${API_BASE_URL}/uploads/${encodeURIComponent(cleanTitle)}`;
     }
     return "";
@@ -62,7 +68,8 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
         mime.startsWith("text/") ||
         mime.includes("markdown") ||
         mime.includes("json") ||
-        (cleanTitle && (cleanTitle.endsWith(".txt") || cleanTitle.endsWith(".md")));
+        mime.includes("html") ||
+        (cleanTitle && (cleanTitle.endsWith(".txt") || cleanTitle.endsWith(".md") || cleanTitle.endsWith(".html")));
 
       setIsImage(mime.startsWith("image/"));
       setIsPdf(mime === "application/pdf");
@@ -112,7 +119,7 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
       setIsAudio(["mp3", "wav", "ogg", "aac", "m4a", "wma", "flac"].includes(ext));
       setIsVideo(["mp4", "webm", "ogg", "mov", "avi", "mkv", "3gp"].includes(ext));
       
-      const isMd = ext === "md" || ext === "txt" || ext === "json" || ext === "log";
+      const isMd = ext === "md" || ext === "txt" || ext === "json" || ext === "log" || ext === "html";
       setIsMarkdown(isMd);
       setViewerUrl(normalizedUrl);
 
@@ -131,7 +138,7 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
           })
           .catch(() => {
             setMarkdownContent(
-              `### ⚠️ Document File Not Found\n\nThe requested document **\`${cleanTitle || "Document"}\`** is not available on the server. If this document was generated earlier without a saved text link, please regenerate or re-save it.`
+              `### ⚠️ Document File Not Found\n\nThe requested document **\`${cleanTitle || "Document"}\`** is not available on the server.`
             );
           })
           .finally(() => {
@@ -139,7 +146,7 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
           });
       }
     }
-  }, [effectiveUrl, normalizedUrl]);
+  }, [effectiveUrl, normalizedUrl, cleanTitle]);
 
   // Synchronous DOM manipulation to black out content BEFORE OS capture can process
   const forceBlackout = () => {
@@ -294,9 +301,9 @@ export default function DocumentViewerModal({ fileUrl, title, badge, onClose }) 
             </div>
             <div>
               <h3 className="font-bold text-slate-800 text-sm leading-tight">{cleanTitle || "Document"}</h3>
-              {badge && (
+              {effectiveBadge && (
                 <span className="text-[10px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  {badge}
+                  {effectiveBadge}
                 </span>
               )}
             </div>
