@@ -7,7 +7,7 @@ import os
 load_dotenv()
 
 # Get database URL from .env file
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL: str = os.getenv("DATABASE_URL") or "sqlite:///./legal_tech.db"
 
 connect_args = {}
 if DATABASE_URL and "sqlite" in DATABASE_URL:
