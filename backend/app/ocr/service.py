@@ -119,22 +119,35 @@ def extract_text_from_image(file_bytes: bytes, lang: str = ALL_LANGUAGES) -> dic
 
 
 def extract_text_from_pdf(file_bytes: bytes, lang: str = ALL_LANGUAGES) -> dict:
-    """Convert each PDF page to image, then run OCR."""
-    try:
-        from pdf2image import convert_from_bytes
-    except ImportError:
-        return {
-            "extracted_text": "pdf2image is not installed.",
-            "page_count": 0,
-            "languages_used": lang,
-            "error": "pdf2image is missing.",
-        }
+    """Convert each PDF page to image via pypdfium2 or pdf2image, then run OCR."""
+    pages = []
 
+    # 1. Primary Engine: pypdfium2 (zero-dependency local PDF renderer)
     try:
-        pages = convert_from_bytes(file_bytes, dpi=200)
+        import pypdfium2 as pdfium
+        pdf = pdfium.PdfDocument(file_bytes)
+        for page in pdf:
+            pil_img = page.render(scale=2).to_pil().convert("RGB")
+            pages.append(pil_img)
     except Exception as e:
+        logger.warning(f"pypdfium2 extraction failed, trying pdf2image fallback: {e}")
+
+    # 2. Secondary Engine: pdf2image
+    if not pages:
+        try:
+            from pdf2image import convert_from_bytes
+            pages = convert_from_bytes(file_bytes, dpi=200)
+        except Exception as e:
+            return {
+                "extracted_text": f"PDF Conversion Error: {e}",
+                "page_count": 0,
+                "languages_used": lang,
+                "error": f"PDF Rendering Failed: {e}",
+            }
+
+    if not pages:
         return {
-            "extracted_text": f"PDF Conversion Error: {e}",
+            "extracted_text": "Could not render PDF pages.",
             "page_count": 0,
             "languages_used": lang,
         }

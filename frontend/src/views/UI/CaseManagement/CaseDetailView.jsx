@@ -163,14 +163,24 @@ export default function CaseDetailView({ id }) {
     if (!selectedCase || (!extractedText && !digitizedHtml)) return;
     try {
       const cleanName = (originalFilename || "Document").replace(/\.[^/.]+$/, "");
-      const contentToSave = digitizedHtml || extractedText;
-      const ext = digitizedHtml ? "html" : "txt";
-      const mime = digitizedHtml ? "text/html" : "text/plain";
-      const docName = `OCR_${cleanName.replace(/[^a-zA-Z0-9_]/g, "_")}.${ext}`;
-      const textBase64 = `data:${mime};charset=utf-8;base64,${btoa(unescape(encodeURIComponent(contentToSave)))}`;
+      let docName = "";
+      let textBase64 = "";
+
+      if (typeof extractedText === "string" && extractedText.startsWith("data:")) {
+        const isPdf = extractedText.includes("pdf");
+        const ext = isPdf ? "pdf" : "png";
+        docName = `Scanned_${cleanName.replace(/[^a-zA-Z0-9_]/g, "_")}.${ext}`;
+        textBase64 = extractedText;
+      } else {
+        const contentToSave = digitizedHtml || extractedText;
+        const ext = digitizedHtml ? "html" : "txt";
+        const mime = digitizedHtml ? "text/html" : "text/plain";
+        docName = `OCR_${cleanName.replace(/[^a-zA-Z0-9_]/g, "_")}.${ext}`;
+        textBase64 = `data:${mime};charset=utf-8;base64,${btoa(unescape(encodeURIComponent(contentToSave)))}`;
+      }
 
       const newDocObj = {
-        documentType: detectedDocType || "OCR Extracted Text",
+        documentType: detectedDocType || "Scanned Document",
         advocate: getLoggedInUser()?.username || selectedCase.selected_advocate || "Advocate",
         file: docName,
         url: textBase64,
