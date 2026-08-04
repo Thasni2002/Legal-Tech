@@ -11,6 +11,9 @@ import io
 import os
 import platform
 import logging
+import json
+import re
+from dotenv import load_dotenv
 from PIL import Image
 
 logger = logging.getLogger(__name__)
@@ -20,9 +23,9 @@ _RAPID_OCR_ENGINE = None
 _RAPID_OCR_AVAILABLE = False
 
 try:
-    from rapidocr_onnxruntime import RapidOCR
+    from rapidocr_onnxruntime import RapidOCR  # type: ignore # pyright: ignore
     _RAPID_OCR_AVAILABLE = True
-except ImportError:
+except Exception:
     _RAPID_OCR_AVAILABLE = False
 
 
@@ -39,7 +42,10 @@ def _get_rapid_ocr():
 
 
 # ── 2. Tesseract OCR (Secondary Fallback Engine) ─────────────────────────────
-import pytesseract
+try:
+    import pytesseract  # type: ignore # pyright: ignore
+except Exception:
+    pytesseract = None  # type: ignore
 
 TESSERACT_PATHS = [
     r"C:\Program Files\Tesseract-OCR\tesseract.exe",
@@ -49,11 +55,14 @@ TESSERACT_PATHS = [
 ]
 
 def _init_tesseract():
-    if platform.system() == "Windows":
+    if pytesseract and platform.system() == "Windows":
         for p in TESSERACT_PATHS:
             if os.path.exists(p):
-                pytesseract.pytesseract.tesseract_cmd = p
-                return p
+                try:
+                    pytesseract.pytesseract.tesseract_cmd = p
+                    return p
+                except Exception:
+                    pass
     return None
 
 TESSERACT_EXE = _init_tesseract()
@@ -93,10 +102,10 @@ def _ocr_image(pil_image: Image.Image, lang: str = ALL_LANGUAGES) -> str:
             logger.warning(f"RapidOCR processing failed: {e}")
 
     # 2. Secondary: Tesseract OCR (if installed)
-    if TESSERACT_EXE and os.path.exists(TESSERACT_EXE):
+    if pytesseract and TESSERACT_EXE and os.path.exists(TESSERACT_EXE):
         try:
             config = "--oem 3 --psm 3"
-            text = pytesseract.image_to_string(img_rgb, lang=lang, config=config)
+            text = pytesseract.image_to_string(img_rgb, lang=lang, config=config)  # type: ignore
             if text and text.strip():
                 return text.strip()
         except Exception as e:
@@ -124,7 +133,7 @@ def extract_text_from_pdf(file_bytes: bytes, lang: str = ALL_LANGUAGES) -> dict:
 
     # 1. Primary Engine: pypdfium2 (zero-dependency local PDF renderer)
     try:
-        import pypdfium2 as pdfium
+        import pypdfium2 as pdfium  # type: ignore # pyright: ignore
         pdf = pdfium.PdfDocument(file_bytes)
         for page in pdf:
             pil_img = page.render(scale=2).to_pil().convert("RGB")
@@ -135,7 +144,7 @@ def extract_text_from_pdf(file_bytes: bytes, lang: str = ALL_LANGUAGES) -> dict:
     # 2. Secondary Engine: pdf2image
     if not pages:
         try:
-            from pdf2image import convert_from_bytes
+            from pdf2image import convert_from_bytes  # type: ignore # pyright: ignore
             pages = convert_from_bytes(file_bytes, dpi=200)
         except Exception as e:
             return {
@@ -164,11 +173,6 @@ def extract_text_from_pdf(file_bytes: bytes, lang: str = ALL_LANGUAGES) -> dict:
     }
 
 
-import json
-import re
-from dotenv import load_dotenv
-
-
 def digitize_document_layout(extracted_text: str, filename: str = "") -> dict:
     """
     Reconstructs OCR text into an exact formatted digital replica HTML layout.
@@ -187,7 +191,7 @@ def digitize_document_layout(extracted_text: str, filename: str = "") -> dict:
 
     if api_key:
         try:
-            import google.generativeai as genai
+            import google.generativeai as genai  # type: ignore # pyright: ignore
             genai.configure(api_key=api_key)
             model = genai.GenerativeModel("gemini-2.0-flash")
 
@@ -270,10 +274,10 @@ def _template_digitize_fallback(text: str, filename: str) -> dict:
               [ Holder Photo ]
             </div>
             <div style="flex: 1; font-size: 13px; color: #1e293b; line-height: 1.7;">
-              <div><strong>Name:</strong> {name or 'Jemshiya Jameel'}</div>
-              <div><strong>Father's Name:</strong> {father_name or 'Jameel'}</div>
-              <div><strong>Gender:</strong> {gender or 'Female'}</div>
-              <div><strong>Date of Birth / Age:</strong> {dob or '29-05-2005'}</div>
+              <div><strong>Name:</strong> {name or '<u style="display:inline-block; min-width:140px;">&nbsp;</u>'}</div>
+              <div><strong>Father's Name:</strong> {father_name or '<u style="display:inline-block; min-width:140px;">&nbsp;</u>'}</div>
+              <div><strong>Gender:</strong> {gender or '<u style="display:inline-block; min-width:100px;">&nbsp;</u>'}</div>
+              <div><strong>Date of Birth / Age:</strong> {dob or '<u style="display:inline-block; min-width:120px;">&nbsp;</u>'}</div>
             </div>
           </div>
         </div>
