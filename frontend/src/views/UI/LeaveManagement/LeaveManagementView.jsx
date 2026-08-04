@@ -24,6 +24,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { API_BASE_URL } from "@/utils/api";
 import { getLoggedInUser } from "@/utils/auth";
 import useModulePermission from "@/utils/useModulePermission";
@@ -33,6 +34,9 @@ export default function LeaveManagementView({
   viewMode = "senior", // "senior" | "junior" | "clerk"
   moduleKey = "Leave Management",
 }) {
+  const searchParams = useSearchParams();
+  const shouldApplyDirectly = searchParams ? searchParams.get("apply") === "true" : false;
+
   const { perms, loading: permsLoading } = useModulePermission(moduleKey);
   const user = getLoggedInUser();
   const roleNorm = (user?.role || "").toLowerCase().replace(/\s+/g, "");
@@ -101,7 +105,13 @@ export default function LeaveManagementView({
   const [clerkTab, setClerkTab] = useState("own"); // "own" | "team"
 
   // Apply View Page State
-  const [isApplying, setIsApplying] = useState(false);
+  const [isApplying, setIsApplying] = useState(shouldApplyDirectly);
+
+  useEffect(() => {
+    if (shouldApplyDirectly) {
+      setIsApplying(true);
+    }
+  }, [shouldApplyDirectly]);
   const [duration, setDuration] = useState("Multiple Days"); // "Single Day" | "Half Day" | "Multiple Days"
   const [halfDayPeriod, setHalfDayPeriod] = useState("First Half"); // "First Half" | "Second Half"
   const [leaveTypeSearch, setLeaveTypeSearch] = useState("");
