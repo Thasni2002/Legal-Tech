@@ -1,12 +1,12 @@
-import CourtFeeCalView from '@/views/UI/Finance Management/FinanceManagementView'
-import React from 'react'
+import CourtFeeCalView from '@/views/UI/Finance Management/FinanceManagementView';
+import React, { Suspense } from 'react';
 
-const page = () => {
+const Page = () => {
   return (
-    <div>
+    <Suspense fallback={<div className="p-10 text-center text-slate-500 font-bold">Loading Billing & Finance Management...</div>}>
       <CourtFeeCalView/>
-    </div>
-  )
-}
+    </Suspense>
+  );
+};
 
-export default page
+export default Page;

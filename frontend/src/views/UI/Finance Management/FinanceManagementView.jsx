@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import {
   History, Wallet, CheckCircle2, Clock, AlertCircle,
   Search, User, Phone, Mail, FileText, Send,
-  Briefcase, Scale, Receipt, Landmark
+  Briefcase, Scale, Receipt, Landmark, Lock
 } from "lucide-react";
 import { jsPDF } from "jspdf";
 import InvoiceHistoryView from "./InvoiceHistoryView";
@@ -15,6 +16,16 @@ import ConfirmModal from "@/components/common/ConfirmModal";
 
 export default function CourtFeeCalView() {
   const { hasPermission } = usePermissions();
+  const searchParams = useSearchParams();
+
+  const paramClientName = searchParams ? searchParams.get("client_name") : null;
+  const paramCaseNo = searchParams ? searchParams.get("case_no") : null;
+  const paramMobile = searchParams ? searchParams.get("mobile") : null;
+  const paramEmail = searchParams ? searchParams.get("email") : null;
+  const paramCaseType = searchParams ? searchParams.get("case_type") : null;
+  const paramFromCase = searchParams ? searchParams.get("from_case") === "true" : false;
+
+  const isLockedFromCase = paramFromCase || Boolean(paramClientName && paramCaseNo);
 
 
   // Dynamic list of invoices and stats from the backend
@@ -108,6 +119,20 @@ export default function CourtFeeCalView() {
       fetchInvoicesAndStats();
     });
   }, [fetchInvoicesAndStats]);
+
+  // Auto-fill client & case information when navigated from Case Management
+  useEffect(() => {
+    if (paramClientName || paramCaseNo) {
+      if (paramClientName) {
+        setClientName(paramClientName);
+        setSearchTerm(paramClientName);
+      }
+      if (paramCaseNo) setCaseNumber(paramCaseNo);
+      if (paramMobile) setMobileNumber(paramMobile);
+      if (paramEmail) setEmail(paramEmail);
+      if (paramCaseType) setAdvocateFeeCaseType(paramCaseType);
+    }
+  }, [paramClientName, paramCaseNo, paramMobile, paramEmail, paramCaseType]);
 
   const handleSendPayment = async () => {
     if (!clientName) {
@@ -497,35 +522,75 @@ export default function CourtFeeCalView() {
 
           {/* Client Details Section */}
           <div className="bg-white border border-[#E2E8F0] rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-8">
-            <h3 className="text-xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
-                <User size={16} />
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-extrabold text-[#0F172A] flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
+                  <User size={16} />
+                </div>
+                Client Information
+              </h3>
+              {isLockedFromCase && (
+                <span className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl font-bold text-xs">
+                  <Lock size={13} /> Auto-Filled & Locked
+                </span>
+              )}
+            </div>
+
+            {isLockedFromCase && (
+              <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50/60 border border-blue-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
+                    <Lock size={16} />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-blue-950 text-sm">
+                      Linked to Case #{caseNumber || paramCaseNo}
+                    </h4>
+                    <p className="text-xs text-blue-700/90 font-medium mt-0.5">
+                      Client: <span className="font-bold text-blue-950">{clientName || paramClientName || "N/A"}</span>
+                    </p>
+                  </div>
+                </div>
+                <div className="text-[11px] font-bold text-blue-700 bg-white/80 backdrop-blur-sm border border-blue-200 px-3 py-1.5 rounded-xl shrink-0 self-start sm:self-auto">
+                  🔒 Fields are automatically filled and read-only
+                </div>
               </div>
-              Client Information
-            </h3>
+            )}
 
             <div className="grid md:grid-cols-2 gap-6">
               {/* Searchable Client Input */}
               <div className="relative col-span-1 md:col-span-2">
-                <label className="block text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">Search Client</label>
+                <label className="block text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">
+                  Client Name {isLockedFromCase && "(Auto-filled)"}
+                </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Search size={18} className="text-[#94A3B8]" />
                   </div>
-                  <input
-                    type="text"
-                    placeholder="Type to search existing clients..."
-                    value={searchTerm}
-                    onChange={(e) => handleClientSearch(e.target.value)}
-                    onFocus={() => {
-                      setFilteredClients(clients);
-                      setShowDropdown(true);
-                    }}
-                    className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
-                  />
+                  {isLockedFromCase ? (
+                    <input
+                      type="text"
+                      value={searchTerm || clientName}
+                      readOnly
+                      disabled
+                      className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm bg-[#F8FAFC] text-[#0F172A] font-bold cursor-not-allowed"
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Type to search existing clients..."
+                      value={searchTerm}
+                      onChange={(e) => handleClientSearch(e.target.value)}
+                      onFocus={() => {
+                        setFilteredClients(clients);
+                        setShowDropdown(true);
+                      }}
+                      className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                    />
+                  )}
                 </div>
 
-                {showDropdown && filteredClients.length > 0 && (
+                {!isLockedFromCase && showDropdown && filteredClients.length > 0 && (
                   <div className="absolute w-full bg-white border border-[#E2E8F0] rounded-xl mt-2 max-h-60 overflow-y-auto z-50 shadow-xl">
                     {filteredClients.map((client) => (
                       <div
@@ -559,13 +624,21 @@ export default function CourtFeeCalView() {
               {/* Case Selection — full width */}
               <div className="md:col-span-2">
                 <label className="block text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">
-                  {clientCases.length > 0 ? "Select Case Number" : "Case Number"}
+                  Case Number {isLockedFromCase && "(Auto-filled)"}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
                     <Briefcase size={16} className="text-[#94A3B8]" />
                   </div>
-                  {clientCases.length > 0 ? (
+                  {isLockedFromCase ? (
+                    <input
+                      type="text"
+                      value={caseNumber}
+                      readOnly
+                      disabled
+                      className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm bg-[#F8FAFC] text-[#0F172A] font-bold cursor-not-allowed"
+                    />
+                  ) : clientCases.length > 0 ? (
                     <select
                       value={caseNumber}
                       onChange={(e) => setCaseNumber(e.target.value)}
