@@ -1,6 +1,7 @@
 "use client";
 
 import { API_BASE_URL } from "@/utils/api";
+import { getLoggedInUser } from "@/utils/auth";
 
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -132,6 +133,9 @@ function StatCard({ label, value, color, bg }) {
 export default function CaseView() {
   const router = useRouter();
   const { hasPermission } = usePermissions();
+  const user = getLoggedInUser();
+  const isClerk = (user?.role || "").toLowerCase().includes("clerk");
+  const canAddCase = isClerk || hasPermission("Case Management", "add");
 
   const [cases, setCases] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -350,9 +354,9 @@ export default function CaseView() {
                 className="rounded-xl border border-[#E2E8F0] pl-9 pr-4 py-2.5 text-sm w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition"
               />
             </div>
-            {hasPermission("Case Management", "add") && (
+            {canAddCase && (
               <button
-                onClick={() => router.push("/case-management/case-add")}
+                onClick={() => router.push(isClerk ? "/case-management/case-add?redirect=/clerk/cases" : "/case-management/case-add")}
                 className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-sm transition"
               >
                 <Plus size={16} />

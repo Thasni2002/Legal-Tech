@@ -35,6 +35,7 @@ const ALL_MODULES = [
   "Court Visit",
   "Format Physical File",
   "Clerk Documents",
+  "Clerk Cases",
   "Leave Management",
   "Junior Leave",
   "Clerk Leave",
