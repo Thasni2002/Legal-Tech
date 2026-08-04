@@ -21,7 +21,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Load dotenv to read DATABASE_URL from .env
 load_dotenv()
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL: str = os.getenv("DATABASE_URL") or "sqlite:///./legal_tech.db"
 
 # Import Base and models so Alembic is aware of them
 from app.database import Base
