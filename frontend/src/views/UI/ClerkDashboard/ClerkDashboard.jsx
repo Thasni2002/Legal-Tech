@@ -212,6 +212,13 @@ export default function ClerkDashboard() {
             Manage daily court visits, physical file formatting, tasks, and leave applications.
           </p>
         </div>
+        <button
+          onClick={() => router.push("/case-management/case-add?redirect=/clerk/documents")}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-extrabold transition shadow-md active:scale-95 cursor-pointer shrink-0"
+        >
+          <Plus size={16} />
+          Add Case
+        </button>
       </div>
 
       {/* Stats Summary Grid - Responsive 3-Card Grid across Desktop, Tablet & Mobile */}
