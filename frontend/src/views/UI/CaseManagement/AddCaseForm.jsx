@@ -2,9 +2,10 @@
 
 import { API_BASE_URL } from "@/utils/api";
 import { DISTRICT_COURTS } from "@/utils/districtCourts";
+import { getLoggedInUser } from "@/utils/auth";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { ArrowLeft, X, Eye, CheckCircle, Edit3, Loader2 } from "lucide-react";
 import OCRPanel from "./OCRPanel";
 
@@ -454,7 +455,17 @@ function ErrorMsg({ message }) {
 export default function AddCaseForm({ editId: propEditId } = {}) {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const editId = propEditId || params?.id;
+
+  // Determine where to go back / after save depending on role
+  const getBackRoute = () => {
+    const redirectParam = searchParams ? searchParams.get("redirect") : null;
+    if (redirectParam) return redirectParam;
+    const user = getLoggedInUser();
+    const role = (user?.role || "").toLowerCase();
+    return role.includes("clerk") ? "/clerk/documents" : "/case-management";
+  };
 
   const isEditMode = !!editId;
   const [documents, setDocuments] = useState([
@@ -1497,7 +1508,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
 
       setTimeout(() => {
         setShowSuccessPopup(false);
-        router.push("/case-management");
+        router.push(getBackRoute());
       }, 2500);
 
       // Reset form only for add mode
@@ -1671,7 +1682,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
         <div className="flex items-center gap-4 mb-6">
           <button
             type="button"
-            onClick={() => router.push("/case-management")}
+            onClick={() => router.push(getBackRoute())}
             className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 transition"
           >
             <ArrowLeft size={20} />
@@ -2354,7 +2365,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
           <div className="flex justify-end gap-3 pt-4 border-t border-[#F1F5F9]">
             <button
               type="button"
-              onClick={() => router.push("/case-management")}
+              onClick={() => router.push(getBackRoute())}
               className="px-6 py-3.5 rounded-lg font-medium text-sm border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] transition"
             >
               Cancel
