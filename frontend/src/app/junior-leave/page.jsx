@@ -1,10 +1,12 @@
-import React from "react";
+"use client";
+
+import React, { Suspense } from "react";
 import LeaveManagementView from "@/views/UI/LeaveManagement/LeaveManagementView";
 
 export default function Page() {
   return (
-    <div>
+    <Suspense fallback={<div className="p-10 text-center text-slate-500 font-bold">Loading Leave Management...</div>}>
       <LeaveManagementView viewMode="junior" moduleKey="Junior Leave" />
-    </div>
+    </Suspense>
   );
 }

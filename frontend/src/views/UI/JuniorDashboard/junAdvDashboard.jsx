@@ -12,6 +12,7 @@ import {
   FolderOpen,
   User,
   ArrowRight,
+  CalendarCheck,
 } from "lucide-react";
 
 const ROLE_BADGE = {
@@ -223,18 +224,27 @@ export default function JunAdvDashView() {
             Junior Advocate {userName ? <span className="capitalize">{userName}</span> : ""}
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center lg:items-end gap-3 w-full lg:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center lg:items-center gap-3 w-full lg:w-auto">
           <div className="text-left sm:text-right bg-[#F8FAFC] px-4 sm:px-5 py-3 rounded-2xl border border-[#E2E8F0] w-full sm:w-auto">
             <p className="text-[#64748B] font-bold text-xs uppercase tracking-wider">Today&apos;s Date</p>
             <p className="text-[#0F172A] font-extrabold text-sm sm:text-base mt-0.5">{currentDate}</p>
           </div>
-          <button
-            onClick={() => router.push("/junior-calendar")}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 text-xs font-extrabold text-white bg-[#2563EB] hover:bg-[#1D4ED8] px-4 py-3 rounded-xl transition-all cursor-pointer shadow-xs"
-          >
-            <Calendar size={15} />
-            <span>View Calendar</span>
-          </button>
+          <div className="flex flex-col gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => router.push("/junior-calendar")}
+              className="w-full flex items-center justify-center gap-2 text-xs font-extrabold text-white bg-[#2563EB] hover:bg-[#1D4ED8] px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-xs"
+            >
+              <Calendar size={15} />
+              <span>View Calendar</span>
+            </button>
+            <button
+              onClick={() => router.push("/junior-leave?apply=true")}
+              className="w-full flex items-center justify-center gap-2 text-xs font-extrabold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-4 py-2 rounded-xl transition-all cursor-pointer shadow-xs"
+            >
+              <CalendarCheck size={14} />
+              <span>Apply Leave</span>
+            </button>
+          </div>
         </div>
       </div>
 
