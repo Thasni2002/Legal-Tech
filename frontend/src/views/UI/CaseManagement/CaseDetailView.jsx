@@ -587,10 +587,10 @@ export default function CaseDetailView({ id }) {
     caseInvoices.length === 0
       ? "No Invoices"
       : totalPending === 0
-        ? "Fully Paid"
-        : totalPaid > 0
-          ? "Partially Paid"
-          : "Payment Due";
+      ? "Fully Paid"
+      : totalPaid > 0
+      ? "Partially Paid"
+      : "Payment Due";
 
   // ── Case Notes: fetch from backend ──────────────────────────────────────
   const fetchCaseNotes = async (caseId) => {
@@ -723,7 +723,7 @@ export default function CaseDetailView({ id }) {
           ac.case_number &&
           rawCase.case_no &&
           String(ac.case_number).trim().toLowerCase() ===
-          String(rawCase.case_no).trim().toLowerCase()
+            String(rawCase.case_no).trim().toLowerCase()
         );
       });
       const resolvedStatus = assigned ? assigned.status : rawCase.status;
@@ -741,7 +741,7 @@ export default function CaseDetailView({ id }) {
             ac.case_number &&
             rawCase.case_no &&
             String(ac.case_number).trim().toLowerCase() ===
-            String(rawCase.case_no || "").trim().toLowerCase()
+              String(rawCase.case_no || "").trim().toLowerCase()
           );
         }
         return false;
@@ -1131,10 +1131,11 @@ export default function CaseDetailView({ id }) {
               <button
                 key={tabObj.key}
                 onClick={() => setActiveTab(tabObj.key)}
-                className={`px-3.5 sm:px-5 py-2.5 sm:py-3 text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-colors relative cursor-pointer rounded-xl whitespace-nowrap shrink-0 ${activeTab === tabObj.key
+                className={`px-3.5 sm:px-5 py-2.5 sm:py-3 text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-colors relative cursor-pointer rounded-xl whitespace-nowrap shrink-0 ${
+                  activeTab === tabObj.key
                     ? "text-[#2563EB] bg-white shadow-sm font-extrabold border border-slate-200"
                     : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100/50"
-                  }`}
+                }`}
               >
                 {tabObj.label}
               </button>
@@ -1275,101 +1276,101 @@ export default function CaseDetailView({ id }) {
                 );
               })()}
 
-              {/* Parties & Legal Representatives Section */}
+                            {/* Parties & Legal Representatives Section */}
               <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#F1F5F9]">
-                  <div>
-                    <h3 className="font-extrabold text-lg text-[#0F172A]">Parties & Legal Representatives</h3>
-                    <p className="text-xs text-[#64748B] mt-0.5">Comprehensive overview of petitioner, respondent, opposing counsel, and bench officer.</p>
-                  </div>
-                  <span className="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-200 self-start sm:self-auto shrink-0">
-                    CNR: {selectedCase.cnr_number || "N/A"}
-                  </span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#F1F5F9]">
+                <div>
+                  <h3 className="font-extrabold text-lg text-[#0F172A]">Parties & Legal Representatives</h3>
+                  <p className="text-xs text-[#64748B] mt-0.5">Comprehensive overview of petitioner, respondent, opposing counsel, and bench officer.</p>
                 </div>
+                <span className="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-200 self-start sm:self-auto shrink-0">
+                  CNR: {selectedCase.cnr_number || "N/A"}
+                </span>
+              </div>
 
-                {/* VS Layout Cards */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                  {/* Petitioner Side Card */}
-                  <div className="bg-gradient-to-br from-[#F0F9FF] to-[#E0F2FE] rounded-2xl p-5 sm:p-6 border border-[#BAE6FD] space-y-4 shadow-xs relative overflow-hidden">
-                    <div className="absolute top-0 right-0 bg-[#0284C7] text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl tracking-wider">
-                      Petitioner Side
+              {/* VS Layout Cards */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                {/* Petitioner Side Card */}
+                <div className="bg-gradient-to-br from-[#F0F9FF] to-[#E0F2FE] rounded-2xl p-5 sm:p-6 border border-[#BAE6FD] space-y-4 shadow-xs relative overflow-hidden">
+                  <div className="absolute top-0 right-0 bg-[#0284C7] text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl tracking-wider">
+                    Petitioner Side
+                  </div>
+                  <div className="flex items-center gap-3 mb-2 pr-24">
+                    <div className="w-10 h-10 rounded-xl bg-[#0284C7] text-white flex items-center justify-center font-bold shrink-0">
+                      <User size={20} />
                     </div>
-                    <div className="flex items-center gap-3 mb-2 pr-24">
-                      <div className="w-10 h-10 rounded-xl bg-[#0284C7] text-white flex items-center justify-center font-bold shrink-0">
-                        <User size={20} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-bold text-[#0369A1] uppercase tracking-wider">Client / Petitioner</p>
-                        <h4 className="text-base font-extrabold text-[#0F172A] truncate">
-                          {selectedCase.client_name || ecourtsData?.petitioner || "Petitioner"}
-                        </h4>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 pt-3 border-t border-[#B9E6FE]">
-                      <div className="bg-white/80 rounded-xl p-3.5 border border-sky-100">
-                        <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Petitioner Role</p>
-                        <p className="text-xs font-bold text-[#0F172A] mt-0.5">{selectedCase.client_role || "Petitioner / Complainant"}</p>
-                      </div>
-                      <div className="bg-white/80 rounded-xl p-3.5 border border-sky-100">
-                        <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Petitioner Advocate / Legal Counsel</p>
-                        <p className="text-xs font-bold text-[#0284C7] mt-0.5">
-                          {ecourtsData?.petitionerAdvocate || selectedCase.selected_advocate || "Advocate (On Record)"}
-                        </p>
-                      </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold text-[#0369A1] uppercase tracking-wider">Client / Petitioner</p>
+                      <h4 className="text-base font-extrabold text-[#0F172A] truncate">
+                        {selectedCase.client_name || ecourtsData?.petitioner || "Petitioner"}
+                      </h4>
                     </div>
                   </div>
 
-                  {/* Respondent Side Card */}
-                  <div className="bg-gradient-to-br from-[#FFF7ED] to-[#FFEDD5] rounded-2xl p-5 sm:p-6 border border-[#FDBA74] space-y-4 shadow-xs relative overflow-hidden">
-                    <div className="absolute top-0 right-0 bg-[#EA580C] text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl tracking-wider">
-                      Respondent Side
+                  <div className="space-y-3 pt-3 border-t border-[#B9E6FE]">
+                    <div className="bg-white/80 rounded-xl p-3.5 border border-sky-100">
+                      <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Petitioner Role</p>
+                      <p className="text-xs font-bold text-[#0F172A] mt-0.5">{selectedCase.client_role || "Petitioner / Complainant"}</p>
                     </div>
-                    <div className="flex items-center gap-3 mb-2 pr-24">
-                      <div className="w-10 h-10 rounded-xl bg-[#EA580C] text-white flex items-center justify-center font-bold shrink-0">
-                        <User size={20} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-bold text-[#C2410C] uppercase tracking-wider">Respondent / Opposing Party</p>
-                        <h4 className="text-base font-extrabold text-[#0F172A] truncate">
-                          {ecourtsData?.respondent || (selectedCase.case_title ? selectedCase.case_title.split(/ vs\.? | v\.? /i)[1] : "") || "State / Respondent"}
-                        </h4>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 pt-3 border-t border-[#FED7AA]">
-                      <div className="bg-white/80 rounded-xl p-3.5 border border-orange-100">
-                        <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Respondent Role</p>
-                        <p className="text-xs font-bold text-[#0F172A] mt-0.5">Respondent / Accused Party</p>
-                      </div>
-                      <div className="bg-white/80 rounded-xl p-3.5 border border-orange-100">
-                        <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Respondent Advocate / Opposing Counsel</p>
-                        <p className="text-xs font-bold text-[#C2410C] mt-0.5">
-                          {ecourtsData?.respondentAdvocate || "Government Pleader / Opposing Counsel"}
-                        </p>
-                      </div>
+                    <div className="bg-white/80 rounded-xl p-3.5 border border-sky-100">
+                      <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Petitioner Advocate / Legal Counsel</p>
+                      <p className="text-xs font-bold text-[#0284C7] mt-0.5">
+                        {ecourtsData?.petitionerAdvocate || selectedCase.selected_advocate || "Advocate (On Record)"}
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Presiding Judicial Officer Card */}
-                <div className="bg-purple-50/60 border border-purple-100 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold shrink-0">
-                      <Gavel size={20} />
+                {/* Respondent Side Card */}
+                <div className="bg-gradient-to-br from-[#FFF7ED] to-[#FFEDD5] rounded-2xl p-5 sm:p-6 border border-[#FDBA74] space-y-4 shadow-xs relative overflow-hidden">
+                  <div className="absolute top-0 right-0 bg-[#EA580C] text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl tracking-wider">
+                    Respondent Side
+                  </div>
+                  <div className="flex items-center gap-3 mb-2 pr-24">
+                    <div className="w-10 h-10 rounded-xl bg-[#EA580C] text-white flex items-center justify-center font-bold shrink-0">
+                      <User size={20} />
                     </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Presiding Judicial Officer</p>
-                      <h5 className="text-sm font-extrabold text-[#0F172A]">
-                        {ecourtsData?.presidingJudge || "Hon'ble Presiding Judge"}
-                      </h5>
-                      <p className="text-xs text-[#64748B] mt-0.5">{selectedCase.court_name}</p>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold text-[#C2410C] uppercase tracking-wider">Respondent / Opposing Party</p>
+                      <h4 className="text-base font-extrabold text-[#0F172A] truncate">
+                        {ecourtsData?.respondent || (selectedCase.case_title ? selectedCase.case_title.split(/ vs\.? | v\.? /i)[1] : "") || "State / Respondent"}
+                      </h4>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 pt-3 border-t border-[#FED7AA]">
+                    <div className="bg-white/80 rounded-xl p-3.5 border border-orange-100">
+                      <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Respondent Role</p>
+                      <p className="text-xs font-bold text-[#0F172A] mt-0.5">Respondent / Accused Party</p>
+                    </div>
+                    <div className="bg-white/80 rounded-xl p-3.5 border border-orange-100">
+                      <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Respondent Advocate / Opposing Counsel</p>
+                      <p className="text-xs font-bold text-[#C2410C] mt-0.5">
+                        {ecourtsData?.respondentAdvocate || "Government Pleader / Opposing Counsel"}
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* ── Previous Similar Case History ──────────────────── */}
+              {/* Presiding Judicial Officer Card */}
+              <div className="bg-purple-50/60 border border-purple-100 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold shrink-0">
+                    <Gavel size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Presiding Judicial Officer</p>
+                    <h5 className="text-sm font-extrabold text-[#0F172A]">
+                      {ecourtsData?.presidingJudge || "Hon'ble Presiding Judge"}
+                    </h5>
+                    <p className="text-xs text-[#64748B] mt-0.5">{selectedCase.court_name}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+{/* ── Previous Similar Case History ──────────────────── */}
               <div className="bg-gradient-to-br from-indigo-50 via-purple-50/50 to-violet-50/30 border border-indigo-200 rounded-2xl p-5 sm:p-6 shadow-sm mt-6 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-start gap-3">
@@ -1644,10 +1645,11 @@ export default function CaseDetailView({ id }) {
                                       const val = e.target.value.replace(/\D/g, "");
                                       handleDocPasswordChange(idx, val);
                                     }}
-                                    className={`w-full rounded-xl border px-3.5 py-2 pr-9 text-xs sm:text-sm font-mono tracking-[0.3em] text-[#0F172A] placeholder:font-sans placeholder:tracking-normal placeholder:text-xs focus:outline-none focus:ring-2 transition ${doc.password && doc.password.length > 0 && doc.password.length < 6
+                                    className={`w-full rounded-xl border px-3.5 py-2 pr-9 text-xs sm:text-sm font-mono tracking-[0.3em] text-[#0F172A] placeholder:font-sans placeholder:tracking-normal placeholder:text-xs focus:outline-none focus:ring-2 transition ${
+                                      doc.password && doc.password.length > 0 && doc.password.length < 6
                                         ? "border-red-500 focus:ring-red-500/20 focus:border-red-500"
                                         : "border-[#E2E8F0] focus:ring-[#2563EB]/20 focus:border-[#2563EB]"
-                                      }`}
+                                    }`}
                                   />
                                   <button
                                     type="button"
@@ -1865,14 +1867,15 @@ export default function CaseDetailView({ id }) {
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span
-                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide border ${note.category === "Action Item"
+                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide border ${
+                                note.category === "Action Item"
                                   ? "bg-rose-50 text-rose-700 border-rose-200"
                                   : note.category === "Hearing Prep"
-                                    ? "bg-amber-50 text-amber-700 border-amber-200"
-                                    : note.category === "Client Call"
-                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                      : "bg-blue-50 text-blue-700 border-blue-200"
-                                }`}
+                                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                                  : note.category === "Client Call"
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : "bg-blue-50 text-blue-700 border-blue-200"
+                              }`}
                             >
                               {note.category}
                             </span>
@@ -1915,14 +1918,15 @@ export default function CaseDetailView({ id }) {
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span
-                    className={`px-3 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wide border ${paymentStatus === "Fully Paid"
+                    className={`px-3 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wide border ${
+                      paymentStatus === "Fully Paid"
                         ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                         : paymentStatus === "Partially Paid"
-                          ? "bg-amber-50 text-amber-700 border-amber-200"
-                          : paymentStatus === "No Invoices"
-                            ? "bg-slate-50 text-slate-500 border-slate-200"
-                            : "bg-rose-50 text-rose-700 border-rose-200"
-                      }`}
+                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                        : paymentStatus === "No Invoices"
+                        ? "bg-slate-50 text-slate-500 border-slate-200"
+                        : "bg-rose-50 text-rose-700 border-rose-200"
+                    }`}
                   >
                     {paymentStatus === "Fully Paid" && "🟢 "}
                     {paymentStatus === "Partially Paid" && "🟡 "}
@@ -1931,7 +1935,16 @@ export default function CaseDetailView({ id }) {
                     {paymentStatus}
                   </span>
                   <button
-                    onClick={() => router.push("/finance-management")}
+                    onClick={() => {
+                      const clientName = selectedCase?.client_name || "";
+                      const caseNo = selectedCase?.case_no || selectedCase?.case_id || "";
+                      const mobile = selectedCase?.contact_number || selectedCase?.mobile || "";
+                      const email = selectedCase?.email_id || selectedCase?.email || "";
+                      const caseType = selectedCase?.case_type || "";
+                      router.push(
+                        `/finance-management?client_name=${encodeURIComponent(clientName)}&case_no=${encodeURIComponent(caseNo)}&mobile=${encodeURIComponent(mobile)}&email=${encodeURIComponent(email)}&case_type=${encodeURIComponent(caseType)}&from_case=true`
+                      );
+                    }}
                     className="flex items-center gap-1.5 px-3.5 py-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-xl font-bold text-xs transition shadow-sm cursor-pointer"
                   >
                     + Add Invoice
@@ -2019,10 +2032,10 @@ export default function CaseDetailView({ id }) {
                                 inv.status === "Paid"
                                   ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                   : inv.status === "Overdue"
-                                    ? "bg-rose-50 text-rose-700 border-rose-200"
-                                    : inv.status === "Sent"
-                                      ? "bg-blue-50 text-blue-700 border-blue-200"
-                                      : "bg-amber-50 text-amber-700 border-amber-200";
+                                  ? "bg-rose-50 text-rose-700 border-rose-200"
+                                  : inv.status === "Sent"
+                                  ? "bg-blue-50 text-blue-700 border-blue-200"
+                                  : "bg-amber-50 text-amber-700 border-amber-200";
                               return (
                                 <tr key={inv.id} className="hover:bg-slate-50/80 transition">
                                   <td className="px-5 py-3.5 font-bold text-blue-600">INV-{String(inv.id).padStart(4, "0")}</td>
@@ -2053,7 +2066,16 @@ export default function CaseDetailView({ id }) {
                           Go to Finance Management → Billing and create an invoice with case number <span className="font-bold text-slate-600">{selectedCase.case_no || selectedCase.case_id}</span> to see it here.
                         </p>
                         <button
-                          onClick={() => router.push("/finance-management")}
+                          onClick={() => {
+                            const clientName = selectedCase?.client_name || "";
+                            const caseNo = selectedCase?.case_no || selectedCase?.case_id || "";
+                            const mobile = selectedCase?.contact_number || selectedCase?.mobile || "";
+                            const email = selectedCase?.email_id || selectedCase?.email || "";
+                            const caseType = selectedCase?.case_type || "";
+                            router.push(
+                              `/finance-management?client_name=${encodeURIComponent(clientName)}&case_no=${encodeURIComponent(caseNo)}&mobile=${encodeURIComponent(mobile)}&email=${encodeURIComponent(email)}&case_type=${encodeURIComponent(caseType)}&from_case=true`
+                            );
+                          }}
                           className="px-5 py-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-xl font-bold text-xs transition cursor-pointer shadow-sm"
                         >
                           Go to Finance & Billing →
@@ -2207,10 +2229,11 @@ export default function CaseDetailView({ id }) {
                       <button
                         onClick={handleSaveToCaseDocuments}
                         disabled={saveCaseDocLoading || !generatedDocContent}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer border ${saveCaseDocSuccess
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer border ${
+                          saveCaseDocSuccess
                             ? "bg-emerald-600 text-white border-emerald-600"
                             : "bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200"
-                          }`}
+                        }`}
                         title="Save directly into Case Documents folder for this case"
                       >
                         {saveCaseDocSuccess ? (
@@ -2481,11 +2504,11 @@ export default function CaseDetailView({ id }) {
         document.body
       )}
 
-
+      
       {viewBriefModal && createPortal(
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewBriefModal(null)} />
-
+          
           <div className="relative bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl z-10 border border-slate-200 flex flex-col">
             {/* Modal Header */}
             <div className="sticky top-0 z-20 bg-slate-900 text-white px-6 py-5 border-b border-slate-800 flex items-center justify-between gap-4">
@@ -2565,12 +2588,12 @@ export default function CaseDetailView({ id }) {
         document.body
       )}
 
-
+    
       {/* Modal: View Saved AI Strategic Brief */}
       {viewBriefModal && typeof window !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewBriefModal(null)} />
-
+          
           <div className="relative bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl z-10 border border-slate-200 flex flex-col">
             {/* Modal Header */}
             <div className="sticky top-0 z-20 bg-slate-900 text-white px-6 py-5 border-b border-slate-800 flex items-center justify-between gap-4">
@@ -2712,3 +2735,5 @@ export default function CaseDetailView({ id }) {
     </div>
   );
 }
+
+
