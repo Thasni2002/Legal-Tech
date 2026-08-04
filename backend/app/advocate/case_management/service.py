@@ -1,21 +1,26 @@
-from sqlalchemy.orm import Session
+import os
 import json
 from datetime import datetime
+from dotenv import load_dotenv
+
+from fastapi import HTTPException
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+
+try:
+    import google.generativeai as genai  # type: ignore # pyright: ignore[reportMissingImports]
+except Exception:
+    genai = None
 
 from .models import Case, AIDocumentHistory
 from .schemas import CaseCreate, CaseUpdate
 
-
-
-
-from sqlalchemy import func
 
 def create_case(db: Session, data: CaseCreate):
     if data.cnrNumber and data.cnrNumber.strip():
         cnr_val = data.cnrNumber.strip()
         existing = db.query(Case).filter(func.lower(Case.cnr_number) == func.lower(cnr_val)).first()
         if existing:
-            from fastapi import HTTPException
             raise HTTPException(status_code=400, detail="A case with this CNR Number already exists.")
 
     new_case = Case(
@@ -40,7 +45,7 @@ def create_case(db: Session, data: CaseCreate):
 
         selected_advocate=data.selectedAdvocate,
         documents=json.dumps(
-            [doc.dict() for doc in data.documents]
+            [doc.model_dump() if hasattr(doc, 'model_dump') else doc.dict() for doc in data.documents]
         ) if data.documents else "[]",
         next_hearing_date=data.nextHearingDate,
         cnr_number=data.cnrNumber
@@ -63,6 +68,14 @@ def create_case(db: Session, data: CaseCreate):
 def get_all_cases(db: Session):
     cases = db.query(Case).order_by(Case.id.desc()).all()
 
+    try:
+        from app.advocate.lawfirm_management.models import AssignedCase
+        assigned_list = db.query(AssignedCase).all()
+        ac_map_id = {ac.case_id: ac for ac in assigned_list if ac.case_id}
+        ac_map_no = {ac.case_number: ac for ac in assigned_list if ac.case_number}
+    except Exception:
+        ac_map_id, ac_map_no = {}, {}
+
     for case in cases:
         db.expunge(case)
         if isinstance(case.documents, str):
@@ -70,6 +83,16 @@ def get_all_cases(db: Session):
                 case.documents = json.loads(case.documents or "[]")
             except Exception:
                 case.documents = []
+
+        ac = ac_map_id.get(case.id) or ac_map_no.get(case.case_no)
+        if ac:
+            setattr(case, "advocate_name", ac.advocate_name or case.selected_advocate)
+            setattr(case, "secondary_advocate_name", ac.secondary_advocate_name)
+            if not case.selected_advocate and ac.advocate_name:
+                case.selected_advocate = ac.advocate_name
+        else:
+            setattr(case, "advocate_name", case.selected_advocate)
+            setattr(case, "secondary_advocate_name", None)
 
     return cases
 
@@ -84,6 +107,24 @@ def get_case(db: Session, case_id: int):
                 case.documents = json.loads(case.documents or "[]")
             except Exception:
                 case.documents = []
+
+        try:
+            from app.advocate.lawfirm_management.models import AssignedCase
+            ac = db.query(AssignedCase).filter(
+                (AssignedCase.case_id == case.id) |
+                (AssignedCase.case_id.is_(None) & (AssignedCase.case_number == case.case_no))
+            ).first()
+            if ac:
+                setattr(case, "advocate_name", ac.advocate_name or case.selected_advocate)
+                setattr(case, "secondary_advocate_name", ac.secondary_advocate_name)
+                if not case.selected_advocate and ac.advocate_name:
+                    case.selected_advocate = ac.advocate_name
+            else:
+                setattr(case, "advocate_name", case.selected_advocate)
+                setattr(case, "secondary_advocate_name", None)
+        except Exception:
+            setattr(case, "advocate_name", case.selected_advocate)
+            setattr(case, "secondary_advocate_name", None)
 
     return case
 
@@ -126,8 +167,6 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
         case.status = data.status
         try:
             from app.advocate.lawfirm_management.models import AssignedCase
-            # Only match by the specific case.id to avoid cross-case contamination
-            # when multiple cases share the same case_no.
             assigned_cases = db.query(AssignedCase).filter(
                 AssignedCase.case_id == case.id
             ).all()
@@ -148,15 +187,12 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
             if not data.selectedAdvocate:
                 db.query(AssignedCase).filter(
                     (AssignedCase.case_id == case.id) |
-                    ((AssignedCase.case_id == None) & (AssignedCase.case_number == case.case_no))
+                    (AssignedCase.case_id.is_(None) & (AssignedCase.case_number == case.case_no))
                 ).delete(synchronize_session=False)
             else:
-                # Sync advocate_name on any existing AssignedCase records for this case.
-                # No validation error if no AssignedCase exists — selectedAdvocate is the
-                # primary/document advocate on Case, not a junior advocate assignment record.
                 assigned_cases = db.query(AssignedCase).filter(
                     (AssignedCase.case_id == case.id) |
-                    ((AssignedCase.case_id == None) & (AssignedCase.case_number == case.case_no))
+                    (AssignedCase.case_id.is_(None) & (AssignedCase.case_number == case.case_no))
                 ).all()
                 for ac in assigned_cases:
                     ac.advocate_name = data.selectedAdvocate
@@ -166,13 +202,13 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
             print(f"Error synchronizing advocate on case update: {e}")
     if data.documents is not None:
         case.documents = json.dumps(
-            [doc.dict() for doc in data.documents]
+            [doc.model_dump() if hasattr(doc, 'model_dump') else doc.dict() for doc in data.documents]
         )
         try:
             from app.advocate.lawfirm_management.models import AssignedCase
             assigned_cases = db.query(AssignedCase).filter(
                 (AssignedCase.case_id == case.id) |
-                ((AssignedCase.case_id == None) & (AssignedCase.case_number == case.case_no))
+                (AssignedCase.case_id.is_(None) & (AssignedCase.case_number == case.case_no))
             ).all()
             for ac in assigned_cases:
                 if ac.case_id is None:
@@ -187,7 +223,6 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
         if cnr_val:
             existing = db.query(Case).filter(func.lower(Case.cnr_number) == func.lower(cnr_val), Case.id != case_id).first()
             if existing:
-                from fastapi import HTTPException
                 raise HTTPException(status_code=400, detail="A case with this CNR Number already exists.")
         case.cnr_number = data.cnrNumber
 
@@ -218,15 +253,10 @@ def delete_case(db: Session, case_id: int):
 
 
 def generate_legal_document(db: Session, case_id: int, user_prompt: str):
-    import os
-    import google.generativeai as genai
-    from fastapi import HTTPException
-
     case = get_case(db, case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
 
-    from dotenv import load_dotenv
     load_dotenv()
     
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -235,7 +265,6 @@ def generate_legal_document(db: Session, case_id: int, user_prompt: str):
 
     genai.configure(api_key=api_key)
     
-    # Construct prompt with case context
     context = f"""
     Case Title: {case.case_title}
     Case Number: {case.case_no}
@@ -262,7 +291,6 @@ User Request:
         response = model.generate_content(full_prompt)
         doc_content = response.text
 
-        # Save to history database table
         history_item = AIDocumentHistory(
             case_id=case.id,
             case_no=case.case_no,
@@ -317,15 +345,7 @@ def delete_ai_document_history(db: Session, doc_id: int):
     return True
 
 
-
 def ask_ai_assistant(db: Session, user_query: str, user_role: str = None, advocate_name: str = None, client_name: str = None):
-    import os
-    import json
-    from datetime import datetime
-    import google.generativeai as genai
-    from fastapi import HTTPException
-    
-    from dotenv import load_dotenv
     load_dotenv()
     
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -334,7 +354,6 @@ def ask_ai_assistant(db: Session, user_query: str, user_role: str = None, advoca
         
     genai.configure(api_key=api_key)
     
-    # Fetch cases and apply role-based filtering
     cases = get_all_cases(db)
     if user_role == "Junior Advocate" and advocate_name:
         cases = [c for c in cases if c.selected_advocate == advocate_name]
@@ -361,14 +380,12 @@ def ask_ai_assistant(db: Session, user_query: str, user_role: str = None, advoca
         
     context_block = "\n".join(context_lines)
 
-    # Fetch billing and consultation data if client context is active
     invoices_context = ""
     consultations_context = ""
     
     if client_name:
         try:
             from app.advocate.finance_management.models import Invoice
-            # Query invoices matching client_name
             invoices = db.query(Invoice).all()
             matched_invoices = [inv for inv in invoices if inv.client_name and (client_name_lower in inv.client_name.strip().lower() or inv.client_name.strip().lower() in client_name_lower)]
             if matched_invoices:
@@ -383,7 +400,6 @@ def ask_ai_assistant(db: Session, user_query: str, user_role: str = None, advoca
             
         try:
             from app.advocate.consultations.models import Consultation
-            # Query consultations matching client_name
             consultations = db.query(Consultation).all()
             matched_consultations = [con for con in consultations if con.client_name and (client_name_lower in con.client_name.strip().lower() or con.client_name.strip().lower() in client_name_lower)]
             if matched_consultations:
@@ -396,7 +412,6 @@ def ask_ai_assistant(db: Session, user_query: str, user_role: str = None, advoca
         except Exception as e:
             consultations_context = f"Error fetching consultations: {str(e)}"
 
-    # Fetch advocate assignments and leave info
     advocates_context = ""
     try:
         from app.advocate.lawfirm_management.models import Advocate, AssignedCase
@@ -407,7 +422,6 @@ def ask_ai_assistant(db: Session, user_query: str, user_role: str = None, advoca
             name = a.advocate_name or ""
             a_name = name.strip().lower()
             handling = [ac.case_number or ac.case_name or str(ac.case_id) for ac in assigned_cases_list if ac.advocate_name and ac.advocate_name.strip().lower() == a_name]
-            # Also check Cases table for selected_advocate
             primary_handling = [c.case_no or c.case_title for c in cases if c.selected_advocate and c.selected_advocate.strip().lower() == a_name]
             all_handling = list(set(handling + primary_handling))
             cases_str = ", ".join(all_handling) if all_handling else "None"
@@ -477,7 +491,6 @@ User Question:
         response = model.generate_content(full_prompt)
         response_text = response.text.strip()
         
-        # Check if the response is our JSON action format
         if response_text.startswith("{") and response_text.endswith("}") and '"action"' in response_text:
             try:
                 action_data = json.loads(response_text)
@@ -485,7 +498,6 @@ User Question:
                     case_no = action_data.get("case_no")
                     new_status = action_data.get("new_status")
                     
-                    # Execute database update
                     case_to_update = db.query(Case).filter(Case.case_no == case_no).first()
                     if case_to_update:
                         case_to_update.status = new_status
@@ -494,11 +506,8 @@ User Question:
                     else:
                         return {"response": f"Failed to update: Could not find case with number {case_no}."}
             except json.JSONDecodeError:
-                pass # Fall back to normal text if parsing fails
+                pass
                 
         return {"response": response_text}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI Assistant failed: {str(e)}")
-
-
-

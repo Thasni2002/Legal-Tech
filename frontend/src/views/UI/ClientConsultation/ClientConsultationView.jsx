@@ -49,6 +49,19 @@ export default function ClientConsultationView() {
   };
 
   const [canAddConsultation, setCanAddConsultation] = useState(true);
+  const [clientDisplayName, setClientDisplayName] = useState("");
+
+  const getClientDisplayName = (u) => {
+    if (!u) return "";
+    const fullName = [u.firstName || u.first_name, u.lastName || u.last_name].filter(Boolean).join(" ").trim();
+    if (fullName) return fullName;
+    if (u.fullName) return u.fullName;
+    if (u.full_name) return u.full_name;
+    if (u.client_name) return u.client_name;
+    if (u.clientName) return u.clientName;
+    if (u.name) return u.name;
+    return u.username || "";
+  };
 
   const [formData, setFormData] = useState({
     name: "",
@@ -151,10 +164,37 @@ export default function ClientConsultationView() {
     const loggedIn = getLoggedInUser();
     setUser(loggedIn);
     if (loggedIn) {
+      const initialName = getClientDisplayName(loggedIn);
+      setClientDisplayName(initialName);
       setFormData((prev) => ({
         ...prev,
-        name: loggedIn.username,
+        name: initialName,
       }));
+
+      fetch(`${API_BASE_URL}/case-management/`)
+        .then((res) => (res.ok ? res.json() : []))
+        .then((cases) => {
+          if (Array.isArray(cases) && cases.length > 0) {
+            const userEmail = (loggedIn.email || "").toLowerCase().trim();
+            const userName = (loggedIn.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            const matchedCase = cases.find((c) => {
+              const cEmail = (c.email_id || "").toLowerCase().trim();
+              const cClientName = (c.client_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+              return (
+                (userEmail && cEmail && userEmail === cEmail) ||
+                (userName && cClientName && (cClientName === userName || userName.includes(cClientName)))
+              );
+            });
+            if (matchedCase && matchedCase.client_name) {
+              setClientDisplayName(matchedCase.client_name);
+              setFormData((prev) => ({
+                ...prev,
+                name: matchedCase.client_name,
+              }));
+            }
+          }
+        })
+        .catch(() => {});
     }
     fetchConsultations(loggedIn);
     if (loggedIn) {
@@ -208,7 +248,7 @@ export default function ClientConsultationView() {
         setShowModal(false);
         fetchConsultations(user);
         setFormData({
-          name: user ? user.username : "",
+          name: clientDisplayName || getClientDisplayName(user),
           date: "",
           time: "",
           type: "",
@@ -252,7 +292,7 @@ export default function ClientConsultationView() {
         setShowModal(false);
         fetchConsultations(user);
         setFormData({
-          name: user ? user.username : "",
+          name: clientDisplayName || getClientDisplayName(user),
           date: "",
           time: "",
           type: "",
@@ -386,7 +426,7 @@ export default function ClientConsultationView() {
               onClick={() => {
                 setRescheduleId(null);
                 setFormData({
-                  name: user ? user.username : "",
+                  name: clientDisplayName || getClientDisplayName(user),
                   date: "",
                   time: "",
                   type: "",

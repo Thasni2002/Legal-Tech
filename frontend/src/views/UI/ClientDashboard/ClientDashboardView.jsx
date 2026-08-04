@@ -372,7 +372,7 @@ export default function ClientDashboard() {
                     </span>
                   </div>
                   <div className="text-[11px] text-slate-600 pt-1 border-t border-slate-200/60 space-y-1">
-                    <p>👤 Advocate: <strong className="text-slate-800">{item.selected_advocate || "Not Assigned"}</strong></p>
+                    <p>👤 Advocate: <strong className="text-slate-800">{item.selected_advocate || item.advocate_name || "Not Assigned"}</strong></p>
                     <p>🏛️ Court: <strong className="text-slate-800">{item.court_name}</strong></p>
                   </div>
                 </div>
@@ -397,7 +397,7 @@ export default function ClientDashboard() {
                         <span className="block font-bold text-[#0F172A]">{item.case_title}</span>
                         <span className="text-[11px] text-[#64748B]">{item.case_type}</span>
                       </td>
-                      <td className="p-3.5 sm:p-4 text-xs sm:text-sm text-[#475569] whitespace-nowrap">{item.selected_advocate || "Not Assigned"}</td>
+                      <td className="p-3.5 sm:p-4 text-xs sm:text-sm text-[#475569] whitespace-nowrap">{item.selected_advocate || item.advocate_name || "Not Assigned"}</td>
                       <td className="p-3.5 sm:p-4 text-xs sm:text-sm text-[#475569] whitespace-nowrap">{item.court_name}</td>
                       <td className="p-3.5 sm:p-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${

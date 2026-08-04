@@ -174,7 +174,7 @@ def create_assigned_case(
             prior = db.query(AssignedCase).filter(
                 (AssignedCase.case_id == case_id_val) |
                 (
-                    (AssignedCase.case_id == None) &
+                    AssignedCase.case_id.is_(None) &
                     (AssignedCase.case_number == case_number_val)
                 ),
                 AssignedCase.advocate_name == advocate_name
@@ -196,7 +196,7 @@ def create_assigned_case(
         )
         if case_data.case_number and case_data.case_number.strip():
             cond = cond | (
-                (AssignedCase.case_id == None) &
+                AssignedCase.case_id.is_(None) &
                 (AssignedCase.case_number == case_data.case_number.strip()) &
                 (AssignedCase.advocate_name == adv_name)
             )

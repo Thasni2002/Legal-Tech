@@ -38,6 +38,10 @@ class Case(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
 class UploadedFile(Base):
     __tablename__ = "uploaded_files"
 
@@ -89,6 +93,10 @@ class AIDocumentHistory(Base):
 
     case = relationship(Case, backref="ai_document_histories")
 
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
 
 class CaseNote(Base):
     """Internal advocate notes & tasks for a specific case."""
@@ -102,5 +110,9 @@ class CaseNote(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     case = relationship(Case, backref="notes")
+
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
 
