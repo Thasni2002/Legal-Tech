@@ -84,11 +84,26 @@ export default function ClientCaseTrackingView() {
           let formattedUpdatedDate = formatRelativeDate(item.updated_at || item.created_at) || "Today";
           let formattedFilingDate = formatRelativeDate(item.created_at || item.updated_at) || "Today";
 
+          const primaryAdv = item.selected_advocate || item.advocate_name || item.advocateName || item.assigned_advocate;
+          const secondaryAdv = item.secondary_advocate_name || item.secondaryAdvocateName;
+
+          let advocateNameStr = "";
+          if (primaryAdv && primaryAdv.toLowerCase() !== "advocate") {
+            advocateNameStr = primaryAdv;
+            if (secondaryAdv && secondaryAdv.toLowerCase() !== "advocate") {
+              advocateNameStr += ` & ${secondaryAdv}`;
+            }
+          } else if (secondaryAdv && secondaryAdv.toLowerCase() !== "advocate") {
+            advocateNameStr = secondaryAdv;
+          } else {
+            advocateNameStr = "Not Assigned";
+          }
+
           return {
             caseId: item.case_no || "N/A",
             title: item.case_title || "Untitled Case",
             status: item.status || "Active",
-            advocate: item.selected_advocate || "Advocate",
+            advocate: advocateNameStr,
             clientName: item.client_name || "Client",
             court: item.court_name || "Civil Court",
             nextHearing: item.next_hearing_date || "To be scheduled",

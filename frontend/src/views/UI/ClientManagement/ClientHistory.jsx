@@ -220,7 +220,7 @@ export default function ClientHistory() {
                 caseTitle: c.case_title || "N/A",
                 caseNumber: c.case_no || "N/A",
                 courtName: c.court_name || "N/A",
-                assignedAdvocate: "Advocate",
+                assignedAdvocate: c.selected_advocate || c.advocate_name || "Not Assigned",
               };
               idCounter++;
             }
