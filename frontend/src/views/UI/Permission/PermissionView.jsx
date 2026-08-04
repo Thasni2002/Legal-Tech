@@ -106,6 +106,7 @@ const ALL_GROUPS = [
       { key: "Clerk Dashboard", label: "Dashboard (Clerk)" },
       { key: "Court Visit", label: "Court Visit" },
       { key: "Format Physical File", label: "Format Physical File" },
+      { key: "Clerk Documents", label: "Documents (Clerk)" },
       { key: "Clerk Leave", label: "Clerk Leave" },
     ]
   }

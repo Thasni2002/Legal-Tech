@@ -35,12 +35,12 @@ export default function Navbar() {
     const uFull = `${loggedInUser?.firstName || ""} ${loggedInUser?.lastName || ""}`.toLowerCase().replace(/[^a-z0-9]/g, "");
 
     const savedUserLocal = typeof window !== "undefined" && userKey ? localStorage.getItem(`advocate_profile_${userKey}`) : null;
-    
+
     let savedProfileData = null;
     if (savedUserLocal) {
       try {
         savedProfileData = JSON.parse(savedUserLocal);
-      } catch (e) {}
+      } catch (e) { }
     } else if (typeof window !== "undefined") {
       const savedGlobal = localStorage.getItem("advocate_profile");
       if (savedGlobal) {
@@ -55,7 +55,7 @@ export default function Navbar() {
           ) {
             savedProfileData = parsed;
           }
-        } catch (e) {}
+        } catch (e) { }
       }
     }
 
@@ -262,11 +262,10 @@ export default function Navbar() {
           >
             <Bell
               size={20}
-              className={`${
-                unreadCount > 0
+              className={`${unreadCount > 0
                   ? "text-[#0F172A] animate-bell-shake"
                   : "text-[#64748B]"
-              }`}
+                }`}
             />
             {unreadCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 bg-[#DC2626] text-white text-[10px] font-semibold h-[18px] w-[18px] rounded-full flex items-center justify-center animate-pulse">
@@ -314,31 +313,28 @@ export default function Navbar() {
                 <div className="flex bg-slate-100/80 p-1 rounded-2xl">
                   <button
                     onClick={() => setNotifFilter("all")}
-                    className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all duration-200 cursor-pointer ${
-                      notifFilter === "all"
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all duration-200 cursor-pointer ${notifFilter === "all"
                         ? "bg-white text-slate-900 shadow-sm"
                         : "text-slate-500 hover:text-slate-800"
-                    }`}
+                      }`}
                   >
                     All
                   </button>
                   <button
                     onClick={() => setNotifFilter("unread")}
-                    className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all duration-200 cursor-pointer ${
-                      notifFilter === "unread"
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all duration-200 cursor-pointer ${notifFilter === "unread"
                         ? "bg-white text-slate-900 shadow-sm"
                         : "text-slate-500 hover:text-slate-800"
-                    }`}
+                      }`}
                   >
                     Unread
                   </button>
                   <button
                     onClick={() => setNotifFilter("read")}
-                    className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all duration-200 cursor-pointer ${
-                      notifFilter === "read"
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all duration-200 cursor-pointer ${notifFilter === "read"
                         ? "bg-white text-slate-900 shadow-sm"
                         : "text-slate-500 hover:text-slate-800"
-                    }`}
+                      }`}
                   >
                     Read
                   </button>
@@ -409,11 +405,10 @@ export default function Navbar() {
                         <div
                           key={item.id}
                           onClick={() => !isRead && markAsRead(item.id)}
-                          className={`flex items-start gap-3.5 p-3 rounded-xl border transition-all duration-150 relative group ${
-                            isRead
+                          className={`flex items-start gap-3.5 p-3 rounded-xl border transition-all duration-150 relative group ${isRead
                               ? "bg-slate-50/60 border-slate-100/80 opacity-75 hover:opacity-100 hover:bg-white"
                               : "bg-gradient-to-r from-blue-50/50 via-indigo-50/20 to-white border-blue-200/80 shadow-2xs hover:border-blue-300 hover:shadow-xs cursor-pointer"
-                          }`}
+                            }`}
                         >
                           <div
                             className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center text-base shadow-2xs mt-0.5 transition-transform duration-200 group-hover:scale-105 ${item.bg} ${item.color}`}
@@ -434,11 +429,10 @@ export default function Navbar() {
                             </div>
 
                             <p
-                              className={`text-xs leading-snug transition-colors ${
-                                isRead
+                              className={`text-xs leading-snug transition-colors ${isRead
                                   ? "font-normal text-slate-600"
                                   : "font-semibold text-slate-900 group-hover:text-blue-900"
-                              } line-clamp-2`}
+                                } line-clamp-2`}
                               title={cleanedTitle}
                             >
                               {cleanedTitle}

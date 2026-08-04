@@ -148,12 +148,23 @@ export default function DocumentScannerTab({ onContinueToOCR, onSaveToDocuments,
           setOriginalPreview(data.original_preview_b64);
         }
       } else {
-        const errData = await res.json();
-        throw new Error(errData.detail || "Boundary detection failed.");
+        const errData = await res.json().catch(() => ({}));
+        console.warn("Corner detection fallback:", errData?.detail);
+        setCorners([
+          { x: 5, y: 5 },
+          { x: 95, y: 5 },
+          { x: 95, y: 95 },
+          { x: 5, y: 95 },
+        ]);
       }
     } catch (e) {
       console.warn("Corner detection warning:", e);
-      setError(e.message || "Corner detection warning.");
+      setCorners([
+        { x: 5, y: 5 },
+        { x: 95, y: 5 },
+        { x: 95, y: 95 },
+        { x: 5, y: 95 },
+      ]);
     } finally {
       setDetectingCorners(false);
       // Run initial scan once corners are set

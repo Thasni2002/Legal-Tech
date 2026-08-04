@@ -21,6 +21,8 @@ import {
   Users,
   ArrowLeft,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { API_BASE_URL } from "@/utils/api";
 import { getLoggedInUser } from "@/utils/auth";
@@ -61,6 +63,39 @@ export default function LeaveManagementView({
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [search, setSearch] = useState("");
+  const [timePeriod, setTimePeriod] = useState("all"); // "all" | "this_week" | "this_month" | "this_year" | "custom"
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 6;
+
+  const handleTimePeriodChange = (period) => {
+    setTimePeriod(period);
+    setCurrentPage(1);
+
+    const now = new Date();
+    const todayY = now.getFullYear();
+    const todayM = now.getMonth();
+
+    if (period === "all") {
+      setFromDate("");
+      setToDate("");
+    } else if (period === "this_week") {
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(now.setDate(diff));
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      setFromDate(monday.toISOString().split("T")[0]);
+      setToDate(sunday.toISOString().split("T")[0]);
+    } else if (period === "this_month") {
+      const firstDay = new Date(todayY, todayM, 1);
+      const lastDay = new Date(todayY, todayM + 1, 0);
+      setFromDate(firstDay.toISOString().split("T")[0]);
+      setToDate(lastDay.toISOString().split("T")[0]);
+    } else if (period === "this_year") {
+      setFromDate(`${todayY}-01-01`);
+      setToDate(`${todayY}-12-31`);
+    }
+  };
 
   // Clerk specific tab: "own" vs "team"
   const [clerkTab, setClerkTab] = useState("own"); // "own" | "team"
@@ -141,20 +176,40 @@ export default function LeaveManagementView({
     fetchData();
   }, [fetchData]);
 
-  // Filter leaves locally by search input & user scope
-  const filteredLeaves = leaves.filter((item) => {
-    if (viewMode === "junior" && user?.id) {
-      if (item.user_id !== user.id) return false;
-    }
-    if (!search.trim()) return true;
-    const term = search.toLowerCase();
-    return (
-      item.applicant_name?.toLowerCase().includes(term) ||
-      item.subject?.toLowerCase().includes(term) ||
-      item.leave_type?.toLowerCase().includes(term) ||
-      item.applicant_role?.toLowerCase().includes(term)
-    );
-  });
+  // Filter leaves locally by search input, date range & user scope
+  const filteredLeaves = React.useMemo(() => {
+    return leaves.filter((item) => {
+      if (viewMode === "junior" && user?.id) {
+        if (item.user_id !== user.id) return false;
+      }
+      if (search.trim()) {
+        const term = search.toLowerCase();
+        const matches =
+          item.applicant_name?.toLowerCase().includes(term) ||
+          item.subject?.toLowerCase().includes(term) ||
+          item.leave_type?.toLowerCase().includes(term) ||
+          item.applicant_role?.toLowerCase().includes(term) ||
+          item.description?.toLowerCase().includes(term);
+        if (!matches) return false;
+      }
+
+      const leaveFrom = item.from_date;
+      const leaveTo = item.to_date || item.from_date;
+
+      if (fromDate && leaveTo && leaveTo < fromDate) return false;
+      if (toDate && leaveFrom && leaveFrom > toDate) return false;
+
+      return true;
+    });
+  }, [leaves, viewMode, user?.id, search, fromDate, toDate]);
+
+  const totalPages = Math.ceil(filteredLeaves.length / ITEMS_PER_PAGE) || 1;
+  const activeCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedLeaves = React.useMemo(() => {
+    const start = (activeCurrentPage - 1) * ITEMS_PER_PAGE;
+    return filteredLeaves.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredLeaves, activeCurrentPage, ITEMS_PER_PAGE]);
 
   // Helper to format duration display dynamically
   const getDurationDisplay = (req) => {
@@ -183,10 +238,6 @@ export default function LeaveManagementView({
   // Handle Apply Form submission
   const handleApplySubmit = async (e) => {
     e.preventDefault();
-    if (!applyForm.description.trim()) {
-      showAlert("Please provide a description for your leave request.", "Validation Error", "error");
-      return;
-    }
     if (!applyForm.from_date || !applyForm.to_date) {
       showAlert("Please select both From Date and To Date.", "Validation Error", "error");
       return;
@@ -621,78 +672,89 @@ export default function LeaveManagementView({
       )}
 
       {/* Filter and Action Header Container */}
-      <div className="bg-white rounded-2xl border border-[#E2E8F0] p-3.5 sm:p-5 mb-4 sm:mb-6 shadow-xs w-full max-w-full min-w-0 space-y-3.5 sm:space-y-4">
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3.5 sm:gap-4 w-full min-w-0">
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] p-4 sm:p-5 mb-5 shadow-xs w-full max-w-full min-w-0">
+        <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3.5 sm:gap-4 w-full min-w-0">
           
-          {/* Status Pills */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto no-scrollbar shrink-0">
-            {["All", "Pending", "Approved", "Rejected"].map((tab) => {
-              const active = statusFilter === tab;
-              return (
-                <button
-                  key={tab}
-                  onClick={() => setStatusFilter(tab)}
-                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
-                    active ? "bg-[#2563EB] text-white shadow-xs" : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
-                  }`}
-                >
-                  {tab}
-                </button>
-              );
-            })}
+          {/* Left Group: Status Pills & Time Period Dropdown */}
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            {/* Status Pills */}
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl shrink-0">
+              {["All", "Pending", "Approved", "Rejected"].map((tab) => {
+                const active = statusFilter === tab;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => { setStatusFilter(tab); setCurrentPage(1); }}
+                    className={`px-3.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                      active ? "bg-[#2563EB] text-white shadow-xs" : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Time Period Filter Dropdown */}
+            <div className="relative shrink-0">
+              <select
+                value={timePeriod}
+                onChange={(e) => handleTimePeriodChange(e.target.value)}
+                className="appearance-none bg-slate-100 hover:bg-slate-200/70 border border-slate-200 text-slate-800 text-xs font-bold py-2.5 pl-3.5 pr-8 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition"
+              >
+                <option value="all">All Time</option>
+                <option value="this_week">This Week</option>
+                <option value="this_month">This Month</option>
+                <option value="this_year">This Year</option>
+                <option value="custom">Custom Range</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-500">
+                <ChevronDown size={14} />
+              </div>
+            </div>
           </div>
 
-          {/* Controls: Search, Dates, Apply */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 flex-1 min-w-0 justify-end">
-            {viewMode !== "senior" && (
-              <>
-                {/* Search */}
-                <div className="relative flex-1 min-w-0 max-w-full sm:max-w-xs">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-8 pr-3 py-2 border border-slate-300 rounded-xl text-xs text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  />
-                </div>
+          {/* Right Group: Search, Single Date Picker, Apply Button */}
+          <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0 justify-start xl:justify-end">
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[180px] max-w-full sm:max-w-xs">
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search applicant, type, reason..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+                className="w-full pl-9 pr-3.5 py-2.5 border border-slate-300 rounded-xl text-xs text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
 
-                {/* Dates Side by Side */}
-                <div className="grid grid-cols-2 gap-2 shrink-0">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">From Date</span>
-                    <input
-                      type="date"
-                      value={fromDate}
-                      onChange={(e) => setFromDate(e.target.value)}
-                      className="px-2.5 py-1.5 border border-slate-300 rounded-xl text-xs text-slate-900 bg-white"
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">To Date</span>
-                    <input
-                      type="date"
-                      value={toDate}
-                      onChange={(e) => setToDate(e.target.value)}
-                      className="px-2.5 py-1.5 border border-slate-300 rounded-xl text-xs text-slate-900 bg-white"
-                    />
-                  </div>
-                </div>
-              </>
-            )}
+            {/* Single Calendar Date Filter */}
+            <div className="w-full sm:w-44 shrink-0">
+              <CustomDatePicker
+                selected={fromDate}
+                onChange={(dateStr) => {
+                  setFromDate(dateStr);
+                  setToDate(dateStr);
+                  setTimePeriod(dateStr ? "custom" : "all");
+                  setCurrentPage(1);
+                }}
+                minDate={null}
+                placeholder="Select Date"
+              />
+            </div>
 
             {/* Apply Leave Button */}
             {perms.add && viewMode !== "senior" && (viewMode !== "clerk" || clerkTab === "own") && (
               <button
                 onClick={() => setIsApplying(true)}
-                className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer shrink-0 w-full sm:w-auto self-end sm:self-auto mt-1 sm:mt-0"
+                className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer shrink-0"
               >
                 <Plus size={16} />
                 <span>Apply Leave</span>
               </button>
             )}
           </div>
+
         </div>
       </div>
 
@@ -718,7 +780,7 @@ export default function LeaveManagementView({
           <>
             {/* Mobile Native Card View (< 640px) */}
             <div className="block sm:hidden divide-y divide-slate-100">
-              {filteredLeaves.map((req) => {
+              {paginatedLeaves.map((req) => {
                 const isOwnRequest = user?.id === req.user_id;
                 const statusColor =
                   req.status === "Approved" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
@@ -746,8 +808,8 @@ export default function LeaveManagementView({
                         <span className="font-mono text-slate-500 font-bold">{getDurationDisplay(req)}</span>
                       </div>
                       <p className="text-slate-600 text-[11px] font-medium leading-relaxed">{req.description || "No description provided."}</p>
-                      <div className="text-[11px] text-blue-600 font-semibold pt-1 border-t border-slate-200/60">
-                        🗓️ {req.from_date} to {req.to_date}
+                      <div className="text-[11px] text-blue-600 font-semibold pt-1 border-t border-slate-200/60 flex items-center gap-1">
+                        <CalendarIcon size={12} /> {req.from_date} to {req.to_date}
                       </div>
                     </div>
 
@@ -804,7 +866,7 @@ export default function LeaveManagementView({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-                  {filteredLeaves.map((req) => {
+                  {paginatedLeaves.map((req) => {
                     const isOwnRequest = user?.id === req.user_id;
                     const statusColor =
                       req.status === "Approved" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
@@ -884,6 +946,41 @@ export default function LeaveManagementView({
                 </tbody>
               </table>
             </div>
+
+            {/* Table Pagination Controls */}
+            {filteredLeaves.length > 0 && (
+              <div className="px-4 py-3.5 border-t border-slate-100 bg-slate-50/60 flex flex-col sm:flex-row justify-between items-center gap-3">
+                <span className="text-xs text-slate-500 font-medium">
+                  Showing <span className="font-bold text-slate-800">{(activeCurrentPage - 1) * ITEMS_PER_PAGE + 1}</span> to{" "}
+                  <span className="font-bold text-slate-800">{Math.min(activeCurrentPage * ITEMS_PER_PAGE, filteredLeaves.length)}</span> of{" "}
+                  <span className="font-bold text-slate-800">{filteredLeaves.length}</span> leave records
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={activeCurrentPage === 1}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                  >
+                    <ChevronLeft size={14} /> Previous
+                  </button>
+
+                  <span className="text-xs font-bold text-slate-700 px-3 py-1.5 bg-white border border-slate-200 rounded-xl shadow-2xs">
+                    {activeCurrentPage} / {totalPages}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={activeCurrentPage === totalPages}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                  >
+                    Next <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -1020,7 +1117,7 @@ export default function LeaveManagementView({
               <button
                 type="button"
                 onClick={() => setAlertModal({ show: false, title: "", message: "", type: "info" })}
-                className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs transition shadow-md cursor-pointer"
+                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs transition shadow-md shadow-blue-600/20 cursor-pointer"
               >
                 OK
               </button>
