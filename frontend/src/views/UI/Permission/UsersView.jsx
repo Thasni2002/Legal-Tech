@@ -50,6 +50,7 @@ const ALL_MODULES = [
   "Court Visit",
   "Format Physical File",
   "Clerk Documents",
+  "Clerk Cases",
   "Leave Management",
   "Junior Leave",
   "Clerk Leave",
@@ -109,6 +110,7 @@ const SENIOR_JUNIOR_MODULES = [
       { key: "Court Visit", label: "Court Visit" },
       { key: "Format Physical File", label: "Format Physical File" },
       { key: "Clerk Documents", label: "Documents (Clerk)" },
+      { key: "Clerk Cases", label: "Cases (Clerk)" },
       { key: "Clerk Leave", label: "Clerk Leave" },
     ]
   }
