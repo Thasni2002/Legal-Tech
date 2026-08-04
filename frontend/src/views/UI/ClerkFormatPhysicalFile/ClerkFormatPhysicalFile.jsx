@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Printer, Plus, Search, Folder, PrinterCheck, Camera, Edit2, Trash2, Save, X, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Printer, Plus, Search, Folder, PrinterCheck, Camera, Edit2, Trash2, Save, X, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
 import { API_BASE_URL } from "@/utils/api";
 import { getTodayDateString } from "@/utils/dateUtils";
@@ -15,6 +15,8 @@ export default function ClerkFormatPhysicalFile() {
   const [mounted, setMounted] = useState(false);
   const [files, setFiles] = useState([]);
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 7;
   const [activeLabelFile, setActiveLabelFile] = useState(null);
   const [editingFileId, setEditingFileId] = useState(null);
   const [deleteConfirmFile, setDeleteConfirmFile] = useState(null);
@@ -27,6 +29,31 @@ export default function ClerkFormatPhysicalFile() {
     dateFiled: new Date().toISOString().split("T")[0],
     status: "Active"
   });
+
+  // Check if current file number is a duplicate of any existing record
+  const isDuplicateFileNumber = React.useMemo(() => {
+    const fn = formData.fileNumber.trim().toLowerCase();
+    if (!fn) return false;
+    return files.some(
+      (f) =>
+        f.fileNumber &&
+        f.fileNumber.trim().toLowerCase() === fn &&
+        f.id !== editingFileId
+    );
+  }, [formData.fileNumber, files, editingFileId]);
+
+  const deduplicateFiles = (fileList) => {
+    const unique = [];
+    const seen = new Set();
+    for (const f of fileList) {
+      const key = `${f.id}-${f.fileNumber}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(f);
+      }
+    }
+    return unique;
+  };
 
   const fetchPhysicalFiles = async () => {
     try {
@@ -42,8 +69,9 @@ export default function ClerkFormatPhysicalFile() {
             shelf: b.shelf_index || "Shelf 1",
             dateFiled: b.created_at ? b.created_at.split("T")[0] : new Date().toISOString().split("T")[0]
           }));
-          setFiles(mapped);
-          localStorage.setItem("clerk_physical_files", JSON.stringify(mapped));
+          const deduped = deduplicateFiles(mapped);
+          setFiles(deduped);
+          localStorage.setItem("clerk_physical_files", JSON.stringify(deduped));
           return;
         }
       }
@@ -55,7 +83,7 @@ export default function ClerkFormatPhysicalFile() {
     const saved = localStorage.getItem("clerk_physical_files");
     if (saved) {
       try {
-        setFiles(JSON.parse(saved));
+        setFiles(deduplicateFiles(JSON.parse(saved)));
       } catch (e) {}
     } else {
       // Default seed sample
@@ -82,6 +110,11 @@ export default function ClerkFormatPhysicalFile() {
     e.preventDefault();
     if (!formData.fileNumber || !formData.caseTitle) {
       alert("Please fill in File Number and Case Title.");
+      return;
+    }
+
+    if (isDuplicateFileNumber) {
+      alert("Physical File Number already registered! Please enter a unique file number.");
       return;
     }
 
@@ -112,7 +145,7 @@ export default function ClerkFormatPhysicalFile() {
 
       setEditingFileId(null);
     } else {
-      // Create new record
+      // Create new record - Place at the top
       let newId = Date.now();
       try {
         const res = await fetch(`${API_BASE_URL}/clerk/format-physical-file/`, {
@@ -139,6 +172,7 @@ export default function ClerkFormatPhysicalFile() {
         localStorage.setItem("clerk_physical_files", JSON.stringify(updated));
         return updated;
       });
+      setCurrentPage(1); // Jump to first page to show newly added item at top
     }
 
     setFormData({
@@ -275,12 +309,31 @@ export default function ClerkFormatPhysicalFile() {
     }
   };
 
-  const filteredFiles = files.filter(
-    (f) =>
-      f.fileNumber.toLowerCase().includes(search.toLowerCase()) ||
-      f.caseTitle.toLowerCase().includes(search.toLowerCase()) ||
-      f.cabinet.toLowerCase().includes(search.toLowerCase())
-  );
+  // Sort files with newest / recent added at the top
+  const sortedFiles = React.useMemo(() => {
+    return [...files].sort((a, b) => {
+      const idA = Number(a.id) || 0;
+      const idB = Number(b.id) || 0;
+      return idB - idA;
+    });
+  }, [files]);
+
+  const filteredFiles = React.useMemo(() => {
+    return sortedFiles.filter(
+      (f) =>
+        f.fileNumber.toLowerCase().includes(search.toLowerCase()) ||
+        f.caseTitle.toLowerCase().includes(search.toLowerCase()) ||
+        f.cabinet.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [sortedFiles, search]);
+
+  const totalPages = Math.ceil(filteredFiles.length / ITEMS_PER_PAGE) || 1;
+  const activeCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedFiles = React.useMemo(() => {
+    const start = (activeCurrentPage - 1) * ITEMS_PER_PAGE;
+    return filteredFiles.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredFiles, activeCurrentPage, ITEMS_PER_PAGE]);
 
   if (!user) {
     return (
@@ -342,7 +395,7 @@ export default function ClerkFormatPhysicalFile() {
         >
           <h2 className="text-lg font-extrabold text-[#0F172A] border-b pb-3 flex items-center justify-between">
             <span className="flex items-center gap-2">
-              <span className="text-emerald-500">📁</span> {editingFileId ? "Edit Physical File" : "Log Physical File"}
+              <Folder size={18} className="text-blue-600" /> {editingFileId ? "Edit Physical File" : "Log Physical File"}
             </span>
             {editingFileId && (
               <button
@@ -363,8 +416,18 @@ export default function ClerkFormatPhysicalFile() {
                 value={formData.fileNumber}
                 onChange={(e) => setFormData({ ...formData, fileNumber: e.target.value })}
                 placeholder="e.g. PF-2026-003"
-                className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0F172A] font-medium outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition"
+                className={`w-full rounded-xl border px-4 py-3 text-sm font-medium outline-none transition ${
+                  isDuplicateFileNumber
+                    ? "border-red-500 bg-red-50/40 text-red-900 focus:ring-2 focus:ring-red-500/20"
+                    : "border-[#E2E8F0] text-[#0F172A] focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
+                }`}
               />
+              {isDuplicateFileNumber && (
+                <p className="text-xs font-bold text-red-600 mt-1.5 flex items-center gap-1.5">
+                  <AlertTriangle size={14} className="shrink-0 text-red-500" />
+                  <span>Physical File Number already exists! Please enter a unique file number.</span>
+                </p>
+              )}
             </div>
 
             <div>
@@ -423,8 +486,13 @@ export default function ClerkFormatPhysicalFile() {
           <div className="flex gap-2">
             <button
               type="submit"
-              className={`w-full font-bold text-xs uppercase tracking-wider py-4 rounded-xl transition duration-200 shadow-md flex items-center justify-center gap-2 cursor-pointer ${
-                editingFileId ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20" : "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 active:scale-[0.99]"
+              disabled={isDuplicateFileNumber || !formData.fileNumber.trim() || !formData.caseTitle.trim()}
+              className={`w-full font-bold text-xs uppercase tracking-wider py-4 rounded-xl transition duration-200 shadow-md flex items-center justify-center gap-2 ${
+                isDuplicateFileNumber || !formData.fileNumber.trim() || !formData.caseTitle.trim()
+                  ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none border border-slate-300/60"
+                  : editingFileId
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20 cursor-pointer"
+                  : "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 active:scale-[0.99] cursor-pointer"
               }`}
             >
               {editingFileId ? <Save size={16} /> : <Plus size={16} />}
@@ -445,7 +513,10 @@ export default function ClerkFormatPhysicalFile() {
                 placeholder="Search file index..."
                 className="w-full ml-2 bg-transparent outline-none text-xs text-[#0F172A] placeholder:text-[#94A3B8]"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
               />
             </div>
           </div>
@@ -462,8 +533,8 @@ export default function ClerkFormatPhysicalFile() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F1F5F9]">
-                {filteredFiles.map((file) => (
-                  <tr key={file.id} className="hover:bg-slate-50/50 transition">
+                {paginatedFiles.map((file, idx) => (
+                  <tr key={`${file.id}-${file.fileNumber}-${idx}`} className="hover:bg-slate-50/50 transition">
                     <td className="px-6 py-4 text-sm font-bold text-slate-800 whitespace-nowrap">{file.fileNumber}</td>
                     <td className="px-6 py-4 text-sm font-semibold text-slate-700 max-w-[240px] leading-snug">{file.caseTitle}</td>
                     <td className="px-6 py-4 text-xs font-semibold text-slate-500 whitespace-nowrap">
@@ -510,8 +581,8 @@ export default function ClerkFormatPhysicalFile() {
 
           {/* Mobile & Tablet Responsive Card View (visible on mobile & tablet) */}
           <div className="block md:hidden p-4 space-y-3.5 bg-slate-50/50 flex-1">
-            {filteredFiles.map((file) => (
-              <div key={file.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-3">
+            {paginatedFiles.map((file, idx) => (
+              <div key={`${file.id}-${file.fileNumber}-${idx}`} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-3">
                 <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
                   <span className="font-extrabold text-xs text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">
                     {file.fileNumber}
@@ -554,6 +625,41 @@ export default function ClerkFormatPhysicalFile() {
               <div className="p-8 text-center text-slate-400 font-medium text-xs">No matching physical files found.</div>
             )}
           </div>
+
+          {/* Table Pagination Footer */}
+          {filteredFiles.length > 0 && (
+            <div className="px-6 py-4 border-t border-[#F1F5F9] bg-[#F8FAFC]/50 flex flex-col sm:flex-row justify-between items-center gap-3">
+              <span className="text-xs text-slate-500 font-medium">
+                Showing <span className="font-bold text-slate-800">{(activeCurrentPage - 1) * ITEMS_PER_PAGE + 1}</span> to{" "}
+                <span className="font-bold text-slate-800">{Math.min(activeCurrentPage * ITEMS_PER_PAGE, filteredFiles.length)}</span> of{" "}
+                <span className="font-bold text-slate-800">{filteredFiles.length}</span> physical records
+              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={activeCurrentPage === 1}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition cursor-pointer flex items-center gap-1 shadow-xs"
+                >
+                  <ChevronLeft size={14} /> Previous
+                </button>
+
+                <span className="text-xs font-bold text-slate-700 px-2.5 py-1 bg-white border border-slate-200 rounded-lg shadow-xs">
+                  {activeCurrentPage} / {totalPages}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={activeCurrentPage === totalPages}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition cursor-pointer flex items-center gap-1 shadow-xs"
+                >
+                  Next <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
