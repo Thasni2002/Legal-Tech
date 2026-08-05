@@ -16,12 +16,26 @@ from .models import Case, AIDocumentHistory
 from .schemas import CaseCreate, CaseUpdate
 
 
-def create_case(db: Session, data: CaseCreate):
+def create_case(db: Session, data: CaseCreate, current_user=None):
     if data.cnrNumber and data.cnrNumber.strip():
         cnr_val = data.cnrNumber.strip()
         existing = db.query(Case).filter(func.lower(Case.cnr_number) == func.lower(cnr_val)).first()
         if existing:
             raise HTTPException(status_code=400, detail="A case with this CNR Number already exists.")
+
+    # ── Confidential Vault: validate and hash password if needed ──
+    is_confidential = bool(data.isConfidential)
+    pwd_hash = None
+    owner_id = None
+    if is_confidential:
+        role = (getattr(current_user, 'role', '') or '').lower()
+        if 'senior' not in role and 'admin' not in role:
+            raise HTTPException(status_code=403, detail="Only Senior Advocates can create confidential cases")
+        if not data.casePassword or len(data.casePassword.strip()) < 6:
+            raise HTTPException(status_code=400, detail="A case password of at least 6 characters is required for confidential cases")
+        import bcrypt
+        pwd_hash = bcrypt.hashpw(data.casePassword[:72].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        owner_id = getattr(current_user, 'id', None)
 
     new_case = Case(
         case_id=data.caseId,
@@ -48,7 +62,13 @@ def create_case(db: Session, data: CaseCreate):
             [doc.model_dump() if hasattr(doc, 'model_dump') else doc.dict() for doc in data.documents]
         ) if data.documents else "[]",
         next_hearing_date=data.nextHearingDate,
-        cnr_number=data.cnrNumber
+        cnr_number=data.cnrNumber,
+
+        # Vault
+        is_confidential=is_confidential,
+        confidential_password_hash=pwd_hash,
+        confidential_owner_id=owner_id,
+        needs_password_reset=False,
     )
 
     db.add(new_case)
@@ -65,8 +85,35 @@ def create_case(db: Session, data: CaseCreate):
     return new_case
 
 
-def get_all_cases(db: Session):
-    cases = db.query(Case).order_by(Case.id.desc()).all()
+def get_all_cases(db: Session, current_user=None):
+    """
+    Returns cases visible to current_user.
+    SECURITY: Confidential cases are ONLY returned to their owner (Layer 1 — ORM filter).
+    If current_user is None (unauthenticated), no confidential cases are returned.
+    """
+    from sqlalchemy import or_
+
+    owner_id = getattr(current_user, 'id', None)
+    user_role = (getattr(current_user, 'role', '') or '').lower()
+
+    if owner_id:
+        if 'admin' in user_role:
+            cases = db.query(Case).order_by(Case.id.desc()).all()
+        else:
+            cases = (
+                db.query(Case)
+                .filter(
+                    or_(
+                        Case.is_confidential == False,
+                        Case.confidential_owner_id == owner_id,
+                    )
+                )
+                .order_by(Case.id.desc())
+                .all()
+            )
+    else:
+        # No authenticated user — return only non-confidential cases
+        cases = db.query(Case).filter(Case.is_confidential == False).order_by(Case.id.desc()).all()
 
     try:
         from app.advocate.lawfirm_management.models import AssignedCase
@@ -97,8 +144,16 @@ def get_all_cases(db: Session):
     return cases
 
 
-def get_case(db: Session, case_id: int):
+def get_case(db: Session, case_id: int, current_user=None):
     case = db.query(Case).filter(Case.id == case_id).first()
+
+    # SECURITY Layer 2: Return 404 (not 403) for confidential cases owned by others
+    # This prevents leaking that the case exists.
+    if case and case.is_confidential:
+        owner_id = getattr(current_user, 'id', None)
+        user_role = (getattr(current_user, 'role', '') or '').lower()
+        if case.confidential_owner_id != owner_id and 'admin' not in user_role:
+            return None  # Caller raises 404
 
     if case:
         db.expunge(case)
@@ -245,6 +300,36 @@ def delete_case(db: Session, case_id: int):
 
     if not case:
         return None
+
+    case_no_val = case.case_no
+
+    try:
+        from app.advocate.lawfirm_management.models import AssignedCase
+        db.query(AssignedCase).filter(
+            (AssignedCase.case_id == case_id) | 
+            (AssignedCase.case_number == case_no_val)
+        ).delete(synchronize_session=False)
+    except Exception as e:
+        print(f"[delete_case] AssignedCase cleanup warning: {e}")
+
+    try:
+        from app.advocate.confidential_vault.models import ConfidentialCaseAuditLog
+        db.query(ConfidentialCaseAuditLog).filter(ConfidentialCaseAuditLog.case_id == case_id).delete(synchronize_session=False)
+    except Exception as e:
+        print(f"[delete_case] ConfidentialCaseAuditLog cleanup warning: {e}")
+
+    try:
+        from app.ocr.models import OcrResult
+        db.query(OcrResult).filter(OcrResult.case_id == case_id).delete(synchronize_session=False)
+    except Exception as e:
+        print(f"[delete_case] OcrResult cleanup warning: {e}")
+
+    try:
+        from .models import CaseDocumentWorkflow, AIDocumentHistory
+        db.query(CaseDocumentWorkflow).filter(CaseDocumentWorkflow.case_id == case_id).delete(synchronize_session=False)
+        db.query(AIDocumentHistory).filter(AIDocumentHistory.case_id == case_id).delete(synchronize_session=False)
+    except Exception as e:
+        print(f"[delete_case] Document/AI history cleanup warning: {e}")
 
     db.delete(case)
     db.commit()

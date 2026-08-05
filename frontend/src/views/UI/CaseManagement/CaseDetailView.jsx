@@ -36,8 +36,11 @@ import {
   History,
 } from "lucide-react";
 import { usePermissions } from "@/utils/usePermissions";
-import { getLoggedInUser } from "@/utils/auth";
+import { getLoggedInUser, getAuthHeaders } from "@/utils/auth";
 import { isSensitiveCase } from "@/utils/caseSensitivity";
+import { clearVaultSession, isVaultUnlocked, refreshVaultActivity, setVaultSession } from "@/utils/vaultSession";
+import VaultPasswordModal from "@/components/vault/VaultPasswordModal";
+import VaultResetModal from "@/components/vault/VaultResetModal";
 import SimilarCasesClient from "@/app/case-management/similar-cases/[id]/SimilarCasesClient";
 import OCRPanel from "./OCRPanel";
 import DocumentViewerModal from "@/components/common/DocumentViewerModal";
@@ -158,6 +161,13 @@ export default function CaseDetailView({ id }) {
   const [docAssignedSet, setDocAssignedSet] = useState(new Set());
   const [docAssignModal, setDocAssignModal] = useState(null);
   const [viewingDocument, setViewingDocument] = useState(null);
+
+  // ── Confidential Vault state ────────────────────────────────────────────
+  const isSeniorAdvocate = (loggedInUser?.role || "").toLowerCase().includes("senior");
+  const [vaultUnlocked, setVaultUnlocked] = useState(false);
+  const [showVaultModal, setShowVaultModal] = useState(false);
+  const [showVaultReset, setShowVaultReset] = useState(false);
+  // ─────────────────────────────────────────────────────────────────────
 
   const handleSaveOcrToCaseDocuments = async (extractedText, originalFilename, detectedDocType, digitizedHtml) => {
     if (!selectedCase || (!extractedText && !digitizedHtml)) return;
@@ -694,12 +704,20 @@ export default function CaseDetailView({ id }) {
   const fetchCaseDetails = async () => {
     try {
       setLoading(true);
-      // 1. Fetch case details
-      const response = await fetch(`${API_BASE_URL}/case-management/${id}`);
+      // 1. Fetch case details (auth token lets backend apply owner-level filter)
+      const response = await fetch(`${API_BASE_URL}/case-management/${id}`, {
+        headers: getAuthHeaders(),
+      });
       if (!response.ok) {
         throw new Error("Case not found");
       }
       const rawCase = await response.json();
+
+      // ── Confidential vault gate (Always require password entry) ──
+      if (rawCase.is_confidential) {
+        setVaultUnlocked(false);
+        setShowVaultModal(true);
+      }
 
       // 2. Fetch assigned cases for live status mapping
       let assignedCases = [];
@@ -786,10 +804,41 @@ export default function CaseDetailView({ id }) {
 
   useEffect(() => {
     if (id) {
+      setVaultUnlocked(false);
+      clearVaultSession(id);
       fetchCaseDetails();
       fetchAdvocates();
     }
+    return () => {
+      if (id) clearVaultSession(id);
+    };
   }, [id]);
+
+  // Vault modal rendering — shown before the rest of the detail view
+  if (showVaultReset) {
+    return (
+      <VaultResetModal
+        caseId={id}
+        onBack={() => { setShowVaultReset(false); setShowVaultModal(true); }}
+        onResetSuccess={() => { setShowVaultReset(false); setShowVaultModal(true); }}
+      />
+    );
+  }
+
+  if (showVaultModal && selectedCase?.is_confidential && !vaultUnlocked) {
+    return (
+      <VaultPasswordModal
+        caseId={id}
+        caseTitle={selectedCase?.case_title}
+        onSuccess={(token) => {
+          setVaultSession(id, token);
+          setVaultUnlocked(true);
+          setShowVaultModal(false);
+        }}
+        onForgotPassword={() => { setShowVaultModal(false); setShowVaultReset(true); }}
+      />
+    );
+  }
 
   const handleDelete = async () => {
     setDeleteLoading(true);

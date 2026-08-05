@@ -26,6 +26,8 @@ from app.advocate.dashboard import router as dashboard_router
 from app.advocate.tasks import router as tasks_router
 from app.advocate.tasks.models import Task, TaskMessage
 from app.advocate.case_management.models import CaseDocumentWorkflow, CaseNote
+from app.advocate.confidential_vault.routes import router as vault_router
+from app.advocate.confidential_vault.models import ConfidentialCaseAuditLog  # ensure table is created
 
 # Clerk models and routers
 from app.clerk.dashboard.models import ClerkTask
@@ -193,4 +195,5 @@ app.include_router(clerk_efiling_router)
 app.include_router(leave_router, prefix="/leaves", tags=["Leave Management"])
 app.include_router(ecourts_router)
 app.include_router(ocr_router)
+app.include_router(vault_router)
 

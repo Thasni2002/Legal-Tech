@@ -1,7 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
+from typing import Optional, List
+from jose import jwt, JWTError
 
 from app.database import get_db
+from app.authapp.models import User
+from app.authapp.service import SECRET_KEY, ALGORITHM
 
 from .schemas import CaseCreate, CaseUpdate
 from .service import create_case, get_all_cases, get_case, update_case, delete_case
@@ -12,27 +16,80 @@ router = APIRouter(
 )
 
 
+# ─── Auth dependency (same pattern as tasks module) ───────────────────────────
+
+def get_current_user_optional(
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    """Returns user if a valid Bearer token is provided, else None."""
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    token = authorization.split(" ", 1)[1]
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: int = payload.get("id")
+        if not user_id:
+            return None
+    except JWTError:
+        return None
+    return db.query(User).filter(User.id == user_id).first()
+
+
+def get_current_user(
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+) -> User:
+    """Requires a valid Bearer token."""
+    user = get_current_user_optional.__wrapped__(authorization, db) if hasattr(get_current_user_optional, '__wrapped__') else None
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    token = authorization.split(" ", 1)[1]
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: int = payload.get("id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Case CRUD
+# ─────────────────────────────────────────────────────────────────────────────
+
 @router.post("/")
 def add_case(
     data: CaseCreate,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
-    return create_case(db, data)
+    return create_case(db, data, current_user)
 
 
 @router.get("/")
 def fetch_cases(
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
-    return get_all_cases(db)
+    """
+    SECURITY: Confidential cases are filtered at the ORM level.
+    Only the owning Senior Advocate will see their own confidential cases.
+    All other users receive the case list WITHOUT any confidential entries.
+    """
+    return get_all_cases(db, current_user)
 
 
-from typing import Optional
+from typing import Optional as Opt
 from .schemas import AIDocumentHistoryResponse, AIDocumentHistoryUpdate
 
 @router.get("/ai-documents/history", response_model=list[AIDocumentHistoryResponse])
 def fetch_ai_document_history(
-    case_id: Optional[int] = None,
+    case_id: Opt[int] = None,
     db: Session = Depends(get_db)
 ):
     from .service import get_ai_document_histories
@@ -64,13 +121,17 @@ def delete_ai_document(
     return {"message": "Document deleted successfully"}
 
 
-
 @router.get("/{case_id}")
 def fetch_case(
     case_id: int,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
-    case = get_case(db, case_id)
+    """
+    SECURITY: Returns 404 for confidential cases if the requester is not the owner.
+    Intentionally 404 (not 403) to prevent existence leakage.
+    """
+    case = get_case(db, case_id, current_user)
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
     return case
@@ -80,8 +141,16 @@ def fetch_case(
 def edit_case(
     case_id: int,
     data: CaseUpdate,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
+    # Guard: block non-owners from editing confidential cases
+    existing = db.query(__import__('app.advocate.case_management.models', fromlist=['Case']).Case).filter_by(id=case_id).first()
+    if existing and existing.is_confidential:
+        owner_id = getattr(current_user, 'id', None)
+        user_role = (getattr(current_user, 'role', '') or '').lower()
+        if existing.confidential_owner_id != owner_id and 'admin' not in user_role:
+            raise HTTPException(status_code=404, detail="Case not found")
     updated = update_case(db, case_id, data)
     if not updated:
         raise HTTPException(status_code=404, detail="Case not found")
@@ -91,8 +160,17 @@ def edit_case(
 @router.delete("/{case_id}")
 def remove_case(
     case_id: int,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
+    # Guard: block non-owners from deleting confidential cases
+    from .models import Case
+    existing = db.query(Case).filter(Case.id == case_id).first()
+    if existing and existing.is_confidential:
+        owner_id = getattr(current_user, 'id', None)
+        user_role = (getattr(current_user, 'role', '') or '').lower()
+        if existing.confidential_owner_id != owner_id and 'admin' not in user_role:
+            raise HTTPException(status_code=404, detail="Case not found")
     deleted = delete_case(db, case_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Case not found")
@@ -107,14 +185,11 @@ class GenerateDocumentRequest(BaseModel):
 def generate_document(
     case_id: int,
     request: GenerateDocumentRequest,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
     from .service import generate_legal_document
     return generate_legal_document(db, case_id, request.prompt)
-
-
-
-
 
 
 from fastapi import UploadFile, File, Response
@@ -178,9 +253,7 @@ def ai_assistant_endpoint(
     return ask_ai_assistant(db, request.query, request.role, request.advocateName, request.clientName)
 
 
-from typing import List
-from app.advocate.tasks.routes import get_current_user
-from app.authapp.models import User
+from app.advocate.tasks.routes import get_current_user as tasks_get_current_user
 from .models import CaseDocumentWorkflow
 from .schemas import (
     CaseDocumentWorkflowCreate,
@@ -192,7 +265,7 @@ from app.utils.email import send_email
 
 @router.get("/workflow/documents", response_model=List[CaseDocumentWorkflowResponse])
 def get_workflow_documents(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(tasks_get_current_user),
     db: Session = Depends(get_db)
 ):
     role = (current_user.role or "").lower()
@@ -204,7 +277,7 @@ def get_workflow_documents(
 @router.post("/workflow/documents", response_model=CaseDocumentWorkflowResponse)
 def create_workflow_document(
     data: CaseDocumentWorkflowCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(tasks_get_current_user),
     db: Session = Depends(get_db)
 ):
     new_doc = CaseDocumentWorkflow(
@@ -226,7 +299,7 @@ def create_workflow_document(
 @router.get("/workflow/documents/{doc_id}", response_model=CaseDocumentWorkflowResponse)
 def get_workflow_document(
     doc_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(tasks_get_current_user),
     db: Session = Depends(get_db)
 ):
     doc = db.query(CaseDocumentWorkflow).filter(CaseDocumentWorkflow.id == doc_id).first()
@@ -243,7 +316,7 @@ def get_workflow_document(
 def update_workflow_document(
     doc_id: int,
     data: CaseDocumentWorkflowUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(tasks_get_current_user),
     db: Session = Depends(get_db)
 ):
     doc = db.query(CaseDocumentWorkflow).filter(CaseDocumentWorkflow.id == doc_id).first()
@@ -272,7 +345,7 @@ def update_workflow_document(
 @router.post("/workflow/documents/{doc_id}/submit", response_model=CaseDocumentWorkflowResponse)
 def submit_workflow_document(
     doc_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(tasks_get_current_user),
     db: Session = Depends(get_db)
 ):
     doc = db.query(CaseDocumentWorkflow).filter(CaseDocumentWorkflow.id == doc_id).first()
@@ -291,7 +364,7 @@ def submit_workflow_document(
 async def review_workflow_document(
     doc_id: int,
     data: CaseDocumentWorkflowReview,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(tasks_get_current_user),
     db: Session = Depends(get_db)
 ):
     role = (current_user.role or "").lower()
@@ -341,8 +414,20 @@ from typing import List as TypingList
 
 
 @router.get("/{case_id}/notes", response_model=TypingList[CaseNoteOut])
-def get_case_notes(case_id: int, db: Session = Depends(get_db)):
+def get_case_notes(
+    case_id: int,
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+):
     """Fetch all internal advocate notes for a case (newest first)."""
+    # SECURITY: Block non-owners from reading notes on confidential cases
+    from .models import Case as CaseModel
+    case = db.query(CaseModel).filter(CaseModel.id == case_id).first()
+    if case and case.is_confidential:
+        owner_id = getattr(current_user, 'id', None)
+        if case.confidential_owner_id != owner_id:
+            raise HTTPException(status_code=404, detail="Case not found")
+
     notes = (
         db.query(CaseNote)
         .filter(CaseNote.case_id == case_id)
@@ -353,8 +438,20 @@ def get_case_notes(case_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{case_id}/notes", response_model=CaseNoteOut)
-def add_case_note(case_id: int, data: CaseNoteCreate, db: Session = Depends(get_db)):
+def add_case_note(
+    case_id: int,
+    data: CaseNoteCreate,
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+):
     """Add a new internal advocate note to a case."""
+    from .models import Case as CaseModel
+    case = db.query(CaseModel).filter(CaseModel.id == case_id).first()
+    if case and case.is_confidential:
+        owner_id = getattr(current_user, 'id', None)
+        if case.confidential_owner_id != owner_id:
+            raise HTTPException(status_code=404, detail="Case not found")
+
     note = CaseNote(
         case_id=case_id,
         text=data.text,
@@ -368,8 +465,20 @@ def add_case_note(case_id: int, data: CaseNoteCreate, db: Session = Depends(get_
 
 
 @router.delete("/{case_id}/notes/{note_id}")
-def delete_case_note(case_id: int, note_id: int, db: Session = Depends(get_db)):
+def delete_case_note(
+    case_id: int,
+    note_id: int,
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+):
     """Delete an internal advocate note."""
+    from .models import Case as CaseModel
+    case = db.query(CaseModel).filter(CaseModel.id == case_id).first()
+    if case and case.is_confidential:
+        owner_id = getattr(current_user, 'id', None)
+        if case.confidential_owner_id != owner_id:
+            raise HTTPException(status_code=404, detail="Case not found")
+
     note = db.query(CaseNote).filter(CaseNote.id == note_id, CaseNote.case_id == case_id).first()
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")

@@ -59,6 +59,10 @@ class CaseCreate(BaseModel):
     documents: Optional[List[DocumentSchema]] = []
     nextHearingDate: Optional[str] = None
 
+    # Confidential Vault fields (Senior Advocate only)
+    isConfidential: Optional[bool] = False
+    casePassword: Optional[str] = None   # plain-text; hashed in service layer; never stored as-is
+
 
 # Update Case Schema
 class CaseUpdate(BaseModel):
@@ -85,6 +89,10 @@ class CaseUpdate(BaseModel):
     selectedAdvocate: Optional[str] = None
     documents: Optional[List[DocumentSchema]] = []
     nextHearingDate: Optional[str] = None
+
+    # Allow updating confidential status (can lock an existing case)
+    isConfidential: Optional[bool] = None
+    casePassword: Optional[str] = None
 
 
 # Response Schema

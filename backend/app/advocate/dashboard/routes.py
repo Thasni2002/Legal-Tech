@@ -67,7 +67,14 @@ def get_recent_activity(
     # ── 1. Case updates & new cases (from case_management_cases) ──
     try:
         # Optimize performance: limit query to recent cases instead of scanning all rows
-        cases = db.query(Case).order_by(Case.updated_at.desc(), Case.created_at.desc()).limit(limit * 3).all()
+        # SECURITY: Exclude confidential cases from dashboard activity feed
+        cases = (
+            db.query(Case)
+            .filter(Case.is_confidential == False)
+            .order_by(Case.updated_at.desc(), Case.created_at.desc())
+            .limit(limit * 3)
+            .all()
+        )
         for case in cases:
             actor = case.selected_advocate if case.selected_advocate else "Senior Advocate"
 
@@ -218,7 +225,19 @@ def get_recent_documents(
 
     try:
         # Optimize performance: only retrieve recent cases containing documents
-        cases = db.query(Case).filter(Case.documents != None, Case.documents != "[]", Case.documents != "").order_by(Case.updated_at.desc(), Case.created_at.desc()).limit(limit * 3).all()
+        # SECURITY: Exclude confidential cases from document feed
+        cases = (
+            db.query(Case)
+            .filter(
+                Case.is_confidential == False,
+                Case.documents != None,
+                Case.documents != "[]",
+                Case.documents != ""
+            )
+            .order_by(Case.updated_at.desc(), Case.created_at.desc())
+            .limit(limit * 3)
+            .all()
+        )
         for case in cases:
             if not case.documents:
                 continue
