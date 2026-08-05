@@ -14,7 +14,9 @@ import {
   Calendar,
   Check,
   Smartphone,
-  Globe
+  Globe,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import jsPDF from "jspdf";
 import useModulePermission from "@/utils/useModulePermission";
@@ -329,6 +331,11 @@ export default function ClientPayments() {
     doc.save(`Invoice_${inv.id}_${inv.client_name || "Record"}.pdf`);
   };
 
+  // Pagination states
+  const [duePage, setDuePage] = useState(1);
+  const [historyPage, setHistoryPage] = useState(1);
+  const itemsPerPage = 5;
+
   // Filter due vs paid invoices
   const dueInvoices = invoices.filter(
     (inv) => inv.status.toLowerCase() === "sent" || inv.status.toLowerCase() === "overdue"
@@ -339,6 +346,20 @@ export default function ClientPayments() {
 
   const totalPaid = paidInvoices.reduce((sum, inv) => sum + inv.grand_total, 0);
   const totalDue = dueInvoices.reduce((sum, inv) => sum + inv.grand_total, 0);
+
+  // Pagination calculations for Due Invoices
+  const dueTotalPages = Math.ceil(dueInvoices.length / itemsPerPage) || 1;
+  const activeDuePage = Math.min(duePage, dueTotalPages);
+  const dueStartIndex = (activeDuePage - 1) * itemsPerPage;
+  const dueEndIndex = Math.min(dueStartIndex + itemsPerPage, dueInvoices.length);
+  const paginatedDueInvoices = dueInvoices.slice(dueStartIndex, dueEndIndex);
+
+  // Pagination calculations for Payment History
+  const historyTotalPages = Math.ceil(paidInvoices.length / itemsPerPage) || 1;
+  const activeHistoryPage = Math.min(historyPage, historyTotalPages);
+  const historyStartIndex = (activeHistoryPage - 1) * itemsPerPage;
+  const historyEndIndex = Math.min(historyStartIndex + itemsPerPage, paidInvoices.length);
+  const paginatedPaidInvoices = paidInvoices.slice(historyStartIndex, historyEndIndex);
 
   // If there's an authentication/session issue, render a detailed clean warning card
   // No view access
@@ -474,7 +495,7 @@ export default function ClientPayments() {
                 </thead>
 
                 <tbody className="divide-y divide-[#F1F5F9] font-medium text-slate-700">
-                  {dueInvoices.map((inv) => (
+                  {paginatedDueInvoices.map((inv) => (
                     <tr key={inv.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="p-3.5 font-mono font-bold text-[#0F172A]">#{inv.id}</td>
                       <td className="p-3.5 font-bold text-slate-800">{inv.case_number || "General Consultation"}</td>
@@ -526,7 +547,7 @@ export default function ClientPayments() {
 
             {/* Mobile Stacked Cards (Visible < 768px) */}
             <div className="block md:hidden space-y-3 w-full max-w-full min-w-0">
-              {dueInvoices.map((inv) => (
+              {paginatedDueInvoices.map((inv) => (
                 <div key={inv.id} className="bg-white rounded-2xl border border-[#E2E8F0] p-4 space-y-3 shadow-xs min-w-0">
                   <div className="flex items-start justify-between gap-2 border-b border-[#F1F5F9] pb-2.5">
                     <div className="min-w-0 flex-1">
@@ -579,6 +600,57 @@ export default function ClientPayments() {
                 </div>
               ))}
             </div>
+
+            {/* Pagination Bar for Due Payments */}
+            {dueInvoices.length > 0 && (
+              <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#E2E8F0] w-full min-w-0">
+                <p className="text-xs font-medium text-[#64748B]">
+                  Showing <span className="font-bold text-[#0F172A]">{dueStartIndex + 1}</span> to{" "}
+                  <span className="font-bold text-[#0F172A]">{dueEndIndex}</span> of{" "}
+                  <span className="font-bold text-[#0F172A]">{dueInvoices.length}</span> entries
+                </p>
+
+                {dueTotalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setDuePage((prev) => Math.max(prev - 1, 1))}
+                      disabled={activeDuePage === 1}
+                      className="p-2 rounded-xl border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors flex items-center gap-1 text-xs font-bold"
+                      title="Previous Page"
+                    >
+                      <ChevronLeft size={16} />
+                      <span>Prev</span>
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: dueTotalPages }, (_, i) => i + 1).map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => setDuePage(page)}
+                          className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            activeDuePage === page
+                              ? "bg-[#2563EB] text-white shadow-xs"
+                              : "text-[#64748B] hover:bg-slate-100 border border-transparent"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={() => setDuePage((prev) => Math.min(prev + 1, dueTotalPages))}
+                      disabled={activeDuePage === dueTotalPages}
+                      className="p-2 rounded-xl border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors flex items-center gap-1 text-xs font-bold"
+                      title="Next Page"
+                    >
+                      <span>Next</span>
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>
@@ -611,7 +683,7 @@ export default function ClientPayments() {
                 </thead>
 
                 <tbody className="divide-y divide-[#F1F5F9] font-medium text-slate-700">
-                  {paidInvoices.map((inv) => (
+                  {paginatedPaidInvoices.map((inv) => (
                     <tr key={inv.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="p-3.5 font-mono text-xs text-slate-500 font-bold">#{inv.id}</td>
                       <td className="p-3.5 font-bold text-slate-800">{inv.case_number || "Consultation"}</td>
@@ -639,7 +711,7 @@ export default function ClientPayments() {
 
             {/* Mobile Stacked Cards (Visible < 768px) */}
             <div className="block md:hidden space-y-3 w-full max-w-full min-w-0">
-              {paidInvoices.map((inv) => (
+              {paginatedPaidInvoices.map((inv) => (
                 <div key={inv.id} className="bg-white rounded-xl border border-[#E2E8F0] p-3.5 space-y-2.5 shadow-xs min-w-0">
                   <div className="flex items-start justify-between gap-2 border-b border-[#F1F5F9] pb-2">
                     <div className="min-w-0 flex-1">
@@ -667,6 +739,57 @@ export default function ClientPayments() {
                 </div>
               ))}
             </div>
+
+            {/* Pagination Bar for Payment History */}
+            {paidInvoices.length > 0 && (
+              <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#E2E8F0] w-full min-w-0">
+                <p className="text-xs font-medium text-[#64748B]">
+                  Showing <span className="font-bold text-[#0F172A]">{historyStartIndex + 1}</span> to{" "}
+                  <span className="font-bold text-[#0F172A]">{historyEndIndex}</span> of{" "}
+                  <span className="font-bold text-[#0F172A]">{paidInvoices.length}</span> entries
+                </p>
+
+                {historyTotalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setHistoryPage((prev) => Math.max(prev - 1, 1))}
+                      disabled={activeHistoryPage === 1}
+                      className="p-2 rounded-xl border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors flex items-center gap-1 text-xs font-bold"
+                      title="Previous Page"
+                    >
+                      <ChevronLeft size={16} />
+                      <span>Prev</span>
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: historyTotalPages }, (_, i) => i + 1).map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => setHistoryPage(page)}
+                          className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            activeHistoryPage === page
+                              ? "bg-[#2563EB] text-white shadow-xs"
+                              : "text-[#64748B] hover:bg-slate-100 border border-transparent"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={() => setHistoryPage((prev) => Math.min(prev + 1, historyTotalPages))}
+                      disabled={activeHistoryPage === historyTotalPages}
+                      className="p-2 rounded-xl border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors flex items-center gap-1 text-xs font-bold"
+                      title="Next Page"
+                    >
+                      <span>Next</span>
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>

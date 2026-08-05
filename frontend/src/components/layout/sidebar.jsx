@@ -481,57 +481,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
             })}
           </nav>
 
-          {/* Drawer Footer Status */}
-          {user && (
-            <div className="p-3.5 border-t border-[#E2E8F0] bg-slate-50/60 font-poppins">
-              <div className="flex items-center justify-between text-[11px] text-slate-500">
-                <span className="font-medium truncate max-w-[130px]">
-                  {(() => {
-                    let name = user.username;
-                    try {
-                      const userKey = (user.email || user.username || "").toLowerCase().trim();
-                      const uEmail = (user.email || "").toLowerCase().trim();
-                      const uName = (user.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-                      const uFull = `${user.firstName || ""} ${user.lastName || ""}`.toLowerCase().replace(/[^a-z0-9]/g, "");
 
-                      const savedUserLocal = typeof window !== "undefined" && userKey ? localStorage.getItem(`advocate_profile_${userKey}`) : null;
-                      let savedProfile = null;
-                      if (savedUserLocal) {
-                        savedProfile = savedUserLocal;
-                      } else if (typeof window !== "undefined") {
-                        const savedGlobal = localStorage.getItem("advocate_profile");
-                        if (savedGlobal) {
-                          const parsed = JSON.parse(savedGlobal);
-                          const pEmail = (parsed.emailAddress || parsed.email_address || "").toLowerCase().trim();
-                          const pName = (parsed.advocateName || parsed.advocate_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-                          if (
-                            (uEmail && pEmail && pEmail === uEmail) ||
-                            (uName && pName && (pName === uName || uName.includes(pName))) ||
-                            (uFull && pName && (pName === uFull || uFull.includes(pName)))
-                          ) {
-                            savedProfile = savedGlobal;
-                          }
-                        }
-                      }
-                      if (savedProfile) {
-                        const parsed = JSON.parse(savedProfile);
-                        if (parsed.advocateName || parsed.advocate_name) {
-                          name = parsed.advocateName || parsed.advocate_name;
-                        }
-                      }
-                    } catch (e) {}
-                    if ((user.role || "").toLowerCase() === "clerk" && name) {
-                      name = name.replace(/\s+Advocate$/i, "");
-                    }
-                    return name;
-                  })()}
-                </span>
-                <span className="text-[9px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-bold border border-blue-100 capitalize">
-                  {user.role}
-                </span>
-              </div>
-            </div>
-          )}
         </aside>
       </div>
 

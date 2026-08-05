@@ -17,6 +17,9 @@ import {
   Lock,
   Calendar,
   Video,
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -29,6 +32,8 @@ export default function ClientConsultationView() {
   const [mounted, setMounted] = useState(false);
   const [dismissedNotifications, setDismissedNotifications] = useState([]);
   const [hearings, setHearings] = useState([]);
+  const [requestsPage, setRequestsPage] = useState(1);
+  const [upcomingPage, setUpcomingPage] = useState(1);
 
   const formatDateString = (dateStr) => {
     if (!dateStr) return "N/A";
@@ -121,6 +126,7 @@ export default function ClientConsultationView() {
 
   const [rescheduleId, setRescheduleId] = useState(null);
   const [successToast, setSuccessToast] = useState({ show: false, message: "", type: "success" });
+  const [alertModal, setAlertModal] = useState({ show: false, title: "", message: "", type: "success" });
 
   const fetchConsultations = async (currentUser) => {
     try {
@@ -270,15 +276,13 @@ export default function ClientConsultationView() {
   }, []);
 
   const triggerSuccess = (message, type = "success") => {
-    setSuccessToast({ show: true, message, type });
-    setTimeout(() => {
-      setSuccessToast({ show: false, message: "", type: "success" });
-    }, 4000);
+    const title = type === "success" ? "Success" : type === "error" ? "Error" : "Notice";
+    setAlertModal({ show: true, title, message, type });
   };
 
   const handleBookAppointment = async () => {
     if (!canAddConsultation) {
-      triggerSuccess("You do not have permission to book a consultation.", "warning");
+      setAlertModal({ show: true, title: "Access Denied", message: "You do not have permission to book a consultation." });
       return;
     }
 
@@ -290,7 +294,7 @@ export default function ClientConsultationView() {
       !formData.time ||
       !formData.type
     ) {
-      triggerSuccess("Please fill all required fields (Date, Time, and Meeting Type).", "warning");
+      setAlertModal({ show: true, title: "Missing Information", message: "Please fill all required fields (Date, Time, and Meeting Type)." });
       return;
     }
 
@@ -336,7 +340,7 @@ export default function ClientConsultationView() {
 
   const handleReschedule = async () => {
     if (!formData.date || !formData.time) {
-      triggerSuccess("Please select Date and Time.", "warning");
+      setAlertModal({ show: true, title: "Date & Time Required", message: "Please select both a new Date and Time to request a reschedule." });
       return;
     }
 
@@ -415,6 +419,56 @@ export default function ClientConsultationView() {
 
   return (
     <div className="w-full max-w-full min-w-0 mx-auto space-y-5 sm:space-y-8 p-3.5 sm:px-6 lg:px-8 py-4 sm:py-6 overflow-x-hidden">
+      {/* ── Custom Alert Warning Modal ── */}
+      {alertModal.show && mounted && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-[#0F172A]/40 backdrop-blur-sm"
+            onClick={() => setAlertModal({ show: false, title: "", message: "", type: "success" })}
+          />
+          {/* Modal */}
+          <div className="relative bg-white rounded-2xl shadow-2xl border border-[#E2E8F0] w-full max-w-md mx-4 p-6 sm:p-8 animate-in zoom-in-95 fade-in duration-200">
+            {/* Icon */}
+            {alertModal.type === "success" ? (
+              <div className="w-12 h-12 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 size={24} />
+              </div>
+            ) : alertModal.type === "error" ? (
+              <div className="w-12 h-12 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <X size={24} />
+              </div>
+            ) : (
+              <div className="w-12 h-12 bg-amber-50 border border-amber-200 text-amber-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle size={24} />
+              </div>
+            )}
+            {/* Title */}
+            <h3 className="text-xl font-extrabold text-[#0F172A] text-center tracking-tight mb-2">
+              {alertModal.title}
+            </h3>
+            {/* Message */}
+            <p className="text-[#475569] text-sm text-center leading-relaxed mb-6">
+              {alertModal.message}
+            </p>
+            {/* Action */}
+            <button
+              onClick={() => setAlertModal({ show: false, title: "", message: "", type: "success" })}
+              className={`w-full text-white font-bold text-xs uppercase tracking-wider py-3 rounded-xl transition-colors duration-200 cursor-pointer ${
+                alertModal.type === "success"
+                  ? "bg-emerald-600 hover:bg-emerald-700"
+                  : alertModal.type === "error"
+                  ? "bg-rose-600 hover:bg-rose-700"
+                  : "bg-amber-600 hover:bg-amber-700"
+              }`}
+            >
+              Got it
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* ──── HEADER ──── */}
       <div className="mb-4 sm:mb-6 min-w-0">
         <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap mb-1">
@@ -506,213 +560,268 @@ export default function ClientConsultationView() {
             if (dismissedNotifications.includes(item.id)) return false;
             return item.status === "Rescheduled";
           });
-          if (newMeetingItems.length === 0 && rescheduledItems.length === 0) return null;
+          const allRequestCards = [...newMeetingItems, ...rescheduledItems];
+          if (allRequestCards.length === 0) return null;
+
+          const requestsPerPage = 1;
+          const requestsTotalPages = Math.ceil(allRequestCards.length / requestsPerPage) || 1;
+          const activeRequestsPage = Math.min(requestsPage, requestsTotalPages);
+          const startIndex = (activeRequestsPage - 1) * requestsPerPage;
+          const paginatedRequestCards = allRequestCards.slice(startIndex, startIndex + requestsPerPage);
+
           return (
             <div className="space-y-4 mb-5">
-
-              {/* NEW MEETING cards — blue theme */}
-              {newMeetingItems.map(item => (
-                <div
-                  key={item.id}
-                  className="relative overflow-hidden rounded-2xl border border-blue-200 shadow-sm"
-                  style={{ background: "linear-gradient(135deg, #EFF6FF 0%, #F8FBFF 100%)" }}
-                >
-                  <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, #2563EB, #60A5FA)" }} />
-                  <div className="p-4 sm:p-5">
-                    <div className="flex items-start justify-between gap-3 mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg, #2563EB, #3B82F6)" }}>
-                          <CalendarPlus size={18} className="text-white" />
-                        </div>
-                        <div>
-                          <p className="font-extrabold text-[#1E3A8A] text-sm sm:text-base leading-tight">
-                            New Meeting Scheduled by Advocate
-                          </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-600 text-white">
-                              📅 Confirm Required
-                            </span>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border border-blue-300 text-blue-700 bg-white">
-                              {item.type}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleDismissNotification(item.id)}
-                        className="text-blue-300 hover:text-blue-600 p-1.5 rounded-lg hover:bg-blue-100 transition-colors shrink-0 cursor-pointer"
-                        title="Dismiss"
-                      >
-                        <X size={15} />
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                      <div className="bg-white rounded-xl border border-blue-100 p-3 sm:p-4 space-y-2.5">
-                        <p className="text-[10px] font-extrabold text-blue-500 uppercase tracking-widest mb-1">Scheduled For</p>
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
-                            <Calendar size={13} className="text-blue-500" />
+              {paginatedRequestCards.map(item => {
+                const isNewMeeting = item.status === "Pending Client";
+                return isNewMeeting ? (
+                  /* NEW MEETING card — blue theme */
+                  <div
+                    key={item.id}
+                    className="relative overflow-hidden rounded-2xl border border-blue-200 shadow-sm"
+                    style={{ background: "linear-gradient(135deg, #EFF6FF 0%, #F8FBFF 100%)" }}
+                  >
+                    <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, #2563EB, #60A5FA)" }} />
+                    <div className="p-4 sm:p-5">
+                      <div className="flex items-start justify-between gap-3 mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg, #2563EB, #3B82F6)" }}>
+                            <CalendarPlus size={18} className="text-white" />
                           </div>
                           <div>
-                            <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Date</p>
-                            <p className="font-extrabold text-[#0F172A] text-sm">{formatDateString(item.date)}</p>
+                            <p className="font-extrabold text-[#1E3A8A] text-sm sm:text-base leading-tight">
+                              New Meeting Scheduled by Advocate
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-600 text-white">
+                                📅 Confirm Required
+                              </span>
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border border-blue-300 text-blue-700 bg-white">
+                                {item.type}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
-                            <Clock size={13} className="text-blue-500" />
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Time</p>
-                            <p className="font-extrabold text-[#0F172A] text-sm">{formatTimeString(item.time)}</p>
-                          </div>
-                        </div>
+                        <button
+                          onClick={() => handleDismissNotification(item.id)}
+                          className="text-blue-300 hover:text-blue-600 p-1.5 rounded-lg hover:bg-blue-100 transition-colors shrink-0 cursor-pointer"
+                          title="Dismiss"
+                        >
+                          <X size={15} />
+                        </button>
                       </div>
-                      <div className="bg-white rounded-xl border border-blue-100 p-3 sm:p-4">
-                        <p className="text-[10px] font-extrabold text-blue-500 uppercase tracking-widest mb-2">Note</p>
-                        {item.reschedule_reason && item.reschedule_reason !== "Approved by advocate" ? (
-                          <p className="text-sm text-slate-600 italic leading-relaxed">&ldquo;{item.reschedule_reason}&rdquo;</p>
-                        ) : (
-                          <p className="text-xs text-slate-400 italic">Your advocate has booked a meeting slot for you.</p>
-                        )}
-                      </div>
-                    </div>
 
-                    <div className="flex flex-col sm:flex-row gap-2.5">
-                      <button
-                        onClick={() => handleApproveAppointment(item.id)}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-extrabold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer text-white shadow-sm"
-                        style={{ background: "linear-gradient(135deg, #059669, #10B981)" }}
-                      >
-                        <CheckCircle2 size={16} />
-                        <span>✓ Confirm Appointment</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setRescheduleId(item.id);
-                          setFormData({
-                            name: item.client_name || clientDisplayName || getClientDisplayName(user),
-                            date: "",
-                            time: "",
-                            type: item.type || "",
-                          });
-                          setMeetingLink("");
-                          setSelectedTimeDate(null);
-                          setShowModal(true);
-                        }}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-blue-300 text-blue-700 hover:bg-blue-50 rounded-xl font-extrabold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer"
-                      >
-                        <Clock size={16} />
-                        <span>Request Different Time</span>
-                      </button>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                        <div className="bg-white rounded-xl border border-blue-100 p-3 sm:p-4 space-y-2.5">
+                          <p className="text-[10px] font-extrabold text-blue-500 uppercase tracking-widest mb-1">Scheduled For</p>
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+                              <Calendar size={13} className="text-blue-500" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Date</p>
+                              <p className="font-extrabold text-[#0F172A] text-sm">{formatDateString(item.date)}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+                              <Clock size={13} className="text-blue-500" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Time</p>
+                              <p className="font-extrabold text-[#0F172A] text-sm">{formatTimeString(item.time)}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="bg-white rounded-xl border border-blue-100 p-3 sm:p-4">
+                          <p className="text-[10px] font-extrabold text-blue-500 uppercase tracking-widest mb-2">Note</p>
+                          {item.reschedule_reason && item.reschedule_reason !== "Approved by advocate" ? (
+                            <p className="text-sm text-slate-600 italic leading-relaxed">&ldquo;{item.reschedule_reason}&rdquo;</p>
+                          ) : (
+                            <p className="text-xs text-slate-400 italic">Your advocate has booked a meeting slot for you.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row gap-2.5">
+                        <button
+                          onClick={() => handleApproveAppointment(item.id)}
+                          className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-extrabold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer text-white shadow-sm"
+                          style={{ background: "linear-gradient(135deg, #059669, #10B981)" }}
+                        >
+                          <CheckCircle2 size={16} />
+                          <span>✓ Confirm Appointment</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setRescheduleId(item.id);
+                            setFormData({
+                              name: item.client_name || clientDisplayName || getClientDisplayName(user),
+                              date: "",
+                              time: "",
+                              type: item.type || "",
+                            });
+                            setMeetingLink("");
+                            setSelectedTimeDate(null);
+                            setShowModal(true);
+                          }}
+                          className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-blue-300 text-blue-700 hover:bg-blue-50 rounded-xl font-extrabold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer"
+                        >
+                          <Clock size={16} />
+                          <span>Request Different Time</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-
-              {/* RESCHEDULED cards — orange theme */}
-              {rescheduledItems.map(item => (
-                <div
-                  key={item.id}
-                  className="relative overflow-hidden rounded-2xl border border-orange-200 shadow-sm"
-                  style={{ background: "linear-gradient(135deg, #FFF7ED 0%, #FFFBF5 100%)" }}
-                >
-                  <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, #F59E0B, #FB923C)" }} />
-                  <div className="p-4 sm:p-5">
-                    <div className="flex items-start justify-between gap-3 mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg, #F59E0B, #FB923C)" }}>
-                          <Calendar size={18} className="text-white" />
-                        </div>
-                        <div>
-                          <p className="font-extrabold text-[#92400E] text-sm sm:text-base leading-tight">
-                            Senior Advocate Rescheduled Your Appointment
-                          </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-500 text-white">
-                              ⚡ Action Required
-                            </span>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border border-orange-300 text-orange-700 bg-white">
-                              {item.type}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleDismissNotification(item.id)}
-                        className="text-orange-300 hover:text-orange-600 p-1.5 rounded-lg hover:bg-orange-100 transition-colors shrink-0 cursor-pointer"
-                        title="Dismiss"
-                      >
-                        <X size={15} />
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                      <div className="bg-white rounded-xl border border-orange-100 p-3 sm:p-4 space-y-2.5">
-                        <p className="text-[10px] font-extrabold text-orange-500 uppercase tracking-widest mb-1">Proposed Schedule</p>
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
-                            <Calendar size={13} className="text-orange-500" />
+                ) : (
+                  /* RESCHEDULED card — orange theme */
+                  <div
+                    key={item.id}
+                    className="relative overflow-hidden rounded-2xl border border-orange-200 shadow-sm"
+                    style={{ background: "linear-gradient(135deg, #FFF7ED 0%, #FFFBF5 100%)" }}
+                  >
+                    <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, #F59E0B, #FB923C)" }} />
+                    <div className="p-4 sm:p-5">
+                      <div className="flex items-start justify-between gap-3 mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg, #F59E0B, #FB923C)" }}>
+                            <Calendar size={18} className="text-white" />
                           </div>
                           <div>
-                            <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Date</p>
-                            <p className="font-extrabold text-[#0F172A] text-sm">{formatDateString(item.date)}</p>
+                            <p className="font-extrabold text-[#92400E] text-sm sm:text-base leading-tight">
+                              Senior Advocate Rescheduled Your Appointment
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-500 text-white">
+                                ⚡ Action Required
+                              </span>
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border border-orange-300 text-orange-700 bg-white">
+                                {item.type}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
-                            <Clock size={13} className="text-orange-500" />
+                        <button
+                          onClick={() => handleDismissNotification(item.id)}
+                          className="text-orange-300 hover:text-orange-600 p-1.5 rounded-lg hover:bg-orange-100 transition-colors shrink-0 cursor-pointer"
+                          title="Dismiss"
+                        >
+                          <X size={15} />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                        <div className="bg-white rounded-xl border border-orange-100 p-3 sm:p-4 space-y-2.5">
+                          <p className="text-[10px] font-extrabold text-orange-500 uppercase tracking-widest mb-1">Proposed Schedule</p>
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
+                              <Calendar size={13} className="text-orange-500" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Date</p>
+                              <p className="font-extrabold text-[#0F172A] text-sm">{formatDateString(item.date)}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Time</p>
-                            <p className="font-extrabold text-[#0F172A] text-sm">{formatTimeString(item.time)}</p>
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
+                              <Clock size={13} className="text-orange-500" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Time</p>
+                              <p className="font-extrabold text-[#0F172A] text-sm">{formatTimeString(item.time)}</p>
+                            </div>
                           </div>
+                        </div>
+
+                        <div className="bg-white rounded-xl border border-orange-100 p-3 sm:p-4">
+                          <p className="text-[10px] font-extrabold text-orange-500 uppercase tracking-widest mb-2">Advocate Note</p>
+                          {item.reschedule_reason ? (
+                            <p className="text-sm text-slate-600 italic leading-relaxed">&ldquo;{item.reschedule_reason}&rdquo;</p>
+                          ) : (
+                            <p className="text-xs text-slate-400 italic">No note provided.</p>
+                          )}
                         </div>
                       </div>
 
-                      <div className="bg-white rounded-xl border border-orange-100 p-3 sm:p-4">
-                        <p className="text-[10px] font-extrabold text-orange-500 uppercase tracking-widest mb-2">Advocate Note</p>
-                        {item.reschedule_reason ? (
-                          <p className="text-sm text-slate-600 italic leading-relaxed">&ldquo;{item.reschedule_reason}&rdquo;</p>
-                        ) : (
-                          <p className="text-xs text-slate-400 italic">No note provided.</p>
-                        )}
+                      <div className="flex flex-col sm:flex-row gap-2.5">
+                        <button
+                          onClick={() => handleApproveAppointment(item.id)}
+                          className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-extrabold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer text-white shadow-sm"
+                          style={{ background: "linear-gradient(135deg, #059669, #10B981)" }}
+                        >
+                          <CheckCircle2 size={16} />
+                          <span>✓ Accept Proposed Date</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setRescheduleId(item.id);
+                            setFormData({
+                              name: item.client_name || clientDisplayName || getClientDisplayName(user),
+                              date: "",
+                              time: "",
+                              type: item.type || "",
+                            });
+                            setMeetingLink("");
+                            setSelectedTimeDate(null);
+                            setShowModal(true);
+                          }}
+                          className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-orange-300 text-orange-700 hover:bg-orange-50 rounded-xl font-extrabold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer"
+                        >
+                          <Clock size={16} />
+                          <span>Request Different Time</span>
+                        </button>
                       </div>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row gap-2.5">
-                      <button
-                        onClick={() => handleApproveAppointment(item.id)}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-extrabold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer text-white shadow-sm"
-                        style={{ background: "linear-gradient(135deg, #059669, #10B981)" }}
-                      >
-                        <CheckCircle2 size={16} />
-                        <span>✓ Accept Proposed Date</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setRescheduleId(item.id);
-                          setFormData({
-                            name: item.client_name || clientDisplayName || getClientDisplayName(user),
-                            date: "",
-                            time: "",
-                            type: item.type || "",
-                          });
-                          setMeetingLink("");
-                          setSelectedTimeDate(null);
-                          setShowModal(true);
-                        }}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-orange-300 text-orange-700 hover:bg-orange-50 rounded-xl font-extrabold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer"
-                      >
-                        <Clock size={16} />
-                        <span>Request Different Time</span>
-                      </button>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
+              {/* Meeting Requests Pagination Controls */}
+              {requestsTotalPages > 1 && (
+                <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-[#E2E8F0] w-full">
+                  <p className="text-xs font-medium text-[#64748B]">
+                    Showing request <span className="font-bold text-[#0F172A]">{activeRequestsPage}</span> of{" "}
+                    <span className="font-bold text-[#0F172A]">{requestsTotalPages}</span>
+                  </p>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setRequestsPage((prev) => Math.max(prev - 1, 1))}
+                      disabled={activeRequestsPage === 1}
+                      className="p-2 rounded-xl border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors flex items-center gap-1 text-xs font-bold"
+                      title="Previous Request"
+                    >
+                      <ChevronLeft size={16} />
+                      <span>Prev</span>
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: requestsTotalPages }, (_, i) => i + 1).map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => setRequestsPage(page)}
+                          className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            activeRequestsPage === page
+                              ? "bg-[#2563EB] text-white shadow-xs"
+                              : "text-[#64748B] hover:bg-slate-100 border border-transparent"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={() => setRequestsPage((prev) => Math.min(prev + 1, requestsTotalPages))}
+                      disabled={activeRequestsPage === requestsTotalPages}
+                      className="p-2 rounded-xl border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors flex items-center gap-1 text-xs font-bold"
+                      title="Next Request"
+                    >
+                      <span>Next</span>
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })()}
@@ -848,104 +957,164 @@ export default function ClientConsultationView() {
           <div className="p-6 text-center text-[#64748B] font-medium text-xs sm:text-sm bg-slate-50 rounded-2xl border border-slate-100">
             No upcoming meetings.
           </div>
-        ) : (
-          <>
-            {/* Mobile Native Cards (< 640px) */}
-            <div className="block sm:hidden space-y-3 w-full min-w-0">
-              {upcomingMeetings.map((item) => (
-                <div key={item.id} className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2 w-full min-w-0">
-                  <div className="flex items-start justify-between gap-2 min-w-0">
-                    <div>
-                      <h4 className="text-xs font-extrabold text-[#0F172A]">{formatDateString(item.date)}</h4>
-                      <p className="text-[11px] text-slate-500 font-bold">{formatTimeString(item.time)}</p>
-                    </div>
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border shrink-0 ${
-                      item.status === "Approved" || item.status === "Scheduled"
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                        : "bg-amber-50 text-amber-700 border border-amber-200"
-                    }`}>
-                      <CheckCircle2 size={10} />
-                      {item.status}
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-slate-600 flex items-center justify-between pt-1 border-t border-slate-200/60">
-                    <span className="font-bold text-slate-800 bg-slate-200/60 px-2 py-0.5 rounded-md">{item.type}</span>
-                    {item.meeting_link ? (
-                      <a
-                        href={item.meeting_link.startsWith("http") ? item.meeting_link : `https://${item.meeting_link}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[#2563EB] hover:text-[#1D4ED8] font-bold inline-flex items-center gap-1 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg text-[10px]"
-                      >
-                        <Video size={12} />
-                        <span>Google Meet</span>
-                      </a>
-                    ) : null}
-                  </div>
-                </div>
-              ))}
-            </div>
+        ) : (() => {
+          const itemsPerPage = 5;
+          const upcomingTotalPages = Math.ceil(upcomingMeetings.length / itemsPerPage) || 1;
+          const activeUpcomingPage = Math.min(upcomingPage, upcomingTotalPages);
+          const startIndex = (activeUpcomingPage - 1) * itemsPerPage;
+          const endIndex = Math.min(startIndex + itemsPerPage, upcomingMeetings.length);
+          const paginatedUpcomingMeetings = upcomingMeetings.slice(startIndex, endIndex);
 
-            {/* Desktop & Tablet Table (>= 640px) */}
-            <div className="hidden sm:block w-full overflow-x-auto rounded-xl border border-[#E2E8F0] min-w-0">
-              <table className="min-w-full divide-y divide-[#E2E8F0] text-xs sm:text-sm">
-                <thead className="bg-[#F8FAFC]">
-                  <tr>
-                    <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Date</th>
-                    <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Time</th>
-                    <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Type</th>
-                    <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Google Meet Link</th>
-                    <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E2E8F0] bg-white">
-                  {upcomingMeetings.map((item) => (
-                    <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors">
-                      <td className="p-3.5 sm:p-4 text-[#475569] font-medium whitespace-nowrap">{formatDateString(item.date)}</td>
-                      <td className="p-3.5 sm:p-4 text-[#475569] font-medium whitespace-nowrap">{formatTimeString(item.time)}</td>
-                      <td className="p-3.5 sm:p-4 text-[#475569] whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                          item.type === "Video Call" || item.type === "Video Consultation"
-                            ? "bg-blue-50 text-blue-700 border border-blue-200"
-                            : item.type === "Chat" || item.type === "Chat Consultation"
-                            ? "bg-purple-50 text-purple-700 border border-purple-200"
-                            : "bg-amber-50 text-amber-700 border border-amber-200"
-                        }`}>
-                          {item.type}
-                        </span>
-                      </td>
-                      <td className="p-3.5 sm:p-4 whitespace-nowrap">
-                        {item.meeting_link ? (
-                          <a
-                            href={item.meeting_link.startsWith("http") ? item.meeting_link : `https://${item.meeting_link}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[#2563EB] hover:text-[#1D4ED8] font-bold inline-flex items-center gap-1.5 bg-blue-50/70 border border-blue-200 px-3 py-1 rounded-lg transition-colors text-xs"
-                          >
-                            <Video size={14} />
-                            <span>Open Google Meet</span>
-                          </a>
-                        ) : (
-                          <span className="text-[#94A3B8] font-medium">-</span>
-                        )}
-                      </td>
-                      <td className="p-3.5 sm:p-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                          item.status === "Approved" || item.status === "Scheduled"
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            : "bg-amber-50 text-amber-700 border border-amber-200"
-                        }`}>
-                          <CheckCircle2 size={11} />
-                          {item.status}
-                        </span>
-                      </td>
+          return (
+            <>
+              {/* Mobile Native Cards (< 640px) */}
+              <div className="block sm:hidden space-y-3 w-full min-w-0">
+                {paginatedUpcomingMeetings.map((item) => (
+                  <div key={item.id} className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2 w-full min-w-0">
+                    <div className="flex items-start justify-between gap-2 min-w-0">
+                      <div>
+                        <h4 className="text-xs font-extrabold text-[#0F172A]">{formatDateString(item.date)}</h4>
+                        <p className="text-[11px] text-slate-500 font-bold">{formatTimeString(item.time)}</p>
+                      </div>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border shrink-0 ${
+                        item.status === "Approved" || item.status === "Scheduled"
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : "bg-amber-50 text-amber-700 border border-amber-200"
+                      }`}>
+                        <CheckCircle2 size={10} />
+                        {item.status}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-600 flex items-center justify-between pt-1 border-t border-slate-200/60">
+                      <span className="font-bold text-slate-800 bg-slate-200/60 px-2 py-0.5 rounded-md">{item.type}</span>
+                      {item.meeting_link ? (
+                        <a
+                          href={item.meeting_link.startsWith("http") ? item.meeting_link : `https://${item.meeting_link}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#2563EB] hover:text-[#1D4ED8] font-bold inline-flex items-center gap-1 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg text-[10px]"
+                        >
+                          <Video size={12} />
+                          <span>Google Meet</span>
+                        </a>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop & Tablet Table (>= 640px) */}
+              <div className="hidden sm:block w-full overflow-x-auto rounded-xl border border-[#E2E8F0] min-w-0">
+                <table className="min-w-full divide-y divide-[#E2E8F0] text-xs sm:text-sm">
+                  <thead className="bg-[#F8FAFC]">
+                    <tr>
+                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Date</th>
+                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Time</th>
+                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Type</th>
+                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Google Meet Link</th>
+                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+                  </thead>
+                  <tbody className="divide-y divide-[#E2E8F0] bg-white">
+                    {paginatedUpcomingMeetings.map((item) => (
+                      <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors">
+                        <td className="p-3.5 sm:p-4 text-[#475569] font-medium whitespace-nowrap">{formatDateString(item.date)}</td>
+                        <td className="p-3.5 sm:p-4 text-[#475569] font-medium whitespace-nowrap">{formatTimeString(item.time)}</td>
+                        <td className="p-3.5 sm:p-4 text-[#475569] whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                            item.type === "Video Call" || item.type === "Video Consultation"
+                              ? "bg-blue-50 text-blue-700 border border-blue-200"
+                              : item.type === "Chat" || item.type === "Chat Consultation"
+                              ? "bg-purple-50 text-purple-700 border border-purple-200"
+                              : "bg-amber-50 text-amber-700 border border-amber-200"
+                          }`}>
+                            {item.type}
+                          </span>
+                        </td>
+                        <td className="p-3.5 sm:p-4 whitespace-nowrap">
+                          {item.meeting_link ? (
+                            <a
+                              href={item.meeting_link.startsWith("http") ? item.meeting_link : `https://${item.meeting_link}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#2563EB] hover:text-[#1D4ED8] font-bold inline-flex items-center gap-1.5 bg-blue-50/70 border border-blue-200 px-3 py-1 rounded-lg transition-colors text-xs"
+                            >
+                              <Video size={14} />
+                              <span>Open Google Meet</span>
+                            </a>
+                          ) : (
+                            <span className="text-[#94A3B8] font-medium">-</span>
+                          )}
+                        </td>
+                        <td className="p-3.5 sm:p-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                            item.status === "Approved" || item.status === "Scheduled"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : "bg-amber-50 text-amber-700 border border-amber-200"
+                          }`}>
+                            <CheckCircle2 size={11} />
+                            {item.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination Bar for Upcoming Meetings */}
+              {upcomingMeetings.length > 0 && (
+                <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#E2E8F0] w-full min-w-0">
+                  <p className="text-xs font-medium text-[#64748B]">
+                    Showing <span className="font-bold text-[#0F172A]">{startIndex + 1}</span> to{" "}
+                    <span className="font-bold text-[#0F172A]">{endIndex}</span> of{" "}
+                    <span className="font-bold text-[#0F172A]">{upcomingMeetings.length}</span> entries
+                  </p>
+
+                  {upcomingTotalPages > 1 && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setUpcomingPage((prev) => Math.max(prev - 1, 1))}
+                        disabled={activeUpcomingPage === 1}
+                        className="p-2 rounded-xl border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors flex items-center gap-1 text-xs font-bold"
+                        title="Previous Page"
+                      >
+                        <ChevronLeft size={16} />
+                        <span>Prev</span>
+                      </button>
+
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: upcomingTotalPages }, (_, i) => i + 1).map((page) => (
+                          <button
+                            key={page}
+                            onClick={() => setUpcomingPage(page)}
+                            className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                              activeUpcomingPage === page
+                                ? "bg-[#2563EB] text-white shadow-xs"
+                                : "text-[#64748B] hover:bg-slate-100 border border-transparent"
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => setUpcomingPage((prev) => Math.min(prev + 1, upcomingTotalPages))}
+                        disabled={activeUpcomingPage === upcomingTotalPages}
+                        className="p-2 rounded-xl border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors flex items-center gap-1 text-xs font-bold"
+                        title="Next Page"
+                      >
+                        <span>Next</span>
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
 
       {/* Modal */}

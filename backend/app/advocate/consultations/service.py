@@ -205,10 +205,8 @@ def create_consultation(db: Session, data: ConsultationCreate, background_tasks:
         if adv and adv.email and "@" in adv.email:
             advocate_recipients.add(adv.email.strip())
 
-    mail_user = os.getenv("MAIL_USERNAME")
-    if mail_user and "@" in mail_user:
-        advocate_recipients.add(mail_user.strip())
     advocate_recipients.add("shiyaxxx3@gmail.com")
+    advocate_recipients.discard("ashfahashraf@gmail.com")
 
     # Resolve Client Email
     client_email = find_client_email_by_name(db, data.client_name, client_id, data.client_email)
@@ -317,10 +315,8 @@ def process_public_action(db: Session, consultation_id: int, data: any, backgrou
             if adv and adv.email and "@" in adv.email:
                 advocate_recipients.add(adv.email.strip())
 
-        mail_user = os.getenv("MAIL_USERNAME")
-        if mail_user and "@" in mail_user:
-            advocate_recipients.add(mail_user.strip())
         advocate_recipients.add("shiyaxxx3@gmail.com")
+        advocate_recipients.discard("ashfahashraf@gmail.com")
 
         # HTML Body for Client
         client_html = build_consultation_email(
@@ -411,10 +407,8 @@ def reschedule_consultation(db: Session, consultation_id: int, data: Consultatio
             if adv and adv.email and "@" in adv.email:
                 advocate_recipients.add(adv.email.strip())
 
-        mail_user = os.getenv("MAIL_USERNAME")
-        if mail_user and "@" in mail_user:
-            advocate_recipients.add(mail_user.strip())
         advocate_recipients.add("shiyaxxx3@gmail.com")
+        advocate_recipients.discard("ashfahashraf@gmail.com")
 
         adv_subj = f"Consultation Rescheduled - {consultation.client_name}"
         adv_html = render_base_template(
@@ -480,10 +474,8 @@ def update_consultation_status(db: Session, consultation_id: int, status: str, b
             if adv and adv.email and "@" in adv.email:
                 advocate_recipients.add(adv.email.strip())
 
-        mail_user = os.getenv("MAIL_USERNAME")
-        if mail_user and "@" in mail_user:
-            advocate_recipients.add(mail_user.strip())
         advocate_recipients.add("shiyaxxx3@gmail.com")
+        advocate_recipients.discard("ashfahashraf@gmail.com")
 
         adv_subj = f"Consultation Status Updated ({status}) - {consultation.client_name}"
         adv_html = render_base_template(
@@ -587,11 +579,17 @@ def start_instant_consultation(db: Session, data: ConsultationStart, background_
               </table>
             </div>
 
-            <p>Please log in to your account to <strong>confirm</strong> or <strong>request a different time</strong>.</p>
-            <div style="text-align: center; margin: 28px 0;">
-              <a href="{frontend_url}/client-consultation" 
-                 style="background: linear-gradient(135deg, #2563EB, #1D4ED8); color: #FFFFFF; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; display: inline-block;">
-                View Appointment
+            <p style="font-weight: 600; color: #0F172A; text-align: center;">Please confirm your availability or request a different slot:</p>
+            <div style="text-align: center; margin: 24px 0;">
+              <a href="{frontend_url}/consultation-action?id={new_consultation.id}&action=approve" 
+                 target="_blank"
+                 style="background: linear-gradient(135deg, #059669, #10B981); color: #FFFFFF; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 700; font-size: 14px; display: inline-block; margin-right: 12px; margin-bottom: 10px; shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                ✓ Confirm Appointment
+              </a>
+              <a href="{frontend_url}/client-consultation?reschedule_id={new_consultation.id}" 
+                 target="_blank"
+                 style="background: linear-gradient(135deg, #F59E0B, #FB923C); color: #FFFFFF; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 700; font-size: 14px; display: inline-block; margin-bottom: 10px; shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                🗓️ Request Reschedule
               </a>
             </div>
             """

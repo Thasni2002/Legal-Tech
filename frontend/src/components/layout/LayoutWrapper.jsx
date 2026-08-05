@@ -8,8 +8,8 @@ import Navbar from "@/components/layout/navbar";
 import { getLoggedInUser } from "@/utils/auth";
 import FloatingAIIcon from "@/components/common/FloatingAIIcon";
 
-// Pages that should NOT show the sidebar/navbar
-const AUTH_ROUTES = ["/login", "/register"];
+// Pages that should NOT show the sidebar/navbar and don't require login verification
+const AUTH_ROUTES = ["/login", "/register", "/consultation-action", "/client-action"];
 
 export default function LayoutWrapper({ children }) {
   const pathname = usePathname();
@@ -42,10 +42,13 @@ export default function LayoutWrapper({ children }) {
 
     const verifyUser = () => {
       const loggedIn = getLoggedInUser();
+      const nextParam = typeof window !== "undefined" ? encodeURIComponent(window.location.pathname + window.location.search) : "";
+      const loginUrl = nextParam ? `/login?next=${nextParam}` : "/login";
+
       if (!loggedIn) {
         setIsVerified(false);
         localStorage.removeItem("token");
-        router.push("/login");
+        router.push(loginUrl);
         return;
       } else {
         setIsVerified(true);
@@ -56,7 +59,7 @@ export default function LayoutWrapper({ children }) {
           if (res.status === 404 || res.status === 401) {
             setIsVerified(false);
             localStorage.removeItem("token");
-            router.push("/login");
+            router.push(loginUrl);
           } else {
             setIsVerified(true);
           }

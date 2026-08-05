@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Upload, Eye, Trash, FileText, Download, ExternalLink, X, ClipboardList } from "lucide-react";
+import { Upload, Eye, Trash, FileText, Download, ExternalLink, X, ClipboardList, ChevronLeft, ChevronRight } from "lucide-react";
 import useModulePermission from "@/utils/useModulePermission";
 import { getLoggedInUser } from "@/utils/auth";
 import { API_BASE_URL } from "@/utils/api";
@@ -67,10 +67,16 @@ export default function ClientDocuments() {
   const [matchedCases, setMatchedCases] = useState([]);
   const [selectedCaseId, setSelectedCaseId] = useState("");
   const [filterCaseTitle, setFilterCaseTitle] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [successToast, setSuccessToast] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterCaseTitle, documents]);
 
   const fetchClientDocs = async () => {
     try {
@@ -563,24 +569,30 @@ export default function ClientDocuments() {
                 <p className="text-slate-700 font-bold text-xs sm:text-sm">No documents found</p>
                 <p className="text-slate-400 text-xs">Upload a document above to share it with your legal counsel.</p>
               </div>
-            ) : (
-              <>
-                {/* Desktop & Tablet Table View (Visible on >= 768px) */}
-                <div className="hidden md:block overflow-x-auto rounded-xl border border-[#E2E8F0] w-full">
-                  <table className="w-full text-left text-xs sm:text-sm">
-                    <thead>
-                      <tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
-                        <th className="p-3.5">Case Title</th>
-                        <th className="p-3.5">File Name</th>
-                        <th className="p-3.5">Uploaded Date</th>
-                        <th className="p-3.5">Status</th>
-                        <th className="p-3.5 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#F1F5F9] font-medium text-slate-700">
-                      {documents
-                        .filter((doc) => !filterCaseTitle || doc.caseTitle === filterCaseTitle)
-                        .map((doc) => (
+            ) : (() => {
+              const filteredDocs = documents.filter((doc) => !filterCaseTitle || doc.caseTitle === filterCaseTitle);
+              const totalPages = Math.ceil(filteredDocs.length / itemsPerPage) || 1;
+              const activeCurrentPage = Math.min(currentPage, totalPages);
+              const startIndex = (activeCurrentPage - 1) * itemsPerPage;
+              const endIndex = Math.min(startIndex + itemsPerPage, filteredDocs.length);
+              const paginatedDocs = filteredDocs.slice(startIndex, endIndex);
+
+              return (
+                <>
+                  {/* Desktop & Tablet Table View (Visible on >= 768px) */}
+                  <div className="hidden md:block overflow-x-auto rounded-xl border border-[#E2E8F0] w-full">
+                    <table className="w-full text-left text-xs sm:text-sm">
+                      <thead>
+                        <tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
+                          <th className="p-3.5">Case Title</th>
+                          <th className="p-3.5">File Name</th>
+                          <th className="p-3.5">Uploaded Date</th>
+                          <th className="p-3.5">Status</th>
+                          <th className="p-3.5 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#F1F5F9] font-medium text-slate-700">
+                        {paginatedDocs.map((doc) => (
                           <tr key={doc.id} className="hover:bg-slate-50/80 transition-colors">
                             <td className="p-3.5 font-bold text-[#0F172A]">{doc.caseTitle}</td>
                             <td className="p-3.5 font-mono text-xs text-slate-600 truncate max-w-[200px]" title={doc.fileName}>{doc.fileName}</td>
@@ -618,15 +630,13 @@ export default function ClientDocuments() {
                             </td>
                           </tr>
                         ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </tbody>
+                    </table>
+                  </div>
 
-                {/* Mobile Cards Stack View (Visible on < 768px) */}
-                <div className="block md:hidden space-y-3 w-full max-w-full min-w-0">
-                  {documents
-                    .filter((doc) => !filterCaseTitle || doc.caseTitle === filterCaseTitle)
-                    .map((doc) => (
+                  {/* Mobile Cards Stack View (Visible on < 768px) */}
+                  <div className="block md:hidden space-y-3 w-full max-w-full min-w-0">
+                    {paginatedDocs.map((doc) => (
                       <div
                         key={doc.id}
                         className="bg-white rounded-xl border border-[#E2E8F0] p-3.5 space-y-2.5 shadow-xs"
@@ -663,9 +673,61 @@ export default function ClientDocuments() {
                         </div>
                       </div>
                     ))}
-                </div>
-              </>
-            )}
+                  </div>
+
+                  {/* Pagination Control Bar */}
+                  {filteredDocs.length > 0 && (
+                    <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#E2E8F0] w-full min-w-0">
+                      <p className="text-xs font-medium text-[#64748B]">
+                        Showing <span className="font-bold text-[#0F172A]">{startIndex + 1}</span> to{" "}
+                        <span className="font-bold text-[#0F172A]">{endIndex}</span> of{" "}
+                        <span className="font-bold text-[#0F172A]">{filteredDocs.length}</span> entries
+                      </p>
+
+                      {totalPages > 1 && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                            disabled={activeCurrentPage === 1}
+                            className="p-2 rounded-xl border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors flex items-center gap-1 text-xs font-bold"
+                            title="Previous Page"
+                          >
+                            <ChevronLeft size={16} />
+                            <span>Prev</span>
+                          </button>
+
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                              <button
+                                key={page}
+                                onClick={() => setCurrentPage(page)}
+                                className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                  activeCurrentPage === page
+                                    ? "bg-[#2563EB] text-white shadow-xs"
+                                    : "text-[#64748B] hover:bg-slate-100 border border-transparent"
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            ))}
+                          </div>
+
+                          <button
+                            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                            disabled={activeCurrentPage === totalPages}
+                            className="p-2 rounded-xl border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors flex items-center gap-1 text-xs font-bold"
+                            title="Next Page"
+                          >
+                            <span>Next</span>
+                            <ChevronRight size={16} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
       )}

@@ -107,8 +107,8 @@ def generate_meet_link(
         except Exception:
             pass
             
-    link = generate_google_meet_link(client_name, date, time, user_id=user_id)
-    return {"meeting_link": link}
+    meet_link = generate_google_meet_link(client_name=client_name, date_str=date, time_str=time, user_id=user_id)
+    return {"meeting_link": meet_link}
 
 
 @router.get("/stats", response_model=ConsultationStats)
