@@ -108,15 +108,35 @@ export default function ProfileView({ profile = {}, onEdit }) {
     headerDisplayName = headerDisplayName.replace(/\s+Advocate$/i, "");
   }
 
-  // Resolve profile image: API record first, then localStorage cache (keeps
-  // navbar and profile page in sync), then ui-avatars initials fallback.
+  // Resolve profile image: API record first, then user-specific localStorage cache,
+  // then verified global advocate_profile cache, then ui-avatars initials fallback.
   const resolvedProfileImage = (() => {
     if (profile?.profileImage) return profile.profileImage;
     try {
+      const userKey = user ? (user.email || user.username || "").toLowerCase().trim() : null;
+      if (userKey) {
+        const savedUserLocal = typeof window !== "undefined" && localStorage.getItem(`advocate_profile_${userKey}`);
+        if (savedUserLocal) {
+          const parsed = JSON.parse(savedUserLocal);
+          if (parsed.profileImage) return parsed.profileImage;
+        }
+      }
       const saved = typeof window !== "undefined" && localStorage.getItem("advocate_profile");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.profileImage) return parsed.profileImage;
+        const pEmail = (parsed.emailAddress || parsed.email_address || "").toLowerCase().trim();
+        const pName = (parsed.advocateName || parsed.advocate_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        const uEmail = (user?.email || "").toLowerCase().trim();
+        const uName = (user?.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        const uFull = `${user?.firstName || ""} ${user?.lastName || ""}`.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+        if (
+          (uEmail && pEmail && pEmail === uEmail) ||
+          (uName && pName && (pName === uName || uName.includes(pName))) ||
+          (uFull && pName && (pName === uFull || uFull.includes(pName)))
+        ) {
+          if (parsed.profileImage) return parsed.profileImage;
+        }
       }
     } catch (e) {}
     return null;
