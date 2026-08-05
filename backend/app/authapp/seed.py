@@ -4,13 +4,13 @@ from .service import hash_password
 
 def create_default_user(db: Session):
     existing_user = db.query(User).filter(
-        User.email == "admin@example.com"
+        (User.email == "shiyaxxx3@gmail.com") | (User.username == "admin")
     ).first()
 
     if not existing_user:
         default_user = User(
             username="admin",
-            email="admin@example.com",
+            email="shiyaxxx3@gmail.com",
             password=hash_password("admin123"),
             role="Senior Advocate",
             first_name="Admin",

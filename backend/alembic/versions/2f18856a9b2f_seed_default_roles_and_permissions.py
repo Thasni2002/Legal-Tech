@@ -33,7 +33,7 @@ def upgrade() -> None:
     if not admin:
         admin = User(
             username="admin",
-            email="admin@example.com",
+            email="shiyaxxx3@gmail.com",
             password=hash_password("admin123"),
             role="Senior Advocate"
         )

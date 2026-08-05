@@ -153,6 +153,40 @@ export default function ConsultationsView() {
             const dismissed = JSON.parse(localStorage.getItem("dismissed_consultation_notifications") || "[]");
             setDismissedNotifications(dismissed);
 
+            if (typeof window !== "undefined") {
+                const params = new URLSearchParams(window.location.search);
+                const paramApproved = params.get("approved");
+                const paramRescheduleId = params.get("reschedule_id");
+
+                if (paramApproved) {
+                    setToast({ show: true, message: "Consultation approved successfully!", type: "success" });
+                    setTimeout(() => {
+                        setToast({ show: false, message: "", type: "success" });
+                    }, 4000);
+                }
+
+                if (paramRescheduleId) {
+                    fetch(`${API_BASE_URL}/consultations/${paramRescheduleId}/public-details`)
+                        .then((res) => (res.ok ? res.json() : null))
+                        .then((item) => {
+                            if (item) {
+                                setSelectedAppointment({
+                                    id: item.id,
+                                    client: item.client_name,
+                                    client_name: item.client_name,
+                                    date: item.date,
+                                    time: item.time,
+                                    type: item.type,
+                                    status: item.status
+                                });
+                                setShowAppointments(true);
+                                setShowDeclineModal(true);
+                            }
+                        })
+                        .catch(() => {});
+                }
+            }
+
             try {
                 const uniqueClientsMap = new Map();
 
@@ -297,7 +331,10 @@ export default function ConsultationsView() {
             return;
         }
 
-        const selectedClient = clients.find(c => c.clientName === clientName);
+        const selectedClient = clients.find(c => 
+          (c.clientName || "").trim().toLowerCase() === clientName.trim().toLowerCase() ||
+          (c.name || "").trim().toLowerCase() === clientName.trim().toLowerCase()
+        );
         const clientEmail = selectedClient ? (selectedClient.emailId || selectedClient.email || "") : "";
 
         const newMeeting = {

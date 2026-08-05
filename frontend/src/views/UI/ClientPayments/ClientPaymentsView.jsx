@@ -56,12 +56,58 @@ export default function ClientPayments() {
       return;
     }
 
+    setClientEmail(user.email || "");
 
-    setClientEmail(user.email);
+    // Try to get a real name from token fields first
+    const tokenFullName = [
+      user.first_name || user.firstName,
+      user.last_name || user.lastName
+    ].filter(Boolean).join(" ").trim();
 
-    const namePart = user.email.split("@")[0];
-    const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
-    setClientName(formattedName);
+    const tokenName = tokenFullName ||
+      user.full_name ||
+      user.fullName ||
+      user.name ||
+      user.client_name ||
+      ""; // do NOT fall back to username/email here
+
+    if (tokenName) {
+      setClientName(tokenName);
+    }
+
+    // Always attempt to fetch real full name from case management
+    fetch(`${API_BASE_URL}/case-management/`)
+      .then(res => (res.ok ? res.json() : []))
+      .then(cases => {
+        if (!Array.isArray(cases)) return;
+        const userEmail = (user.email || "").toLowerCase().trim();
+        const userName = (user.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+        const matchedCase = cases.find(c => {
+          const cEmail = (c.email_id || "").toLowerCase().trim();
+          const cClientName = (c.client_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+          return (
+            (userEmail && cEmail && userEmail === cEmail) ||
+            (userName && cClientName && (cClientName === userName || userName.includes(cClientName)))
+          );
+        });
+
+        if (matchedCase && matchedCase.client_name) {
+          setClientName(matchedCase.client_name);
+        } else if (!tokenName) {
+          // Last resort: use username (not email prefix)
+          const fallback = user.username ||
+            (user.email ? user.email.split("@")[0] : "Client");
+          setClientName(fallback.charAt(0).toUpperCase() + fallback.slice(1));
+        }
+      })
+      .catch(() => {
+        if (!tokenName) {
+          const fallback = user.username ||
+            (user.email ? user.email.split("@")[0] : "Client");
+          setClientName(fallback.charAt(0).toUpperCase() + fallback.slice(1));
+        }
+      });
   }, []);
 
   // Fetch invoices for active client
