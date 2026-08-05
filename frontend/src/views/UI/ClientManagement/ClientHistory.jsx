@@ -215,7 +215,10 @@ export default function ClientHistory() {
                 fullName: name,
                 clientName: name,
                 phone: c.contact_number || "N/A",
+                altPhone: c.alt_contact_number || "",
                 email: c.email_id || "N/A",
+                address: c.client_address || "",
+                district: c.client_district || "",
                 caseStatus: c.status || "N/A",
                 caseTitle: c.case_title || "N/A",
                 caseNumber: c.case_no || "N/A",
@@ -223,6 +226,10 @@ export default function ClientHistory() {
                 assignedAdvocate: c.selected_advocate || c.advocate_name || "Not Assigned",
               };
               idCounter++;
+            } else {
+              if (!clientMap[name].address && c.client_address) clientMap[name].address = c.client_address;
+              if (!clientMap[name].district && c.client_district) clientMap[name].district = c.client_district;
+              if (!clientMap[name].altPhone && c.alt_contact_number) clientMap[name].altPhone = c.alt_contact_number;
             }
           });
           const clientsArray = Object.values(clientMap);
@@ -237,6 +244,18 @@ export default function ClientHistory() {
                 return itemClientName === targetName || targetName.includes(itemClientName) || itemClientName.includes(targetName);
               })
             : data;
+
+          if (matchedCases.length > 0) {
+            const firstMatch = matchedCases[0];
+            setClient(prev => ({
+              ...prev,
+              phone: (prev?.phone && prev.phone !== "N/A") ? prev.phone : (firstMatch.contact_number || "N/A"),
+              altPhone: prev?.altPhone || prev?.alt_contact_number || prev?.altPhone || firstMatch.alt_contact_number || "",
+              email: (prev?.email && prev.email !== "N/A") ? prev.email : (firstMatch.email_id || "N/A"),
+              address: prev?.address || prev?.clientAddress || firstMatch.client_address || "",
+              district: prev?.district || prev?.clientDistrict || firstMatch.client_district || "",
+            }));
+          }
 
           const matchedCasesWithAdvocates = matchedCases.map(item => {
             const caseAdvCandidates = [];
@@ -668,7 +687,9 @@ export default function ClientHistory() {
                             fullName: client.fullName || client.clientName,
                             email: client.email || client.emailId,
                             phone: client.phone || client.contactNumber,
-                            altPhone: client.altPhone || client.altContactNumber || ""
+                            altPhone: client.altPhone || client.altContactNumber || "",
+                            address: client.address || client.clientAddress || "",
+                            district: client.district || client.clientDistrict || ""
                           }));
                           setShowEditModal(true);
                         }}
@@ -682,7 +703,7 @@ export default function ClientHistory() {
                   </div>
 
                   {/* Personal Information Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                     <div className="p-3.5 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]/60 space-y-1">
                       <div className="flex items-center gap-1.5 text-xs text-[#94A3B8] font-semibold">
                         <Phone size={13} className="text-[#2563EB]" />
@@ -698,6 +719,23 @@ export default function ClientHistory() {
 
                     <div className="p-3.5 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]/60 space-y-1">
                       <div className="flex items-center gap-1.5 text-xs text-[#94A3B8] font-semibold">
+                        <Phone size={13} className="text-[#2563EB]" />
+                        <span>Alternative Mobile</span>
+                      </div>
+                      {(client.altPhone || client.alt_contact_number || client.altContactNumber) ? (
+                        <a
+                          href={`tel:${client.altPhone || client.alt_contact_number || client.altContactNumber}`}
+                          className="text-xs font-bold text-[#0F172A] hover:text-[#2563EB] block truncate"
+                        >
+                          {client.altPhone || client.alt_contact_number || client.altContactNumber}
+                        </a>
+                      ) : (
+                        <p className="text-xs font-bold text-[#94A3B8] block truncate">N/A</p>
+                      )}
+                    </div>
+
+                    <div className="p-3.5 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]/60 space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs text-[#94A3B8] font-semibold">
                         <Mail size={13} className="text-[#2563EB]" />
                         <span>Email Address</span>
                       </div>
@@ -708,6 +746,17 @@ export default function ClientHistory() {
                       >
                         {client.email || client.emailId || "N/A"}
                       </a>
+                    </div>
+
+                    <div className="p-3.5 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]/60 space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs text-[#94A3B8] font-semibold">
+                        <MapPin size={13} className="text-[#2563EB]" />
+                        <span>Address & Location</span>
+                      </div>
+                      <p className="text-xs font-bold text-[#0F172A] truncate" title={`${client.address || client.clientAddress || 'N/A'} ${client.district || client.clientDistrict ? `(${client.district || client.clientDistrict})` : ''}`}>
+                        {client.address || client.clientAddress ? `${client.address || client.clientAddress}` : "N/A"}
+                        {client.district || client.clientDistrict ? ` (${client.district || client.clientDistrict})` : ""}
+                      </p>
                     </div>
 
                     <div className="p-3.5 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]/60 space-y-1">
