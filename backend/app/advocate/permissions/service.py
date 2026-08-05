@@ -579,6 +579,9 @@ def update_user(
             )
         db_user.email = data.email
 
+    if data.role is not None:
+        db_user.role = data.role
+
     if data.password:
         if data.password != data.confirmPassword:
             raise ValueError("Passwords do not match")

@@ -366,10 +366,10 @@ def build_consultation_email(
 
     <p style="font-weight: 600; color: #0F172A;">Please confirm your availability:</p>
     <div style="margin: 20px 0; text-align: center;">
-      <a href="{frontend_url}/client-action?id={consultation_id}&action=approve" target="_blank" style="background: #16A34A; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block; margin-right: 10px;">
+      <a href="{frontend_url}/consultation-action?id={consultation_id}&action=approve" target="_blank" style="background: #16A34A; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block; margin-right: 10px;">
         ✓ Confirm Appointment
       </a>
-      <a href="{frontend_url}/client-action?id={consultation_id}&action=reschedule" target="_blank" style="background: #D97706; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block;">
+      <a href="{frontend_url}/consultation-action?id={consultation_id}&action=reschedule" target="_blank" style="background: #D97706; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block;">
         🗓️ Request Reschedule
       </a>
     </div>
@@ -377,6 +377,62 @@ def build_consultation_email(
     return render_base_template(
         title="Legal Consultation Scheduled",
         badge_label="Consultation",
+        content_html=content_html
+    )
+
+
+def build_client_booking_email(
+    client_name: str,
+    date_str: str,
+    time_str: str,
+    type_str: str,
+    issue: str = "",
+    consultation_id: int = 0,
+    frontend_url: str = "http://localhost:3000"
+) -> str:
+    issue_row = f"""
+    <tr>
+      <td style="padding-bottom: 12px; color: #64748B; font-size: 13px; font-weight: 600; text-transform: uppercase;">Issue / Note</td>
+      <td style="padding-bottom: 12px; color: #0F172A; font-weight: 600;">{issue}</td>
+    </tr>
+    """ if issue else ""
+
+    content_html = f"""
+    <h2 style="color: #0F172A; font-size: 22px; font-weight: 700; margin-top: 0;">New Appointment Booking Request</h2>
+    <p>Dear <strong>Senior Advocate</strong>,</p>
+    <p>Client <strong>{client_name or 'A client'}</strong> has requested a new legal consultation appointment.</p>
+
+    <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 24px; margin: 24px 0;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+        <tr>
+          <td style="padding-bottom: 12px; color: #64748B; font-size: 13px; font-weight: 600; text-transform: uppercase;" width="35%">Client Name</td>
+          <td style="padding-bottom: 12px; color: #0F172A; font-weight: 700;" width="65%">{client_name}</td>
+        </tr>
+        <tr>
+          <td style="padding-bottom: 12px; color: #64748B; font-size: 13px; font-weight: 600; text-transform: uppercase;">Mode / Type</td>
+          <td style="padding-bottom: 12px; color: #0F172A; font-weight: 600;">{type_str or 'Consultation'}</td>
+        </tr>
+        <tr>
+          <td style="padding-bottom: 12px; color: #64748B; font-size: 13px; font-weight: 600; text-transform: uppercase;">Requested Date & Time</td>
+          <td style="padding-bottom: 12px; color: #2563EB; font-weight: 700;">{date_str} at {time_str}</td>
+        </tr>
+        {issue_row}
+      </table>
+    </div>
+
+    <p style="font-weight: 600; color: #0F172A;">Please review and take action on this appointment:</p>
+    <div style="margin: 20px 0; text-align: center;">
+      <a href="{frontend_url}/consultation-action?id={consultation_id}&action=approve" target="_blank" style="background: #16A34A; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block; margin-right: 10px;">
+        ✓ Approve Appointment
+      </a>
+      <a href="{frontend_url}/consultations?reschedule_id={consultation_id}" target="_blank" style="background: #D97706; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block;">
+        🗓️ Reschedule
+      </a>
+    </div>
+    """
+    return render_base_template(
+        title="New Appointment Booking Request",
+        badge_label="Appointment Request",
         content_html=content_html
     )
 

@@ -7,6 +7,27 @@ import { API_BASE_URL } from "@/utils/api";
 
 const BASE_URL = API_BASE_URL;
 
+const ACTIVE_CASE_STATUSES = new Set([
+  "active",
+  "client consulting",
+  "client detail collection",
+  "document data collection",
+  "document pending",
+  "document verified",
+  "advocate assigned",
+  "under review",
+  "case preparation",
+  "court file",
+  "in progress",
+  "hearing scheduled",
+  "hearing completed",
+]);
+
+const isActiveCase = (status) => {
+  if (!status) return true;
+  return ACTIVE_CASE_STATUSES.has(status.toLowerCase().trim());
+};
+
 export default function ClientDashboard() {
   const [userName, setUserName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -214,7 +235,7 @@ export default function ClientDashboard() {
   }, []);
 
   // Derived stats
-  const activeCasesCount = cases.filter((c) => c.status === "Active").length;
+  const activeCasesCount = cases.filter((c) => isActiveCase(c.status)).length;
   const upcomingHearingsCount = hearings.length;
 
   // Format a date string nicely

@@ -23,9 +23,50 @@ def get_consultations(
 ):
     return service.get_consultations(db, client_id=client_id, status=status)
 
+from pydantic import BaseModel
+
+class PublicActionData(BaseModel):
+    action: str
+    date: Optional[str] = None
+    time: Optional[str] = None
+    reason: Optional[str] = None
+
 @router.post("/book", response_model=ConsultationOut)
-def book_consultation(data: ConsultationCreate, db: Session = Depends(get_db)):
-    return service.create_consultation(db, data)
+def book_consultation(
+    data: ConsultationCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    return service.create_consultation(db, data, background_tasks)
+
+@router.get("/{consultation_id}/public-details")
+def get_public_details(consultation_id: int, db: Session = Depends(get_db)):
+    consultation = service.get_consultation_by_id(db, consultation_id)
+    if not consultation:
+        raise HTTPException(status_code=404, detail="Consultation not found")
+    return {
+        "id": consultation.id,
+        "client_name": consultation.client_name,
+        "date": str(consultation.date),
+        "time": str(consultation.time),
+        "type": consultation.type,
+        "status": consultation.status,
+        "meeting_link": consultation.meeting_link,
+        "issue": consultation.issue,
+        "fee": consultation.fee
+    }
+
+@router.post("/{consultation_id}/public-action")
+def perform_public_action(
+    consultation_id: int,
+    data: PublicActionData,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    result = service.process_public_action(db, consultation_id, data, background_tasks)
+    if not result:
+        raise HTTPException(status_code=404, detail="Consultation not found")
+    return result
 
 @router.post("/start", response_model=ConsultationOut)
 def start_consultation(
@@ -36,15 +77,15 @@ def start_consultation(
     return service.start_instant_consultation(db, data, background_tasks)
 
 @router.put("/{consultation_id}/status", response_model=ConsultationOut)
-def update_status(consultation_id: int, data: ConsultationUpdateStatus, db: Session = Depends(get_db)):
-    consultation = service.update_consultation_status(db, consultation_id, data.status)
+def update_status(consultation_id: int, data: ConsultationUpdateStatus, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    consultation = service.update_consultation_status(db, consultation_id, data.status, background_tasks)
     if not consultation:
         raise HTTPException(status_code=404, detail="Consultation not found")
     return consultation
 
 @router.put("/{consultation_id}/reschedule", response_model=ConsultationOut)
-def reschedule(consultation_id: int, data: ConsultationReschedule, db: Session = Depends(get_db)):
-    consultation = service.reschedule_consultation(db, consultation_id, data)
+def reschedule(consultation_id: int, data: ConsultationReschedule, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    consultation = service.reschedule_consultation(db, consultation_id, data, background_tasks)
     if not consultation:
         raise HTTPException(status_code=404, detail="Consultation not found")
     return consultation

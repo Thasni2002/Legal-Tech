@@ -7,7 +7,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   UserPlus, Key, Eye, EyeOff, RefreshCw, AlertTriangle,
-  ShieldCheck, Mail, Phone, User, Check, X, FileText, Settings, Shield, Plus, Copy
+  ShieldCheck, Mail, Phone, User, Check, X, FileText, Settings, Shield, Plus, Copy, Pencil
 } from "lucide-react";
 
 const DEFAULT_ROLES = [
@@ -207,6 +207,7 @@ export default function UsersView() {
   const [notification, setNotification] = useState(null);
 
   const [mounted, setMounted] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
   const [provisionedUser, setProvisionedUser] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteImpact, setDeleteImpact] = useState(null);
@@ -382,7 +383,7 @@ export default function UsersView() {
     setTimeout(() => setNotification(null), 3000);
   };
 
-  // Handle Provisioning
+  // Handle Provisioning or Updating User
   const handleProvisionUser = async (e) => {
     e.preventDefault();
 
@@ -410,6 +411,52 @@ export default function UsersView() {
       showToast("Email address is required", "error");
       return;
     }
+
+    if (editingUser) {
+      try {
+        const nameParts = firstName.trim().split(" ");
+        const fName = nameParts[0] || firstName.trim();
+        const lName = nameParts.slice(1).join(" ") || "";
+
+        const res = await fetch(`${API_BASE_URL}/permissions/users/${editingUser.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            firstName: fName,
+            lastName: lName,
+            phone: phoneNumber.trim(),
+            username: username.trim(),
+            email: emailAddress.trim(),
+            role: selectedRole,
+            password: tempPassword.trim() || null,
+          })
+        });
+
+        if (res.ok) {
+          const updatedUser = await res.json();
+          setUsers((prev) => prev.map((u) => u.id === editingUser.id ? updatedUser : u));
+          showToast(`User @${updatedUser.username} updated successfully!`);
+          window.dispatchEvent(new Event("permissions_updated"));
+
+          setEditingUser(null);
+          setFirstName("");
+          setLastName("");
+          setPhoneNumber("");
+          setUsername("");
+          setEmailAddress("");
+          setSelectedAdvocateId("");
+          setSelectedClientId("");
+          generateRandomPassword();
+        } else {
+          const errData = await res.json();
+          showToast(errData.detail || "Error updating user", "error");
+        }
+      } catch (err) {
+        showToast("Unable to connect to the backend", "error");
+      }
+      return;
+    }
+
     if (!tempPassword.trim()) {
       showToast("Temporary password is required", "error");
       return;
@@ -453,8 +500,56 @@ export default function UsersView() {
     }
   };
 
+  // Start editing a user from the Active Provisioned Users table
+  const handleStartEditUser = (userToEdit) => {
+    setEditingUser(userToEdit);
+    if (userToEdit.role) {
+      const matchedRole = roles.find(
+        (r) => r.name.toLowerCase() === userToEdit.role.toLowerCase()
+      );
+      if (matchedRole) {
+        setSelectedRole(matchedRole.name);
+      } else {
+        setSelectedRole(userToEdit.role);
+      }
+    }
+    const fullName = [userToEdit.firstName || userToEdit.first_name, userToEdit.lastName || userToEdit.last_name]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || userToEdit.username || "";
+
+    setFirstName(fullName);
+    setLastName(userToEdit.lastName || userToEdit.last_name || "");
+    setPhoneNumber(userToEdit.phone || "");
+    setUsername(userToEdit.username || "");
+    setEmailAddress(userToEdit.email || "");
+    setTempPassword(userToEdit.tempPassword || userToEdit.temp_password || "");
+    setSelectedAdvocateId("");
+    setSelectedClientId("");
+
+    setTimeout(() => {
+      document.getElementById("create-user-form-container")?.scrollIntoView({ behavior: "smooth" });
+    }, 50);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingUser(null);
+    setFirstName("");
+    setLastName("");
+    setPhoneNumber("");
+    setUsername("");
+    setEmailAddress("");
+    setSelectedAdvocateId("");
+    setSelectedClientId("");
+    generateRandomPassword();
+  };
+
   // Cancel form edits
   const handleCancel = () => {
+    if (editingUser) {
+      handleCancelEdit();
+      return;
+    }
     setFirstName("");
     setLastName("");
     setPhoneNumber("");
@@ -686,8 +781,8 @@ export default function UsersView() {
         </div>
       )}
 
-      {/* Main card containing Creation panel */}
-      <div className="bg-white rounded-2xl sm:rounded-3xl border border-[#E2E8F0] p-4 sm:p-6 md:p-8 shadow-sm">
+      {/* Main card containing Creation / Edit panel */}
+      <div id="create-user-form-container" className="bg-white rounded-2xl sm:rounded-3xl border border-[#E2E8F0] p-4 sm:p-6 md:p-8 shadow-sm">
         {/* Page Header */}
         <div className="mb-6 sm:mb-10 pb-4 sm:pb-6 border-b border-slate-100">
           <h1 className="text-[#0F172A] font-extrabold text-2xl sm:text-3xl lg:text-4xl tracking-tight leading-tight">
@@ -697,17 +792,43 @@ export default function UsersView() {
         {/* Form header */}
         <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
           <div className="w-10 h-10 sm:w-11 sm:h-11 bg-slate-100 text-slate-800 rounded-full flex items-center justify-center shrink-0">
-            <UserPlus size={20} className="sm:w-[22px] sm:h-[22px]" />
+            {editingUser ? <Pencil size={20} className="sm:w-[22px] sm:h-[22px] text-blue-600" /> : <UserPlus size={20} className="sm:w-[22px] sm:h-[22px]" />}
           </div>
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
-              Create New User
+              {editingUser ? `Edit User: @${editingUser.username}` : "Create New User"}
             </h2>
             <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
-              Provision user credentials and map their security role
+              {editingUser
+                ? "Update user profile credentials and map security role"
+                : "Provision user credentials and map their security role"}
             </p>
           </div>
         </div>
+
+        {/* Editing Banner Alert */}
+        {editingUser && (
+          <div className="mb-6 p-4 rounded-2xl bg-blue-50 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-blue-900 animate-in fade-in">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                <Pencil size={14} />
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-blue-600">Editing User Credentials</p>
+                <p className="text-xs font-semibold text-slate-700">
+                  Currently editing <strong className="text-blue-700 font-bold">@{editingUser.username}</strong> ({editingUser.role})
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="px-4 py-2 rounded-xl bg-white border border-blue-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-2xs shrink-0 cursor-pointer"
+            >
+              Cancel Edit
+            </button>
+          </div>
+        )}
 
         {/* Dynamic role selection tabs */}
         <div className="mb-6 sm:mb-8">
@@ -753,7 +874,16 @@ export default function UsersView() {
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                 Full Name *
               </label>
-              {(selectedRole || "").toUpperCase().includes("CLERK") ? (
+              {editingUser ? (
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                  placeholder="Enter full name"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 sm:px-4 py-2.5 sm:py-3 text-slate-800 placeholder:text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-xs sm:text-sm font-medium"
+                />
+              ) : (selectedRole || "").toUpperCase().includes("CLERK") ? (
                 <select
                   value={selectedAdvocateId}
                   onChange={(e) => {
@@ -896,15 +1026,13 @@ export default function UsersView() {
               )}
             </div>
 
-
-
             {/* Phone Number */}
             <div className="flex flex-col">
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                   Phone Number *
                 </label>
-                {Boolean(selectedAdvocateId || selectedClientId) && (
+                {Boolean(!editingUser && (selectedAdvocateId || selectedClientId)) && (
                   <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 uppercase">
                     Auto-Fetched
                   </span>
@@ -915,16 +1043,16 @@ export default function UsersView() {
                 type="tel"
                 value={phoneNumber}
                 onChange={(e) => {
-                  if (selectedAdvocateId || selectedClientId) return;
+                  if (!editingUser && (selectedAdvocateId || selectedClientId)) return;
                   const value = e.target.value.replace(/\D/g, "");
                   if (value.length <= 10) setPhoneNumber(value);
                 }}
-                readOnly={Boolean(selectedAdvocateId || selectedClientId)}
+                readOnly={Boolean(!editingUser && (selectedAdvocateId || selectedClientId))}
                 maxLength={10}
                 required
-                placeholder={selectedAdvocateId || selectedClientId ? "Auto-fetched phone number" : "Enter phone number"}
+                placeholder={!editingUser && (selectedAdvocateId || selectedClientId) ? "Auto-fetched phone number" : "Enter phone number"}
                 className={`w-full rounded-xl border px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-all ${
-                  (selectedAdvocateId || selectedClientId)
+                  (!editingUser && (selectedAdvocateId || selectedClientId))
                     ? "bg-[#F1F5F9] text-[#475569] border-[#E2E8F0] cursor-not-allowed select-none font-bold"
                     : "bg-slate-50/50 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB]"
                 }`}
@@ -944,7 +1072,7 @@ export default function UsersView() {
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                   Username *
                 </label>
-                {Boolean(selectedAdvocateId || selectedClientId) && (
+                {Boolean(!editingUser && (selectedAdvocateId || selectedClientId)) && (
                   <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 uppercase">
                     Auto-Fetched
                   </span>
@@ -954,14 +1082,14 @@ export default function UsersView() {
                 type="text"
                 value={username}
                 onChange={(e) => {
-                  if (selectedAdvocateId || selectedClientId) return;
+                  if (!editingUser && (selectedAdvocateId || selectedClientId)) return;
                   setUsername(e.target.value);
                 }}
-                readOnly={Boolean(selectedAdvocateId || selectedClientId)}
+                readOnly={Boolean(!editingUser && (selectedAdvocateId || selectedClientId))}
                 required
-                placeholder={selectedAdvocateId || selectedClientId ? "Auto-fetched username" : "Enter username"}
+                placeholder={!editingUser && (selectedAdvocateId || selectedClientId) ? "Auto-fetched username" : "Enter username"}
                 className={`w-full rounded-xl border px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-all ${
-                  (selectedAdvocateId || selectedClientId)
+                  (!editingUser && (selectedAdvocateId || selectedClientId))
                     ? "bg-[#F1F5F9] text-[#475569] border-[#E2E8F0] cursor-not-allowed select-none font-bold"
                     : "bg-slate-50/50 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB]"
                 }`}
@@ -974,7 +1102,7 @@ export default function UsersView() {
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                   Email Address *
                 </label>
-                {Boolean(selectedAdvocateId || selectedClientId) && (
+                {Boolean(!editingUser && (selectedAdvocateId || selectedClientId)) && (
                   <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 uppercase">
                     Auto-Fetched
                   </span>
@@ -984,14 +1112,14 @@ export default function UsersView() {
                 type="email"
                 value={emailAddress}
                 onChange={(e) => {
-                  if (selectedAdvocateId || selectedClientId) return;
+                  if (!editingUser && (selectedAdvocateId || selectedClientId)) return;
                   setEmailAddress(e.target.value);
                 }}
-                readOnly={Boolean(selectedAdvocateId || selectedClientId)}
+                readOnly={Boolean(!editingUser && (selectedAdvocateId || selectedClientId))}
                 required
-                placeholder={selectedAdvocateId || selectedClientId ? "Auto-fetched email address" : "Enter email address"}
+                placeholder={!editingUser && (selectedAdvocateId || selectedClientId) ? "Auto-fetched email address" : "Enter email address"}
                 className={`w-full rounded-xl border px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-all ${
-                  (selectedAdvocateId || selectedClientId)
+                  (!editingUser && (selectedAdvocateId || selectedClientId))
                     ? "bg-[#F1F5F9] text-[#475569] border-[#E2E8F0] cursor-not-allowed select-none font-bold"
                     : "bg-slate-50/50 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB]"
                 }`}
@@ -1045,7 +1173,7 @@ export default function UsersView() {
               className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-3.5 bg-[#2563EB] text-white hover:bg-blue-700 text-xs font-bold uppercase rounded-full cursor-pointer tracking-wider transition-all shadow-md shadow-blue-200/50 active:scale-95 flex items-center justify-center gap-2 text-center"
             >
               <Check size={16} />
-              <span>Provision {getRoleDisplayName(selectedRole)}</span>
+              <span>{editingUser ? "Save User Changes" : `Provision ${getRoleDisplayName(selectedRole)}`}</span>
             </button>
 
             <button
@@ -1156,11 +1284,18 @@ export default function UsersView() {
                       onClick={() => handleOpenDetails(user)}
                       className="flex-1 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all text-center shadow-xs cursor-pointer active:scale-95"
                     >
-                      View Details
+                      View
+                    </button>
+                    <button
+                      onClick={() => handleStartEditUser(user)}
+                      className="py-2 px-3.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold transition-all text-center border border-blue-100 cursor-pointer active:scale-95 flex items-center justify-center gap-1"
+                    >
+                      <Pencil size={13} />
+                      Edit
                     </button>
                     <button
                       onClick={() => handleDeleteUserClick(user.id, user.username, user.role)}
-                      className="py-2 px-4 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold transition-all text-center border border-red-100 cursor-pointer active:scale-95"
+                      className="py-2 px-3.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold transition-all text-center border border-red-100 cursor-pointer active:scale-95"
                     >
                       Delete
                     </button>
@@ -1275,6 +1410,13 @@ export default function UsersView() {
                             className="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
                           >
                             View
+                          </button>
+                          <button
+                            onClick={() => handleStartEditUser(user)}
+                            className="px-3.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                          >
+                            <Pencil size={13} />
+                            Edit
                           </button>
                           <button
                             onClick={() => handleDeleteUserClick(user.id, user.username, user.role)}

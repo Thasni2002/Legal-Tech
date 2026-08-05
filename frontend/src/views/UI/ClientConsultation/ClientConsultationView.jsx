@@ -70,6 +70,8 @@ export default function ClientConsultationView() {
     type: "",
   });
   const [selectedTimeDate, setSelectedTimeDate] = useState(null);
+  const [meetingLink, setMeetingLink] = useState("");
+  const [generatingMeetLink, setGeneratingMeetLink] = useState(false);
 
   const handleTimeChange = (date) => {
     setSelectedTimeDate(date);
@@ -85,6 +87,37 @@ export default function ClientConsultationView() {
       setFormData((prev) => ({ ...prev, time: "" }));
     }
   };
+
+  const generateMeetingLink = async (currentClient, currentDate, currentTime) => {
+    setGeneratingMeetLink(true);
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    try {
+      const client = currentClient || "Client";
+      const date = currentDate || new Date().toISOString().split('T')[0];
+      const time = currentTime || "12:00 PM";
+      const headers = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      const res = await fetch(`${API_BASE_URL}/consultations/generate-meet-link?client_name=${encodeURIComponent(client)}&date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}`, {
+        headers
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMeetingLink(data.meeting_link || "");
+      }
+    } catch (err) {
+      console.error("Failed to generate meet link:", err);
+    } finally {
+      setGeneratingMeetLink(false);
+    }
+  };
+
+  useEffect(() => {
+    if (formData.type === "Video Call" && !meetingLink && !generatingMeetLink) {
+      generateMeetingLink(formData.name || clientDisplayName, formData.date, formData.time);
+    }
+  }, [formData.type, formData.date, formData.time]);
 
   const [rescheduleId, setRescheduleId] = useState(null);
   const [successToast, setSuccessToast] = useState({ show: false, message: "", type: "success" });
@@ -202,6 +235,38 @@ export default function ClientConsultationView() {
     }
     const dismissed = JSON.parse(localStorage.getItem("client_dismissed_consultation_notifications") || "[]");
     setDismissedNotifications(dismissed);
+
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const paramRescheduleId = params.get("reschedule_id");
+      const paramApproved = params.get("approved");
+
+      if (paramApproved) {
+        setSuccessToast({ show: true, message: "Consultation approved successfully!", type: "success" });
+        setTimeout(() => {
+          setSuccessToast({ show: false, message: "", type: "success" });
+        }, 4000);
+      }
+
+      if (paramRescheduleId) {
+        fetch(`${API_BASE_URL}/consultations/${paramRescheduleId}/public-details`)
+          .then((res) => (res.ok ? res.json() : null))
+          .then((item) => {
+            if (item) {
+              setRescheduleId(item.id);
+              setFormData({
+                name: item.client_name || "",
+                date: item.date || "",
+                time: item.time || "",
+                type: item.type || "",
+              });
+              setMeetingLink(item.meeting_link || "");
+              setShowModal(true);
+            }
+          })
+          .catch(() => {});
+      }
+    }
   }, []);
 
   const triggerSuccess = (message, type = "success") => {
@@ -216,22 +281,27 @@ export default function ClientConsultationView() {
       triggerSuccess("You do not have permission to book a consultation.", "warning");
       return;
     }
+
+    const resolvedClientName = formData.name || clientDisplayName || getClientDisplayName(user) || (user ? user.username : "Client");
+
     if (
-      !formData.name ||
+      !resolvedClientName ||
       !formData.date ||
       !formData.time ||
       !formData.type
     ) {
-      triggerSuccess("Please fill all required fields.", "warning");
+      triggerSuccess("Please fill all required fields (Date, Time, and Meeting Type).", "warning");
       return;
     }
 
     const bookData = {
-      client_name: formData.name,
+      client_name: resolvedClientName,
       client_id: user ? user.id : null,
+      client_email: user ? user.email : "",
       date: formData.date,
       time: formData.time,
       type: formData.type,
+      meeting_link: formData.type === "Video Call" ? meetingLink : "",
       issue: "Consultation Request",
       fee: "₹500",
     };
@@ -253,6 +323,7 @@ export default function ClientConsultationView() {
           time: "",
           type: "",
         });
+        setMeetingLink("");
         setSelectedTimeDate(null);
       } else {
         triggerSuccess("Failed to book appointment.", "error");
@@ -297,6 +368,7 @@ export default function ClientConsultationView() {
           time: "",
           type: "",
         });
+        setMeetingLink("");
         setSelectedTimeDate(null);
       } else {
         triggerSuccess("Failed to reschedule consultation.", "error");
@@ -327,15 +399,17 @@ export default function ClientConsultationView() {
     }
   };
 
+  // Pending advocate action (client requested reschedule or new booking)
   const pendingRequests = appointments.filter(
-    item => item.status === "Pending Client" || item.status === "Pending"
+    item => item.status === "Pending"
   );
 
+  // Only confirmed/approved/scheduled meetings appear in Upcoming Meetings
+  // Rescheduled & Pending Client are handled in the notification action cards above
   const upcomingMeetings = appointments.filter(
     item =>
       item.status === "Approved" ||
       item.status === "Scheduled" ||
-      item.status === "Rescheduled" ||
       item.status === "Pending Advocate"
   );
 
@@ -356,59 +430,7 @@ export default function ClientConsultationView() {
         </p>
       </div>
 
-      {/* Notifications */}
-      {mounted && appointments.filter(item => {
-        if (dismissedNotifications.includes(item.id)) return false;
-        const isApprovedByAdvocate = item.status === "Approved" && item.reschedule_reason === "Approved by advocate";
-        const isRescheduledByAdvocate = item.status === "Rescheduled" && item.reschedule_reason?.includes("advocate");
-        return isApprovedByAdvocate || isRescheduledByAdvocate;
-      }).length > 0 && (
-        <div className="space-y-2.5 mb-4 sm:mb-6 w-full min-w-0">
-          {appointments.filter(item => {
-            if (dismissedNotifications.includes(item.id)) return false;
-            const isApprovedByAdvocate = item.status === "Approved" && item.reschedule_reason === "Approved by advocate";
-            const isRescheduledByAdvocate = item.status === "Rescheduled" && item.reschedule_reason?.includes("advocate");
-            return isApprovedByAdvocate || isRescheduledByAdvocate;
-          }).map(item => {
-            const isApproved = item.status === "Approved";
-            return (
-              <div
-                key={item.id}
-                className={`flex items-start justify-between p-3 sm:p-4 rounded-xl border transition-all ${
-                  isApproved
-                    ? "bg-emerald-50/80 border-emerald-200 text-emerald-900"
-                    : "bg-amber-50/80 border-amber-200 text-amber-900"
-                }`}
-              >
-                <div className="flex gap-2.5 items-start sm:items-center min-w-0">
-                  <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 ${isApproved ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                    {isApproved ? <CheckCircle2 size={16} /> : <Clock size={16} />}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-bold text-xs sm:text-sm truncate">
-                      {isApproved
-                        ? `Your consultation request has been approved`
-                        : `Your consultation has been rescheduled`}
-                    </p>
-                    <p className="text-[11px] sm:text-xs mt-0.5 opacity-90 font-medium">
-                      Scheduled for: <span className="font-bold">{formatDateString(item.date)}</span> at <span className="font-bold">{formatTimeString(item.time)}</span> ({item.type})
-                      {!isApproved && item.reschedule_reason && (
-                        <span className="block mt-0.5 font-semibold italic truncate">Reason: {item.reschedule_reason}</span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleDismissNotification(item.id)}
-                  className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-200/50 transition-colors shrink-0 cursor-pointer"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
+
 
       {/* ──── ACTION CARDS ──── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-6 mb-6 w-full min-w-0">
@@ -431,6 +453,8 @@ export default function ClientConsultationView() {
                   time: "",
                   type: "",
                 });
+                setMeetingLink("");
+                setSelectedTimeDate(null);
                 setShowModal(true);
               }}
               className="w-full mt-4 sm:mt-6 bg-[#2563EB] hover:bg-[#1D4ED8] text-white py-2.5 sm:py-3 px-4 rounded-xl font-bold text-xs sm:text-sm tracking-wide transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
@@ -472,11 +496,236 @@ export default function ClientConsultationView() {
           <span>Meeting Requests</span>
         </h2>
 
-        {pendingRequests.length === 0 ? (
+        {/* Advocate Action Cards — New Meetings (Pending Client) + Rescheduled */}
+        {mounted && (() => {
+          const newMeetingItems = appointments.filter(item => {
+            if (dismissedNotifications.includes(item.id)) return false;
+            return item.status === "Pending Client";
+          });
+          const rescheduledItems = appointments.filter(item => {
+            if (dismissedNotifications.includes(item.id)) return false;
+            return item.status === "Rescheduled";
+          });
+          if (newMeetingItems.length === 0 && rescheduledItems.length === 0) return null;
+          return (
+            <div className="space-y-4 mb-5">
+
+              {/* NEW MEETING cards — blue theme */}
+              {newMeetingItems.map(item => (
+                <div
+                  key={item.id}
+                  className="relative overflow-hidden rounded-2xl border border-blue-200 shadow-sm"
+                  style={{ background: "linear-gradient(135deg, #EFF6FF 0%, #F8FBFF 100%)" }}
+                >
+                  <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, #2563EB, #60A5FA)" }} />
+                  <div className="p-4 sm:p-5">
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg, #2563EB, #3B82F6)" }}>
+                          <CalendarPlus size={18} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="font-extrabold text-[#1E3A8A] text-sm sm:text-base leading-tight">
+                            New Meeting Scheduled by Advocate
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-600 text-white">
+                              📅 Confirm Required
+                            </span>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border border-blue-300 text-blue-700 bg-white">
+                              {item.type}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDismissNotification(item.id)}
+                        className="text-blue-300 hover:text-blue-600 p-1.5 rounded-lg hover:bg-blue-100 transition-colors shrink-0 cursor-pointer"
+                        title="Dismiss"
+                      >
+                        <X size={15} />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                      <div className="bg-white rounded-xl border border-blue-100 p-3 sm:p-4 space-y-2.5">
+                        <p className="text-[10px] font-extrabold text-blue-500 uppercase tracking-widest mb-1">Scheduled For</p>
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+                            <Calendar size={13} className="text-blue-500" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Date</p>
+                            <p className="font-extrabold text-[#0F172A] text-sm">{formatDateString(item.date)}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+                            <Clock size={13} className="text-blue-500" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Time</p>
+                            <p className="font-extrabold text-[#0F172A] text-sm">{formatTimeString(item.time)}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-white rounded-xl border border-blue-100 p-3 sm:p-4">
+                        <p className="text-[10px] font-extrabold text-blue-500 uppercase tracking-widest mb-2">Note</p>
+                        {item.reschedule_reason && item.reschedule_reason !== "Approved by advocate" ? (
+                          <p className="text-sm text-slate-600 italic leading-relaxed">&ldquo;{item.reschedule_reason}&rdquo;</p>
+                        ) : (
+                          <p className="text-xs text-slate-400 italic">Your advocate has booked a meeting slot for you.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-2.5">
+                      <button
+                        onClick={() => handleApproveAppointment(item.id)}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-extrabold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer text-white shadow-sm"
+                        style={{ background: "linear-gradient(135deg, #059669, #10B981)" }}
+                      >
+                        <CheckCircle2 size={16} />
+                        <span>✓ Confirm Appointment</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setRescheduleId(item.id);
+                          setFormData({
+                            name: item.client_name || clientDisplayName || getClientDisplayName(user),
+                            date: "",
+                            time: "",
+                            type: item.type || "",
+                          });
+                          setMeetingLink("");
+                          setSelectedTimeDate(null);
+                          setShowModal(true);
+                        }}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-blue-300 text-blue-700 hover:bg-blue-50 rounded-xl font-extrabold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer"
+                      >
+                        <Clock size={16} />
+                        <span>Request Different Time</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* RESCHEDULED cards — orange theme */}
+              {rescheduledItems.map(item => (
+                <div
+                  key={item.id}
+                  className="relative overflow-hidden rounded-2xl border border-orange-200 shadow-sm"
+                  style={{ background: "linear-gradient(135deg, #FFF7ED 0%, #FFFBF5 100%)" }}
+                >
+                  <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, #F59E0B, #FB923C)" }} />
+                  <div className="p-4 sm:p-5">
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg, #F59E0B, #FB923C)" }}>
+                          <Calendar size={18} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="font-extrabold text-[#92400E] text-sm sm:text-base leading-tight">
+                            Senior Advocate Rescheduled Your Appointment
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-500 text-white">
+                              ⚡ Action Required
+                            </span>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border border-orange-300 text-orange-700 bg-white">
+                              {item.type}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDismissNotification(item.id)}
+                        className="text-orange-300 hover:text-orange-600 p-1.5 rounded-lg hover:bg-orange-100 transition-colors shrink-0 cursor-pointer"
+                        title="Dismiss"
+                      >
+                        <X size={15} />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                      <div className="bg-white rounded-xl border border-orange-100 p-3 sm:p-4 space-y-2.5">
+                        <p className="text-[10px] font-extrabold text-orange-500 uppercase tracking-widest mb-1">Proposed Schedule</p>
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
+                            <Calendar size={13} className="text-orange-500" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Date</p>
+                            <p className="font-extrabold text-[#0F172A] text-sm">{formatDateString(item.date)}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
+                            <Clock size={13} className="text-orange-500" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Time</p>
+                            <p className="font-extrabold text-[#0F172A] text-sm">{formatTimeString(item.time)}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-xl border border-orange-100 p-3 sm:p-4">
+                        <p className="text-[10px] font-extrabold text-orange-500 uppercase tracking-widest mb-2">Advocate Note</p>
+                        {item.reschedule_reason ? (
+                          <p className="text-sm text-slate-600 italic leading-relaxed">&ldquo;{item.reschedule_reason}&rdquo;</p>
+                        ) : (
+                          <p className="text-xs text-slate-400 italic">No note provided.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-2.5">
+                      <button
+                        onClick={() => handleApproveAppointment(item.id)}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-extrabold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer text-white shadow-sm"
+                        style={{ background: "linear-gradient(135deg, #059669, #10B981)" }}
+                      >
+                        <CheckCircle2 size={16} />
+                        <span>✓ Accept Proposed Date</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setRescheduleId(item.id);
+                          setFormData({
+                            name: item.client_name || clientDisplayName || getClientDisplayName(user),
+                            date: "",
+                            time: "",
+                            type: item.type || "",
+                          });
+                          setMeetingLink("");
+                          setSelectedTimeDate(null);
+                          setShowModal(true);
+                        }}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-orange-300 text-orange-700 hover:bg-orange-50 rounded-xl font-extrabold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer"
+                      >
+                        <Clock size={16} />
+                        <span>Request Different Time</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+            </div>
+          );
+        })()}
+
+        {/* Empty state — only when no cards AND no pending table rows */}
+        {pendingRequests.length === 0 && appointments.filter(i => i.status === "Rescheduled" || i.status === "Pending Client").length === 0 && (
           <div className="p-6 text-center text-[#64748B] font-medium text-xs sm:text-sm bg-slate-50 rounded-2xl border border-slate-100">
             No pending meeting requests.
           </div>
-        ) : (
+        )}
+
+        {/* Pending requests table — only when there are actual pending items */}
+        {pendingRequests.length > 0 && (
           <>
             {/* Mobile Native Cards (< 640px) */}
             <div className="block sm:hidden space-y-3 w-full min-w-0">
@@ -510,6 +759,8 @@ export default function ClientConsultationView() {
                           time: item.time,
                           type: item.type,
                         });
+                        setMeetingLink(item.meeting_link || "");
+                        setSelectedTimeDate(null);
                         setShowModal(true);
                       }}
                       className="flex-1 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
@@ -566,6 +817,8 @@ export default function ClientConsultationView() {
                                 time: item.time,
                                 type: item.type,
                               });
+                              setMeetingLink(item.meeting_link || "");
+                              setSelectedTimeDate(null);
                               setShowModal(true);
                             }}
                             className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer"
@@ -718,10 +971,10 @@ export default function ClientConsultationView() {
                   <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-1.5 block">Client Name</label>
                   <input
                     type="text"
+                    readOnly
                     placeholder="Enter your name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full border border-[#E2E8F0] rounded-xl p-3 text-[#0F172A] bg-[#F8FAFC] focus:bg-white text-xs sm:text-sm font-medium outline-none"
+                    value={formData.name || clientDisplayName || getClientDisplayName(user) || (user ? user.username : "")}
+                    className="w-full border border-[#E2E8F0] rounded-xl p-3 text-[#0F172A] bg-[#F1F5F9] font-bold text-xs sm:text-sm outline-none cursor-not-allowed select-none"
                   />
                 </div>
               )}
@@ -755,17 +1008,41 @@ export default function ClientConsultationView() {
 
               {!rescheduleId && (
                 <div>
-                  <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-1.5 block">Meeting Type</label>
+                  <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-1.5 block">Type</label>
                   <select
                     value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    onChange={(e) => {
+                      const newType = e.target.value;
+                      setFormData({ ...formData, type: newType });
+                      if (newType === "Video Call") {
+                        if (!meetingLink) {
+                          generateMeetingLink(formData.name || clientDisplayName, formData.date, formData.time);
+                        }
+                      } else {
+                        setMeetingLink("");
+                      }
+                    }}
                     className="w-full border border-[#E2E8F0] rounded-xl p-3 text-[#0F172A] bg-[#F8FAFC] focus:bg-white text-xs sm:text-sm font-medium outline-none cursor-pointer"
                   >
-                    <option value="">Select Type</option>
-                    <option value="Video Consultation">Video Consultation</option>
-                    <option value="Chat Consultation">Chat Consultation</option>
+                    <option value="">Meeting Type</option>
+                    <option value="Video Call">Video Call</option>
+                    <option value="Chat">Chat</option>
                     <option value="Person to Person">Person to Person</option>
                   </select>
+                </div>
+              )}
+
+              {!rescheduleId && formData.type === "Video Call" && (
+                <div>
+                  <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-1.5 block">Google Meet Link</label>
+                  <input
+                    type="url"
+                    value={meetingLink}
+                    onChange={(e) => setMeetingLink(e.target.value)}
+                    placeholder={generatingMeetLink ? "Generating Meet link..." : "Paste or auto-generated Google Meet link"}
+                    disabled={generatingMeetLink}
+                    className="w-full border border-[#E2E8F0] rounded-xl p-3 text-[#0F172A] bg-[#F8FAFC] focus:bg-white text-xs sm:text-sm font-medium outline-none transition-all"
+                  />
                 </div>
               )}
             </div>
