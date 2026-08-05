@@ -140,14 +140,29 @@ export default function ClientDashboard() {
           recentActivities.push({
             title: `Hearing scheduled for ${h.case_title}`,
             timestamp: h.date,
+            time: h.time,
           });
         });
 
         // Latest consultations
         clientConsults.forEach((c) => {
+          let statusTitle = "Meeting Approved";
+          if (c.status) {
+            const cleanStatus = c.status.replace(/Consultation/i, "").trim();
+            if (cleanStatus.toLowerCase() === "approved" || cleanStatus.toLowerCase() === "scheduled") {
+              statusTitle = "Meeting Approved";
+            } else if (cleanStatus.toLowerCase() === "rescheduled") {
+              statusTitle = "Meeting Rescheduled";
+            } else if (cleanStatus.toLowerCase() === "pending client" || cleanStatus.toLowerCase() === "pending") {
+              statusTitle = "Meeting Requested";
+            } else {
+              statusTitle = `Meeting ${cleanStatus}`;
+            }
+          }
           recentActivities.push({
-            title: `Consultation ${c.status}`,
+            title: statusTitle,
             timestamp: c.date,
+            time: c.time,
           });
         });
 
@@ -239,17 +254,25 @@ export default function ClientDashboard() {
   const upcomingHearingsCount = hearings.length;
 
   // Format a date string nicely
-  const fmtDate = (d) => {
+  const fmtDate = (d, timeStr) => {
     if (!d) return "—";
+    let formatted = d;
     try {
-      return new Date(d).toLocaleDateString("en-IN", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      });
+      const parsed = new Date(d);
+      if (!isNaN(parsed.getTime())) {
+        formatted = parsed.toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+      }
     } catch {
-      return d;
+      formatted = d;
     }
+    if (timeStr) {
+      return `${formatted} at ${timeStr}`;
+    }
+    return formatted;
   };
 
   const hour = new Date().getHours();
@@ -531,7 +554,7 @@ export default function ClientDashboard() {
                   </div>
                   <div className="flex-1 bg-[#F8FAFC] p-3 sm:p-3.5 rounded-2xl border border-[#E2E8F0] min-w-0">
                     <span className="font-bold text-xs sm:text-sm text-[#1E293B] block break-words">{item.title}</span>
-                    <span className="text-[10.5px] text-[#64748B] mt-0.5 block">{fmtDate(item.timestamp)}</span>
+                    <span className="text-[10.5px] text-[#64748B] mt-0.5 block">{fmtDate(item.timestamp, item.time)}</span>
                   </div>
                 </div>
               ))

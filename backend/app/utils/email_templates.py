@@ -364,12 +364,12 @@ def build_consultation_email(
       </table>
     </div>
 
-    <p style="font-weight: 600; color: #0F172A;">Please confirm your availability:</p>
+    <p style="font-weight: 600; color: #0F172A; text-align: center;">Please confirm your availability or request a different slot:</p>
     <div style="margin: 20px 0; text-align: center;">
-      <a href="{frontend_url}/consultation-action?id={consultation_id}&action=approve" target="_blank" style="background: #16A34A; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block; margin-right: 10px;">
+      <a href="{frontend_url}/consultation-action?id={consultation_id}&action=approve" target="_blank" style="background: linear-gradient(135deg, #059669, #10B981); color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block; margin-right: 10px; margin-bottom: 10px;">
         ✓ Confirm Appointment
       </a>
-      <a href="{frontend_url}/consultation-action?id={consultation_id}&action=reschedule" target="_blank" style="background: #D97706; color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block;">
+      <a href="{frontend_url}/client-consultation?reschedule_id={consultation_id}" target="_blank" style="background: linear-gradient(135deg, #F59E0B, #FB923C); color: #FFFFFF; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block; margin-bottom: 10px;">
         🗓️ Request Reschedule
       </a>
     </div>

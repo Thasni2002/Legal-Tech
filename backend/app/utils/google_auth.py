@@ -30,20 +30,49 @@ def get_google_auth_flow(redirect_uri: str, state: str = None) -> Flow:
 
 def get_authorization_url(redirect_uri: str, state: str) -> str:
     """
-    Generate Google Consent Screen redirect URL.
+    Generate Google Consent Screen redirect URL manually to bypass PKCE requirements.
     We request offline access and force consent prompt to guarantee a Refresh Token is returned.
     """
-    flow = get_google_auth_flow(redirect_uri, state=state)
-    auth_url, _ = flow.authorization_url(
-        access_type='offline',
-        prompt='consent',
-        include_granted_scopes='true'
-    )
+    import urllib.parse
+    client_id = os.getenv("GOOGLE_CLIENT_ID")
+    
+    params = {
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": " ".join(SCOPES),
+        "state": state,
+        "access_type": "offline",
+        "prompt": "consent",
+        "include_granted_scopes": "true"
+    }
+    
+    auth_base_url = "https://accounts.google.com/o/oauth2/auth"
+    auth_url = f"{auth_base_url}?{urllib.parse.urlencode(params)}"
     return auth_url
 
 def get_refresh_token_from_code(redirect_uri: str, code: str) -> str:
     """Exchange authorization code for token credentials and retrieve the refresh token."""
-    flow = get_google_auth_flow(redirect_uri)
-    flow.fetch_token(code=code)
-    credentials = flow.credentials
-    return credentials.refresh_token
+    import requests
+    client_id = os.getenv("GOOGLE_CLIENT_ID")
+    client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+    
+    token_url = "https://oauth2.googleapis.com/token"
+    payload = {
+        "code": code,
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "redirect_uri": redirect_uri,
+        "grant_type": "authorization_code"
+    }
+    
+    try:
+        response = requests.post(token_url, data=payload)
+        response_data = response.json()
+        if response.status_code == 200:
+            return response_data.get("refresh_token")
+        else:
+            error_desc = response_data.get("error_description") or response_data.get("error", "Unknown error")
+            raise Exception(f"{error_desc}")
+    except Exception as e:
+        raise Exception(f"Failed to exchange code: {str(e)}")

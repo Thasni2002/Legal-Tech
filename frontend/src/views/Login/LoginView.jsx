@@ -336,7 +336,12 @@ export default function Login() {
     try {
       const res  = await fetch(`${API_BASE_URL}/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(formData) });
       const data = await res.json();
-      if (res.ok) { localStorage.setItem("token", data.access_token); router.push("/"); }
+      if (res.ok) { 
+        localStorage.setItem("token", data.access_token); 
+        const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+        const nextUrl = params ? params.get("next") : null;
+        router.push(nextUrl ? decodeURIComponent(nextUrl) : "/"); 
+      }
       else setErrors({ api: data.detail || "Invalid credentials." });
     } catch { setErrors({ api: "Connection error. Please retry." }); }
     finally { setLoading(false); }

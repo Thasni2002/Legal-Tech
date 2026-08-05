@@ -61,13 +61,12 @@ export default function ConsultationsView() {
     const [showScheduleSuccess, setShowScheduleSuccess] = useState(false);
     const [showDuplicateModal, setShowDuplicateModal] = useState(false);
     const [duplicateMessage, setDuplicateMessage] = useState("");
+    const [alertModal, setAlertModal] = useState({ show: false, title: "", message: "", type: "success" });
     const [toast, setToast] = useState({ show: false, message: "", type: "success" });
 
     const showToast = (message, type = "success") => {
-        setToast({ show: true, message, type });
-        setTimeout(() => {
-            setToast({ show: false, message: "", type: "success" });
-        }, 4000);
+        const title = type === "success" ? "Success" : type === "error" ? "Error" : "Notice";
+        setAlertModal({ show: true, title, message, type });
     };
 
     const generateMeetingLink = async (currentClient, currentDate, currentTime) => {
@@ -310,24 +309,24 @@ export default function ConsultationsView() {
 
     const handleStartConsultation = async () => {
         if (!clientName.trim()) {
-            showToast("Please enter a client name.", "warning");
+            setAlertModal({ show: true, title: "Missing Client Name", message: "Please select or enter a client name before scheduling." });
             return;
         }
         if (consultationType === "Consultation Type" || consultationType === "Meeting Type") {
-            showToast("Please select a meeting type.", "warning");
+            setAlertModal({ show: true, title: "Missing Meeting Type", message: "Please select a meeting type (Video Call, Chat, or Person to Person)." });
             return;
         }
         if (!consultationDate) {
-            showToast("Please select a date.", "warning");
+            setAlertModal({ show: true, title: "Missing Date", message: "Please select a date for the consultation." });
             return;
         }
         if (!consultationTime) {
-            showToast("Please select a time.", "warning");
+            setAlertModal({ show: true, title: "Missing Time", message: "Please select a time for the consultation." });
             return;
         }
 
         if (consultationType === "Video Call" && !meetingLink.trim()) {
-            showToast("Please enter Google Meet link.", "warning");
+            setAlertModal({ show: true, title: "Missing Meeting Link", message: "Please enter or generate a Google Meet link for the video call." });
             return;
         }
 
@@ -453,6 +452,56 @@ export default function ConsultationsView() {
                             className="w-full bg-[#0F172A] hover:bg-[#1E293B] text-white font-bold text-xs uppercase tracking-wider py-3 rounded-xl transition-colors duration-200 cursor-pointer"
                         >
                             OK, Choose a Different Time
+                        </button>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* ── Custom Alert Warning Modal ── */}
+            {alertModal.show && mounted && createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-[#0F172A]/40 backdrop-blur-sm"
+                        onClick={() => setAlertModal({ show: false, title: "", message: "", type: "success" })}
+                    />
+                    {/* Modal */}
+                    <div className="relative bg-white rounded-2xl shadow-2xl border border-[#E2E8F0] w-full max-w-md mx-4 p-6 sm:p-8 animate-in zoom-in-95 fade-in duration-200">
+                        {/* Icon */}
+                        {alertModal.type === "success" ? (
+                            <div className="w-12 h-12 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                <CheckCircle2 size={24} />
+                            </div>
+                        ) : alertModal.type === "error" ? (
+                            <div className="w-12 h-12 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                <X size={24} />
+                            </div>
+                        ) : (
+                            <div className="w-12 h-12 bg-amber-50 border border-amber-200 text-amber-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                <AlertTriangle size={24} />
+                            </div>
+                        )}
+                        {/* Title */}
+                        <h3 className="text-xl font-extrabold text-[#0F172A] text-center tracking-tight mb-2">
+                            {alertModal.title}
+                        </h3>
+                        {/* Message */}
+                        <p className="text-[#475569] text-sm text-center leading-relaxed mb-6">
+                            {alertModal.message}
+                        </p>
+                        {/* Action */}
+                        <button
+                            onClick={() => setAlertModal({ show: false, title: "", message: "", type: "success" })}
+                            className={`w-full text-white font-bold text-xs uppercase tracking-wider py-3 rounded-xl transition-colors duration-200 cursor-pointer ${
+                                alertModal.type === "success"
+                                    ? "bg-emerald-600 hover:bg-emerald-700"
+                                    : alertModal.type === "error"
+                                    ? "bg-rose-600 hover:bg-rose-700"
+                                    : "bg-amber-600 hover:bg-amber-700"
+                            }`}
+                        >
+                            Got it
                         </button>
                     </div>
                 </div>,

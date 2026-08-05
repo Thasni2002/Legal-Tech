@@ -828,14 +828,14 @@ def google_login(token: str, request: Request):
 
     base_url = os.getenv("BACKEND_URL", "http://localhost:8000")
     base_url = base_url.rstrip("/")
-    redirect_uri = f"{base_url}/google/callback"
+    redirect_uri = f"{base_url}/auth/google/callback"
     
     from app.utils.google_auth import get_authorization_url
     auth_url = get_authorization_url(redirect_uri, state=str(user_id))
     return RedirectResponse(auth_url)
 
 
-@router.get("/google/callback")
+@router.get("/auth/google/callback")
 def google_callback(code: str, state: str, db: Session = Depends(get_db)):
     """
     Google OAuth Callback endpoint.
@@ -853,7 +853,7 @@ def google_callback(code: str, state: str, db: Session = Depends(get_db)):
 
     base_url = os.getenv("BACKEND_URL", "http://localhost:8000")
     base_url = base_url.rstrip("/")
-    redirect_uri = f"{base_url}/google/callback"
+    redirect_uri = f"{base_url}/auth/google/callback"
 
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
     frontend_url = frontend_url.rstrip("/")

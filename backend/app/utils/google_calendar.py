@@ -10,7 +10,7 @@ from app.database import SessionLocal
 logger = logging.getLogger("google_calendar")
 
 def generate_mock_meet_link() -> str:
-    """Generate a realistic looking Google Meet link (e.g. https://meet.google.com/abc-defg-hij)"""
+    """Generate a realistic looking mock Google Meet link"""
     part1 = ''.join(random.choices(string.ascii_lowercase, k=3))
     part2 = ''.join(random.choices(string.ascii_lowercase, k=4))
     part3 = ''.join(random.choices(string.ascii_lowercase, k=3))
@@ -26,16 +26,23 @@ def generate_google_meet_link(client_name: str, date_str: str, time_str: str, us
     client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
     
     refresh_token = None
-    if user_id:
-        db = SessionLocal()
-        try:
+    db = SessionLocal()
+    try:
+        user = None
+        if user_id:
             user = db.query(User).filter(User.id == user_id).first()
-            if user and user.google_refresh_token:
-                refresh_token = user.google_refresh_token
-        except Exception as db_err:
-            logger.warning(f"Error querying user's refresh token from db: {db_err}")
-        finally:
-            db.close()
+        
+        # If no user is found, or the user does not have a refresh token (e.g., a Client),
+        # fall back to using the first advocate/admin who has a linked Google account.
+        if not user or not user.google_refresh_token:
+            user = db.query(User).filter(User.google_refresh_token != None, User.google_refresh_token != "").first()
+            
+        if user and user.google_refresh_token:
+            refresh_token = user.google_refresh_token
+    except Exception as db_err:
+        logger.warning(f"Error querying user's refresh token from db: {db_err}")
+    finally:
+        db.close()
 
     if not refresh_token:
         refresh_token = os.getenv("GOOGLE_REFRESH_TOKEN")
