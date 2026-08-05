@@ -1990,8 +1990,9 @@ export default function CaseDetailView({ id }) {
                       const mobile = selectedCase?.contact_number || selectedCase?.mobile || "";
                       const email = selectedCase?.email_id || selectedCase?.email || "";
                       const caseType = selectedCase?.case_type || "";
+                      const caseId = selectedCase?.id || "";
                       router.push(
-                        `/finance-management?client_name=${encodeURIComponent(clientName)}&case_no=${encodeURIComponent(caseNo)}&mobile=${encodeURIComponent(mobile)}&email=${encodeURIComponent(email)}&case_type=${encodeURIComponent(caseType)}&from_case=true`
+                        `/finance-management?client_name=${encodeURIComponent(clientName)}&case_no=${encodeURIComponent(caseNo)}&mobile=${encodeURIComponent(mobile)}&email=${encodeURIComponent(email)}&case_type=${encodeURIComponent(caseType)}&from_case=true&case_id=${encodeURIComponent(caseId)}`
                       );
                     }}
                     className="flex items-center gap-1.5 px-3.5 py-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-xl font-bold text-xs transition shadow-sm cursor-pointer"
@@ -2121,8 +2122,9 @@ export default function CaseDetailView({ id }) {
                             const mobile = selectedCase?.contact_number || selectedCase?.mobile || "";
                             const email = selectedCase?.email_id || selectedCase?.email || "";
                             const caseType = selectedCase?.case_type || "";
+                            const caseId = selectedCase?.id || "";
                             router.push(
-                              `/finance-management?client_name=${encodeURIComponent(clientName)}&case_no=${encodeURIComponent(caseNo)}&mobile=${encodeURIComponent(mobile)}&email=${encodeURIComponent(email)}&case_type=${encodeURIComponent(caseType)}&from_case=true`
+                              `/finance-management?client_name=${encodeURIComponent(clientName)}&case_no=${encodeURIComponent(caseNo)}&mobile=${encodeURIComponent(mobile)}&email=${encodeURIComponent(email)}&case_type=${encodeURIComponent(caseType)}&from_case=true&case_id=${encodeURIComponent(caseId)}`
                             );
                           }}
                           className="px-5 py-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-xl font-bold text-xs transition cursor-pointer shadow-sm"

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import {
   History, Wallet, CheckCircle2, Clock, AlertCircle,
@@ -12,9 +12,11 @@ import { jsPDF } from "jspdf";
 import InvoiceHistoryView from "./InvoiceHistoryView";
 import { usePermissions } from "@/utils/usePermissions";
 import ConfirmModal from "@/components/common/ConfirmModal";
+import { API_BASE_URL } from "@/utils/api";
 
 
 export default function CourtFeeCalView() {
+  const router = useRouter();
   const { hasPermission } = usePermissions();
   const searchParams = useSearchParams();
 
@@ -24,6 +26,7 @@ export default function CourtFeeCalView() {
   const paramEmail = searchParams ? searchParams.get("email") : null;
   const paramCaseType = searchParams ? searchParams.get("case_type") : null;
   const paramFromCase = searchParams ? searchParams.get("from_case") === "true" : false;
+  const paramCaseId = searchParams ? searchParams.get("case_id") : null;
 
   const isLockedFromCase = paramFromCase || Boolean(paramClientName && paramCaseNo);
 
@@ -84,33 +87,33 @@ export default function CourtFeeCalView() {
   // Fetch data from FastAPI backend
   const fetchInvoicesAndStats = useCallback(async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/finance/invoices");
+      const res = await fetch(`${API_BASE_URL}/finance/invoices`);
       if (res.ok) {
         const data = await res.json();
         setInvoices(data);
       }
     } catch (err) {
-      console.error("FAILED URL: http://127.0.0.1:8000/finance/invoices", err);
+      console.error("FAILED URL:", `${API_BASE_URL}/finance/invoices`, err);
     }
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/finance/stats");
+      const res = await fetch(`${API_BASE_URL}/finance/stats`);
       if (res.ok) {
         const data = await res.json();
         setStats(data);
       }
     } catch (err) {
-      console.error("FAILED URL: http://127.0.0.1:8000/finance/stats", err);
+      console.error("FAILED URL:", `${API_BASE_URL}/finance/stats`, err);
     }
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/finance/clients");
+      const res = await fetch(`${API_BASE_URL}/finance/clients`);
       if (res.ok) {
         const data = await res.json();
         setClients(data);
       }
     } catch (err) {
-      console.error("FAILED URL: http://127.0.0.1:8000/finance/clients", err);
+      console.error("FAILED URL:", `${API_BASE_URL}/finance/clients`, err);
     }
   }, []);
 
@@ -176,7 +179,7 @@ export default function CourtFeeCalView() {
         status: "Sent"
       };
 
-      const res = await fetch("http://127.0.0.1:8000/finance/invoices", {
+      const res = await fetch(`${API_BASE_URL}/finance/invoices`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -195,7 +198,7 @@ export default function CourtFeeCalView() {
           const formData = new FormData();
           formData.append("file", pdfBlob, `invoice_${savedInvoice.id}.pdf`);
 
-          const uploadRes = await fetch(`http://127.0.0.1:8000/finance/upload-invoice/${savedInvoice.id}`, {
+          const uploadRes = await fetch(`${API_BASE_URL}/finance/upload-invoice/${savedInvoice.id}`, {
             method: "POST",
             body: formData,
           });
@@ -821,8 +824,15 @@ export default function CourtFeeCalView() {
               Payment request has been sent successfully to the client.
             </p>
             <button
-              onClick={() => setShowSuccessModal(false)}
-              className="w-full bg-emerald-600 text-white font-bold py-3.5 rounded-xl hover:bg-emerald-700 active:scale-[0.98] transition-all shadow-lg shadow-emerald-600/20"
+              onClick={() => {
+                setShowSuccessModal(false);
+                if (paramFromCase && paramCaseId) {
+                  router.push(`/case-management/view/${paramCaseId}`);
+                } else if (paramFromCase) {
+                  router.push("/case-management");
+                }
+              }}
+              className="w-full bg-emerald-600 text-white font-bold py-3.5 rounded-xl hover:bg-emerald-700 active:scale-[0.98] transition-all shadow-lg shadow-emerald-600/20 cursor-pointer"
             >
               Done
             </button>

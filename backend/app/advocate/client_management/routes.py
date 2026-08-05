@@ -198,6 +198,10 @@ def update_client(client_id: str, client: ClientUpdate, db: Session = Depends(ge
         db_client.phone = client.phone
         if hasattr(db_client, 'alt_phone'):
             db_client.alt_phone = client.alt_phone
+        if hasattr(db_client, 'address'):
+            db_client.address = client.address
+        if hasattr(db_client, 'district'):
+            db_client.district = client.district
         db.commit()
         db.refresh(db_client)
         updated_any = True
@@ -216,6 +220,10 @@ def update_client(client_id: str, client: ClientUpdate, db: Session = Depends(ge
         }
         if client.alt_phone is not None:
             case_update_dict[CaseMgmtCase.alt_contact_number] = client.alt_phone
+        if client.address is not None:
+            case_update_dict[CaseMgmtCase.client_address] = client.address
+        if client.district is not None:
+            case_update_dict[CaseMgmtCase.client_district] = client.district
 
         cases_updated = db.query(CaseMgmtCase).filter(CaseMgmtCase.client_name == client.original_name).update(
             case_update_dict, synchronize_session=False
@@ -245,7 +253,9 @@ def update_client(client_id: str, client: ClientUpdate, db: Session = Depends(ge
         full_name=client.full_name,
         email=client.email,
         phone=client.phone,
-        alt_phone=client.alt_phone
+        alt_phone=client.alt_phone,
+        address=client.address,
+        district=client.district
     )
 
 

@@ -16,7 +16,8 @@ class ClientCreate(BaseModel):
     email: str
     phone: str
     alt_phone: Optional[str] = None
-
+    address: Optional[str] = None
+    district: Optional[str] = None
 
 
 class ClientUpdate(BaseModel):
@@ -25,6 +26,8 @@ class ClientUpdate(BaseModel):
     email: str
     phone: str
     alt_phone: Optional[str] = None
+    address: Optional[str] = None
+    district: Optional[str] = None
 
 class ClientResponse(BaseModel):
     id: int
@@ -33,6 +36,8 @@ class ClientResponse(BaseModel):
     email: str
     phone: str
     alt_phone: Optional[str] = None
+    address: Optional[str] = None
+    district: Optional[str] = None
 
     class Config:
         from_attributes = True

@@ -18,6 +18,8 @@ export default function ClientEdit({ onSave, onCancel }) {
     email: "",
     phone: "",
     altPhone: "",
+    address: "",
+    district: "",
   });
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -30,12 +32,14 @@ export default function ClientEdit({ onSave, onCancel }) {
 
         setFormData({
           clientId: parsed.clientId || "",
-          fullName: parsed.fullName || "",
-          email: parsed.email || "",
-          phone: parsed.phone || "",
-          altPhone: parsed.altPhone || "",
+          fullName: parsed.fullName || parsed.clientName || "",
+          email: parsed.email || parsed.emailId || "",
+          phone: parsed.phone || parsed.contactNumber || "",
+          altPhone: parsed.altPhone || parsed.altContactNumber || "",
+          address: parsed.address || parsed.clientAddress || "",
+          district: parsed.district || parsed.clientDistrict || "",
         });
-        setOriginalName(parsed.fullName || "");
+        setOriginalName(parsed.fullName || parsed.clientName || "");
       } catch (err) {
         console.error("Failed to parse client data:", err);
       }
@@ -69,6 +73,8 @@ export default function ClientEdit({ onSave, onCancel }) {
         email: formData.email,
         phone: formData.phone,
         alt_phone: formData.altPhone || null,
+        address: formData.address || null,
+        district: formData.district || null,
       };
 
       const res = await fetch(`${API_BASE_URL}/clients/${formData.clientId}`, {
@@ -121,8 +127,6 @@ export default function ClientEdit({ onSave, onCancel }) {
 
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-
-
 
           {/* Full Name */}
           <div>
@@ -190,6 +194,38 @@ export default function ClientEdit({ onSave, onCancel }) {
               maxLength={10}
               className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
               placeholder="e.g. 9123456789 (optional)"
+            />
+          </div>
+
+          {/* Client Address */}
+          <div>
+            <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">
+              Client Address
+            </label>
+
+            <input
+              type="text"
+              name="address"
+              value={formData.address || ""}
+              onChange={handleChange}
+              className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+              placeholder="Enter Street / Residential Address"
+            />
+          </div>
+
+          {/* Client District / Location */}
+          <div>
+            <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">
+              Client District / Location
+            </label>
+
+            <input
+              type="text"
+              name="district"
+              value={formData.district || ""}
+              onChange={handleChange}
+              className="w-full rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
+              placeholder="Enter District or City Location"
             />
           </div>
         </div>

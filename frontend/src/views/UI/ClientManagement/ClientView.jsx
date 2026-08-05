@@ -108,6 +108,8 @@ export default function ClientView() {
               contactNumber: matchedProfile.phoneNumber || c.contact_number || "N/A",
               altPhone: c.alt_contact_number || "",
               emailId: matchedProfile.emailAddress || c.email_id || "N/A",
+              clientAddress: c.client_address || "",
+              clientDistrict: c.client_district || "",
               profileImage: matchedProfile.profileImage || null,
               activeCases: 1,
               courtName: c.court_name || "N/A",
@@ -116,6 +118,9 @@ export default function ClientView() {
             idCounter++;
           } else {
             clientMap[name].activeCases += 1;
+            if (!clientMap[name].clientAddress && c.client_address) clientMap[name].clientAddress = c.client_address;
+            if (!clientMap[name].clientDistrict && c.client_district) clientMap[name].clientDistrict = c.client_district;
+            if (!clientMap[name].altPhone && c.alt_contact_number) clientMap[name].altPhone = c.alt_contact_number;
             if (!clientMap[name].profileImage && matchedProfile.profileImage) {
               clientMap[name].profileImage = matchedProfile.profileImage;
             }
@@ -465,6 +470,9 @@ export default function ClientView() {
                               emailId: client.emailId,
                               phone: client.contactNumber,
                               contactNumber: client.contactNumber,
+                              altPhone: client.altPhone || "",
+                              address: client.clientAddress || "",
+                              district: client.clientDistrict || "",
                               profileImage: client.profileImage || null,
                               caseStatus: client.status,
                               status: client.status,
@@ -486,7 +494,9 @@ export default function ClientView() {
                                 fullName: client.clientName,
                                 email: client.emailId,
                                 phone: client.contactNumber,
-                                altPhone: client.altPhone || ""
+                                altPhone: client.altPhone || "",
+                                address: client.clientAddress || client.address || "",
+                                district: client.clientDistrict || client.district || ""
                               }));
                               setShowEditModal(true);
                             }}
@@ -616,6 +626,9 @@ export default function ClientView() {
                                 emailId: client.emailId,
                                 phone: client.contactNumber,
                                 contactNumber: client.contactNumber,
+                                altPhone: client.altPhone || "",
+                                address: client.clientAddress || "",
+                                district: client.clientDistrict || "",
                                 profileImage: client.profileImage || null,
                                 caseStatus: client.status,
                                 status: client.status,
@@ -637,7 +650,9 @@ export default function ClientView() {
                                   fullName: client.clientName,
                                   email: client.emailId,
                                   phone: client.contactNumber,
-                                  altPhone: client.altPhone || ""
+                                  altPhone: client.altPhone || "",
+                                  address: client.clientAddress || client.address || "",
+                                  district: client.clientDistrict || client.district || ""
                                 }));
                                 setShowEditModal(true);
                               }}
