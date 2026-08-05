@@ -224,7 +224,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         { name: "Court Visit", path: "/clerk/court-visit", icon: Scale, moduleKey: "Court Visit" },
         { name: "Format Physical File", path: "/clerk/format-physical-file", icon: Folder, moduleKey: "Format Physical File" },
         { name: "Documents", path: "/clerk/documents", icon: FileText, moduleKey: "Clerk Documents" },
-       { name: "Leave", path: "/clerk/leave", icon: Calendar, moduleKey: "Clerk Leave" },
+       
       ],
     },
     {
@@ -490,9 +490,29 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
                     let name = user.username;
                     try {
                       const userKey = (user.email || user.username || "").toLowerCase().trim();
+                      const uEmail = (user.email || "").toLowerCase().trim();
+                      const uName = (user.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                      const uFull = `${user.firstName || ""} ${user.lastName || ""}`.toLowerCase().replace(/[^a-z0-9]/g, "");
+
                       const savedUserLocal = typeof window !== "undefined" && userKey ? localStorage.getItem(`advocate_profile_${userKey}`) : null;
-                      const savedGlobal = typeof window !== "undefined" ? localStorage.getItem("advocate_profile") : null;
-                      const savedProfile = savedUserLocal || savedGlobal;
+                      let savedProfile = null;
+                      if (savedUserLocal) {
+                        savedProfile = savedUserLocal;
+                      } else if (typeof window !== "undefined") {
+                        const savedGlobal = localStorage.getItem("advocate_profile");
+                        if (savedGlobal) {
+                          const parsed = JSON.parse(savedGlobal);
+                          const pEmail = (parsed.emailAddress || parsed.email_address || "").toLowerCase().trim();
+                          const pName = (parsed.advocateName || parsed.advocate_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                          if (
+                            (uEmail && pEmail && pEmail === uEmail) ||
+                            (uName && pName && (pName === uName || uName.includes(pName))) ||
+                            (uFull && pName && (pName === uFull || uFull.includes(pName)))
+                          ) {
+                            savedProfile = savedGlobal;
+                          }
+                        }
+                      }
                       if (savedProfile) {
                         const parsed = JSON.parse(savedProfile);
                         if (parsed.advocateName || parsed.advocate_name) {

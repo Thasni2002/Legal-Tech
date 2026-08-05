@@ -20,7 +20,9 @@ export default function ClientDashboard() {
 
   useEffect(() => {
     const user = getLoggedInUser();
-    const name = user?.username || user?.name || "";
+    const username = user?.username || user?.name || "";
+    const userFullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim();
+    const displayName = userFullName || user?.name || user?.username || "";
 
     const safeFetch = async (url) => {
       try {
@@ -34,18 +36,18 @@ export default function ClientDashboard() {
     };
 
     const fetchAll = async () => {
-      setUserName(name);
+      setUserName(displayName);
       try {
         const [casesData, consultData, invoicesData, advocatesData] = await Promise.all([
           safeFetch(`${BASE_URL}/case-management/`),
           safeFetch(`${BASE_URL}/consultations`),
-          safeFetch(`${BASE_URL}/finance/invoices${name ? `?client_name=${encodeURIComponent(name)}` : ""}`),
+          safeFetch(`${BASE_URL}/finance/invoices${username ? `?client_name=${encodeURIComponent(username)}` : ""}`),
           safeFetch(`${BASE_URL}/lawfirm-management/`),
         ]);
 
         setInvoices(invoicesData);
 
-        // Filter cases for this client by email or client_name matching username
+        // Filter cases for this client by email or client_name matching username/fullname
         const clientCases = Array.isArray(casesData)
           ? (user
             ? casesData.filter((c) => {
@@ -57,7 +59,8 @@ export default function ClientDashboard() {
               if (c.client_name) {
                 const normalizedName = c.client_name.toLowerCase().replace(/[^a-z0-9]/g, "");
                 const normalizedUsername = (user.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-                if (normalizedName === normalizedUsername) {
+                const normalizedFull = userFullName.toLowerCase().replace(/[^a-z0-9]/g, "");
+                if (normalizedName === normalizedUsername || (normalizedFull && normalizedName === normalizedFull)) {
                   return true;
                 }
               }
@@ -83,13 +86,14 @@ export default function ClientDashboard() {
         setHearings(clientHearings);
 
         // Filter consultations for this client by client_name
-        const clientConsults = name
+        const clientConsults = (username || userFullName)
           ? consultData.filter((c) => {
             const normalized = (c.client_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-            const normalizedUser = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const normalizedUser = (user.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            const normalizedFull = userFullName.toLowerCase().replace(/[^a-z0-9]/g, "");
             return (
-              normalized.includes(normalizedUser) ||
-              normalizedUser.includes(normalized)
+              (normalizedUser && normalized.includes(normalizedUser)) ||
+              (normalizedFull && normalized.includes(normalizedFull))
             );
           })
           : consultData;
@@ -142,9 +146,9 @@ export default function ClientDashboard() {
         // Show top 4
         setActivities(recentActivities.slice(0, 4));
 
-        // Derive unique assigned advocate names across cases and hearings
+        // Derive unique assigned advocate names across cases (primary & secondary) and hearings
         const advocateNamesInCases = clientCases
-          .map((c) => c.selected_advocate)
+          .flatMap((c) => [c.selected_advocate, c.secondary_advocate_name, c.secondaryAdvocateName])
           .filter((name) => name && name !== "—" && name !== "");
 
         const advocateNamesInHearings = clientHearings
@@ -156,10 +160,29 @@ export default function ClientDashboard() {
         );
 
         const advocatesList = uniqueAdvocateNames.map((name) => {
+          const normSearch = name.toLowerCase().replace(/[^a-z0-9]/g, "");
           const matchedAdvocate = Array.isArray(advocatesData)
-            ? advocatesData.find(
-              (adv) => (adv.advocate_name || adv.advocateName || "").toLowerCase().trim() === name.toLowerCase().trim()
-            )
+            ? advocatesData.find((adv) => {
+                const advName = (adv.advocate_name || adv.advocateName || "").toLowerCase().trim();
+                const advNormName = advName.replace(/[^a-z0-9]/g, "");
+                const advEmail = (adv.email_address || adv.emailAddress || "").toLowerCase().trim();
+                const advNormEmail = advEmail.replace(/[^a-z0-9]/g, "");
+
+                if (!normSearch) return false;
+
+                // 1. Exact name match
+                if (advName === name.toLowerCase().trim()) return true;
+
+                // 2. Email match
+                if (advEmail && (advEmail === name.toLowerCase().trim() || (advNormEmail && advNormEmail.includes(normSearch)))) return true;
+
+                // 3. Substring / normalized match (e.g., "ashfahashraf" matching "Adv. ashfah ashraf")
+                if (advNormName && (advNormName === normSearch || advNormName.includes(normSearch) || normSearch.includes(advNormName))) {
+                  return true;
+                }
+
+                return false;
+              })
             : null;
 
           if (matchedAdvocate) {
@@ -167,7 +190,7 @@ export default function ClientDashboard() {
               name: matchedAdvocate.advocate_name || matchedAdvocate.advocateName || name,
               phone: matchedAdvocate.phone_number || matchedAdvocate.phoneNumber || "—",
               email: matchedAdvocate.email_address || matchedAdvocate.emailAddress || "—",
-              specialization: matchedAdvocate.specialization || "—",
+              specialization: matchedAdvocate.specialization || matchedAdvocate.practice_court || matchedAdvocate.practiceCourt || "—",
             };
           } else {
             return {
