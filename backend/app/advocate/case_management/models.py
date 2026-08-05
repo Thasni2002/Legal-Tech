@@ -1,5 +1,5 @@
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.mysql import LONGTEXT, LONGBLOB
 from app.database import Base
@@ -34,6 +34,15 @@ class Case(Base):
     selected_advocate = Column(String(255), nullable=True)
     documents = Column(LONGTEXT, nullable=True)
     next_hearing_date = Column(String(100), nullable=True)
+
+    # ── Confidential Vault Fields ──────────────────────────────────────────
+    # Only set when a Senior Advocate marks the case as confidential.
+    # is_confidential=True hides the case from ALL other users at DB level.
+    is_confidential           = Column(Boolean, default=False, nullable=False)
+    confidential_password_hash = Column(String(255), nullable=True)  # bcrypt hash
+    confidential_owner_id     = Column(Integer, ForeignKey("users.id"), nullable=True)
+    needs_password_reset      = Column(Boolean, default=False, nullable=False)
+    # ─────────────────────────────────────────────────────────────────────
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

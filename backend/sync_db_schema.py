@@ -13,6 +13,7 @@ import app.advocate.consultations.models
 import app.advocate.case_management.models
 import app.advocate.client_management.models
 import app.advocate.leave_management.models
+import app.advocate.confidential_vault.models   # NEW: vault audit log table
 
 
 def get_sql_type(column):

@@ -31,8 +31,12 @@ import {
   EyeOff,
   LayoutGrid,
   List,
+  Lock,          // ← Vault lock badge
+  ShieldCheck,   // ← Vault unlocked badge
 } from "lucide-react";
+import { getAuthHeaders } from "@/utils/auth";
 import { usePermissions } from "@/utils/usePermissions";
+import { isVaultUnlocked } from "@/utils/vaultSession";
 
 // Helper to get status badge styling and icon
 function getStatusBadgeStyle(status) {
@@ -155,10 +159,14 @@ export default function CaseView() {
     }
   };
 
+  const isSeniorAdvocate = (user?.role || "").toLowerCase().includes("senior");
+
   const fetchCases = async () => {
     try {
-      // 1. Fetch cases
-      const response = await fetch(`${API_BASE_URL}/case-management/`);
+      // Pass auth token so backend can apply confidential-case filter by owner
+      const response = await fetch(`${API_BASE_URL}/case-management/`, {
+        headers: getAuthHeaders(),
+      });
       const data = await response.json();
       const rawCases = Array.isArray(data)
         ? data
@@ -218,14 +226,19 @@ export default function CaseView() {
   const handleDelete = async (id) => {
     setDeleteLoading(true);
     try {
-      await fetch(`${API_BASE_URL}/case-management/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/case-management/${id}`, {
         method: "DELETE",
+        headers: getAuthHeaders(),
       });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => null);
+        throw new Error(errData?.detail || "Failed to delete case");
+      }
       await fetchCases();
       setDeleteConfirm(null);
     } catch (error) {
-      console.error(error);
-      alert("Failed to delete the case. Please try again.");
+      console.error("Delete case error:", error);
+      alert("Failed to delete case: " + (error?.message || "Please try again."));
     } finally {
       setDeleteLoading(false);
     }
@@ -233,6 +246,15 @@ export default function CaseView() {
 
   const filteredCases = cases.filter((item) => {
     const term = searchTerm.toLowerCase();
+    const isMasked = Boolean(item.is_confidential);
+
+    if (isMasked) {
+      return (
+        item.case_id?.toLowerCase().includes(term) ||
+        "confidential".includes(term)
+      );
+    }
+
     return (
       item.case_title?.toLowerCase().includes(term) ||
       item.case_no?.toLowerCase().includes(term) ||
@@ -371,68 +393,90 @@ export default function CaseView() {
           <div className="p-5 bg-[#F8FAFC]/50">
             {filteredCases.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredCases.slice(casesPage * 6, (casesPage + 1) * 6).map((item) => (
-                  <div
-                    key={item.id}
-                    className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-xs hover:shadow-md hover:border-blue-300 transition-all flex flex-col justify-between space-y-4"
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="text-xs font-mono font-bold text-[#2563EB] bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
-                            {item.case_id}
-                          </span>
-                          {item.case_no && (
-                            <span className="text-[11px] font-semibold text-[#334155] bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                              {item.case_no}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <StatusBadge status={item.status} />
-                          {item.isAssigned && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200" title={`Assigned to ${item.assignedTo || 'Advocate'}`}>
-                              <UserCheck size={11} /> Assigned
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                {filteredCases.slice(casesPage * 6, (casesPage + 1) * 6).map((item) => {
+                  const isConfidential = Boolean(item.is_confidential);
+                  const isMasked = isConfidential;
 
-                      <div>
-                        <h3 className="font-bold text-[#0F172A] text-base leading-snug line-clamp-2" title={item.case_title}>
-                          {item.case_title}
-                        </h3>
-                        <p className="text-xs text-[#94A3B8] mt-1 font-medium">
-                          {item.case_type && item.case_type.includes(": ")
-                            ? item.case_type.replace(": ", " · ")
-                            : item.case_type}
-                        </p>
-                      </div>
+                  const displayTitle = isMasked ? "••••••••••••••••" : item.case_title;
+                  const displayCaseNo = isMasked ? "••••/••••" : item.case_no;
+                  const displayType = isMasked
+                    ? "Confidential Case"
+                    : (item.case_type && item.case_type.includes(": ")
+                      ? item.case_type.replace(": ", " · ")
+                      : item.case_type);
+                  const displayClient = isMasked ? "••••••••" : (item.client_name || "—");
+                  const displayCourt = isMasked ? "••••••••" : (item.court_name || "Unassigned");
 
-                      <div className="space-y-2 text-xs text-[#64748B] bg-[#F8FAFC] p-3 rounded-xl border border-[#E2E8F0]/60">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-semibold text-[#94A3B8]">Client:</span>
-                          <div className="text-right truncate max-w-[160px]">
-                            <span className="font-bold text-[#0F172A]">{item.client_name || "—"}</span>
-                            {item.client_role && (
-                              <span className="ml-1 text-[10px] font-bold text-[#2563EB]">({item.client_role})</span>
+                  return (
+                    <div
+                      key={item.id}
+                      className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-xs hover:shadow-md hover:border-blue-300 transition-all flex flex-col justify-between space-y-4"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-xs font-mono font-bold text-[#2563EB] bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
+                              {item.case_id}
+                            </span>
+                            {item.case_no && (
+                              <span className="text-[11px] font-semibold text-[#334155] bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                {displayCaseNo}
+                              </span>
+                            )}
+                            {/* ── CONFIDENTIAL VAULT BADGE ── */}
+                            {isConfidential && (
+                              <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider select-none bg-purple-50 text-purple-700 border border-purple-200"
+                                title="Confidential Case — Password Required"
+                              >
+                                <Lock size={9} />
+                                Confidential
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <StatusBadge status={item.status} />
+                            {item.isAssigned && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200" title={`Assigned to ${item.assignedTo || 'Advocate'}`}>
+                                <UserCheck size={11} /> Assigned
+                              </span>
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-semibold text-[#94A3B8]">Court:</span>
-                          <span className="font-semibold text-[#475569] truncate max-w-[160px]" title={item.court_name}>
-                            {item.court_name || "Unassigned"}
-                          </span>
+
+                        <div>
+                          <h3 className="font-bold text-[#0F172A] text-base leading-snug line-clamp-2" title={isMasked ? "Confidential Case" : item.case_title}>
+                            {displayTitle}
+                          </h3>
+                          <p className="text-xs text-[#94A3B8] mt-1 font-medium">
+                            {displayType}
+                          </p>
                         </div>
-                        {item.isAssigned && item.assignedTo && (
-                          <div className="flex items-center justify-between pt-1 border-t border-[#E2E8F0]/40">
-                            <span className="text-[11px] font-semibold text-purple-600">Assigned To:</span>
-                            <span className="font-bold text-purple-900 truncate max-w-[160px]">{item.assignedTo}</span>
+
+                        <div className="space-y-2 text-xs text-[#64748B] bg-[#F8FAFC] p-3 rounded-xl border border-[#E2E8F0]/60">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-semibold text-[#94A3B8]">Client:</span>
+                            <div className="text-right truncate max-w-[160px]">
+                              <span className="font-bold text-[#0F172A]">{displayClient}</span>
+                              {!isMasked && item.client_role && (
+                                <span className="ml-1 text-[10px] font-bold text-[#2563EB]">({item.client_role})</span>
+                              )}
+                            </div>
                           </div>
-                        )}
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-semibold text-[#94A3B8]">Court:</span>
+                            <span className="font-semibold text-[#475569] truncate max-w-[160px]" title={isMasked ? "Confidential Court" : item.court_name}>
+                              {displayCourt}
+                            </span>
+                          </div>
+                          {item.isAssigned && item.assignedTo && (
+                            <div className="flex items-center justify-between pt-1 border-t border-[#E2E8F0]/40">
+                              <span className="text-[11px] font-semibold text-purple-600">Assigned To:</span>
+                              <span className="font-bold text-purple-900 truncate max-w-[160px]">{isMasked ? "••••••••" : item.assignedTo}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
                     <div className="flex items-center gap-2 pt-3 border-t border-[#F1F5F9]">
                       <button
@@ -465,7 +509,8 @@ export default function CaseView() {
                       )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="py-16 text-center">
@@ -494,85 +539,109 @@ export default function CaseView() {
                 </thead>
                 <tbody className="divide-y divide-[#F8FAFC]">
                   {filteredCases.length > 0 ? (
-                    filteredCases.slice(casesPage * 5, (casesPage + 1) * 5).map((item) => (
-                      <tr
-                        key={item.id}
-                        className="hover:bg-[#F8FAFC] transition-colors duration-150 group"
-                      >
-                        <td className="px-5 py-4">
-                          <p className="text-sm font-semibold text-[#0F172A] max-w-[220px] truncate">{item.case_title}</p>
-                          <p className="text-xs text-[#94A3B8] mt-0.5">
-                            {item.case_type && item.case_type.includes(": ")
-                              ? item.case_type.replace(": ", " · ")
-                              : item.case_type}
-                          </p>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="flex flex-col gap-1">
-                            <span className="text-xs font-mono font-bold text-[#2563EB] bg-blue-50 px-2.5 py-1 rounded-lg w-fit">
-                              {item.case_id}
-                            </span>
-                            {item.case_no && (
-                              <span className="text-xs font-semibold text-[#334155] bg-slate-100 px-2 py-0.5 rounded w-fit border border-slate-200">
-                                {item.case_no}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-5 py-4">
-                          <p className="text-sm text-[#0F172A] font-semibold">{item.client_name}</p>
-                          {item.client_role ? (
-                            <span className="inline-block mt-1 text-[11px] font-bold text-[#2563EB] bg-blue-50/80 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-wider">
-                              {item.client_role}
-                            </span>
-                          ) : null}
-                        </td>
-                        <td className="px-5 py-4 text-sm text-[#475569]">{item.court_name}</td>
-                        <td className="px-5 py-4">
-                          <div className="flex flex-col gap-1 items-start">
-                            <StatusBadge status={item.status} />
-                            {item.isAssigned && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200" title={`Assigned to ${item.assignedTo || 'Advocate'}`}>
-                                <UserCheck size={10} /> Assigned
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => router.push(`/case-management/view/${item.id}`)}
-                              title="View Case"
-                              className="p-2 rounded-lg bg-blue-50 text-[#2563EB] hover:bg-blue-100 transition cursor-pointer"
-                            >
-                              <Eye size={15} />
-                            </button>
-                            {(() => {
-                              const brief = getSavedBrief(item.id);
-                              if (!brief) return null;
-                              return (
-                                <button
-                                  onClick={() => setViewBriefModal(brief)}
-                                  title="View Downloaded AI Summary"
-                                  className="p-2 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition cursor-pointer border border-emerald-200"
+                    filteredCases.slice(casesPage * 5, (casesPage + 1) * 5).map((item) => {
+                      const isConfidential = Boolean(item.is_confidential);
+                      const isMasked = isConfidential;
+
+                      const displayTitle = isMasked ? "••••••••••••••••" : item.case_title;
+                      const displayCaseNo = isMasked ? "••••/••••" : item.case_no;
+                      const displayType = isMasked
+                        ? "Confidential Case"
+                        : (item.case_type && item.case_type.includes(": ")
+                          ? item.case_type.replace(": ", " · ")
+                          : item.case_type);
+                      const displayClient = isMasked ? "••••••••" : (item.client_name || "—");
+                      const displayCourt = isMasked ? "••••••••" : (item.court_name || "Unassigned");
+
+                      return (
+                        <tr
+                          key={item.id}
+                          className="hover:bg-[#F8FAFC] transition-colors duration-150 group"
+                        >
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-sm font-semibold text-[#0F172A] max-w-[220px] truncate" title={isMasked ? "Confidential Case" : item.case_title}>{displayTitle}</p>
+                              {/* Confidential badge */}
+                              {isConfidential && (
+                                <span
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shrink-0 bg-purple-50 text-purple-700 border border-purple-200"
+                                  title="Confidential Case — Password Required"
                                 >
-                                  <FileText size={15} />
-                                </button>
-                              );
-                            })()}
-                            {hasPermission("Case Management", "delete") && (
+                                  <Lock size={8} /> Confidential
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-[#94A3B8] mt-0.5">
+                              {displayType}
+                            </p>
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="flex flex-col gap-1">
+                              <span className="text-xs font-mono font-bold text-[#2563EB] bg-blue-50 px-2.5 py-1 rounded-lg w-fit">
+                                {item.case_id}
+                              </span>
+                              {item.case_no && (
+                                <span className="text-xs font-semibold text-[#334155] bg-slate-100 px-2 py-0.5 rounded w-fit border border-slate-200">
+                                  {displayCaseNo}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-5 py-4">
+                            <p className="text-sm text-[#0F172A] font-semibold">{displayClient}</p>
+                            {!isMasked && item.client_role ? (
+                              <span className="inline-block mt-1 text-[11px] font-bold text-[#2563EB] bg-blue-50/80 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-wider">
+                                {item.client_role}
+                              </span>
+                            ) : null}
+                          </td>
+                          <td className="px-5 py-4 text-sm text-[#475569]">{displayCourt}</td>
+                          <td className="px-5 py-4">
+                            <div className="flex flex-col gap-1 items-start">
+                              <StatusBadge status={item.status} />
+                              {item.isAssigned && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200" title={`Assigned to ${item.assignedTo || 'Advocate'}`}>
+                                  <UserCheck size={10} /> Assigned
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-2">
                               <button
-                                onClick={() => setDeleteConfirm(item.id)}
-                                title="Delete Case"
-                                className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition cursor-pointer"
+                                onClick={() => router.push(`/case-management/view/${item.id}`)}
+                                title="View Case"
+                                className="p-2 rounded-lg bg-blue-50 text-[#2563EB] hover:bg-blue-100 transition cursor-pointer"
                               >
-                                <Trash2 size={15} />
+                                <Eye size={15} />
                               </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                              {(() => {
+                                const brief = getSavedBrief(item.id);
+                                if (!brief) return null;
+                                return (
+                                  <button
+                                    onClick={() => setViewBriefModal(brief)}
+                                    title="View Downloaded AI Summary"
+                                    className="p-2 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition cursor-pointer border border-emerald-200"
+                                  >
+                                    <FileText size={15} />
+                                  </button>
+                                );
+                              })()}
+                              {hasPermission("Case Management", "delete") && (
+                                <button
+                                  onClick={() => setDeleteConfirm(item.id)}
+                                  title="Delete Case"
+                                  className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition cursor-pointer"
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
                       <td colSpan="6" className="px-5 py-16 text-center">
@@ -593,44 +662,61 @@ export default function CaseView() {
             {/* Mobile Card List View (sm and below) */}
             <div className="block md:hidden divide-y divide-[#F1F5F9]">
               {filteredCases.length > 0 ? (
-                filteredCases.slice(casesPage * 5, (casesPage + 1) * 5).map((item) => (
-                  <div key={item.id} className="p-4 flex flex-col gap-3 hover:bg-slate-50/60 transition">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h3 className="font-bold text-sm text-[#0F172A] line-clamp-1">{item.case_title}</h3>
-                        <p className="text-xs text-[#94A3B8] mt-0.5">
-                          {item.case_type && item.case_type.includes(": ")
-                            ? item.case_type.replace(": ", " · ")
-                            : item.case_type}
-                        </p>
+                filteredCases.slice(casesPage * 5, (casesPage + 1) * 5).map((item) => {
+                  const isConfidential = Boolean(item.is_confidential);
+                  const isMasked = isConfidential;
+
+                  const displayTitle = isMasked ? "••••••••••••••••" : item.case_title;
+                  const displayCaseNo = isMasked ? "••••/••••" : item.case_no;
+                  const displayType = isMasked
+                    ? "Confidential Case"
+                    : (item.case_type && item.case_type.includes(": ")
+                      ? item.case_type.replace(": ", " · ")
+                      : item.case_type);
+                  const displayClient = isMasked ? "••••••••" : (item.client_name || "—");
+                  const displayCourt = isMasked ? "••••••••" : (item.court_name || "—");
+
+                  return (
+                    <div key={item.id} className="p-4 flex flex-col gap-3 hover:bg-slate-50/60 transition">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h3 className="font-bold text-sm text-[#0F172A] line-clamp-1">{displayTitle}</h3>
+                          <p className="text-xs text-[#94A3B8] mt-0.5">
+                            {displayType}
+                          </p>
+                        </div>
+                        <StatusBadge status={item.status} />
                       </div>
-                      <StatusBadge status={item.status} />
-                    </div>
 
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <span className="font-mono font-bold text-[#2563EB] bg-blue-50 px-2 py-0.5 rounded-md">
-                        {item.case_id}
-                      </span>
-                      {item.case_no && (
-                        <span className="font-semibold text-[#334155] bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                          {item.case_no}
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <span className="font-mono font-bold text-[#2563EB] bg-blue-50 px-2 py-0.5 rounded-md">
+                          {item.case_id}
                         </span>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 text-xs">
-                      <div>
-                        <span className="text-[#94A3B8] block text-[10px] uppercase font-bold">Client</span>
-                        <span className="font-semibold text-[#0F172A]">{item.client_name || "—"}</span>
-                        {item.client_role && (
-                          <span className="ml-1 text-[10px] font-bold text-[#2563EB]">({item.client_role})</span>
+                        {item.case_no && (
+                          <span className="font-semibold text-[#334155] bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                            {displayCaseNo}
+                          </span>
+                        )}
+                        {isConfidential && (
+                          <span className="font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                            Confidential
+                          </span>
                         )}
                       </div>
-                      <div>
-                        <span className="text-[#94A3B8] block text-[10px] uppercase font-bold">Court</span>
-                        <span className="font-medium text-[#475569] line-clamp-1">{item.court_name || "—"}</span>
+
+                      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 text-xs">
+                        <div>
+                          <span className="text-[#94A3B8] block text-[10px] uppercase font-bold">Client</span>
+                          <span className="font-semibold text-[#0F172A]">{displayClient}</span>
+                          {!isMasked && item.client_role && (
+                            <span className="ml-1 text-[10px] font-bold text-[#2563EB]">({item.client_role})</span>
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-[#94A3B8] block text-[10px] uppercase font-bold">Court</span>
+                          <span className="font-medium text-[#475569] line-clamp-1">{displayCourt}</span>
+                        </div>
                       </div>
-                    </div>
 
                     <div className="flex items-center justify-end gap-2 pt-2">
                       <button
@@ -661,8 +747,9 @@ export default function CaseView() {
                       )}
                     </div>
                   </div>
-                ))
-              ) : (
+                );
+              })
+            ) : (
                 <div className="p-8 text-center">
                   <div className="w-12 h-12 rounded-2xl bg-[#F1F5F9] flex items-center justify-center mx-auto mb-3">
                     <Scale size={20} className="text-[#CBD5E1]" />

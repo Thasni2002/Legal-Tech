@@ -494,6 +494,17 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
     nextHearingDate: "",
   });
 
+  // ── Confidential Vault state (Senior Advocate & Admin) ────────────────────
+  const currentUser = getLoggedInUser();
+  const userRole = (currentUser?.role || "").toLowerCase();
+  const canManageVault = userRole.includes("senior") || userRole.includes("admin");
+  const [isConfidential, setIsConfidential] = useState(false);
+  const [casePassword, setCasePassword]     = useState("");
+  const [casePasswordConfirm, setCasePasswordConfirm] = useState("");
+  const [showCasePwd, setShowCasePwd]       = useState(false);
+  const [vaultError, setVaultError]         = useState("");
+  // ─────────────────────────────────────────────────────────────────────
+
   const [loadingEdit, setLoadingEdit] = useState(false);
   const [ecourtsLoading, setEcourtsLoading] = useState(false);
   const [ecourtsError, setEcourtsError] = useState("");
@@ -1449,7 +1460,24 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
 
         documents: processedDocs,
         nextHearingDate: formData.nextHearingDate || null,
+
+        // Confidential Vault (only included when toggled ON by Senior Advocate)
+        isConfidential: isConfidential,
+        casePassword: isConfidential ? casePassword : null,
       };
+
+      // Client-side vault validation before sending
+      if (isConfidential) {
+        if (!casePassword || casePassword.length < 6) {
+          setVaultError("Case password must be at least 6 characters.");
+          return;
+        }
+        if (casePassword !== casePasswordConfirm) {
+          setVaultError("Case passwords do not match.");
+          return;
+        }
+        setVaultError("");
+      }
 
       const url = isEditMode
         ? `${API_BASE_URL}/case-management/${editId}`
@@ -1461,6 +1489,11 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
         method,
         headers: {
           "Content-Type": "application/json",
+          // Include auth token so backend can verify Senior Advocate role for confidential cases
+          ...(() => {
+            const t = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+            return t ? { Authorization: `Bearer ${t}` } : {};
+          })()
         },
         body: JSON.stringify(payload),
       });
@@ -2361,6 +2394,84 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
             ))}
           </div>
 
+          {/* ═══════════════════════════════════════════════════════════
+              CONFIDENTIAL CASE VAULT — Senior Advocates & Admins
+          ═══════════════════════════════════════════════════════════ */}
+          {canManageVault && !isEditMode && (
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{
+                background: isConfidential ? "linear-gradient(145deg,#0f172a,#1e1b4b)" : "linear-gradient(145deg,#f8fafc,#f1f5f9)",
+                border: isConfidential ? "1px solid rgba(139,92,246,0.35)" : "1px solid #e2e8f0",
+                transition: "all 0.3s ease",
+              }}
+            >
+              <div className="flex items-center justify-between px-5 py-4 cursor-pointer select-none"
+                onClick={() => { setIsConfidential(v => !v); setCasePassword(""); setCasePasswordConfirm(""); setVaultError(""); }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+                    style={{ background: isConfidential ? "linear-gradient(135deg,#4f46e5,#7c3aed)" : "#e2e8f0", boxShadow: isConfidential ? "0 0 16px rgba(139,92,246,0.4)" : "none" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isConfidential ? "#fff" : "#64748b"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p className={`text-sm font-bold transition-colors ${isConfidential ? "text-white" : "text-[#0f172a]"}`}>Mark as Confidential Case</p>
+                    <p className={`text-xs transition-colors ${isConfidential ? "text-purple-300" : "text-[#64748b]"}`}>Only you can see this case. Password-protected vault.</p>
+                  </div>
+                </div>
+                <div className="relative w-12 h-6 rounded-full transition-all duration-300"
+                  style={{ background: isConfidential ? "linear-gradient(135deg,#4f46e5,#7c3aed)" : "#cbd5e1" }}>
+                  <div className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-300"
+                    style={{ left: isConfidential ? "calc(100% - 22px)" : "2px" }} />
+                </div>
+              </div>
+              {isConfidential && (
+                <div className="px-5 pb-5 space-y-4" style={{ borderTop: "1px solid rgba(139,92,246,0.15)" }}>
+                  <p className="text-xs text-purple-300 mt-4">Set a strong password to protect this case. You will need it every time you open the case.</p>
+                  {vaultError && (
+                    <div className="p-3 rounded-xl text-red-300 text-xs"
+                      style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)" }}>{vaultError}</div>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-2">Case Password *</label>
+                      <div className="relative">
+                        <input type={showCasePwd ? "text" : "password"} value={casePassword}
+                          onChange={e => { setCasePassword(e.target.value); setVaultError(""); }}
+                          placeholder="Min. 6 characters" required={isConfidential}
+                          className="w-full pl-4 pr-10 py-3 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none"
+                          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(139,92,246,0.35)" }} />
+                        <button type="button" onClick={() => setShowCasePwd(s => !s)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-purple-300 cursor-pointer">
+                          {showCasePwd
+                            ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                            : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-2">Confirm Password *</label>
+                      <input type="password" value={casePasswordConfirm}
+                        onChange={e => { setCasePasswordConfirm(e.target.value); setVaultError(""); }}
+                        placeholder="Repeat password" required={isConfidential}
+                        className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none"
+                        style={{ background: "rgba(255,255,255,0.05)", border: casePasswordConfirm && casePassword !== casePasswordConfirm ? "1px solid rgba(239,68,68,0.5)" : "1px solid rgba(139,92,246,0.35)" }} />
+                      {casePasswordConfirm && casePassword !== casePasswordConfirm && (
+                        <p className="text-red-400 text-xs mt-1">Passwords do not match</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2 p-3 rounded-xl"
+                    style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)" }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" className="mt-0.5 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <p className="text-purple-300 text-xs">This case will be completely hidden from all other users including other Senior Advocates, Junior Advocates, Clerks, and Clients. All access attempts are logged in a secure audit trail.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Submit Buttons */}
           <div className="flex justify-end gap-3 pt-4 border-t border-[#F1F5F9]">
             <button
@@ -2374,7 +2485,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
               type="submit"
               className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-8 py-3.5 rounded-lg font-medium text-sm shadow-sm transition-all duration-200 cursor-pointer"
             >
-              {isEditMode ? "Update Case" : "Save Case File"}
+              {isEditMode ? "Update Case" : isConfidential ? "🔐 Save Confidential Case" : "Save Case File"}
             </button>
           </div>
         </form>
