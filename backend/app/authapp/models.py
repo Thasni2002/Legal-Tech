@@ -17,3 +17,12 @@ class User(Base):
     document_access = Column(JSON, nullable=True, default=list)
     google_refresh_token = Column(String(500), nullable=True)
 
+
+class UserNotificationRead(Base):
+    __tablename__ = "user_notification_reads"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True)
+    notification_id = Column(String(255), index=True)
+
+

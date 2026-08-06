@@ -288,9 +288,9 @@ export default function KanbanBoard({ tasks = [], onOpenTask, onStatusChange, cu
                   <p>Drop tasks here</p>
                 </div>
               ) : (
-                tasksByCol[col.key].map((task) => (
+                tasksByCol[col.key].map((task, idx) => (
                   <TaskCard
-                    key={task.id}
+                    key={task.id ? `task-${col.key}-${task.id}-${idx}` : `task-idx-${col.key}-${idx}`}
                     task={task}
                     colKey={col.key}
                     onOpen={onOpenTask}

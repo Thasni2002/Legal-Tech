@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+import os
+import shutil
+from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, Header, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import Optional
 from jose import jwt, JWTError
@@ -253,6 +256,34 @@ def list_messages(
     return svc.get_task_messages_with_read_status(db, task)
 
 
+@router.post("/upload-attachment")
+async def upload_task_attachment(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """Upload any file attachment from system for task messages."""
+    upload_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))),
+        "uploads",
+        "task_attachments",
+    )
+    if not os.path.exists(upload_dir):
+        os.makedirs(upload_dir, exist_ok=True)
+
+    safe_filename = f"{int(datetime.utcnow().timestamp())}_{file.filename.replace(' ', '_')}"
+    file_path = os.path.join(upload_dir, safe_filename)
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    file_url = f"/uploads/task_attachments/{safe_filename}"
+    return {
+        "file_url": file_url,
+        "file_name": file.filename,
+        "file_type": file.content_type or file.filename.split(".")[-1],
+    }
+
+
 @router.post("/{task_id}/messages")
 async def post_message(
     task_id: int,
@@ -291,6 +322,9 @@ async def post_message(
         "sender_role": msg.sender_role,
         "message": msg.message,
         "message_type": msg.message_type,
+        "file_url": msg.file_url,
+        "file_name": msg.file_name,
+        "file_type": msg.file_type,
         "created_at": f"{msg.created_at.isoformat()}Z" if msg.created_at else None,
     }
 

@@ -216,7 +216,7 @@ def build_task_assignment_email(
     </div>
 
     <div style="text-align: center; margin: 28px 0;">
-      <a href="http://localhost:3000/dashboard" target="_blank" style="background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 15px; padding: 12px 28px; border-radius: 8px; display: inline-block;">
+      <a href="http://localhost:3000/assigned-tasks" target="_blank" style="background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 15px; padding: 12px 28px; border-radius: 8px; display: inline-block;">
         View Task Board &rarr;
       </a>
     </div>
@@ -240,7 +240,7 @@ def build_task_status_email(task_title: str, changed_by: str, new_status_label: 
     </div>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="http://localhost:3000/dashboard" target="_blank" style="background: #0F172A; color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 14px; padding: 10px 22px; border-radius: 8px; display: inline-block;">
+      <a href="http://localhost:3000/assigned-tasks" target="_blank" style="background: #0F172A; color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 14px; padding: 10px 22px; border-radius: 8px; display: inline-block;">
         Open Dashboard &rarr;
       </a>
     </div>
@@ -262,7 +262,7 @@ def build_task_message_email(task_title: str, sender_name: str, message_text: st
     </blockquote>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="http://localhost:3000/dashboard" target="_blank" style="background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 14px; padding: 10px 22px; border-radius: 8px; display: inline-block;">
+      <a href="http://localhost:3000/assigned-tasks" target="_blank" style="background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 14px; padding: 10px 22px; border-radius: 8px; display: inline-block;">
         Reply on Task Board &rarr;
       </a>
     </div>
@@ -301,7 +301,7 @@ def build_document_review_email(junior_name: str, doc_title: str, case_title: st
     </div>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="http://localhost:3000/dashboard" target="_blank" style="background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 14px; padding: 12px 24px; border-radius: 8px; display: inline-block;">
+      <a href="http://localhost:3000/assigned-tasks" target="_blank" style="background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 14px; padding: 12px 24px; border-radius: 8px; display: inline-block;">
         View Document Details &rarr;
       </a>
     </div>

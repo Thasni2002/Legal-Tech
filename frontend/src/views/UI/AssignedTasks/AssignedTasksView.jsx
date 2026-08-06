@@ -232,10 +232,7 @@ export default function AssignedTasksView({ isJuniorView = false }) {
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-3 sm:p-5 md:p-8 w-full max-w-full min-w-0 overflow-x-hidden">
       {/* ─── Hero / Page Header ─── */}
-      <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-6 md:p-7 relative overflow-hidden shadow-xs mb-4 sm:mb-6 w-full max-w-full min-w-0">
-        {/* Decorative background accent */}
-        <div className="absolute -top-16 -right-16 w-52 h-52 rounded-full bg-blue-600/5 pointer-events-none" />
-
+      <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-6 md:p-7 relative shadow-xs mb-4 sm:mb-6 w-full max-w-full min-w-0">
         <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full min-w-0">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3 min-w-0">

@@ -21,6 +21,11 @@ import {
   Pin,
   Check,
   CheckCheck,
+  Paperclip,
+  File,
+  Download,
+  Mic,
+  Square,
 } from "lucide-react";
 import { API_BASE_URL } from "@/utils/api";
 import { getLoggedInUser } from "@/utils/auth";
@@ -30,14 +35,6 @@ const STATUS_CONFIG = {
   progress: { label: "In Progress", color: "#2563EB", bg: "#EFF6FF" },
   review: { label: "Under Review", color: "#D97706", bg: "#FFFBEB" },
   completed: { label: "Completed", color: "#16A34A", bg: "#F0FDF4" },
-};
-
-const MESSAGE_TYPE_CONFIG = {
-  general: { label: "Message", color: "#64748B", icon: MessageSquare },
-  progress: { label: "Progress Update", color: "#2563EB", icon: Clock },
-  review: { label: "Review Request", color: "#D97706", icon: Eye },
-  completed: { label: "Completed", color: "#16A34A", icon: CheckCircle2 },
-  todo: { label: "Todo Update", color: "#64748B", icon: Tag },
 };
 
 const PRIORITY_CONFIG = {
@@ -56,12 +53,55 @@ function formatTime(dateStr) {
   const d = new Date(str);
   if (isNaN(d.getTime())) return dateStr;
   return d.toLocaleString("en-IN", {
-    day: "numeric",
-    month: "short",
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
   });
+}
+
+function formatDateDivider(dateStr) {
+  if (!dateStr) return "";
+  let str = String(dateStr);
+  if (!str.endsWith("Z") && !str.includes("+") && !str.includes("Z")) {
+    str += "Z";
+  }
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return "";
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const msgDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+  if (msgDate.getTime() === today.getTime()) {
+    return "Today";
+  }
+  if (msgDate.getTime() === yesterday.getTime()) {
+    return "Yesterday";
+  }
+
+  const diffDays = Math.floor((today.getTime() - msgDate.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays > 0 && diffDays < 7) {
+    return d.toLocaleDateString("en-IN", { weekday: "long" });
+  }
+
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+function getMsgDateKey(dateStr) {
+  if (!dateStr) return "";
+  let str = String(dateStr);
+  if (!str.endsWith("Z") && !str.includes("+") && !str.includes("Z")) {
+    str += "Z";
+  }
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
 
 export default function TaskDetailsModal({ task: initialTask, onClose, onStatusChange, isSenior, onEdit, perms, onDelete, onPinToggle, onReadMessages }) {
@@ -79,13 +119,131 @@ export default function TaskDetailsModal({ task: initialTask, onClose, onStatusC
 
   const [messages, setMessages] = useState(initialTask?.messages || []);
   const [newMessage, setNewMessage] = useState("");
-  const [messageType, setMessageType] = useState("general");
+  const [attachedFile, setAttachedFile] = useState(null); // { file_url, file_name, file_type }
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
   const [sending, setSending] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [changingStatus, setChangingStatus] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
   const chatEndRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach((track) => track.stop());
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        if (audioBlob.size > 0) {
+          await uploadVoiceNote(audioBlob);
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Microphone access error:", err);
+      alert("Microphone access is required to record voice notes.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      clearInterval(recordingTimerRef.current);
+    }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      audioChunksRef.current = [];
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      clearInterval(recordingTimerRef.current);
+    }
+  };
+
+  const uploadVoiceNote = async (audioBlob) => {
+    const token = localStorage.getItem("token");
+    setUploadingFile(true);
+    try {
+      const formData = new FormData();
+      const fileName = `Voice_Note_${Date.now()}.webm`;
+      formData.append("file", audioBlob, fileName);
+
+      const res = await fetch(`${API_BASE_URL}/advocate/tasks/upload-attachment`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAttachedFile({
+          file_url: data.file_url,
+          file_name: `Voice Note (${recordingTime}s)`,
+          file_type: "audio/webm",
+        });
+      }
+    } catch (err) {
+      console.error("Error uploading voice note:", err);
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const formatDuration = (secs) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const token = localStorage.getItem("token");
+    setUploadingFile(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch(`${API_BASE_URL}/advocate/tasks/upload-attachment`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAttachedFile(data);
+      }
+    } catch (err) {
+      console.error("Error uploading attachment:", err);
+    } finally {
+      setUploadingFile(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const handleDeleteClick = () => {
     setShowDeleteConfirm(true);
@@ -155,22 +313,31 @@ export default function TaskDetailsModal({ task: initialTask, onClose, onStatusC
   };
 
   const handleSend = async () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() && !attachedFile) return;
     const token = localStorage.getItem("token");
     setSending(true);
     try {
+      const payload = {
+        message: newMessage.trim() || (attachedFile ? `Attached file: ${attachedFile.file_name}` : ""),
+        message_type: "general",
+        file_url: attachedFile?.file_url || null,
+        file_name: attachedFile?.file_name || null,
+        file_type: attachedFile?.file_type || null,
+      };
+
       const res = await fetch(`${API_BASE_URL}/advocate/tasks/${task.id}/messages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ message: newMessage.trim(), message_type: messageType }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         const msg = await res.json();
         setMessages((prev) => [...prev, msg]);
         setNewMessage("");
+        setAttachedFile(null);
       }
     } catch (e) {
       console.error("Error sending message:", e);
@@ -518,85 +685,178 @@ export default function TaskDetailsModal({ task: initialTask, onClose, onStatusC
                   <p style={{ margin: 0, fontSize: "13px" }}>No messages yet. Start the conversation!</p>
                 </div>
               ) : (
-                messages.map((msg) => {
+                messages.map((msg, index) => {
                   const mine = isOwnMessage(msg);
-                  const typeConfig = MESSAGE_TYPE_CONFIG[msg.message_type] || MESSAGE_TYPE_CONFIG.general;
-                  const TypeIcon = typeConfig.icon;
+                  const dateKey = getMsgDateKey(msg.created_at);
+                  const prevDateKey = index > 0 ? getMsgDateKey(messages[index - 1].created_at) : null;
+                  const showDateDivider = index === 0 || dateKey !== prevDateKey;
+                  const dateDividerLabel = showDateDivider ? formatDateDivider(msg.created_at) : "";
+
                   return (
-                    <div
-                      key={msg.id}
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: mine ? "flex-end" : "flex-start",
-                      }}
-                    >
-                      {/* Sender header */}
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-                        <img
-                          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(msg.sender_name || "U")}&background=${mine ? "2563EB" : "D97706"}&color=fff&size=40&rounded=true&bold=true`}
-                          alt={msg.sender_name}
-                          style={{ width: "20px", height: "20px", borderRadius: "50%", order: mine ? 2 : 0 }}
-                        />
-                        <span style={{ fontSize: "11px", color: "#94A3B8", fontWeight: 500 }}>
-                          {mine ? "You" : (msg.sender_name || "Advocate")}
-                        </span>
-                      </div>
-
-                      {/* Bubble */}
-                      <div style={{
-                        maxWidth: "80%",
-                        background: mine ? "linear-gradient(135deg,#2563EB,#1d4ed8)" : "#F1F5F9",
-                        color: mine ? "#fff" : "#1E293B",
-                        borderRadius: mine ? "16px 4px 16px 16px" : "4px 16px 16px 16px",
-                        padding: "10px 14px",
-                        fontSize: "13px",
-                        lineHeight: 1.55,
-                      }}>
-                        {/* Message type tag */}
-                        {msg.message_type && msg.message_type !== "general" && (
-                          <div style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "4px",
-                            marginBottom: "5px",
-                            opacity: 0.85,
-                          }}>
-                            <TypeIcon size={10} />
-                            <span style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                              {typeConfig.label}
-                            </span>
-                          </div>
-                        )}
-                        <div>{msg.message}</div>
-
-                        {/* Bottom timestamp + read ticks */}
+                    <React.Fragment key={msg.id ? `msg-frag-${msg.id}-${index}` : `msg-frag-idx-${index}`}>
+                      {showDateDivider && dateDividerLabel && (
                         <div style={{
                           display: "flex",
                           alignItems: "center",
-                          justifyContent: "flex-end",
-                          gap: "4px",
-                          marginTop: "6px",
-                          fontSize: "10px",
-                          color: mine ? "rgba(255,255,255,0.8)" : "#94A3B8",
-                          fontWeight: 500,
+                          justifyContent: "center",
+                          margin: "12px 0 8px",
                         }}>
-                          <span>{formatTime(msg.created_at)}</span>
-                          {mine && (
-                            <span
-                              style={{ display: "inline-flex", alignItems: "center" }}
-                              title={msg.is_read ? "Seen by recipient" : "Sent"}
-                            >
-                              {msg.is_read ? (
-                                <CheckCheck size={13} className="text-sky-300 stroke-[2.5]" />
-                              ) : (
-                                <Check size={13} className="text-white/70 stroke-[2.5]" />
-                              )}
-                            </span>
+                          <span style={{
+                            background: "#1E293B",
+                            color: "#F8FAFC",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            padding: "3px 12px",
+                            borderRadius: "12px",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+                            letterSpacing: "0.02em",
+                          }}>
+                            {dateDividerLabel}
+                          </span>
+                        </div>
+                      )}
+
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: mine ? "flex-end" : "flex-start",
+                        }}
+                      >
+                        {/* Sender header */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                          <img
+                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(msg.sender_name || "U")}&background=${mine ? "2563EB" : "D97706"}&color=fff&size=40&rounded=true&bold=true`}
+                            alt={msg.sender_name}
+                            style={{ width: "20px", height: "20px", borderRadius: "50%", order: mine ? 2 : 0 }}
+                          />
+                          <span style={{ fontSize: "11px", color: "#94A3B8", fontWeight: 500 }}>
+                            {mine ? "You" : (msg.sender_name || "Advocate")}
+                          </span>
+                        </div>
+
+                        {/* Bubble */}
+                        <div style={{
+                          maxWidth: "80%",
+                          background: mine ? "linear-gradient(135deg,#2563EB,#1d4ed8)" : "#F1F5F9",
+                          color: mine ? "#fff" : "#1E293B",
+                          borderRadius: mine ? "16px 4px 16px 16px" : "4px 16px 16px 16px",
+                          padding: "10px 14px",
+                          fontSize: "13px",
+                          lineHeight: 1.55,
+                        }}>
+                          <div>{msg.message}</div>
+
+                          {/* File Attachment / Voice Note Renderer */}
+                          {msg.file_url && (
+                            <div style={{ marginTop: "6px", marginBottom: "4px" }}>
+                              {(() => {
+                                const fullUrl = msg.file_url.startsWith("http")
+                                  ? msg.file_url
+                                  : `${API_BASE_URL.replace(/\/api\/?$/, "")}${msg.file_url}`;
+                                const ext = (msg.file_name || msg.file_url).split(".").pop()?.toLowerCase();
+                                const isImg = ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext);
+                                const isAudio = ["mp3", "wav", "webm", "ogg", "m4a"].includes(ext) || (msg.file_type && msg.file_type.includes("audio"));
+
+                                if (isAudio) {
+                                  return (
+                                    <div style={{ marginTop: "4px", minWidth: "220px" }}>
+                                      <audio
+                                        controls
+                                        src={fullUrl}
+                                        style={{
+                                          width: "100%",
+                                          height: "36px",
+                                          borderRadius: "8px",
+                                          outline: "none",
+                                        }}
+                                      />
+                                      <div style={{ fontSize: "10.5px", opacity: 0.85, marginTop: "2px", display: "flex", alignItems: "center", gap: "4px" }}>
+                                        <span>{msg.file_name || "Voice Note"}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+
+                                if (isImg) {
+                                  return (
+                                    <a href={fullUrl} target="_blank" rel="noopener noreferrer" style={{ display: "block" }}>
+                                      <img
+                                        src={fullUrl}
+                                        alt={msg.file_name || "Attachment"}
+                                        style={{
+                                          maxHeight: "160px",
+                                          maxWidth: "100%",
+                                          borderRadius: "8px",
+                                          objectFit: "cover",
+                                          border: "1px solid rgba(255,255,255,0.2)",
+                                          marginTop: "4px",
+                                        }}
+                                      />
+                                    </a>
+                                  );
+                                }
+
+                                return (
+                                  <a
+                                    href={fullUrl}
+                                    target="_blank"
+                                    download={msg.file_name || true}
+                                    rel="noopener noreferrer"
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "6px",
+                                      padding: "7px 10px",
+                                      borderRadius: "8px",
+                                      background: mine ? "rgba(255,255,255,0.18)" : "#E2E8F0",
+                                      color: mine ? "#fff" : "#1E293B",
+                                      textDecoration: "none",
+                                      fontSize: "12px",
+                                      fontWeight: 600,
+                                      maxWidth: "100%",
+                                      marginTop: "4px",
+                                    }}
+                                  >
+                                    <Paperclip size={14} style={{ flexShrink: 0 }} />
+                                    <span style={{ flex: 1, minWidth: 0, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+                                      {msg.file_name || "Attachment"}
+                                    </span>
+                                    <Download size={13} style={{ flexShrink: 0, marginLeft: "4px" }} />
+                                  </a>
+                                );
+                              })()}
+                            </div>
                           )}
+
+                          {/* Bottom timestamp + read ticks */}
+                          <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "flex-end",
+                            gap: "4px",
+                            marginTop: "6px",
+                            fontSize: "10px",
+                            color: mine ? "rgba(255,255,255,0.8)" : "#94A3B8",
+                            fontWeight: 500,
+                          }}>
+                            <span>{formatTime(msg.created_at)}</span>
+                            {mine && (
+                              <span
+                                style={{ display: "inline-flex", alignItems: "center" }}
+                                title={msg.is_read ? "Seen by recipient" : "Sent"}
+                              >
+                                {msg.is_read ? (
+                                  <CheckCheck size={13} className="text-sky-300 stroke-[2.5]" />
+                                ) : (
+                                  <Check size={13} className="text-white/70 stroke-[2.5]" />
+                                )}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </React.Fragment>
                   );
                 })
               )}
@@ -609,74 +869,183 @@ export default function TaskDetailsModal({ task: initialTask, onClose, onStatusC
               borderTop: "1.5px solid #F1F5F9",
               background: "#FAFBFC",
             }}>
-              {/* Message type selector */}
-              <div style={{ display: "flex", gap: "6px", marginBottom: "8px", flexWrap: "wrap" }}>
-                {Object.entries(MESSAGE_TYPE_CONFIG).map(([key, conf]) => {
-                  const Icon = conf.icon;
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => setMessageType(key)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        padding: "3px 10px",
-                        borderRadius: "20px",
-                        border: `1.5px solid ${messageType === key ? conf.color : "#E2E8F0"}`,
-                        background: messageType === key ? conf.color : "#fff",
-                        color: messageType === key ? "#fff" : "#64748B",
-                        fontSize: "10.5px",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        transition: "all 0.15s",
-                      }}
-                    >
-                      <Icon size={10} />
-                      {conf.label}
-                    </button>
-                  );
-                })}
-              </div>
+              {/* Hidden file input */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                accept="*/*"
+                style={{ display: "none" }}
+              />
+
+              {/* Attachment Badge Preview */}
+              {attachedFile && (
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: "#EFF6FF",
+                  border: "1px solid #BFDBFE",
+                  padding: "6px 12px",
+                  borderRadius: "8px",
+                  marginBottom: "8px",
+                  fontSize: "12px",
+                  color: "#1E40AF",
+                  fontWeight: 600,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", overflow: "hidden" }}>
+                    <Paperclip size={14} />
+                    <span style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+                      {attachedFile.file_name}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setAttachedFile(null)}
+                    style={{ background: "none", border: "none", color: "#1E40AF", cursor: "pointer", padding: "2px" }}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
 
               <div style={{ display: "flex", gap: "8px", alignItems: "flex-end" }}>
-                <textarea
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }}
-                  rows={2}
-                  placeholder="Type a progress update, message... (Enter to send)"
+                {/* File Attachment Button */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingFile || isRecording}
+                  title="Attach file from system (All Formats Supported)"
                   style={{
-                    flex: 1,
-                    padding: "10px 13px",
-                    border: "1.5px solid #E2E8F0",
+                    padding: "10px",
                     borderRadius: "10px",
-                    fontSize: "13px",
-                    color: "#0F172A",
+                    border: "1.5px solid #E2E8F0",
                     background: "#fff",
-                    outline: "none",
-                    resize: "none",
-                    lineHeight: 1.4,
-                    transition: "border-color 0.2s",
+                    color: "#64748B",
+                    cursor: (uploadingFile || isRecording) ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = "#2563EB")}
-                  onBlur={(e) => (e.target.style.borderColor = "#E2E8F0")}
-                />
+                >
+                  {uploadingFile ? <Loader2 size={18} className="animate-spin text-blue-600" /> : <Paperclip size={18} />}
+                </button>
+
+                {/* Voice Recorder Button */}
+                <button
+                  type="button"
+                  onClick={isRecording ? stopRecording : startRecording}
+                  disabled={uploadingFile}
+                  title={isRecording ? "Stop Recording" : "Record Voice Note"}
+                  style={{
+                    padding: "10px",
+                    borderRadius: "10px",
+                    border: `1.5px solid ${isRecording ? "#EF4444" : "#E2E8F0"}`,
+                    background: isRecording ? "#FEF2F2" : "#fff",
+                    color: isRecording ? "#DC2626" : "#2563EB",
+                    cursor: uploadingFile ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {isRecording ? <Square size={18} fill="#DC2626" /> : <Mic size={18} />}
+                </button>
+
+                {/* Text Input / Recording Indicator */}
+                {isRecording ? (
+                  <div style={{
+                    flex: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "10px 14px",
+                    background: "#FEF2F2",
+                    border: "1.5px solid #FCA5A5",
+                    borderRadius: "10px",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse inline-block" />
+                      <span style={{ fontSize: "13px", fontWeight: 700, color: "#991B1B" }}>
+                        Recording... ({formatDuration(recordingTime)})
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <button
+                        type="button"
+                        onClick={cancelRecording}
+                        style={{
+                          padding: "4px 8px",
+                          borderRadius: "6px",
+                          border: "1px solid #FCA5A5",
+                          background: "#fff",
+                          color: "#991B1B",
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={stopRecording}
+                        style={{
+                          padding: "4px 10px",
+                          borderRadius: "6px",
+                          border: "none",
+                          background: "#DC2626",
+                          color: "#fff",
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        Done
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <textarea
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
+                    rows={2}
+                    placeholder="Type a message, attach file, or record voice note..."
+                    style={{
+                      flex: 1,
+                      padding: "10px 13px",
+                      border: "1.5px solid #E2E8F0",
+                      borderRadius: "10px",
+                      fontSize: "13px",
+                      color: "#0F172A",
+                      background: "#fff",
+                      outline: "none",
+                      resize: "none",
+                      lineHeight: 1.4,
+                      transition: "border-color 0.2s",
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = "#2563EB")}
+                    onBlur={(e) => (e.target.style.borderColor = "#E2E8F0")}
+                  />
+                )}
                 <button
                   onClick={handleSend}
-                  disabled={sending || !newMessage.trim()}
+                  disabled={sending || (!newMessage.trim() && !attachedFile)}
                   style={{
                     padding: "10px 16px",
                     borderRadius: "10px",
                     border: "none",
-                    background: (sending || !newMessage.trim()) ? "#CBD5E1" : "linear-gradient(135deg,#2563EB,#1d4ed8)",
+                    background: (sending || (!newMessage.trim() && !attachedFile)) ? "#CBD5E1" : "linear-gradient(135deg,#2563EB,#1d4ed8)",
                     color: "#fff",
-                    cursor: (sending || !newMessage.trim()) ? "not-allowed" : "pointer",
+                    cursor: (sending || (!newMessage.trim() && !attachedFile)) ? "not-allowed" : "pointer",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",

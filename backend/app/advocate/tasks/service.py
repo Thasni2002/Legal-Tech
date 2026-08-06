@@ -125,6 +125,9 @@ def add_task_message(
         sender_role=sender_role,
         message=data.message,
         message_type=data.message_type or "general",
+        file_url=getattr(data, "file_url", None),
+        file_name=getattr(data, "file_name", None),
+        file_type=getattr(data, "file_type", None),
     )
     db.add(msg)
     db.commit()
@@ -191,6 +194,9 @@ def get_task_messages_with_read_status(db: Session, task: Task) -> List[dict]:
             "sender_role": m.sender_role,
             "message": m.message,
             "message_type": m.message_type,
+            "file_url": m.file_url,
+            "file_name": m.file_name,
+            "file_type": m.file_type,
             "created_at": f"{m.created_at.isoformat()}Z" if m.created_at else None,
             "is_read": is_read,
         })
