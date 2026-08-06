@@ -72,8 +72,21 @@ export default function AssignedTasksView({ isJuniorView = false }) {
   useEffect(() => {
     if (perms?.view) {
       fetchTasks();
+      const interval = setInterval(() => {
+        fetchTasks(true);
+      }, 20000);
+      return () => clearInterval(interval);
     }
   }, [fetchTasks, perms?.view]);
+
+  const handleReadMessages = (taskId) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, unread_count: 0 } : t))
+    );
+    if (selectedTask && selectedTask.id === taskId) {
+      setSelectedTask((prev) => (prev ? { ...prev, unread_count: 0 } : null));
+    }
+  };
 
   // Filtered tasks
   const filteredTasks = tasks.filter((t) => {
@@ -405,6 +418,7 @@ export default function AssignedTasksView({ isJuniorView = false }) {
           perms={perms}
           onDelete={handleDeleteTask}
           onPinToggle={handlePinToggle}
+          onReadMessages={handleReadMessages}
         />
       )}
     </div>

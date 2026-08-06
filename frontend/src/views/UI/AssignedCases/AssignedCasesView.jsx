@@ -13,6 +13,8 @@ import {
   List,
   Search,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import useModulePermission from "@/utils/useModulePermission";
 import { getLoggedInUser } from "@/utils/auth";
@@ -83,6 +85,8 @@ const getStatusBadgeClass = (status) => {
   }
 };
 
+const ITEMS_PER_PAGE = 8;
+
 export default function AssignedCasesView() {
   const router = useRouter();
   const { perms, loading } = useModulePermission("Assigned Cases");
@@ -95,6 +99,9 @@ export default function AssignedCasesView() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [viewBriefModal, setViewBriefModal] = useState(null);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+
   const user = getLoggedInUser();
   const isJuniorAdvocate =
     user && user.role && user.role.toLowerCase().includes("junior");
@@ -102,6 +109,10 @@ export default function AssignedCasesView() {
   useEffect(() => {
     fetchAssignedCases();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
 
   const fetchAssignedCases = async () => {
     try {
@@ -149,24 +160,32 @@ export default function AssignedCasesView() {
         });
       }
 
-      const formattedCases = casesToShow.map((item) => ({
-        id: item.id,
-        caseId: item.case_id,
-        caseIdCode: item.case_id_code || item.case_number || (item.case_id ? `CASE-#${item.case_id}` : `#${item.id}`),
-        title: item.case_title || item.title || item.caseTitle || "Assigned Case",
-        caseNo: item.case_number || item.caseNo || "N/A",
-        client: item.client_name || item.client || "N/A",
-        court: item.practice_court || item.practice_area || item.court || "N/A",
-        hearing: item.due_date || item.next_hearing_date || "No hearing date",
-        status: item.status || "Active",
-        documents: item.assigned_documents || item.documents || [],
-        appearances: item.appearances || [],
-        notes: item.assignment_notes || item.notes || "",
-        primaryAdvocate: item.advocate_name || "",
-        secondaryAdvocate: item.secondaryAdvocateName || item.secondary_advocate_name || "",
-        secondary_advocate_name: item.secondaryAdvocateName || item.secondary_advocate_name || "",
-        advocate_name: item.advocate_name || "",
-      }));
+      const formattedCases = casesToShow.map((item) => {
+        const rawTitle = item.case_name || item.case_title || item.title || item.caseTitle || item.name || "Assigned Case";
+        const isConfidential = isJuniorAdvocate && isSensitiveCase(item);
+        const displayTitle = isConfidential ? "Confidential Case (Restricted)" : rawTitle;
+
+        return {
+          id: item.id,
+          caseId: item.case_id,
+          caseIdCode: item.case_id_code || item.case_number || (item.case_id ? `CASE-#${item.case_id}` : `#${item.id}`),
+          title: displayTitle,
+          rawTitle: rawTitle,
+          caseNo: item.case_number || item.caseNo || "N/A",
+          client: isConfidential ? "Confidential (Restricted)" : (item.client_name || item.client || "N/A"),
+          court: item.practice_court || item.practice_area || item.court || "N/A",
+          hearing: item.due_date || item.next_hearing_date || "No hearing date",
+          status: item.status || "Active",
+          documents: item.assigned_documents || item.documents || [],
+          appearances: item.appearances || [],
+          notes: item.assignment_notes || item.notes || "",
+          primaryAdvocate: item.advocate_name || "",
+          secondaryAdvocate: item.secondaryAdvocateName || item.secondary_advocate_name || "",
+          secondary_advocate_name: item.secondaryAdvocateName || item.secondary_advocate_name || "",
+          advocate_name: item.advocate_name || "",
+          isConfidential: isConfidential,
+        };
+      });
 
       setCases(formattedCases);
     } catch (error) {
@@ -255,6 +274,14 @@ export default function AssignedCasesView() {
     return matchesSearch && matchesStatus;
   });
 
+  // Pagination calculations (8 items per page)
+  const totalPages = Math.ceil(filteredCases.length / ITEMS_PER_PAGE) || 1;
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedCases = filteredCases.slice(
+    (safeCurrentPage - 1) * ITEMS_PER_PAGE,
+    safeCurrentPage * ITEMS_PER_PAGE
+  );
+
   // No view access
   if (!loading && !perms.view) {
     return (
@@ -319,8 +346,8 @@ export default function AssignedCasesView() {
       </div>
 
       {/* Cases Section (Grid vs List) */}
-      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden w-full max-w-full min-w-0">
-        <div className="p-3.5 sm:p-5 border-b border-[#E2E8F0] flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4 w-full max-w-full min-w-0">
+      <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden w-full max-w-full min-w-0 p-4 sm:p-6">
+        <div className="pb-4 border-b border-[#E2E8F0] flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4 w-full max-w-full min-w-0">
           <h2 className="text-base sm:text-lg font-bold text-[#0F172A] whitespace-nowrap">My Assigned Cases</h2>
           
           <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3 w-full lg:w-auto min-w-0">
@@ -384,10 +411,10 @@ export default function AssignedCasesView() {
 
         {/* GRID VIEW */}
         {viewMode === "grid" && (
-          <div className="p-3 sm:p-5 bg-[#F8FAFC]/50 w-full min-w-0">
-            {filteredCases.length > 0 ? (
+          <div className="py-4 bg-[#F8FAFC]/50 w-full min-w-0">
+            {paginatedCases.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 w-full min-w-0">
-                {filteredCases.map((item, index) => (
+                {paginatedCases.map((item, index) => (
                   <div
                     key={index}
                     className="bg-white rounded-2xl border border-[#E2E8F0] p-3.5 sm:p-4 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition-all space-y-3.5 min-w-0"
@@ -489,11 +516,11 @@ export default function AssignedCasesView() {
 
         {/* LIST VIEW */}
         {viewMode === "list" && (
-          <div className="w-full max-w-full min-w-0">
+          <div className="w-full max-w-full min-w-0 py-3">
             {/* Mobile Card List (Visible on phones < 640px) */}
             <div className="block sm:hidden divide-y divide-[#F1F5F9] w-full min-w-0">
-              {filteredCases.length > 0 ? (
-                filteredCases.map((item, index) => (
+              {paginatedCases.length > 0 ? (
+                paginatedCases.map((item, index) => (
                   <div key={index} className="p-3.5 space-y-2.5 w-full min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-mono font-extrabold border border-blue-200">
@@ -572,48 +599,48 @@ export default function AssignedCasesView() {
             </div>
 
             {/* Desktop / Tablet Table View (Visible on >= 640px) */}
-            <div className="hidden sm:block w-full max-w-full overflow-x-auto min-w-0">
-              <table className="w-full min-w-[620px] text-left border-collapse">
-                <thead>
-                  <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-                    <th className="px-4 sm:px-5 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">Case ID</th>
-                    <th className="px-4 sm:px-5 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">Client</th>
-                    <th className="px-4 sm:px-5 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">Court</th>
-                    <th className="px-4 sm:px-5 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">Next Hearing</th>
-                    <th className="px-4 sm:px-5 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">Status</th>
-                    <th className="px-4 sm:px-5 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">Actions</th>
+            <div className="hidden sm:block w-full overflow-x-auto rounded-2xl border border-[#E2E8F0] min-w-0">
+              <table className="w-full min-w-[700px] table-fixed divide-y divide-[#E2E8F0] text-left">
+                <thead className="bg-[#F8FAFC]">
+                  <tr>
+                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[26%]">Case ID</th>
+                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[15%]">Client</th>
+                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[18%]">Court</th>
+                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[14%]">Next Hearing</th>
+                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[10%]">Status</th>
+                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[17%] text-center">Actions</th>
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-[#E2E8F0]">
-                  {filteredCases.length > 0 ? (
-                    filteredCases.map((item, index) => (
+                <tbody className="divide-y divide-[#E2E8F0] bg-white">
+                  {paginatedCases.length > 0 ? (
+                    paginatedCases.map((item, index) => (
                       <tr key={index} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="px-4 sm:px-5 py-3.5">
+                        <td className="px-3 sm:px-4 py-3.5">
                           <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-mono font-extrabold border border-blue-200 block w-fit mb-1">
                             {item.caseIdCode}
                           </span>
-                          <span className="font-bold text-[#0F172A] text-xs leading-snug block max-w-xs truncate">
+                          <span className="font-bold text-[#0F172A] text-xs leading-snug block break-words">
                             {item.title || "Assigned Case"}
                           </span>
                         </td>
-                        <td className="px-4 sm:px-5 py-3.5 text-xs text-[#475569] font-medium max-w-[150px] truncate">
+                        <td className="px-3 sm:px-4 py-3.5 text-xs text-[#475569] font-medium break-words leading-snug">
                           {isJuniorAdvocate && isSensitiveCase(item) ? "Confidential" : item.client}
                         </td>
-                        <td className="px-4 sm:px-5 py-3.5 text-xs text-[#475569] font-medium max-w-[150px] truncate">
+                        <td className="px-3 sm:px-4 py-3.5 text-xs text-[#475569] font-medium break-words leading-snug">
                           {item.court}
                         </td>
-                        <td className="px-4 sm:px-5 py-3.5 text-xs font-bold text-[#2563EB]">
+                        <td className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#2563EB] whitespace-nowrap">
                           {item.hearing}
                         </td>
-                        <td className="px-4 sm:px-5 py-3.5">
+                        <td className="px-3 sm:px-4 py-3.5 whitespace-nowrap">
                           <span className={`px-2.5 py-1 rounded-full text-xs uppercase tracking-wider inline-block ${getStatusBadgeClass(item.status)}`}>
                             {item.status === "Won" ? "🏆 Won" : item.status === "Lost" ? "❌ Lost" : item.status}
                           </span>
                         </td>
 
-                        <td className="px-4 sm:px-5 py-3.5">
-                          <div className="flex gap-2 items-center">
+                        <td className="px-3 sm:px-4 py-3.5 text-center whitespace-nowrap">
+                          <div className="flex gap-2 items-center justify-center">
                             {(() => {
                               try {
                                 const targetId = item.caseId || item.case_id || item.id;
@@ -671,6 +698,18 @@ export default function AssignedCasesView() {
               </table>
             </div>
           </div>
+        )}
+
+        {/* 8-Item Pagination Bar matching standard design */}
+        {filteredCases.length > 0 && (
+          <TablePagination
+            currentPage={safeCurrentPage}
+            totalPages={totalPages}
+            totalEntries={filteredCases.length}
+            pageSize={ITEMS_PER_PAGE}
+            onPageChange={(page) => setCurrentPage(page)}
+            itemLabel="entries"
+          />
         )}
       </div>
 
@@ -767,6 +806,80 @@ export default function AssignedCasesView() {
           </div>
         </div>
       , document.body)}
+    </div>
+  );
+}
+
+function TablePagination({ currentPage, totalPages, totalEntries, pageSize, onPageChange, itemLabel = "entries" }) {
+  const startEntry = totalEntries > 0 ? (currentPage - 1) * pageSize + 1 : 0;
+  const endEntry = Math.min(currentPage * pageSize, totalEntries);
+
+  const pages = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    if (currentPage <= 4) {
+      pages.push(1, 2, 3, 4, 5, "...", totalPages);
+    } else if (currentPage >= totalPages - 3) {
+      pages.push(1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+    } else {
+      pages.push(1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages);
+    }
+  }
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 pt-4 sm:pt-5 mt-4 border-t border-slate-100 w-full min-w-0">
+      <p className="text-xs sm:text-sm text-slate-500 font-medium text-center sm:text-left">
+        Showing <strong className="font-bold text-slate-800">{startEntry}</strong> to{" "}
+        <strong className="font-bold text-slate-800">{endEntry}</strong> of{" "}
+        <strong className="font-bold text-slate-800">{totalEntries}</strong> {itemLabel}
+      </p>
+
+      <div className="flex items-center justify-center flex-wrap gap-1.5 sm:gap-2">
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage <= 1}
+          className="flex items-center gap-1 px-3 py-1.5 sm:px-3.5 rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer shrink-0 active:scale-95"
+        >
+          <ChevronLeft size={13} />
+          <span>Prev</span>
+        </button>
+
+        <div className="flex items-center gap-1 flex-wrap justify-center">
+          {pages.map((p, idx) => {
+            if (p === "...") {
+              return (
+                <span key={`dots-${idx}`} className="px-1 text-xs font-medium text-slate-400">
+                  ...
+                </span>
+              );
+            }
+            const isCurrent = p === currentPage;
+            return (
+              <button
+                key={p}
+                onClick={() => onPageChange(p)}
+                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center justify-center active:scale-95 ${
+                  isCurrent
+                    ? "bg-[#2563EB] text-white shadow-xs"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                }`}
+              >
+                {p}
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage >= totalPages}
+          className="flex items-center gap-1 px-3 py-1.5 sm:px-3.5 rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer shrink-0 active:scale-95"
+        >
+          <span>Next</span>
+          <ChevronRight size={13} />
+        </button>
+      </div>
     </div>
   );
 }
