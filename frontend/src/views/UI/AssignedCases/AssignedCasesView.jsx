@@ -520,8 +520,8 @@ export default function AssignedCasesView() {
         {/* LIST VIEW */}
         {viewMode === "list" && (
           <div className="w-full max-w-full min-w-0 py-3">
-            {/* Mobile Card List (Visible on phones < 640px) */}
-            <div className="block sm:hidden divide-y divide-[#F1F5F9] w-full min-w-0">
+            {/* Mobile & Tablet Card List (< 768px) */}
+            <div className="block md:hidden divide-y divide-[#F1F5F9] w-full min-w-0">
               {paginatedCases.length > 0 ? (
                 paginatedCases.map((item, index) => (
                   <div key={index} className="p-3.5 space-y-2.5 w-full min-w-0">
@@ -601,8 +601,8 @@ export default function AssignedCasesView() {
               )}
             </div>
 
-            {/* Desktop / Tablet Table View (Visible on >= 640px) */}
-            <div className="hidden sm:block w-full overflow-x-auto rounded-2xl border border-[#E2E8F0] min-w-0">
+            {/* Desktop Table View (>= 768px) */}
+            <div className="hidden md:block w-full overflow-x-auto rounded-2xl border border-[#E2E8F0] min-w-0">
               <table className="w-full min-w-[980px] table-fixed divide-y divide-[#E2E8F0] text-left">
                 <thead className="bg-[#F8FAFC]">
                   <tr>
@@ -834,7 +834,7 @@ function TablePagination({ currentPage, totalPages, totalEntries, pageSize, onPa
   }
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 pt-4 sm:pt-5 mt-4 border-t border-slate-100 w-full min-w-0">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 pt-4 sm:pt-5 mt-4 border-t border-slate-100 w-full min-w-0 pb-10 sm:pb-0">
       <p className="text-xs sm:text-sm text-slate-500 font-medium text-center sm:text-left">
         Showing <strong className="font-bold text-slate-800">{startEntry}</strong> to{" "}
         <strong className="font-bold text-slate-800">{endEntry}</strong> of{" "}

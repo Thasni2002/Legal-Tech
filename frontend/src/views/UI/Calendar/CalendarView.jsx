@@ -2,7 +2,7 @@
 
 import { API_BASE_URL } from "@/utils/api";
 
-import { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { getTodayDateString, getCurrentTimeString } from "@/utils/dateUtils";
 import CustomDatePicker from "@/components/ui/CustomDatePicker";
@@ -243,6 +243,117 @@ const getStatusColor = (status) => {
     default:
       return "bg-amber-100 text-amber-800";
   }
+};
+
+const CustomTimePicker = ({ value, onChange, required }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [period, setPeriod] = useState("all");
+  const popoverRef = useRef(null);
+
+  const timeSlots = [
+    { value: "08:00", label: "08:00 AM", period: "morning" },
+    { value: "08:30", label: "08:30 AM", period: "morning" },
+    { value: "09:00", label: "09:00 AM", period: "morning" },
+    { value: "09:30", label: "09:30 AM", period: "morning" },
+    { value: "10:00", label: "10:00 AM", period: "morning" },
+    { value: "10:30", label: "10:30 AM", period: "morning" },
+    { value: "11:00", label: "11:00 AM", period: "morning" },
+    { value: "11:30", label: "11:30 AM", period: "morning" },
+    { value: "12:00", label: "12:00 PM", period: "afternoon" },
+    { value: "12:30", label: "12:30 PM", period: "afternoon" },
+    { value: "13:00", label: "01:00 PM", period: "afternoon" },
+    { value: "13:30", label: "01:30 PM", period: "afternoon" },
+    { value: "14:00", label: "02:00 PM", period: "afternoon" },
+    { value: "14:30", label: "02:30 PM", period: "afternoon" },
+    { value: "15:00", label: "03:00 PM", period: "afternoon" },
+    { value: "15:30", label: "03:30 PM", period: "afternoon" },
+    { value: "16:00", label: "04:00 PM", period: "afternoon" },
+    { value: "16:30", label: "04:30 PM", period: "afternoon" },
+    { value: "17:00", label: "05:00 PM", period: "evening" },
+    { value: "17:30", label: "05:30 PM", period: "evening" },
+    { value: "18:00", label: "06:00 PM", period: "evening" },
+    { value: "18:30", label: "06:30 PM", period: "evening" },
+    { value: "19:00", label: "07:00 PM", period: "evening" },
+    { value: "19:30", label: "07:30 PM", period: "evening" },
+    { value: "20:00", label: "08:00 PM", period: "evening" },
+    { value: "20:30", label: "08:30 PM", period: "evening" },
+    { value: "21:00", label: "09:00 PM", period: "evening" },
+  ];
+
+  const selectedObj = timeSlots.find((t) => t.value === value);
+  const displayLabel = selectedObj ? selectedObj.label : (value || "Select Time");
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (popoverRef.current && !popoverRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredSlots = period === "all" ? timeSlots : timeSlots.filter((t) => t.period === period);
+
+  return (
+    <div className="relative w-full" ref={popoverRef}>
+      <input type="text" required={required} value={value} readOnly className="sr-only" />
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 hover:bg-white rounded-xl pl-3.5 pr-3 py-2 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-left flex items-center justify-between font-medium cursor-pointer shadow-2xs"
+      >
+        <span className={value ? "text-[#0F172A] font-bold" : "text-[#94A3B8]"}>
+          {displayLabel}
+        </span>
+        <Clock size={16} className="text-[#64748B] shrink-0" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-1.5 w-64 bg-white rounded-2xl border border-[#E2E8F0] shadow-2xl p-3 z-[300]">
+          <div className="flex items-center justify-between bg-[#F8FAFC] p-1 rounded-xl mb-2.5 border border-[#E2E8F0]/70 text-[10px] font-bold">
+            {["all", "morning", "afternoon", "evening"].map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPeriod(p)}
+                className={`capitalize px-2 py-1 rounded-lg transition-all cursor-pointer ${
+                  period === p
+                    ? "bg-[#2563EB] text-white shadow-xs"
+                    : "text-[#64748B] hover:text-[#0F172A]"
+                }`}
+              >
+                {p === "all" ? "All" : p.slice(0, 4)}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-1">
+            {filteredSlots.map((slot) => {
+              const isSelected = value === slot.value;
+              return (
+                <button
+                  key={slot.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(slot.value);
+                    setIsOpen(false);
+                  }}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold text-center transition-all cursor-pointer border ${
+                    isSelected
+                      ? "bg-[#2563EB] text-white border-[#2563EB] shadow-2xs"
+                      : "bg-[#F8FAFC] text-[#334155] border-[#E2E8F0] hover:bg-blue-50 hover:text-[#2563EB] hover:border-blue-200"
+                  }`}
+                >
+                  {slot.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default function CalendarView() {
@@ -1553,23 +1664,101 @@ export default function CalendarView() {
 
         </div>
 
-        {/* --- DYNAMIC SCHEDULE TABLE SECTION (Syncs dynamically with events) --- */}
-        <div className="bg-white rounded-3xl border border-[#E2E8F0] p-6 shadow-sm">
+        {/* --- DYNAMIC SCHEDULE REGISTRY SECTION (Syncs dynamically with events) --- */}
+        <div className="bg-white rounded-3xl border border-[#E2E8F0] p-4 sm:p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
               <h2 className="text-lg md:text-xl font-extrabold text-[#0F172A]">
-                Schedule Registry
+                Schedule Register
               </h2>
-              <p className="text-sm text-[#64748B] mt-0.5">
+              <p className="text-xs sm:text-sm text-[#64748B] mt-0.5">
                 Overview of court hearings and lawyer timetables.
               </p>
             </div>
-            <div className="px-3.5 py-1.5 bg-slate-50 border border-slate-150 rounded-2xl text-xs font-bold text-[#64748B] self-start">
+            <div className="px-3.5 py-1.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-[#64748B] self-start">
               Total Listed: {events.length}
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-[#E2E8F0]">
+          {/* MOBILE CARD VIEW (No horizontal scroll required) */}
+          <div className="block md:hidden space-y-3">
+            {events.length === 0 ? (
+              <div className="p-8 text-center text-[#64748B] bg-[#F8FAFC] rounded-2xl border border-dashed border-[#E2E8F0] text-sm">
+                No schedule records available. Click &quot;+ Add Event&quot; to populate.
+              </div>
+            ) : (
+              events
+                .sort((a, b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`))
+                .map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => {
+                      setSelectedEventId(item.id);
+                      setSelectedDate(parseLocalDate(item.date));
+                      setShowViewModal(true);
+                    }}
+                    className={`bg-white p-4 rounded-2xl border border-[#E2E8F0] space-y-2.5 shadow-2xs cursor-pointer hover:border-blue-300 transition ${
+                      selectedEventId === item.id ? "ring-2 ring-blue-500/20 border-blue-500 bg-blue-50/20" : ""
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="text-xs font-bold text-[#2563EB] bg-blue-50 px-2 py-0.5 rounded-lg inline-block mb-1 border border-blue-100">
+                          {formatMonthDayYear(item.date)} &bull; {formatTime(item.time)}
+                        </span>
+                        <h4 className="font-extrabold text-[#0F172A] text-sm leading-snug">
+                          {item.title}
+                        </h4>
+                      </div>
+                      <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full shrink-0 ${getStatusColor(item.status)}`}>
+                        {item.status}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs text-[#64748B] bg-[#F8FAFC] p-2.5 rounded-xl border border-[#E2E8F0]/60">
+                      <div>
+                        <span className="text-[10px] font-bold text-[#94A3B8] uppercase block">Case No</span>
+                        <span className="font-semibold text-[#0F172A]">{item.caseNo || "—"}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] font-bold text-[#94A3B8] uppercase block">Court / Venue</span>
+                        <span className="font-semibold text-[#475569] truncate block max-w-[130px] ml-auto">{item.court || "—"}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1 text-xs">
+                      <span className="text-[11px] font-semibold text-[#2563EB]">
+                        Tap to view details &rarr;
+                      </span>
+
+                      <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        {hasPermission("Calendar", "edit") && (
+                          <button
+                            onClick={(e) => handleOpenEditModal(item, e)}
+                            className="p-1.5 text-[#64748B] hover:text-[#2563EB] bg-[#F8FAFC] rounded-lg transition border border-[#E2E8F0]"
+                            title="Edit Event"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {hasPermission("Calendar", "delete") && (
+                          <button
+                            onClick={(e) => handleDeleteEvent(item.id, e)}
+                            className="p-1.5 text-red-500 hover:text-red-700 bg-red-50 rounded-lg transition border border-red-100"
+                            title="Delete Event"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+            )}
+          </div>
+
+          {/* DESKTOP TABLE VIEW */}
+          <div className="hidden md:block overflow-x-auto rounded-2xl border border-[#E2E8F0]">
             <table className="min-w-full divide-y divide-slate-100 text-sm">
               <thead className="bg-slate-50">
                 <tr>
@@ -1577,7 +1766,7 @@ export default function CalendarView() {
                   <th className="p-4 text-left font-bold text-[#64748B] uppercase tracking-wider text-xs">Time</th>
                   <th className="p-4 text-left font-bold text-[#64748B] uppercase tracking-wider text-xs">Case / Title</th>
                   <th className="p-4 text-left font-bold text-[#64748B] uppercase tracking-wider text-xs">Case No</th>
-                  <th className="p-4 text-left font-bold text-[#64748B] uppercase tracking-wider text-xs">Court</th>
+                  <th className="p-4 text-left font-bold text-[#64748B] uppercase tracking-wider text-xs">Court / Venue</th>
                   <th className="p-4 text-left font-bold text-[#64748B] uppercase tracking-wider text-xs">Status</th>
                   <th className="p-4 text-center font-bold text-[#64748B] uppercase tracking-wider text-xs">Actions</th>
                 </tr>
@@ -1779,33 +1968,33 @@ export default function CalendarView() {
             onClick={() => setShowEventModal(false)}
           >
             <div
-              className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-[#E2E8F0] flex flex-col max-h-[90vh]"
+              className="bg-white rounded-3xl p-5 sm:p-6 w-full max-w-xl shadow-2xl border border-[#E2E8F0] flex flex-col max-h-[96vh]"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-4 mb-5">
+              <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3 mb-3">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setShowEventModal(false)}
-                    className="p-1.5 hover:bg-slate-100 rounded-xl text-[#64748B] hover:text-[#0F172A] transition-colors flex items-center justify-center"
+                    className="p-1.5 hover:bg-slate-100 rounded-xl text-[#64748B] hover:text-[#0F172A] transition-colors flex items-center justify-center cursor-pointer"
                     title="Back"
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </button>
-                  <h2 className="text-xl md:text-2xl font-black text-[#0F172A]">
+                  <h2 className="text-lg md:text-xl font-black text-[#0F172A]">
                     {editingId ? "Edit Event details" : "Schedule New Event"}
                   </h2>
                 </div>
-                <span className="text-[10px] font-bold uppercase px-3 py-1 bg-[#F8FAFC] text-[#64748B] rounded-full">
+                <span className="text-[10px] font-bold uppercase px-3 py-1 bg-[#F8FAFC] text-[#64748B] rounded-full border border-[#E2E8F0]">
                   Advocate Log
                 </span>
               </div>
 
-              <form onSubmit={handleSaveEvent} className="space-y-4 overflow-y-auto pr-1 flex-1 custom-scrollbar">
+              <form onSubmit={handleSaveEvent} className="space-y-2.5 flex-1 overflow-visible">
                 
                 {/* Title */}
                 <div>
-                  <label className="block mb-1.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">
+                  <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
                     Event / Case Title *
                   </label>
                   <input
@@ -1814,14 +2003,14 @@ export default function CalendarView() {
                     placeholder="e.g. Property Dispute Hearing, Bail Plea"
                     value={eventForm.title}
                     onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
-                    className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-2xl px-4 py-3 text-[#0F172A] outline-none focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
+                    className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl px-3.5 py-2 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
                   />
                 </div>
 
                 {/* Grid Date & Time */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block mb-1.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">
+                    <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
                       Date *
                     </label>
                     <CustomDatePicker
@@ -1833,31 +2022,28 @@ export default function CalendarView() {
                   </div>
 
                   <div>
-                    <label className="block mb-1.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">
+                    <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
                       Time *
                     </label>
-                    <input
-                      type="time"
-                      min={eventForm.date === getTodayDateString() ? getCurrentTimeString() : undefined}
-                      required
+                    <CustomTimePicker
                       value={eventForm.time}
-                      onChange={(e) => setEventForm({ ...eventForm, time: e.target.value })}
-                      className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-2xl px-4 py-3 text-[#0F172A] outline-none focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
+                      onChange={(timeStr) => setEventForm({ ...eventForm, time: timeStr })}
+                      required
                     />
                   </div>
                 </div>
 
                 {/* Case Details Grid */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block mb-1.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">
+                    <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
                       Case Type *
                     </label>
                     <select
                       value={eventForm.type}
                       required
                       onChange={(e) => setEventForm({ ...eventForm, type: e.target.value })}
-                      className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-2xl px-4 py-3 text-[#0F172A] outline-none focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition appearance-none"
+                      className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl px-3.5 py-2 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition appearance-none cursor-pointer"
                     >
                       <option value="Civil">Civil</option>
                       <option value="Criminal">Criminal</option>
@@ -1868,14 +2054,14 @@ export default function CalendarView() {
                   </div>
 
                   <div>
-                    <label className="block mb-1.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">
+                    <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
                       Status *
                     </label>
                     <select
                       value={eventForm.status}
                       required
                       onChange={(e) => setEventForm({ ...eventForm, status: e.target.value })}
-                      className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-2xl px-4 py-3 text-[#0F172A] outline-none focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition appearance-none"
+                      className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl px-3.5 py-2 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition appearance-none cursor-pointer"
                     >
                       <option value="Pending">Pending</option>
                       <option value="In Progress">In Progress</option>
@@ -1885,9 +2071,9 @@ export default function CalendarView() {
                 </div>
 
                 {/* Case No & Court Venue */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block mb-1.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">
+                    <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
                       Case No (Optional)
                     </label>
                     <input
@@ -1895,12 +2081,12 @@ export default function CalendarView() {
                       placeholder="e.g. CS/890/2023"
                       value={eventForm.caseNo}
                       onChange={(e) => setEventForm({ ...eventForm, caseNo: e.target.value })}
-                      className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-2xl px-4 py-3 text-[#0F172A] outline-none focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
+                      className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl px-3.5 py-2 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
                     />
                   </div>
 
                   <div>
-                    <label className="block mb-1.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">
+                    <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
                       Court / Venue (Optional)
                     </label>
                     <input
@@ -1908,37 +2094,37 @@ export default function CalendarView() {
                       placeholder="e.g. Civil Court, Prayagraj"
                       value={eventForm.court}
                       onChange={(e) => setEventForm({ ...eventForm, court: e.target.value })}
-                      className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-2xl px-4 py-3 text-[#0F172A] outline-none focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
+                      className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl px-3.5 py-2 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
                     />
                   </div>
                 </div>
 
                 {/* Notes/Agenda Description */}
                 <div>
-                  <label className="block mb-1.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">
+                  <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
                     Agenda Notes / Description
                   </label>
                   <textarea
-                    rows="3"
+                    rows="2"
                     placeholder="Brief outline of case agenda, client context, or required documents..."
                     value={eventForm.notes}
                     onChange={(e) => setEventForm({ ...eventForm, notes: e.target.value })}
-                    className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-2xl px-4 py-3 text-[#0F172A] outline-none focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition resize-none"
+                    className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl px-3.5 py-2 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition resize-none"
                   />
                 </div>
 
                 {/* Dialog Footer Actions */}
-                <div className="flex justify-end gap-3 pt-4 border-t border-[#E2E8F0]">
+                <div className="flex justify-end gap-3 pt-3 mt-1 border-t border-[#E2E8F0]">
                   <button
                     type="button"
                     onClick={() => setShowEventModal(false)}
-                    className="px-5 py-2.5 bg-[#F8FAFC] text-[#64748B] hover:bg-slate-200 rounded-xl font-bold text-sm transition"
+                    className="px-5 py-2 bg-[#F8FAFC] text-[#64748B] hover:bg-slate-200 rounded-xl font-bold text-xs transition cursor-pointer border border-[#E2E8F0]"
                   >
                     Back
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl font-bold text-sm transition shadow-lg shadow-[#2563EB]/10"
+                    className="px-6 py-2 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition shadow-md shadow-[#2563EB]/10 cursor-pointer"
                   >
                     {editingId ? "Save Changes" : "Create Event"}
                   </button>

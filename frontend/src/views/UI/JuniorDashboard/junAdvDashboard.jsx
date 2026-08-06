@@ -311,13 +311,13 @@ export default function JunAdvDashView() {
             </span>
           </div>
 
-          {/* Mobile Native Card View (< 640px) for Stat Card Expansion */}
-          <div className="block sm:hidden space-y-3 w-full min-w-0">
+          {/* Mobile & Tablet Card View (< 768px) for Stat Card Expansion */}
+          <div className="block md:hidden space-y-3 w-full min-w-0">
             {selectedList.length === 0 ? (
               <p className="text-center py-6 text-slate-400 text-xs font-semibold">No cases found in this category.</p>
             ) : (
               selectedList.map((item, idx) => (
-                <div key={idx} className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2 w-full min-w-0">
+                <div key={idx} className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2 w-full min-w-0">
                   <div className="flex items-start justify-between gap-2 min-w-0">
                     <h4 className="text-xs font-extrabold text-[#0F172A] break-words flex-1 min-w-0">{item.title}</h4>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border shrink-0 ${
@@ -336,8 +336,8 @@ export default function JunAdvDashView() {
             )}
           </div>
 
-          {/* Desktop & Tablet Table (>= 640px) */}
-          <div className="hidden sm:block w-full overflow-hidden rounded-2xl border border-[#E2E8F0] min-w-0">
+          {/* Desktop Table (>= 768px) */}
+          <div className="hidden md:block w-full overflow-hidden rounded-2xl border border-[#E2E8F0] min-w-0">
             <table className="w-full table-fixed divide-y divide-[#E2E8F0] text-xs sm:text-sm">
               <thead className="bg-[#F8FAFC]">
                 <tr>
@@ -420,13 +420,13 @@ export default function JunAdvDashView() {
             </div>
           ) : (
             <>
-              {/* Mobile Native Card View (< 640px) */}
-              <div className="block sm:hidden space-y-3 w-full min-w-0">
+              {/* Mobile & Tablet Card View (< 768px) */}
+              <div className="block md:hidden space-y-3 w-full min-w-0">
                 {paginatedUpcomingList.map((item, index) => (
                   <div
                     key={item.id || index}
                     onClick={() => router.push("/assigned-cases")}
-                    className="p-3 bg-slate-50 hover:bg-blue-50/50 border border-slate-200/80 rounded-2xl space-y-2 transition cursor-pointer w-full min-w-0"
+                    className="p-4 bg-slate-50 hover:bg-blue-50/50 border border-slate-200/80 rounded-2xl space-y-2.5 transition cursor-pointer w-full min-w-0 shadow-2xs"
                   >
                     <div className="flex items-start justify-between gap-2 min-w-0">
                       <h4 className="text-xs font-extrabold text-[#0F172A] break-words flex-1 min-w-0">
@@ -441,7 +441,7 @@ export default function JunAdvDashView() {
                       </span>
                     </div>
 
-                    <div className="text-[11px] text-slate-600 space-y-1">
+                    <div className="text-[11px] text-slate-600 space-y-1 bg-white p-2.5 rounded-xl border border-slate-200/60">
                       <p className="flex items-center gap-1.5 truncate">
                         <User size={12} className="text-slate-400 shrink-0" />
                         <span>Client: <strong>{item.clientName}</strong></span>
@@ -456,17 +456,17 @@ export default function JunAdvDashView() {
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-end pt-2 border-t border-slate-200/60 text-[10px]">
+                    <div className="flex items-center justify-end pt-1 text-[11px]">
                       <span className="text-blue-600 font-bold flex items-center gap-0.5">
-                        View Details <ArrowRight size={10} />
+                        View Details <ArrowRight size={11} />
                       </span>
                     </div>
                   </div>
                 ))}
               </div>
 
-              {/* Desktop & Tablet Table (>= 640px) - Seamless Alignment Without Horizontal Scroll */}
-              <div className="hidden sm:block w-full overflow-hidden rounded-2xl border border-[#E2E8F0] min-w-0">
+              {/* Desktop Table (>= 768px) */}
+              <div className="hidden md:block w-full overflow-hidden rounded-2xl border border-[#E2E8F0] min-w-0">
                 <table className="w-full table-fixed divide-y divide-[#E2E8F0] text-xs sm:text-sm">
                   <thead className="bg-[#F8FAFC]">
                     <tr>
@@ -575,8 +575,8 @@ export default function JunAdvDashView() {
             </div>
           ) : (
             <>
-              {/* Mobile Native Card View (< 640px) */}
-              <div className="block sm:hidden space-y-3 w-full min-w-0">
+              {/* Mobile & Tablet Card View (< 768px) */}
+              <div className="block md:hidden space-y-3 w-full min-w-0">
                 {paginatedAssignedList.map((item, index) => {
                   const normUser = (userName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
                   const normSec = (item.secondaryAdvocateName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -586,7 +586,7 @@ export default function JunAdvDashView() {
                     <div
                       key={item.id || index}
                       onClick={() => router.push("/assigned-cases")}
-                      className="p-3 bg-slate-50 hover:bg-blue-50/50 border border-slate-200/80 rounded-2xl space-y-2 transition cursor-pointer w-full min-w-0"
+                      className="p-4 bg-slate-50 hover:bg-blue-50/50 border border-slate-200/80 rounded-2xl space-y-2.5 transition cursor-pointer w-full min-w-0 shadow-2xs"
                     >
                       <div className="flex items-start justify-between gap-2 min-w-0">
                         <h4 className="text-xs font-extrabold text-[#0F172A] break-words flex-1 min-w-0">
@@ -601,14 +601,14 @@ export default function JunAdvDashView() {
                         </span>
                       </div>
 
-                      <div className="text-[11px] text-slate-600 space-y-1">
+                      <div className="text-[11px] text-slate-600 bg-white p-2.5 rounded-xl border border-slate-200/60">
                         <p className="flex items-center gap-1.5 truncate">
                           <User size={12} className="text-slate-400 shrink-0" />
                           <span>Client: <strong>{item.clientName}</strong></span>
                         </p>
                       </div>
 
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 text-[10px]">
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 text-[10px]">
                         {isStandby ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold bg-amber-100 text-amber-800">
                             🛡️ Standby Advocate
@@ -627,8 +627,8 @@ export default function JunAdvDashView() {
                 })}
               </div>
 
-              {/* Desktop & Tablet Table (>= 640px) - Seamless Alignment Without Horizontal Scroll */}
-              <div className="hidden sm:block w-full overflow-hidden rounded-2xl border border-[#E2E8F0] min-w-0">
+              {/* Desktop Table (>= 768px) */}
+              <div className="hidden md:block w-full overflow-hidden rounded-2xl border border-[#E2E8F0] min-w-0">
                 <table className="w-full table-fixed divide-y divide-[#E2E8F0] text-xs sm:text-sm">
                   <thead className="bg-[#F8FAFC]">
                     <tr>
@@ -722,7 +722,7 @@ function TablePagination({ currentPage, totalPages, totalEntries, pageSize, onPa
   }
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 pt-4 sm:pt-5 mt-4 border-t border-slate-100 w-full min-w-0">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 pt-4 sm:pt-5 mt-4 border-t border-slate-100 w-full min-w-0 pb-10 sm:pb-0">
       <p className="text-xs sm:text-sm text-slate-500 font-medium text-center sm:text-left">
         Showing <strong className="font-bold text-slate-800">{startEntry}</strong> to{" "}
         <strong className="font-bold text-slate-800">{endEntry}</strong> of{" "}

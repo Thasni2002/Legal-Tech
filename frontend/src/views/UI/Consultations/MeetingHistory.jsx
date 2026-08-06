@@ -323,34 +323,21 @@ export default function MeetingHistory() {
           </div>
         </div>
 
-        {/* History Table Content */}
+        {/* History Table & Mobile Cards Content */}
         <div className="p-4 sm:p-6">
-          <div className="w-full overflow-x-auto rounded-xl border border-[#E2E8F0]">
-          <table className="min-w-full divide-y divide-[#E2E8F0]">
-            <thead className="bg-[#F8FAFC]">
-              <tr>
-                <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Client Name</th>
-                <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Meeting Date</th>
-                <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Time</th>
-                <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Type</th>
-                <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#E2E8F0] bg-white text-sm">
-              {loading ? (
-                <tr>
-                  <td colSpan="5" className="p-8 text-center text-[#64748B] font-medium">
-                    Loading meeting history...
-                  </td>
-                </tr>
-              ) : currentTableData.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="p-8 text-center text-[#64748B] font-medium">
-                    No meeting history records found.
-                  </td>
-                </tr>
-              ) : (
-                (() => {
+          {loading ? (
+            <div className="p-8 text-center text-[#64748B] font-medium bg-[#F8FAFC] rounded-xl border border-dashed border-[#E2E8F0]">
+              Loading meeting history...
+            </div>
+          ) : currentTableData.length === 0 ? (
+            <div className="p-8 text-center text-[#64748B] font-medium bg-[#F8FAFC] rounded-xl border border-dashed border-[#E2E8F0]">
+              No meeting history records found.
+            </div>
+          ) : (
+            <>
+              {/* MOBILE CARD VIEW (No horizontal scroll required) */}
+              <div className="block md:hidden space-y-3.5">
+                {(() => {
                   let lastGroupKey = null;
                   return currentTableData.map((item) => {
                     const rawDate = item.created_at || item.date || "";
@@ -362,24 +349,35 @@ export default function MeetingHistory() {
                     return (
                       <React.Fragment key={item.id}>
                         {showHeader && (
-                          <tr className="bg-[#F8FAFC] border-t border-b border-[#E2E8F0]">
-                            <td colSpan={5} className="py-2.5 px-4 text-xs font-extrabold text-[#334155] tracking-wider uppercase border-l-4 border-l-[#2563EB]">
-                              {getBookedHeaderLabel(item.created_at || item.date)}
-                            </td>
-                          </tr>
+                          <div className="py-2.5 px-4 text-xs font-extrabold text-[#334155] tracking-wider uppercase bg-white rounded-xl border border-[#E2E8F0] border-l-4 border-l-[#2563EB] shadow-2xs">
+                            {getBookedHeaderLabel(item.created_at || item.date)}
+                          </div>
                         )}
-                        <tr className="hover:bg-[#F8FAFC] transition-colors duration-150">
-                          <td className="p-4 font-bold text-[#0F172A] capitalize whitespace-nowrap">
-                            {item.client_name || item.client || "Client"}
-                          </td>
-                          <td className="p-4 text-[#475569] whitespace-nowrap">
-                            {formatDateString(item.date)}
-                          </td>
-                          <td className="p-4 text-[#475569] font-medium whitespace-nowrap">
-                            {formatTimeString(item.time)}
-                          </td>
-                          <td className="p-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                        <div className="bg-white p-4 rounded-xl border border-[#E2E8F0] space-y-3 shadow-2xs">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <h4 className="font-extrabold text-[#0F172A] text-sm capitalize">
+                                {item.client_name || item.client || "Client"}
+                              </h4>
+                              <p className="text-xs text-[#64748B] mt-0.5 font-medium">
+                                {formatDateString(item.date)} &bull; {formatTimeString(item.time)}
+                              </p>
+                            </div>
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              item.status === "Completed" || item.status === "Approved"
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : item.status === "Rescheduled" || item.status === "Pending Advocate"
+                                ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                : "bg-purple-50 text-purple-700 border border-purple-200"
+                            }`}>
+                              <CheckCircle2 size={10} />
+                              {item.status}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#E2E8F0]/70 text-xs">
+                            <span className="text-[11px] font-semibold text-[#64748B]">Consultation Type:</span>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-bold uppercase ${
                               item.type === "Video Call" || item.type === "Video Consultation"
                                 ? "bg-blue-50 text-blue-700 border border-blue-200"
                                 : item.type === "Chat" || item.type === "Chat Consultation"
@@ -388,32 +386,92 @@ export default function MeetingHistory() {
                             }`}>
                               {item.type}
                             </span>
-                          </td>
-                          <td className="p-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                              item.status === "Completed" || item.status === "Approved"
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                : item.status === "Rescheduled" || item.status === "Pending Advocate"
-                                ? "bg-amber-50 text-amber-700 border border-amber-200"
-                                : "bg-purple-50 text-purple-700 border border-purple-200"
-                            }`}>
-                              <CheckCircle2 size={11} />
-                              {item.status}
-                            </span>
-                          </td>
-                        </tr>
+                          </div>
+                        </div>
                       </React.Fragment>
                     );
                   });
-                })()
-              )}
-            </tbody>
-          </table>
-        </div>
+                })()}
+              </div>
+
+              {/* DESKTOP TABLE VIEW */}
+              <div className="hidden md:block w-full overflow-x-auto rounded-xl border border-[#E2E8F0]">
+                <table className="min-w-full divide-y divide-[#E2E8F0]">
+                  <thead className="bg-[#F8FAFC]">
+                    <tr>
+                      <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Client Name</th>
+                      <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Meeting Date</th>
+                      <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Time</th>
+                      <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Type</th>
+                      <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E2E8F0] bg-white text-sm">
+                    {(() => {
+                      let lastGroupKey = null;
+                      return currentTableData.map((item) => {
+                        const rawDate = item.created_at || item.date || "";
+                        const dateKey = typeof rawDate === "string" ? rawDate.split("T")[0] : String(rawDate);
+                        const showHeader = dateKey !== lastGroupKey;
+                        if (showHeader) {
+                          lastGroupKey = dateKey;
+                        }
+                        return (
+                          <React.Fragment key={item.id}>
+                            {showHeader && (
+                              <tr className="bg-[#F8FAFC] border-t border-b border-[#E2E8F0]">
+                                <td colSpan={5} className="py-2.5 px-4 text-xs font-extrabold text-[#334155] tracking-wider uppercase border-l-4 border-l-[#2563EB]">
+                                  {getBookedHeaderLabel(item.created_at || item.date)}
+                                </td>
+                              </tr>
+                            )}
+                            <tr className="hover:bg-[#F8FAFC] transition-colors duration-150">
+                              <td className="p-4 font-bold text-[#0F172A] capitalize whitespace-nowrap">
+                                {item.client_name || item.client || "Client"}
+                              </td>
+                              <td className="p-4 text-[#475569] whitespace-nowrap">
+                                {formatDateString(item.date)}
+                              </td>
+                              <td className="p-4 text-[#475569] font-medium whitespace-nowrap">
+                                {formatTimeString(item.time)}
+                              </td>
+                              <td className="p-4 whitespace-nowrap">
+                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                                  item.type === "Video Call" || item.type === "Video Consultation"
+                                    ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                    : item.type === "Chat" || item.type === "Chat Consultation"
+                                    ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                    : "bg-amber-50 text-amber-700 border border-amber-200"
+                                }`}>
+                                  {item.type}
+                                </span>
+                              </td>
+                              <td className="p-4 whitespace-nowrap">
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                                  item.status === "Completed" || item.status === "Approved"
+                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                    : item.status === "Rescheduled" || item.status === "Pending Advocate"
+                                    ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                    : "bg-purple-50 text-purple-700 border border-purple-200"
+                                }`}>
+                                  <CheckCircle2 size={11} />
+                                  {item.status}
+                                </span>
+                              </td>
+                            </tr>
+                          </React.Fragment>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
 
         {/* Pagination Bar (10 per page) */}
         {totalItems > 0 && (
-          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-[#E2E8F0]">
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-[#E2E8F0] pb-10 sm:pb-0">
             <p className="text-xs font-medium text-[#64748B]">
               Showing <span className="font-bold text-[#0F172A]">{startIndex + 1}</span> to{" "}
               <span className="font-bold text-[#0F172A]">{endIndex}</span> of{" "}

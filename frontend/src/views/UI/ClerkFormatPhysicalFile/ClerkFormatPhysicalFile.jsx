@@ -521,30 +521,30 @@ export default function ClerkFormatPhysicalFile() {
             </div>
           </div>
 
-          {/* Desktop Table View (hidden on mobile & tablet) */}
-          <div className="hidden md:block overflow-x-auto flex-1 w-full">
+          {/* Desktop Table View (hidden on mobile & tablet < 1024px) */}
+          <div className="hidden lg:block overflow-x-auto flex-1 w-full">
             <table className="w-full text-left border-collapse">
               <thead className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
                 <tr>
-                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B] whitespace-nowrap">File Number</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B] whitespace-nowrap">Case Title</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B] whitespace-nowrap">Location</th>
-                  <th className="px-6 py-4 text-center text-[10px] font-bold uppercase tracking-widest text-[#64748B] whitespace-nowrap">Actions</th>
+                  <th className="px-4 xl:px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B] whitespace-nowrap">File Number</th>
+                  <th className="px-4 xl:px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B] whitespace-nowrap">Case Title</th>
+                  <th className="px-4 xl:px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B] whitespace-nowrap">Location</th>
+                  <th className="px-4 xl:px-6 py-4 text-center text-[10px] font-bold uppercase tracking-widest text-[#64748B] whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F1F5F9]">
                 {paginatedFiles.map((file, idx) => (
                   <tr key={`${file.id}-${file.fileNumber}-${idx}`} className="hover:bg-slate-50/50 transition">
-                    <td className="px-6 py-4 text-sm font-bold text-slate-800 whitespace-nowrap">{file.fileNumber}</td>
-                    <td className="px-6 py-4 text-sm font-semibold text-slate-700 max-w-[240px] leading-snug">{file.caseTitle}</td>
-                    <td className="px-6 py-4 text-xs font-semibold text-slate-500 whitespace-nowrap">
+                    <td className="px-4 xl:px-6 py-4 text-sm font-bold text-slate-800 whitespace-nowrap">{file.fileNumber}</td>
+                    <td className="px-4 xl:px-6 py-4 text-sm font-semibold text-slate-700 max-w-[220px] leading-snug break-words">{file.caseTitle}</td>
+                    <td className="px-4 xl:px-6 py-4 text-xs font-semibold text-slate-500 whitespace-nowrap">
                       <div className="inline-flex items-center gap-1.5">
                         <span className="bg-slate-100 px-2.5 py-1 rounded-md text-slate-600 border border-slate-200/60 font-semibold">{file.cabinet}</span>
                         <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md border border-emerald-200/60 font-bold">{file.shelf}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-center whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-2">
+                    <td className="px-4 xl:px-6 py-4 text-center whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1.5">
                         <button
                           onClick={() => setActiveLabelFile(file)}
                           className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition cursor-pointer shadow-sm shadow-blue-600/20"
@@ -579,8 +579,8 @@ export default function ClerkFormatPhysicalFile() {
             </table>
           </div>
 
-          {/* Mobile & Tablet Responsive Card View (visible on mobile & tablet) */}
-          <div className="block md:hidden p-4 space-y-3.5 bg-slate-50/50 flex-1">
+          {/* Mobile & Tablet Responsive Card View (visible on mobile & tablet < 1024px) */}
+          <div className="block lg:hidden p-4 space-y-3.5 bg-slate-50/50 flex-1">
             {paginatedFiles.map((file, idx) => (
               <div key={`${file.id}-${file.fileNumber}-${idx}`} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-3">
                 <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
@@ -628,7 +628,7 @@ export default function ClerkFormatPhysicalFile() {
 
           {/* Table Pagination Footer */}
           {filteredFiles.length > 0 && (
-            <div className="px-6 py-4 border-t border-[#F1F5F9] bg-[#F8FAFC]/50 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div className="px-6 py-4 border-t border-[#F1F5F9] bg-[#F8FAFC]/50 flex flex-col sm:flex-row justify-between items-center gap-3 pb-10 sm:pb-4">
               <span className="text-xs text-slate-500 font-medium">
                 Showing <span className="font-bold text-slate-800">{(activeCurrentPage - 1) * ITEMS_PER_PAGE + 1}</span> to{" "}
                 <span className="font-bold text-slate-800">{Math.min(activeCurrentPage * ITEMS_PER_PAGE, filteredFiles.length)}</span> of{" "}
@@ -758,16 +758,16 @@ export default function ClerkFormatPhysicalFile() {
               </div>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => setActiveLabelFile(null)}
-                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl transition"
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl transition cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleScreenshot}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl transition shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2"
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl transition shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Camera size={16} />
                 Screenshot

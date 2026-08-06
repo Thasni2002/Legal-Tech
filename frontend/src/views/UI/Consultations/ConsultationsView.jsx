@@ -61,6 +61,7 @@ export default function ConsultationsView() {
     const [showScheduleSuccess, setShowScheduleSuccess] = useState(false);
     const [showDuplicateModal, setShowDuplicateModal] = useState(false);
     const [duplicateMessage, setDuplicateMessage] = useState("");
+    const [scheduledPage, setScheduledPage] = useState(0);
     const [alertModal, setAlertModal] = useState({ show: false, title: "", message: "", type: "success" });
     const [toast, setToast] = useState({ show: false, message: "", type: "success" });
 
@@ -666,14 +667,14 @@ export default function ConsultationsView() {
 
             {/* Appointment Requests */}
             {showAppointments && (
-                <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6 sm:p-8 mb-8 overflow-hidden">
-                    <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-2.5">
+                <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-4 sm:p-6 md:p-8 mb-6 sm:mb-8 overflow-hidden">
+                    <h2 className="text-lg sm:text-xl md:text-2xl font-extrabold text-[#0F172A] mb-4 sm:mb-6 flex items-center gap-2.5">
                         <CalendarCheck size={22} className="text-[#2563EB]" />
                         <span>Appointment Requests</span>
                     </h2>
 
                     <div className="w-full overflow-x-auto rounded-xl border border-[#E2E8F0]">
-                        <table className="min-w-full divide-y divide-[#E2E8F0]">
+                        <table className="min-w-[780px] w-full divide-y divide-[#E2E8F0]">
                             <thead className="bg-[#F8FAFC]">
                                 <tr>
                                     <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider">Client Name</th>
@@ -810,10 +811,10 @@ export default function ConsultationsView() {
                                                             setDeleteId(item.id);
                                                             setShowDeleteModal(true);
                                                         }}
-                                                        className="px-3.5 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 hover:border-rose-200 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                                        className="w-9 h-9 rounded-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                                                        title="Delete Request"
                                                     >
-                                                        <Trash2 size={14} />
-                                                        <span>Delete</span>
+                                                        <Trash2 size={15} />
                                                     </button>
                                                 </div>
                                             </td>
@@ -827,12 +828,12 @@ export default function ConsultationsView() {
             )}
 
             {/* Consultation Form */}
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6 sm:p-8 mb-8">
-                <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-2.5">
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-4 sm:p-6 md:p-8 mb-6 sm:mb-8">
+                <h2 className="text-lg sm:text-xl md:text-2xl font-extrabold text-[#0F172A] mb-4 sm:mb-6 flex items-center gap-2.5">
                     <CalendarDays size={22} className="text-[#2563EB]" />
                     <span>Schedule Meeting</span>
                 </h2>
-                <div className={`grid grid-cols-1 md:grid-cols-2 ${consultationType === "Video Call" ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-6`}>
+                <div className={`grid grid-cols-1 sm:grid-cols-2 ${consultationType === "Video Call" ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-4 sm:gap-6`}>
                     <div className="flex flex-col">
                         <label className="text-xs font-bold text-[#475569] uppercase tracking-wider mb-2">Client Name</label>
                         <select
@@ -924,8 +925,8 @@ export default function ConsultationsView() {
             </div>
 
             {/* Scheduled Meetings Table */}
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6 sm:p-8">
-                <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-2.5">
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-4 sm:p-6 md:p-8">
+                <h2 className="text-lg sm:text-xl md:text-2xl font-extrabold text-[#0F172A] mb-4 sm:mb-6 flex items-center gap-2.5">
                     <Clock size={22} className="text-[#2563EB]" />
                     <span>Scheduled Meetings</span>
                 </h2>
@@ -934,83 +935,202 @@ export default function ConsultationsView() {
                         No scheduled meetings.
                     </div>
                 ) : (
-                    <div className="w-full overflow-x-auto rounded-xl border border-[#E2E8F0]">
-                        <table className="min-w-full divide-y divide-[#E2E8F0]">
-                            <thead className="bg-[#F8FAFC]">
-                                <tr>
-                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Client Name</th>
-                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Date</th>
-                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Time</th>
-                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Type</th>
-                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Google Meet Link</th>
-                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Status</th>
-                                    <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[#E2E8F0] bg-white text-sm">
-                                {history.map((item) => (
-                                    <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors">
-                                        <td className="p-4 whitespace-nowrap font-bold text-[#0F172A] capitalize">{item.client}</td>
-                                        <td className="p-4 whitespace-nowrap text-[#475569]">{formatDateString(item.date)}</td>
-                                        <td className="p-4 whitespace-nowrap font-medium text-[#475569]">{formatTimeString(item.time)}</td>
-                                        <td className="p-4 whitespace-nowrap">
-                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${item.type === "Video Call" || item.type === "Video Consultation"
+                    <>
+                        {/* Mobile Card List (No horizontal scroll needed on mobile) */}
+                        <div className="block md:hidden space-y-3.5">
+                            {history
+                                .slice(scheduledPage * 5, (scheduledPage + 1) * 5)
+                                .map((item) => (
+                                <div
+                                    key={item.id}
+                                    className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0] space-y-3 shadow-2xs"
+                                >
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div>
+                                            <h4 className="font-extrabold text-[#0F172A] text-sm capitalize">
+                                                {item.client}
+                                            </h4>
+                                            <p className="text-xs text-[#64748B] mt-0.5 font-medium">
+                                                {formatDateString(item.date)} &bull; {formatTimeString(item.time)}
+                                            </p>
+                                        </div>
+                                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                            item.status === "Completed" || item.status === "Approved"
+                                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                                : item.status === "Rescheduled"
+                                                ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                                : "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                                        }`}>
+                                            <CheckCircle2 size={10} />
+                                            {item.status}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#E2E8F0]/70 text-xs">
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold uppercase ${
+                                            item.type === "Video Call" || item.type === "Video Consultation"
                                                 ? "bg-blue-50 text-blue-700 border border-blue-200"
-                                                : item.type === "Chat" || item.type === "Chat Consultation"
-                                                    ? "bg-purple-50 text-purple-700 border border-purple-200"
-                                                    : "bg-amber-50 text-amber-700 border border-amber-200"
-                                                }`}>
-                                                {item.type}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 whitespace-nowrap text-sm">
-                                            {item.meeting_link ? (
+                                                : "bg-purple-50 text-purple-700 border border-purple-200"
+                                        }`}>
+                                            {item.type}
+                                        </span>
+
+                                        <div className="flex items-center gap-2">
+                                            {item.meeting_link && (
                                                 <a
                                                     href={item.meeting_link.startsWith("http") ? item.meeting_link : `https://${item.meeting_link}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="text-[#2563EB] hover:text-[#1D4ED8] font-bold inline-flex items-center gap-1.5 bg-blue-50/70 border border-blue-200 px-3 py-1 rounded-lg transition-colors text-xs"
+                                                    className="text-[#2563EB] font-bold inline-flex items-center gap-1 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg text-[11px]"
                                                 >
-                                                    <Video size={14} />
-                                                    <span>Open Google Meet</span>
+                                                    <Video size={12} />
+                                                    <span>Meet</span>
                                                 </a>
-                                            ) : (
-                                                <span className="text-[#94A3B8] font-medium">-</span>
                                             )}
-                                        </td>
-                                        <td className="p-4 whitespace-nowrap">
-                                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${item.status === "Completed"
-                                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                                : item.status === "Approved"
-                                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                                    : item.status === "Rescheduled"
-                                                        ? "bg-amber-50 text-amber-700 border border-amber-200"
-                                                        : item.status === "Pending Client"
-                                                            ? "bg-purple-50 text-purple-700 border border-purple-200"
-                                                            : "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                                                }`}>
-                                                <CheckCircle2 size={11} />
-                                                {item.status}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 whitespace-nowrap">
                                             <button
                                                 onClick={() => {
                                                     setDeleteId(item.id);
                                                     setShowDeleteModal(true);
                                                 }}
-                                                className="px-3 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 hover:border-rose-200 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                                className="w-8 h-8 rounded-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 flex items-center justify-center cursor-pointer shadow-2xs"
+                                                title="Delete Scheduled Meeting"
                                             >
-                                                <Trash2 size={13} />
-                                                <span>Delete</span>
+                                                <Trash2 size={14} />
                                             </button>
-                                        </td>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Desktop Table View */}
+                        <div className="hidden md:block w-full overflow-x-auto rounded-xl border border-[#E2E8F0]">
+                            <table className="w-full divide-y divide-[#E2E8F0]">
+                                <thead className="bg-[#F8FAFC]">
+                                    <tr>
+                                        <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Client Name</th>
+                                        <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Date</th>
+                                        <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Time</th>
+                                        <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Type</th>
+                                        <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Google Meet Link</th>
+                                        <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Status</th>
+                                        <th className="p-4 text-left text-[11px] font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Action</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody className="divide-y divide-[#E2E8F0] bg-white text-sm">
+                                    {history
+                                        .slice(scheduledPage * 5, (scheduledPage + 1) * 5)
+                                        .map((item) => (
+                                        <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors">
+                                            <td className="p-4 whitespace-nowrap font-bold text-[#0F172A] capitalize">{item.client}</td>
+                                            <td className="p-4 whitespace-nowrap text-[#475569]">{formatDateString(item.date)}</td>
+                                            <td className="p-4 whitespace-nowrap font-medium text-[#475569]">{formatTimeString(item.time)}</td>
+                                            <td className="p-4 whitespace-nowrap">
+                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${item.type === "Video Call" || item.type === "Video Consultation"
+                                                    ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                                    : item.type === "Chat" || item.type === "Chat Consultation"
+                                                        ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                                        : "bg-amber-50 text-amber-700 border border-amber-200"
+                                                    }`}>
+                                                    {item.type}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 whitespace-nowrap text-sm">
+                                                {item.meeting_link ? (
+                                                    <a
+                                                        href={item.meeting_link.startsWith("http") ? item.meeting_link : `https://${item.meeting_link}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-[#2563EB] hover:text-[#1D4ED8] font-bold inline-flex items-center gap-1.5 bg-blue-50/70 border border-blue-200 px-3 py-1 rounded-lg transition-colors text-xs shadow-2xs"
+                                                    >
+                                                        <Video size={14} />
+                                                        <span>Open Google Meet</span>
+                                                    </a>
+                                                ) : (
+                                                    <span className="text-[#94A3B8] font-medium">-</span>
+                                                )}
+                                            </td>
+                                            <td className="p-4 whitespace-nowrap">
+                                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${item.status === "Completed"
+                                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                                    : item.status === "Approved"
+                                                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                                        : item.status === "Rescheduled"
+                                                            ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                                            : item.status === "Pending Client"
+                                                                ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                                                : "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                                                    }`}>
+                                                    <CheckCircle2 size={11} />
+                                                    {item.status}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 whitespace-nowrap">
+                                                <button
+                                                    onClick={() => {
+                                                        setDeleteId(item.id);
+                                                        setShowDeleteModal(true);
+                                                    }}
+                                                    className="w-9 h-9 rounded-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                                                    title="Delete Scheduled Meeting"
+                                                >
+                                                    <Trash2 size={15} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
                 )}
+
+                {/* Pagination Controls */}
+                {history.length > 5 && (() => {
+                    const total = history.length;
+                    const totalPages = Math.ceil(total / 5);
+                    const startIdx = scheduledPage * 5 + 1;
+                    const endIdx = Math.min((scheduledPage + 1) * 5, total);
+
+                    return (
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-[#E2E8F0] pb-10 sm:pb-0">
+                            <span className="text-xs text-[#64748B] font-semibold text-center sm:text-left">
+                                Showing <span className="font-bold text-[#0F172A]">{startIdx}</span> to <span className="font-bold text-[#0F172A]">{endIdx}</span> of <span className="font-bold text-[#0F172A]">{total}</span> entries
+                            </span>
+                            <div className="flex flex-wrap items-center justify-center gap-1.5 max-w-full">
+                                <button
+                                    onClick={() => setScheduledPage(p => Math.max(0, p - 1))}
+                                    disabled={scheduledPage === 0}
+                                    className="px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg border border-[#E2E8F0] bg-white text-[#475569] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-2xs"
+                                >
+                                    &lt; Prev
+                                </button>
+
+                                {Array.from({ length: totalPages }, (_, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => setScheduledPage(idx)}
+                                        className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-xs font-bold rounded-lg border transition-all cursor-pointer shadow-2xs ${
+                                            scheduledPage === idx
+                                                ? "bg-[#2563EB] text-white border-[#2563EB]"
+                                                : "bg-white text-[#475569] border-[#E2E8F0] hover:bg-[#F8FAFC]"
+                                        }`}
+                                    >
+                                        {idx + 1}
+                                    </button>
+                                ))}
+
+                                <button
+                                    onClick={() => setScheduledPage(p => Math.min(totalPages - 1, p + 1))}
+                                    disabled={scheduledPage >= totalPages - 1}
+                                    className="px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg border border-[#E2E8F0] bg-white text-[#475569] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-2xs"
+                                >
+                                    Next &gt;
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })()}
             </div>
 
             {mounted && showScheduleSuccess && typeof document !== "undefined"
