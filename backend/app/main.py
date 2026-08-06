@@ -10,7 +10,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine, SessionLocal
-from app.authapp.models import User, UserNotificationRead
+from app.authapp.models import User
 from app.authapp.seed import create_default_user
 from app.advocate.consultations.models import Consultation
 from app.advocate.finance_management.models import Invoice
@@ -42,6 +42,10 @@ from app.clerk.efiling import router as clerk_efiling_router
 # OCR module
 from app.ocr.models import OcrResult
 from app.ocr import router as ocr_router
+
+# Messaging module
+from app.messaging.models import MessagingConversation, MessagingMessage, MessagingMessageRead, MessagingAuditLog
+from app.messaging import messaging_router
 
 
 
@@ -92,23 +96,6 @@ def startup():
     create_default_user(db)
     from app.advocate.permissions.service import seed_roles_and_permissions
     seed_roles_and_permissions(db)
-
-    # Auto migration for advocate_task_messages file attachment columns
-    try:
-        from sqlalchemy import text, inspect
-        inspector = inspect(engine)
-        if "advocate_task_messages" in inspector.get_table_names():
-            columns = [c["name"] for c in inspector.get_columns("advocate_task_messages")]
-            with engine.connect() as conn:
-                if "file_url" not in columns:
-                    conn.execute(text("ALTER TABLE advocate_task_messages ADD COLUMN file_url TEXT;"))
-                if "file_name" not in columns:
-                    conn.execute(text("ALTER TABLE advocate_task_messages ADD COLUMN file_name VARCHAR(255);"))
-                if "file_type" not in columns:
-                    conn.execute(text("ALTER TABLE advocate_task_messages ADD COLUMN file_type VARCHAR(100);"))
-                conn.commit()
-    except Exception as e:
-        print("[Tasks Column Migration Error]:", e)
     
     # Auto-seed database from database_seed.json if empty on startup
     try:
@@ -213,4 +200,5 @@ app.include_router(leave_router, prefix="/leaves", tags=["Leave Management"])
 app.include_router(ecourts_router)
 app.include_router(ocr_router)
 app.include_router(vault_router)
+app.include_router(messaging_router)
 

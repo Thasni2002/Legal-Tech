@@ -543,3 +543,13 @@ main > * {
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(226, 232, 240, 0.8);
 }
+
+/* Messaging Hub Animations */
+@keyframes hubSlideDown {
+  0% { opacity: 0; transform: translateY(-12px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-hub-slide-down {
+  animation: hubSlideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

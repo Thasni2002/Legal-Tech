@@ -47,6 +47,7 @@ BASE_MODULES = [
     "Junior Leave",
     "Clerk Leave",
     "eCourts Integration",
+    "Messaging",
 ]
 
 # Default permission matrix for seeding core roles
@@ -88,6 +89,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Junior Leave": {"view": True, "add": True, "edit": True, "delete": True},
         "Clerk Leave": {"view": True, "add": True, "edit": True, "delete": True},
         "eCourts Integration": {"view": True, "add": True, "edit": True, "delete": True},
+        "Messaging": {"view": True, "add": True, "edit": True, "delete": True},
     },
     "junioradvocate": {
         "Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
@@ -120,6 +122,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Junior Leave": {"view": True, "add": True, "edit": True, "delete": False},
         "Clerk Leave": {"view": False, "add": False, "edit": False, "delete": False},
         "eCourts Integration": {"view": True, "add": True, "edit": False, "delete": False},
+        "Messaging": {"view": True, "add": True, "edit": True, "delete": False},
     },
     "client": {
         "Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
@@ -151,6 +154,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Junior Leave": {"view": False, "add": False, "edit": False, "delete": False},
         "Clerk Leave": {"view": False, "add": False, "edit": False, "delete": False},
         "eCourts Integration": {"view": False, "add": False, "edit": False, "delete": False},
+        "Messaging": {"view": True, "add": True, "edit": False, "delete": False},
     },
     "clerk": {
         "Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
@@ -190,6 +194,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Junior Leave": {"view": True, "add": False, "edit": True, "delete": False},
         "Clerk Leave": {"view": True, "add": True, "edit": True, "delete": True},
         "eCourts Integration": {"view": True, "add": True, "edit": False, "delete": False},
+        "Messaging": {"view": True, "add": True, "edit": True, "delete": False},
     },
 }
 
