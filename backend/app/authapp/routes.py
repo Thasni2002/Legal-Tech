@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from typing import Optional, List
 from datetime import datetime, timedelta, date
 from jose import jwt
@@ -13,7 +13,7 @@ from app.database import SessionLocal
 from .schemas import LoginSchema, TokenSchema
 from . import service
 from .service import SECRET_KEY, ALGORITHM, hash_password
-from .models import User, UserNotificationRead
+from .models import User, UserNotificationRead, AppNotification
 
 class MarkReadRequest(BaseModel):
     user_id: int
@@ -181,13 +181,49 @@ def get_notifications(
     from app.advocate.case_management.models import Case, CaseDocumentWorkflow
     from app.advocate.client_management.models import Document
     from app.advocate.lawfirm_management.models import AssignedCase
-    from app.advocate.tasks.models import Task
+    from app.advocate.tasks.models import Task, TaskMessage
+    from app.advocate.leave_management.models import LeaveRequest
     from app.clerk.dashboard.models import ClerkTask
 
     notifications = []
     now = datetime.utcnow()
     cutoff = now - timedelta(days=30)  # Notifications threshold: last 1 month (30 days)
     today = date.today()
+
+    # Load logged-in user profile details for name comparisons
+    user = db.query(User).filter(User.id == user_id).first() if user_id else None
+
+    # Persistent AppNotification Table Records
+    if user:
+        adv_name_lower = (user.username or "").lower()
+        fname_lower = (user.first_name or "").lower()
+        lname_lower = (user.last_name or "").lower()
+        full_name_lower = f"{fname_lower} {lname_lower}".strip()
+
+        conditions = [
+            AppNotification.user_id == user.id,
+            func.lower(AppNotification.target_name) == adv_name_lower
+        ]
+        if fname_lower and fname_lower != "adv.":
+            conditions.append(func.lower(AppNotification.target_name).contains(fname_lower))
+        if lname_lower:
+            conditions.append(func.lower(AppNotification.target_name).contains(lname_lower))
+        if full_name_lower:
+            conditions.append(func.lower(AppNotification.target_name) == full_name_lower)
+
+        app_notifs = db.query(AppNotification).filter(or_(*conditions)).all()
+        for an in app_notifs:
+            an_created = an.created_at or now
+            notifications.append({
+                "id": f"app_notif_{an.id}",
+                "icon": an.icon or "⚖️",
+                "title": an.title,
+                "time": _time_ago(an_created) if hasattr(an, 'created_at') and an.created_at else (an.time_str or "Just now"),
+                "color": an.color or "text-indigo-600",
+                "bg": an.bg or "bg-indigo-50",
+                "created_at": an_created.isoformat(),
+                "is_read": bool(an.is_read)
+            })
 
     def parse_date_str(d_str):
         if not d_str:
@@ -203,14 +239,37 @@ def get_notifications(
 
     # Helper comparisons for Junior Advocates
     def is_junior_assigned(case_obj):
-        if not user or not case_obj.selected_advocate:
+        if not user:
             return False
-        adv_lower = case_obj.selected_advocate.lower()
-        return (
-            user.username.lower() in adv_lower or
-            (user.first_name and user.first_name.lower() in adv_lower) or
-            (user.last_name and user.last_name.lower() in adv_lower)
-        )
+        
+        target_names = []
+        if hasattr(case_obj, "selected_advocate") and case_obj.selected_advocate:
+            target_names.append(str(case_obj.selected_advocate))
+        if hasattr(case_obj, "advocate_name") and case_obj.advocate_name:
+            target_names.append(str(case_obj.advocate_name))
+        if hasattr(case_obj, "secondary_advocate_name") and case_obj.secondary_advocate_name:
+            target_names.append(str(case_obj.secondary_advocate_name))
+
+        if not target_names:
+            return False
+
+        u_tokens = [
+            (user.username or "").lower(),
+            (user.first_name or "").lower(),
+            (user.last_name or "").lower(),
+            (user.email or "").lower().split("@")[0]
+        ]
+        if "ashfah" in u_tokens[0]:
+            u_tokens.extend(["ashfah", "ashraf"])
+
+        clean_tokens = [t.replace(".", "").strip() for t in u_tokens if len(t.strip()) >= 3]
+
+        for name_str in target_names:
+            norm_target = name_str.lower().replace(" ", "").replace(".", "")
+            for token in clean_tokens:
+                if token in norm_target or norm_target in token:
+                    return True
+        return False
 
     # Helper comparisons for Clients
     def is_client_owner(case_obj):
@@ -231,10 +290,13 @@ def get_notifications(
         client_lower = consult_obj.client_name.lower()
         return user.username.lower() in client_lower
 
-    is_senior = role and role.lower() == "senior advocate"
-    is_junior = role and role.lower() == "junior advocate"
-    is_client = role and role.lower() == "client"
-    is_clerk = role and role.lower() == "clerk"
+    # Flexible Role Matching (supports 'Junior Advocate', 'Junior', 'junior_advocate', etc.)
+    user_role = (role or (user.role if user else "") or "").lower().replace(" ", "").replace("_", "")
+
+    is_senior = "senior" in user_role or "admin" in user_role
+    is_junior = "junior" in user_role
+    is_client = "client" in user_role
+    is_clerk = "clerk" in user_role
 
     # ─── A. SENIOR ADVOCATE NOTIFICATIONS ──────────────────────────────────────────
     if is_senior:
@@ -411,6 +473,64 @@ def get_notifications(
                         "created_at": (t.updated_at or t.created_at).isoformat()
                     })
 
+        # 11. Leave Approval Requests (Junior / Clerk applied for leave)
+        pending_leaves = db.query(LeaveRequest).filter(
+            LeaveRequest.status == "Pending",
+            LeaveRequest.created_at >= cutoff
+        ).all()
+        for lr in pending_leaves:
+            dates_str = f"{lr.from_date}" if lr.from_date == lr.to_date else f"{lr.from_date} to {lr.to_date}"
+            notifications.append({
+                "id": f"senior_leave_req_{lr.id}",
+                "icon": "🌴",
+                "title": f"Leave Approval Request: {lr.applicant_role} {lr.applicant_name} applied for {lr.leave_type} on {dates_str}.",
+                "time": _time_ago(lr.created_at),
+                "color": "text-amber-600",
+                "bg": "bg-amber-50",
+                "created_at": lr.created_at.isoformat()
+            })
+
+        # 12. High-Priority Task Progress / Message / Attachment Update
+        task_msgs = db.query(TaskMessage).filter(
+            TaskMessage.created_at >= cutoff
+        ).all()
+        for tm in task_msgs:
+            if tm.sender_role and "junior" in tm.sender_role.lower():
+                parent_task = db.query(Task).filter(Task.id == tm.task_id).first()
+                if parent_task and parent_task.senior_advocate_id == (user.id if user else 0):
+                    has_attachment = bool(tm.file_url)
+                    is_high_prio = parent_task.priority and parent_task.priority.lower() in ["high", "urgent"]
+                    if is_high_prio or has_attachment or tm.message_type == "progress":
+                        msg_desc = "attached a file/audio note" if has_attachment else "posted a progress update"
+                        notifications.append({
+                            "id": f"senior_task_prog_{tm.id}",
+                            "icon": "🎙️" if (tm.file_type and "audio" in str(tm.file_type).lower()) else ("📎" if has_attachment else "⚡"),
+                            "title": f"High-Priority Task Progress: {tm.sender_name or 'Junior Advocate'} {msg_desc} on task '{parent_task.title}'.",
+                            "time": _time_ago(tm.created_at),
+                            "color": "text-indigo-600",
+                            "bg": "bg-indigo-50",
+                            "created_at": tm.created_at.isoformat()
+                        })
+
+        # 13. Emergency Case Hearing Added (Urgent hearing scheduled within 24-48 hours)
+        emergency_cases = db.query(Case).filter(
+            Case.next_hearing_date.isnot(None)
+        ).all()
+        for ec in emergency_cases:
+            h_date = parse_date_str(ec.next_hearing_date)
+            if h_date:
+                days_diff = (h_date - today).days
+                if 0 <= days_diff <= 2:
+                    notifications.append({
+                        "id": f"senior_emergency_hearing_{ec.id}",
+                        "icon": "🚨",
+                        "title": f"Emergency Case Hearing: Case '{ec.case_title}' has an urgent hearing scheduled on {h_date.strftime('%B %d, %Y')} ({'TODAY' if days_diff==0 else f'in {days_diff} days'}).",
+                        "time": "Urgent Hearing",
+                        "color": "text-rose-600",
+                        "bg": "bg-rose-50",
+                        "created_at": now.isoformat()
+                    })
+
     # ─── B. JUNIOR ADVOCATE NOTIFICATIONS ──────────────────────────────────────────
 
     elif is_junior and user:
@@ -429,6 +549,36 @@ def get_notifications(
                     "bg": "bg-indigo-50",
                     "created_at": case.created_at.isoformat()
                 })
+
+        # 1b. Assigned to a Lawfirm Management AssignedCase (Assigned vs Unassigned)
+        firm_cases = db.query(AssignedCase).all()
+        for ac in firm_cases:
+            c_title = ac.case_title or ac.case_name
+            if not c_title or not c_title.strip() or c_title.strip().lower() == "assigned case":
+                continue
+                
+            if is_junior_assigned(ac):
+                st_lower = (ac.status or "").lower()
+                if st_lower in ["unassigned", "inactive", "removed"]:
+                    notifications.append({
+                        "id": f"unassigned_firm_case_{ac.id}",
+                        "icon": "⚠️",
+                        "title": f"Case Unassigned: Senior Advocate unassigned you from case: \"{c_title}\".",
+                        "time": "Unassigned",
+                        "color": "text-rose-600",
+                        "bg": "bg-rose-50",
+                        "created_at": (now - timedelta(minutes=2)).isoformat()
+                    })
+                else:
+                    notifications.append({
+                        "id": f"assigned_firm_case_{ac.id}",
+                        "icon": "⚖️",
+                        "title": f"You have been assigned to case: \"{c_title}\".",
+                        "time": "Assigned",
+                        "color": "text-indigo-600",
+                        "bg": "bg-indigo-50",
+                        "created_at": (now - timedelta(minutes=5)).isoformat()
+                    })
 
         # 2. Case updated (details changed, e.g. hearing dates)
         updated_cases = db.query(Case).filter(
@@ -476,21 +626,23 @@ def get_notifications(
                 (user.last_name and user.last_name.lower() in adv_lower)
             )
 
-        # 4. Senior Advocate Instructions / Tasks
-        tasks = db.query(AssignedCase).filter(
-            AssignedCase.status == "Active"
+        # 4. Real Senior Advocate Task Assignments
+        jr_real_tasks = db.query(Task).filter(
+            Task.junior_advocate_id == user.id,
+            Task.created_at >= cutoff
         ).all()
-        for task in tasks:
-            if is_junior_assigned_firm_case(task):
-                notifications.append({
-                    "id": f"task_assign_{task.id}",
-                    "icon": "📋",
-                    "title": f"Task assigned by Senior Advocate: '{task.assignment_notes or 'Draft petition'}' for case '{task.case_title}'. Due by {task.due_date or 'N/A'}.",
-                    "time": f"Due {task.due_date}" if task.due_date else "Assigned",
-                    "color": "text-indigo-600",
-                    "bg": "bg-indigo-50",
-                    "created_at": now.isoformat()
-                })
+        for t in jr_real_tasks:
+            c_title = f" for case '{t.case_title}'" if t.case_title else ""
+            t_created = t.created_at or (now - timedelta(days=1))
+            notifications.append({
+                "id": f"real_task_assign_{t.id}",
+                "icon": "📋",
+                "title": f"Task assigned by Senior Advocate: '{t.title}'{c_title}. Due by {t.due_date or 'N/A'}.",
+                "time": _time_ago(t_created),
+                "color": "text-indigo-600",
+                "bg": "bg-indigo-50",
+                "created_at": t_created.isoformat()
+            })
 
         # 5. Case Document Approval updates for Juniors
         my_review_docs = db.query(CaseDocumentWorkflow).filter(
@@ -537,6 +689,38 @@ def get_notifications(
                     "bg": "bg-amber-50",
                     "created_at": now.isoformat()
                 })
+
+        # 7. Standby Advocate Role Notification
+        standby_cases = db.query(AssignedCase).filter(
+            AssignedCase.secondary_advocate_name.isnot(None)
+        ).all()
+        for sc in standby_cases:
+            if is_junior_assigned(sc):
+                notifications.append({
+                    "id": f"jr_standby_role_{sc.id}",
+                    "icon": "🛡️",
+                    "title": f"Standby Advocate Assignment: You have been assigned as Secondary/Standby Counsel for case '{sc.case_title or sc.case_name or 'Assigned Case'}'.",
+                    "time": "Assigned",
+                    "color": "text-amber-600",
+                    "bg": "bg-amber-50",
+                    "created_at": (now - timedelta(minutes=10)).isoformat()
+                })
+
+        # 8. Calendar Reschedule Notice for Junior Advocates
+        rescheduled_discussions = db.query(Consultation).filter(
+            Consultation.status == "Rescheduled",
+            Consultation.updated_at >= cutoff
+        ).all()
+        for rd in rescheduled_discussions:
+            notifications.append({
+                "id": f"jr_cal_rescheduled_{rd.id}",
+                "icon": "📆",
+                "title": f"Calendar Reschedule Notice: Internal case discussion / review meeting rescheduled to {rd.date} at {rd.time}.",
+                "time": _time_ago(rd.updated_at or rd.created_at),
+                "color": "text-blue-600",
+                "bg": "bg-blue-50",
+                "created_at": (rd.updated_at or rd.created_at).isoformat()
+            })
 
     # ─── C. CLIENT NOTIFICATIONS ──────────────────────────────────────────────────
 
@@ -786,7 +970,7 @@ def get_notifications(
                         "time": "Upcoming",
                         "color": "text-amber-600",
                         "bg": "bg-amber-50",
-                        "created_at": now.isoformat()
+                        "created_at": (now - timedelta(days=2)).isoformat()
                     })
                 elif days_left == 2:
                     notifications.append({
@@ -796,7 +980,7 @@ def get_notifications(
                         "time": "Upcoming",
                         "color": "text-orange-600",
                         "bg": "bg-orange-50",
-                        "created_at": now.isoformat()
+                        "created_at": (now - timedelta(days=1)).isoformat()
                     })
                 elif days_left == 0:
                     notifications.append({
@@ -806,7 +990,7 @@ def get_notifications(
                         "time": "Today",
                         "color": "text-rose-600",
                         "bg": "bg-rose-50",
-                        "created_at": now.isoformat()
+                        "created_at": (now - timedelta(hours=1)).isoformat()
                     })
             except (ValueError, AttributeError, IndexError):
                 continue
@@ -838,6 +1022,20 @@ def mark_notifications_read(
     if not payload.user_id or not payload.notification_ids:
         return {"status": "ok", "marked": 0}
 
+    # Mark persistent AppNotification records as read if present
+    app_notif_db_ids = []
+    for nid in payload.notification_ids:
+        if nid.startswith("app_notif_"):
+            try:
+                app_notif_db_ids.append(int(nid.replace("app_notif_", "")))
+            except ValueError:
+                pass
+    if app_notif_db_ids:
+        db.query(AppNotification).filter(
+            AppNotification.id.in_(app_notif_db_ids)
+        ).update({AppNotification.is_read: True}, synchronize_session=False)
+        db.commit()
+
     existing = db.query(UserNotificationRead.notification_id).filter(
         UserNotificationRead.user_id == payload.user_id,
         UserNotificationRead.notification_id.in_(payload.notification_ids)
@@ -853,7 +1051,7 @@ def mark_notifications_read(
         db.bulk_save_objects(new_entries)
         db.commit()
 
-    return {"status": "ok", "marked": len(new_entries)}
+    return {"status": "ok", "marked": len(new_entries) + len(app_notif_db_ids)}
 
 
 @router.get("/google/login")

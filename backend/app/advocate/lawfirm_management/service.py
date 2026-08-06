@@ -5,7 +5,102 @@ import json
 from fastapi import HTTPException
 from .models import Advocate, AssignedCase
 from app.advocate.case_management.models import Case
-from app.authapp.models import User
+from app.authapp.models import User, AppNotification
+
+
+def notify_advocate_case_event(db: Session, advocate_name: str, case_title: str, event_type: str):
+    if not advocate_name or not case_title:
+        return
+
+    clean_adv_name = advocate_name.strip()
+    c_title = case_title.strip()
+    if not c_title or c_title.lower() == "assigned case":
+        return
+
+    target_user = db.query(User).filter(
+        (func.lower(User.username) == clean_adv_name.lower()) |
+        (func.lower(func.concat(User.first_name, ' ', User.last_name)) == clean_adv_name.lower()) |
+        (func.lower(User.email) == clean_adv_name.lower())
+    ).first()
+
+    target_user_id = target_user.id if target_user else None
+
+    if event_type == "assigned":
+        notif = AppNotification(
+            user_id=target_user_id,
+            target_name=clean_adv_name,
+            target_role="Junior Advocate",
+            icon="⚖️",
+            title=f'You have been assigned to case: "{c_title}".',
+            color="text-indigo-600",
+            bg="bg-indigo-50",
+            time_str="Assigned"
+        )
+        db.add(notif)
+        db.commit()
+    elif event_type == "unassigned":
+        notif = AppNotification(
+            user_id=target_user_id,
+            target_name=clean_adv_name,
+            target_role="Junior Advocate",
+            icon="⚠️",
+            title=f'Case Unassigned: Senior Advocate unassigned you from case: "{c_title}".',
+            color="text-rose-600",
+            bg="bg-rose-50",
+            time_str="Unassigned"
+        )
+        db.add(notif)
+        db.commit()
+
+    # Find email address for target advocate
+    recipient_email = target_user.email if (target_user and target_user.email) else None
+    if not recipient_email:
+        adv_rec = db.query(Advocate).filter(
+            (func.lower(Advocate.advocate_name) == clean_adv_name.lower()) |
+            (func.lower(func.concat(Advocate.first_name, ' ', Advocate.last_name)) == clean_adv_name.lower()) |
+            (func.lower(Advocate.email_address) == clean_adv_name.lower())
+        ).first()
+        if adv_rec and adv_rec.email_address:
+            recipient_email = adv_rec.email_address
+
+    if recipient_email and "@" in recipient_email:
+        try:
+            from app.utils.email import send_email_sync
+            from app.utils.email_templates import render_base_template
+            import threading
+
+            if event_type == "assigned":
+                subj = f'⚖️ Case Assigned: "{c_title}"'
+                content_html = f"""
+                <h2 style="color: #0F172A; font-size: 20px; font-weight: 700; margin-top: 0; margin-bottom: 16px;">New Case Assignment</h2>
+                <p>Dear <strong>{clean_adv_name}</strong>,</p>
+                <p>You have been assigned to case <strong>"{c_title}"</strong> by the Senior Advocate.</p>
+                <div style="background-color: #F8FAFC; border-left: 4px solid #2563EB; padding: 16px; margin: 20px 0; border-radius: 6px;">
+                    <p style="margin: 0; font-weight: 600; color: #1E293B;">Case Title: {c_title}</p>
+                    <p style="margin: 4px 0 0 0; color: #64748B; font-size: 13px;">Status: Active / Assigned</p>
+                </div>
+                <p>Please log in to your Legal-Tech dashboard to review case details and files.</p>
+                """
+                html_body = render_base_template(title="Case Assigned", badge_label="Case Assignment", content_html=content_html)
+                threading.Thread(target=send_email_sync, kwargs={"to_email": recipient_email, "subject": subj, "body": html_body}, daemon=True).start()
+
+            elif event_type == "unassigned":
+                subj = f'⚠️ Case Unassigned: "{c_title}"'
+                content_html = f"""
+                <h2 style="color: #0F172A; font-size: 20px; font-weight: 700; margin-top: 0; margin-bottom: 16px;">Case Unassignment Notice</h2>
+                <p>Dear <strong>{clean_adv_name}</strong>,</p>
+                <p>Please be informed that the Senior Advocate has unassigned you from case <strong>"{c_title}"</strong>.</p>
+                <div style="background-color: #FEF2F2; border-left: 4px solid #EF4444; padding: 16px; margin: 20px 0; border-radius: 6px;">
+                    <p style="margin: 0; font-weight: 600; color: #991B1B;">Case Title: {c_title}</p>
+                    <p style="margin: 4px 0 0 0; color: #B91C1C; font-size: 13px;">Status: Unassigned</p>
+                </div>
+                <p>If you have any questions, please contact your Senior Advocate.</p>
+                """
+                html_body = render_base_template(title="Case Unassigned", badge_label="Case Unassignment", content_html=content_html)
+                threading.Thread(target=send_email_sync, kwargs={"to_email": recipient_email, "subject": subj, "body": html_body}, daemon=True).start()
+        except Exception as err:
+            print(f"[EMAIL NOTIFICATION ERROR]: {err}")
+
 
 
 from .schemas import (
@@ -236,6 +331,13 @@ def create_assigned_case(
 
         db.commit()
         db.refresh(existing)
+
+        c_title = existing.case_title or existing.case_name or ""
+        if existing.advocate_name:
+            notify_advocate_case_event(db, existing.advocate_name, c_title, "assigned")
+        if existing.secondary_advocate_name:
+            notify_advocate_case_event(db, existing.secondary_advocate_name, c_title, "assigned")
+
         existing.assigned_documents = json.loads(existing.assigned_documents or "[]")
         existing.appearances = json.loads(existing.appearances or "[]")
         return existing
@@ -247,6 +349,12 @@ def create_assigned_case(
     db.add(new_case)
     db.commit()
     db.refresh(new_case)
+
+    c_title = new_case.case_title or new_case.case_name or ""
+    if new_case.advocate_name:
+        notify_advocate_case_event(db, new_case.advocate_name, c_title, "assigned")
+    if new_case.secondary_advocate_name:
+        notify_advocate_case_event(db, new_case.secondary_advocate_name, c_title, "assigned")
 
     new_case.assigned_documents = json.loads(
         new_case.assigned_documents or "[]"
@@ -269,6 +377,9 @@ def get_assigned_cases(db: Session):
         .outerjoin(
             Case,
             AssignedCase.case_id == Case.id
+        )
+        .filter(
+            ~func.lower(func.coalesce(AssignedCase.status, '')).in_(['unassigned', 'inactive', 'removed'])
         )
         .all()
     )
@@ -338,11 +449,17 @@ def delete_assigned_case(
     if not assigned_case:
         return None
 
-    db.delete(assigned_case)
+    assigned_case.status = "Unassigned"
     db.commit()
 
+    c_title = assigned_case.case_title or assigned_case.case_name or ""
+    if assigned_case.advocate_name:
+        notify_advocate_case_event(db, assigned_case.advocate_name, c_title, "unassigned")
+    if assigned_case.secondary_advocate_name:
+        notify_advocate_case_event(db, assigned_case.secondary_advocate_name, c_title, "unassigned")
+
     return {
-        "message": "Assigned case deleted successfully"
+        "message": "Assigned case unassigned successfully"
     }
 
 

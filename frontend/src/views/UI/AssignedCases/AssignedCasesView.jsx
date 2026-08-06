@@ -122,9 +122,12 @@ export default function AssignedCasesView() {
       );
       const data = await res.json();
 
-      let casesToShow = data;
+      let casesToShow = Array.isArray(data) ? data : [];
+      casesToShow = casesToShow.filter(
+        (item) => !["unassigned", "inactive", "removed"].includes((item.status || "").toLowerCase())
+      );
       if (user && user.role && user.role.toLowerCase().includes("junior")) {
-        casesToShow = data.filter((item) => {
+        casesToShow = casesToShow.filter((item) => {
           const primaryName = item.advocate_name || item.advocateName || "";
           const secondaryName = item.secondary_advocate_name || item.secondaryAdvocateName || "";
           const juniorName = item.junior_advocate || item.juniorAdvocate || item.assigned_to || "";
@@ -600,15 +603,15 @@ export default function AssignedCasesView() {
 
             {/* Desktop / Tablet Table View (Visible on >= 640px) */}
             <div className="hidden sm:block w-full overflow-x-auto rounded-2xl border border-[#E2E8F0] min-w-0">
-              <table className="w-full min-w-[700px] table-fixed divide-y divide-[#E2E8F0] text-left">
+              <table className="w-full min-w-[980px] table-fixed divide-y divide-[#E2E8F0] text-left">
                 <thead className="bg-[#F8FAFC]">
                   <tr>
                     <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[24%]">Case ID</th>
-                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[13%]">Client</th>
-                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[14%]">Court</th>
-                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[14%]">Next Hearing</th>
-                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[19%]">Status</th>
-                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[16%] text-center">Actions</th>
+                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[14%]">Client</th>
+                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[15%]">Court</th>
+                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[13%]">Next Hearing</th>
+                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[10%] text-center">Status</th>
+                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[24%] text-center">Actions</th>
                   </tr>
                 </thead>
 
@@ -633,17 +636,17 @@ export default function AssignedCasesView() {
                         <td className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#2563EB] whitespace-nowrap">
                           {item.hearing}
                         </td>
-                        <td className="px-3 sm:px-4 py-3.5 min-w-0">
+                        <td className="px-2 py-3.5 text-center">
                           <span
                             title={item.status}
-                            className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider inline-block max-w-full ${getStatusBadgeClass(item.status)}`}
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider inline-block max-w-full ${getStatusBadgeClass(item.status)}`}
                           >
                             <span className="truncate">{item.status === "Won" ? "🏆 Won" : item.status === "Lost" ? "❌ Lost" : item.status}</span>
                           </span>
                         </td>
 
-                        <td className="px-3 sm:px-4 py-3.5 text-center whitespace-nowrap">
-                          <div className="flex gap-2 items-center justify-center">
+                        <td className="px-3 sm:px-4 py-3.5 text-center whitespace-nowrap overflow-hidden">
+                          <div className="flex gap-1.5 items-center justify-center flex-nowrap shrink-0">
                             {(() => {
                               try {
                                 const targetId = item.caseId || item.case_id || item.id;
@@ -652,11 +655,11 @@ export default function AssignedCasesView() {
                                   return (
                                     <button
                                       onClick={() => setViewBriefModal(saved[0])}
-                                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors cursor-pointer shadow-xs shrink-0"
+                                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors cursor-pointer shadow-xs shrink-0"
                                       title="View Saved Brief Summary"
                                     >
-                                      <Eye size={14} />
-                                      Summary
+                                      <Eye size={13} />
+                                      <span>Summary</span>
                                     </button>
                                   );
                                 }
@@ -666,21 +669,21 @@ export default function AssignedCasesView() {
 
                             <button
                               onClick={() => setSelectedCase(item)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#2563EB] bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer"
+                              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-[#2563EB] bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer shrink-0"
                               title="See Case Details"
                             >
-                              <Eye size={14} />
-                              View
+                              <Eye size={13} />
+                              <span>View</span>
                             </button>
 
                             {perms.delete && (
                               <button
                                 onClick={() => setDeleteConfirm(item.id)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors cursor-pointer"
+                                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors cursor-pointer shrink-0"
                                 title="Delete Case"
                               >
-                                <Trash2 size={14} />
-                                Delete
+                                <Trash2 size={13} />
+                                <span>Delete</span>
                               </button>
                             )}
                           </div>
