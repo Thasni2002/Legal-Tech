@@ -38,6 +38,9 @@ class TaskStatusUpdate(BaseModel):
 class TaskMessageCreate(BaseModel):
     message: str
     message_type: Optional[str] = "general"
+    file_url: Optional[str] = None
+    file_name: Optional[str] = None
+    file_type: Optional[str] = None
 
 
 class TaskMessageOut(BaseModel):
@@ -48,6 +51,9 @@ class TaskMessageOut(BaseModel):
     sender_role: Optional[str]
     message: str
     message_type: str
+    file_url: Optional[str] = None
+    file_name: Optional[str] = None
+    file_type: Optional[str] = None
     created_at: datetime
 
     class Config:

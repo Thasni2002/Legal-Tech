@@ -152,8 +152,18 @@ export default function Navbar() {
       const res = await fetch(`${API_BASE_URL}/notifications?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
-        // Backend now returns is_read field per notification
-        setNotifications(data);
+        let localReadIds = [];
+        try {
+          const stored = localStorage.getItem(`read_notifs_${loggedInUser.id}`);
+          if (stored) localReadIds = JSON.parse(stored);
+        } catch (e) {}
+
+        const merged = data.map((n) => ({
+          ...n,
+          is_read: n.is_read || localReadIds.includes(n.id),
+        }));
+
+        setNotifications(merged);
       }
     } catch (err) {
       // Quietly ignore transient network/dev-server reload errors
@@ -163,11 +173,22 @@ export default function Navbar() {
   };
 
   /**
-   * Mark one notification as read — persisted in MySQL via backend API.
+   * Mark one notification as read — persisted in MySQL via backend API and LocalStorage.
    */
   const markAsRead = useCallback(async (notifId) => {
     const loggedInUser = getLoggedInUser();
     if (!loggedInUser?.id) return;
+
+    // Save to local storage for immediate persistence
+    try {
+      const key = `read_notifs_${loggedInUser.id}`;
+      const stored = localStorage.getItem(key);
+      const list = stored ? JSON.parse(stored) : [];
+      if (!list.includes(notifId)) {
+        list.push(notifId);
+        localStorage.setItem(key, JSON.stringify(list));
+      }
+    } catch (e) {}
 
     // Optimistic UI update immediately
     setNotifications((prev) =>
@@ -189,7 +210,7 @@ export default function Navbar() {
   }, []);
 
   /**
-   * Mark ALL notifications as read — persisted in MySQL via backend API.
+   * Mark ALL notifications as read — persisted in MySQL via backend API and LocalStorage.
    */
   const markAllAsRead = useCallback(async () => {
     const loggedInUser = getLoggedInUser();
@@ -197,6 +218,15 @@ export default function Navbar() {
 
     const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id);
     if (unreadIds.length === 0) return;
+
+    // Save to local storage
+    try {
+      const key = `read_notifs_${loggedInUser.id}`;
+      const stored = localStorage.getItem(key);
+      const list = stored ? JSON.parse(stored) : [];
+      const updated = Array.from(new Set([...list, ...unreadIds]));
+      localStorage.setItem(key, JSON.stringify(updated));
+    } catch (e) {}
 
     // Optimistic UI update immediately
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));

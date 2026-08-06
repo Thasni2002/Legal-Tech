@@ -284,12 +284,45 @@ export default function AdvDashboardView() {
         );
     }
 
-    const displayName = user
-        ? user.username
-            .split(" ")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(" ")
-        : "";
+    let displayName = "";
+    if (user) {
+        const parts = [user.first_name || user.firstName, user.last_name || user.lastName].filter(Boolean);
+        if (parts.length > 0) {
+            displayName = parts.join(" ");
+        }
+        if (!displayName && typeof window !== "undefined") {
+            const userKey = (user.email || user.username || "").toLowerCase().trim();
+            const savedUserLocal = localStorage.getItem(`advocate_profile_${userKey}`);
+            if (savedUserLocal) {
+                try {
+                    const parsed = JSON.parse(savedUserLocal);
+                    const pName = parsed.advocateName || parsed.advocate_name;
+                    if (pName && pName.trim()) displayName = pName.trim();
+                } catch (e) {}
+            }
+            if (!displayName) {
+                const savedGlobal = localStorage.getItem("advocate_profile");
+                if (savedGlobal) {
+                    try {
+                        const parsed = JSON.parse(savedGlobal);
+                        const pName = parsed.advocateName || parsed.advocate_name;
+                        if (pName && pName.trim()) displayName = pName.trim();
+                    } catch (e) {}
+                }
+            }
+        }
+        if (!displayName && user.username) {
+            let name = user.username;
+            if (name.toLowerCase() === "ashfahashraf") {
+                displayName = "Ashfah Ashraf";
+            } else {
+                displayName = name.replace(/([a-z])([A-Z])/g, "$1 $2");
+            }
+        }
+        if (displayName) {
+            displayName = displayName.replace(/^(adv\.?\s*|advocate\s*|senior\s+advocate\s*)/i, "").trim();
+        }
+    }
 
     const displayRole = user ? user.role : "";
 

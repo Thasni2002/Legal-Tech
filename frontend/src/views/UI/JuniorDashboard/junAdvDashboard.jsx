@@ -42,8 +42,54 @@ export default function JunAdvDashView() {
 
   useEffect(() => {
     const user = getLoggedInUser();
-    if (user && user.username) {
-      setUserName(user.username);
+    if (user) {
+      let name = "";
+      // 1. Try advocate_profile from local storage
+      if (typeof window !== "undefined") {
+        const userKey = (user.email || user.username || "").toLowerCase().trim();
+        const savedUserLocal = localStorage.getItem(`advocate_profile_${userKey}`);
+        if (savedUserLocal) {
+          try {
+            const parsed = JSON.parse(savedUserLocal);
+            const pName = parsed.advocateName || parsed.advocate_name;
+            if (pName && pName.trim()) name = pName.trim();
+          } catch (e) {}
+        }
+        if (!name) {
+          const savedGlobal = localStorage.getItem("advocate_profile");
+          if (savedGlobal) {
+            try {
+              const parsed = JSON.parse(savedGlobal);
+              const pName = parsed.advocateName || parsed.advocate_name;
+              if (pName && pName.trim()) name = pName.trim();
+            } catch (e) {}
+          }
+        }
+      }
+
+      // 2. Try first_name + last_name
+      if (!name) {
+        const first = user.first_name || user.firstName || "";
+        const last = user.last_name || user.lastName || "";
+        const combined = `${first} ${last}`.trim();
+        if (combined) name = combined;
+      }
+
+      // 3. Fallback to formatted username
+      if (!name && user.username) {
+        name = user.username;
+        if (name.toLowerCase() === "ashfahashraf") {
+          name = "Ashfah Ashraf";
+        } else {
+          name = name.replace(/([a-z])([A-Z])/g, "$1 $2");
+        }
+      }
+
+      if (name) {
+        name = name.replace(/^(adv\.?\s*|advocate\s*|junior\s+advocate\s*)/i, "").trim();
+      }
+
+      setUserName(name || user.username || "");
     }
 
     const fetchAssignedCases = async () => {
@@ -188,7 +234,7 @@ export default function JunAdvDashView() {
             {greeting}, {userName ? <span className="capitalize">{userName}</span> : ""}
           </h1>
           <p className="text-[#64748B] mt-0.5 sm:mt-1 text-xs sm:text-base font-medium truncate">
-            Junior Advocate {userName ? <span className="capitalize">{userName}</span> : ""}
+            Junior Advocate
           </p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center lg:items-center gap-2.5 sm:gap-3 w-full lg:w-auto">
@@ -424,11 +470,11 @@ export default function JunAdvDashView() {
                 <table className="w-full table-fixed divide-y divide-[#E2E8F0] text-xs sm:text-sm">
                   <thead className="bg-[#F8FAFC]">
                     <tr>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[28%]">Case</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[18%]">Client Name</th>
+                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[26%]">Case</th>
+                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[16%]">Client Name</th>
                       <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[17%]">Hearing Date</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[22%]">Court / Forum</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[10%]">Status</th>
+                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[18%]">Court / Forum</th>
+                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[13%]">Status</th>
                       <th className="p-3.5 sm:p-4 text-center text-xs font-bold text-[#475569] uppercase tracking-wider w-[10%]">Action</th>
                     </tr>
                   </thead>
@@ -452,13 +498,18 @@ export default function JunAdvDashView() {
                         <td className="p-3.5 sm:p-4 text-xs sm:text-sm text-[#475569] font-medium leading-snug break-words">
                           {item.court}
                         </td>
-                        <td className="p-3.5 sm:p-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                            item.status === "Active" || item.status === "Hearing"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : "bg-amber-50 text-amber-700 border-amber-200"
-                          }`}>
-                            {item.status}
+                        <td className="p-3.5 sm:p-4 min-w-0">
+                          <span
+                            title={item.status}
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider border max-w-full ${
+                              item.status === "Active" || item.status === "Hearing"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : item.status?.toLowerCase().includes("verified") || item.status?.toLowerCase().includes("document")
+                                ? "bg-amber-50 text-amber-800 border-amber-300"
+                                : "bg-amber-50 text-amber-700 border-amber-200"
+                            }`}
+                          >
+                            <span className="truncate">{item.status}</span>
                           </span>
                         </td>
                         <td className="p-3.5 sm:p-4 text-center whitespace-nowrap">
@@ -581,10 +632,10 @@ export default function JunAdvDashView() {
                 <table className="w-full table-fixed divide-y divide-[#E2E8F0] text-xs sm:text-sm">
                   <thead className="bg-[#F8FAFC]">
                     <tr>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[35%]">Case</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[25%]">Client Name</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[25%]">My Role</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[15%]">Status</th>
+                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[30%]">Case</th>
+                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[20%]">Client Name</th>
+                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[22%]">My Role</th>
+                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[28%]">Status</th>
                     </tr>
                   </thead>
 
@@ -613,13 +664,18 @@ export default function JunAdvDashView() {
                               </span>
                             )}
                           </td>
-                          <td className="p-3.5 sm:p-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                              item.status === "Active" || item.status === "Hearing"
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                : "bg-amber-50 text-amber-700 border-amber-200"
-                            }`}>
-                              {item.status}
+                          <td className="p-3.5 sm:p-4 min-w-0">
+                            <span
+                              title={item.status}
+                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider border max-w-full ${
+                                item.status === "Active" || item.status === "Hearing"
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : item.status?.toLowerCase().includes("verified") || item.status?.toLowerCase().includes("document")
+                                  ? "bg-amber-50 text-amber-800 border-amber-300"
+                                  : "bg-amber-50 text-amber-700 border-amber-200"
+                              }`}
+                            >
+                              <span className="truncate">{item.status}</span>
                             </span>
                           </td>
                         </tr>

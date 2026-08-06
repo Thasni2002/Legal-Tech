@@ -13,7 +13,11 @@ from app.database import SessionLocal
 from .schemas import LoginSchema, TokenSchema
 from . import service
 from .service import SECRET_KEY, ALGORITHM, hash_password
-from .models import User
+from .models import User, UserNotificationRead
+
+class MarkReadRequest(BaseModel):
+    user_id: int
+    notification_ids: List[str]
 
 router = APIRouter(tags=["Authentication"])
 
@@ -182,7 +186,7 @@ def get_notifications(
 
     notifications = []
     now = datetime.utcnow()
-    cutoff = now - timedelta(hours=48)  # Recent events threshold
+    cutoff = now - timedelta(days=30)  # Notifications threshold: last 1 month (30 days)
     today = date.today()
 
     def parse_date_str(d_str):
@@ -807,9 +811,49 @@ def get_notifications(
             except (ValueError, AttributeError, IndexError):
                 continue
 
+    # Check database persistent read status for user
+    read_ids = set()
+    if user_id:
+        read_records = db.query(UserNotificationRead.notification_id).filter(
+            UserNotificationRead.user_id == user_id
+        ).all()
+        read_ids = {r[0] for r in read_records}
+
+    for n in notifications:
+        n["is_read"] = n["id"] in read_ids
+
     # Sort all compiled notifications in descending chronological order
     notifications.sort(key=lambda x: x["created_at"], reverse=True)
     return notifications
+
+
+@router.post("/notifications/mark-read")
+def mark_notifications_read(
+    payload: MarkReadRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Persist read notification IDs for user in UserNotificationRead table
+    """
+    if not payload.user_id or not payload.notification_ids:
+        return {"status": "ok", "marked": 0}
+
+    existing = db.query(UserNotificationRead.notification_id).filter(
+        UserNotificationRead.user_id == payload.user_id,
+        UserNotificationRead.notification_id.in_(payload.notification_ids)
+    ).all()
+    existing_ids = {e[0] for e in existing}
+
+    new_entries = []
+    for nid in payload.notification_ids:
+        if nid not in existing_ids:
+            new_entries.append(UserNotificationRead(user_id=payload.user_id, notification_id=nid))
+
+    if new_entries:
+        db.bulk_save_objects(new_entries)
+        db.commit()
+
+    return {"status": "ok", "marked": len(new_entries)}
 
 
 @router.get("/google/login")

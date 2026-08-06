@@ -236,13 +236,13 @@ export default function LeaveManagementView({
       if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
         const diffTime = Math.abs(end.getTime() - start.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-        if (diffDays === 1) return "1 day";
-        return `${diffDays} days`;
+        if (diffDays === 1) return "1 Day";
+        return `${diffDays} Days`;
       }
     }
 
     const days = req.total_days || 1;
-    return days === 1 ? "1 day" : `${days} days`;
+    return days === 1 ? "1 Day" : `${days} Days`;
   };
 
   // Handle Apply Form submission
@@ -861,107 +861,121 @@ export default function LeaveManagementView({
             </div>
 
             {/* Desktop & Tablet Table (>= 640px) */}
-            <div className="hidden sm:block w-full max-w-full overflow-x-auto min-w-0">
-              <table className="w-full min-w-[750px] text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
-                    <th className="py-3.5 px-4">Applicant</th>
-                    <th className="py-3.5 px-4">Leave Type</th>
-                    <th className="py-3.5 px-4">Description / Reason</th>
-                    <th className="py-3.5 px-4">Dates</th>
-                    <th className="py-3.5 px-4">Duration</th>
-                    <th className="py-3.5 px-4">Status</th>
-                    <th className="py-3.5 px-4">Approver Info</th>
-                    <th className="py-3.5 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-                  {paginatedLeaves.map((req) => {
-                    const isOwnRequest = user?.id === req.user_id;
-                    const statusColor =
-                      req.status === "Approved" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      : req.status === "Rejected" ? "bg-rose-50 text-rose-700 border-rose-200"
-                      : req.status === "Cancelled" ? "bg-slate-100 text-slate-600 border-slate-200"
-                      : "bg-amber-50 text-amber-700 border-amber-200";
+            {(() => {
+              const hasPendingActions = paginatedLeaves.some((req) => {
+                const isOwnRequest = user?.id === req.user_id;
+                const isPending = req.status === "Pending";
+                const canApproveReq = canApprove && isPending && perms.edit && !isOwnRequest;
+                const canDeleteReq = isPending && (isOwnRequest || viewMode === "junior");
+                return canApproveReq || canDeleteReq;
+              });
 
-                    return (
-                      <tr key={req.id} className="hover:bg-slate-50/70 transition">
-                        <td className="py-3.5 px-4">
-                          <div className="font-extrabold text-slate-900">{req.applicant_name}</div>
-                          <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md mt-0.5 inline-block">
-                            {req.applicant_role}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 font-bold text-slate-800">{req.leave_type}</td>
-                        <td className="py-3.5 px-4 max-w-[220px]">
-                          <p className="truncate text-slate-600">{req.description || "—"}</p>
-                        </td>
-                        <td className="py-3.5 px-4 font-mono font-semibold text-slate-700 whitespace-nowrap">
-                          {req.from_date === req.to_date || !req.to_date ? (
-                            <div className="leading-snug">{req.from_date}</div>
-                          ) : (
-                            <div className="flex flex-col leading-snug">
-                              <span>{req.from_date}</span>
-                              <span className="text-[10px] text-slate-500 font-sans mt-0.5">to {req.to_date}</span>
-                            </div>
-                          )}
-                        </td>
-                        <td className="py-3.5 px-4 font-bold text-slate-900">
-                          {getDurationDisplay(req)}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${statusColor}`}>
-                            {req.status}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-slate-500">
-                          {req.approver_name ? (
-                            <div>
-                              <span className="font-semibold text-slate-700">{req.approver_name}</span>
-                              {req.rejection_reason && (
-                                <p className="text-[11px] text-red-600 italic">&quot;{req.rejection_reason}&quot;</p>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-slate-400">Pending review</span>
-                          )}
-                        </td>
-                        <td className="py-3.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {canApprove && req.status === "Pending" && perms.edit && !isOwnRequest && (
-                              <>
-                                <button
-                                  onClick={() => { setSelectedLeave(req); setActionType("Approved"); setShowActionModal(true); }}
-                                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer"
-                                >
-                                  Approve
-                                </button>
-                                <button
-                                  onClick={() => { setSelectedLeave(req); setActionType("Rejected"); setShowActionModal(true); }}
-                                  className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer"
-                                >
-                                  Reject
-                                </button>
-                              </>
-                            )}
-                            {req.status === "Pending" && (isOwnRequest || viewMode === "junior") && (
-                              <button
-                                onClick={() => setDeleteLeaveId(req.id)}
-                                className="px-2.5 py-1 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs transition cursor-pointer flex items-center gap-1 shadow-2xs"
-                                title="Delete Pending Leave Request"
-                              >
-                                <Trash2 size={13} />
-                                <span>Delete</span>
-                              </button>
-                            )}
-                          </div>
-                        </td>
+              return (
+                <div className="hidden sm:block w-full max-w-full overflow-x-auto min-w-0">
+                  <table className="w-full min-w-[750px] text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                        <th className="py-3.5 px-4">Applicant</th>
+                        <th className="py-3.5 px-4">Leave Type</th>
+                        <th className="py-3.5 px-4">Description / Reason</th>
+                        <th className="py-3.5 px-4">Dates</th>
+                        <th className="py-3.5 px-4">Duration</th>
+                        <th className="py-3.5 px-4">Status</th>
+                        <th className="py-3.5 px-4">Approver Info</th>
+                        {hasPendingActions && <th className="py-3.5 px-4 text-right">Actions</th>}
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                      {paginatedLeaves.map((req) => {
+                        const isOwnRequest = user?.id === req.user_id;
+                        const statusColor =
+                          req.status === "Approved" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : req.status === "Rejected" ? "bg-rose-50 text-rose-700 border-rose-200"
+                          : req.status === "Cancelled" ? "bg-slate-100 text-slate-600 border-slate-200"
+                          : "bg-amber-50 text-amber-700 border-amber-200";
+
+                        return (
+                          <tr key={req.id} className="hover:bg-slate-50/70 transition">
+                            <td className="py-3.5 px-4">
+                              <div className="font-extrabold text-slate-900">{req.applicant_name}</div>
+                              <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md mt-0.5 inline-block">
+                                {req.applicant_role}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 font-bold text-slate-800">{req.leave_type}</td>
+                            <td className="py-3.5 px-4 max-w-[220px]">
+                              <p className="truncate text-slate-600">{req.description || "—"}</p>
+                            </td>
+                            <td className="py-3.5 px-4 font-mono font-semibold text-slate-700 whitespace-nowrap">
+                              {req.from_date === req.to_date || !req.to_date ? (
+                                <div className="leading-snug">{req.from_date}</div>
+                              ) : (
+                                <div className="flex flex-col leading-snug">
+                                  <span>{req.from_date}</span>
+                                  <span className="text-[10px] text-slate-500 font-sans mt-0.5">to {req.to_date}</span>
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4 font-bold text-slate-900">
+                              {getDurationDisplay(req)}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${statusColor}`}>
+                                {req.status}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-slate-500">
+                              {req.approver_name ? (
+                                <div>
+                                  <span className="font-semibold text-slate-700">{req.approver_name}</span>
+                                  {req.rejection_reason && (
+                                    <p className="text-[11px] text-red-600 italic">&quot;{req.rejection_reason}&quot;</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-slate-400">Pending review</span>
+                              )}
+                            </td>
+                            {hasPendingActions && (
+                              <td className="py-3.5 px-4 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {canApprove && req.status === "Pending" && perms.edit && !isOwnRequest && (
+                                    <>
+                                      <button
+                                        onClick={() => { setSelectedLeave(req); setActionType("Approved"); setShowActionModal(true); }}
+                                        className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer"
+                                      >
+                                        Approve
+                                      </button>
+                                      <button
+                                        onClick={() => { setSelectedLeave(req); setActionType("Rejected"); setShowActionModal(true); }}
+                                        className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer"
+                                      >
+                                        Reject
+                                      </button>
+                                    </>
+                                  )}
+                                  {req.status === "Pending" && (isOwnRequest || viewMode === "junior") && (
+                                    <button
+                                      onClick={() => setDeleteLeaveId(req.id)}
+                                      className="px-2.5 py-1 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                                      title="Delete Pending Leave Request"
+                                    >
+                                      <Trash2 size={13} />
+                                      <span>Delete</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
 
             {/* Table Pagination Controls */}
             {filteredLeaves.length > 0 && (

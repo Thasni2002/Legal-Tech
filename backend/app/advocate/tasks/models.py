@@ -54,6 +54,9 @@ class TaskMessage(Base):
     message = Column(Text, nullable=False)
     # Optional tag: progress | completed | todo | review | general
     message_type = Column(String(50), default="general")
+    file_url = Column(Text, nullable=True)
+    file_name = Column(String(255), nullable=True)
+    file_type = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

@@ -603,12 +603,12 @@ export default function AssignedCasesView() {
               <table className="w-full min-w-[700px] table-fixed divide-y divide-[#E2E8F0] text-left">
                 <thead className="bg-[#F8FAFC]">
                   <tr>
-                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[26%]">Case ID</th>
-                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[15%]">Client</th>
-                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[18%]">Court</th>
+                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[24%]">Case ID</th>
+                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[13%]">Client</th>
+                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[14%]">Court</th>
                     <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[14%]">Next Hearing</th>
-                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[10%]">Status</th>
-                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[17%] text-center">Actions</th>
+                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[19%]">Status</th>
+                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[16%] text-center">Actions</th>
                   </tr>
                 </thead>
 
@@ -633,9 +633,12 @@ export default function AssignedCasesView() {
                         <td className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#2563EB] whitespace-nowrap">
                           {item.hearing}
                         </td>
-                        <td className="px-3 sm:px-4 py-3.5 whitespace-nowrap">
-                          <span className={`px-2.5 py-1 rounded-full text-xs uppercase tracking-wider inline-block ${getStatusBadgeClass(item.status)}`}>
-                            {item.status === "Won" ? "🏆 Won" : item.status === "Lost" ? "❌ Lost" : item.status}
+                        <td className="px-3 sm:px-4 py-3.5 min-w-0">
+                          <span
+                            title={item.status}
+                            className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider inline-block max-w-full ${getStatusBadgeClass(item.status)}`}
+                          >
+                            <span className="truncate">{item.status === "Won" ? "🏆 Won" : item.status === "Lost" ? "❌ Lost" : item.status}</span>
                           </span>
                         </td>
 
