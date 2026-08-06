@@ -4,11 +4,14 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getLoggedInUser } from "@/utils/auth";
 import { API_BASE_URL } from "@/utils/api";
-import { Bell, ChevronDown, LoaderCircle, CheckCheck, X } from "lucide-react";
+import { Bell, ChevronDown, LoaderCircle, CheckCheck, X, MessageCircle } from "lucide-react";
+import MessagingHub from "@/components/messaging/MessagingHub";
 
 export default function Navbar() {
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showMessaging, setShowMessaging] = useState(false);
+  const [msgUnreadCount, setMsgUnreadCount] = useState(0);
   const [notifFilter, setNotifFilter] = useState("all");
   const [user, setUser] = useState(null);
   const [displayName, setDisplayName] = useState("");
@@ -19,6 +22,7 @@ export default function Navbar() {
   const router = useRouter();
   const profileRef = useRef(null);
   const notificationRef = useRef(null);
+  const messagingRef = useRef(null);
 
   const loadUserData = useCallback(async () => {
     const loggedInUser = getLoggedInUser();
@@ -112,8 +116,23 @@ export default function Navbar() {
 
     if (loggedInUser) {
       fetchNotifications(loggedInUser);
+      fetchMsgUnreadCount(loggedInUser);
     }
   }, []);
+
+  const fetchMsgUnreadCount = async (loggedInUser) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      const res = await fetch(`${API_BASE_URL}/messaging/unread-count`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMsgUnreadCount(data.unread_count || 0);
+      }
+    } catch (err) {}
+  };
 
   useEffect(() => {
     loadUserData();
@@ -152,18 +171,8 @@ export default function Navbar() {
       const res = await fetch(`${API_BASE_URL}/notifications?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
-        let localReadIds = [];
-        try {
-          const stored = localStorage.getItem(`read_notifs_${loggedInUser.id}`);
-          if (stored) localReadIds = JSON.parse(stored);
-        } catch (e) {}
-
-        const merged = data.map((n) => ({
-          ...n,
-          is_read: n.is_read || localReadIds.includes(n.id),
-        }));
-
-        setNotifications(merged);
+        // Backend now returns is_read field per notification
+        setNotifications(data);
       }
     } catch (err) {
       // Quietly ignore transient network/dev-server reload errors
@@ -173,22 +182,11 @@ export default function Navbar() {
   };
 
   /**
-   * Mark one notification as read — persisted in MySQL via backend API and LocalStorage.
+   * Mark one notification as read — persisted in MySQL via backend API.
    */
   const markAsRead = useCallback(async (notifId) => {
     const loggedInUser = getLoggedInUser();
     if (!loggedInUser?.id) return;
-
-    // Save to local storage for immediate persistence
-    try {
-      const key = `read_notifs_${loggedInUser.id}`;
-      const stored = localStorage.getItem(key);
-      const list = stored ? JSON.parse(stored) : [];
-      if (!list.includes(notifId)) {
-        list.push(notifId);
-        localStorage.setItem(key, JSON.stringify(list));
-      }
-    } catch (e) {}
 
     // Optimistic UI update immediately
     setNotifications((prev) =>
@@ -210,7 +208,7 @@ export default function Navbar() {
   }, []);
 
   /**
-   * Mark ALL notifications as read — persisted in MySQL via backend API and LocalStorage.
+   * Mark ALL notifications as read — persisted in MySQL via backend API.
    */
   const markAllAsRead = useCallback(async () => {
     const loggedInUser = getLoggedInUser();
@@ -218,15 +216,6 @@ export default function Navbar() {
 
     const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id);
     if (unreadIds.length === 0) return;
-
-    // Save to local storage
-    try {
-      const key = `read_notifs_${loggedInUser.id}`;
-      const stored = localStorage.getItem(key);
-      const list = stored ? JSON.parse(stored) : [];
-      const updated = Array.from(new Set([...list, ...unreadIds]));
-      localStorage.setItem(key, JSON.stringify(updated));
-    } catch (e) {}
 
     // Optimistic UI update immediately
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
@@ -267,6 +256,35 @@ export default function Navbar() {
 
       {/* Right Side */}
       <div className="flex items-center gap-3">
+
+        {/* Messaging Hub Persistent Icon */}
+        <div className="relative" ref={messagingRef}>
+          <button
+            onClick={() => {
+              setShowMessaging(!showMessaging);
+              setShowNotifications(false);
+              setShowProfile(false);
+            }}
+            className={`relative p-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
+              showMessaging 
+                ? "bg-blue-600 text-white shadow-md" 
+                : "hover:bg-slate-100 text-slate-700 hover:text-blue-600"
+            }`}
+            title="Client Messaging Hub"
+          >
+            <MessageCircle size={20} />
+            {msgUnreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-black h-4 min-w-[16px] px-1 rounded-full flex items-center justify-center animate-pulse border-2 border-white">
+                {msgUnreadCount > 9 ? "9+" : msgUnreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Floating Messaging Hub Panel */}
+          {showMessaging && (
+            <MessagingHub onClose={() => setShowMessaging(false)} />
+          )}
+        </div>
 
         {/* Notifications */}
         <div className="relative" ref={notificationRef}>
@@ -550,3 +568,5 @@ export default function Navbar() {
     </nav>
   );
 }
+
+
