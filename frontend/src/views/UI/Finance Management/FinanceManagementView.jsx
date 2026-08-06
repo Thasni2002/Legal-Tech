@@ -752,48 +752,49 @@ export default function CourtFeeCalView() {
 
         {/* Right Column: Billing Summary */}
         <div className="lg:col-span-1">
-          <div className="bg-[#0F172A] rounded-3xl p-8 shadow-2xl shadow-slate-900/20 text-white sticky top-6">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-2xl font-extrabold tracking-tight">Invoice</h3>
-              <Receipt size={28} className="text-slate-400" />
+          <div className="bg-white border border-[#E2E8F0] rounded-3xl p-6 sm:p-8 shadow-md text-[#0F172A] sticky top-6">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#F1F5F9]">
+              <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0F172A]">Invoice</h3>
+              <Receipt size={26} className="text-[#2563EB]" />
             </div>
 
-            <div className="space-y-4 mb-8">
+            <div className="space-y-4 mb-6">
               <div>
-                <p className="text-xs text-slate-400 uppercase tracking-wider font-bold mb-1">Billed To</p>
-                <p className="text-lg font-bold">{clientName || "—"}</p>
-                <p className="text-sm text-slate-300">{email || "—"}</p>
-                <p className="text-sm text-slate-300">{mobileNumber || "—"}</p>
+                <p className="text-[11px] text-[#64748B] uppercase tracking-wider font-extrabold mb-1">Billed To</p>
+                <p className="text-base font-extrabold text-[#0F172A]">{clientName || "—"}</p>
+                <p className="text-xs text-[#475569] font-medium">{email || "—"}</p>
+                <p className="text-xs text-[#475569] font-medium">{mobileNumber || "—"}</p>
               </div>
               <div className="pt-2">
-                <p className="text-xs text-slate-400 uppercase tracking-wider font-bold mb-1">Case Number</p>
-                <p className="text-sm font-semibold">{caseNumber || "—"}</p>
+                <p className="text-[11px] text-[#64748B] uppercase tracking-wider font-extrabold mb-1">Case Number</p>
+                <p className="text-xs font-extrabold text-[#0F172A] font-mono">{caseNumber || "—"}</p>
               </div>
             </div>
 
-            <div className="space-y-4 text-sm border-t border-slate-700/50 pt-6 mb-6">
-              <div className="flex justify-between items-center">
-                <span className="text-slate-300">Advocate Fee</span>
-                <span className="font-bold">₹{advocateFee || 0}</span>
+            <div className="space-y-3 text-xs border-t border-[#E2E8F0] pt-5 mb-6">
+              <div className="flex justify-between items-center text-[#475569] font-medium">
+                <span>Advocate Fee</span>
+                <span className="font-extrabold text-[#0F172A]">₹{advocateFee || 0}</span>
               </div>
 
-              <div className="flex justify-between items-center pt-4 border-t border-dashed border-slate-700">
-                <span className="text-slate-400">Subtotal</span>
-                <span className="font-bold">₹{total}</span>
+              <div className="flex justify-between items-center pt-3 border-t border-dashed border-[#E2E8F0]">
+                <span className="text-[#64748B] font-medium">Subtotal</span>
+                <span className="font-extrabold text-[#0F172A]">₹{total}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-400">GST (18%)</span>
-                <span className="font-bold">₹{(Number(advocateFee || 0) * 0.18).toFixed(2)}</span>
+                <span className="text-[#64748B] font-medium">GST (18%)</span>
+                <span className="font-extrabold text-[#0F172A]">₹{(Number(advocateFee || 0) * 0.18).toFixed(2)}</span>
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 -mx-8 px-8 py-6 mb-8 shadow-inner text-center relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-10"><Landmark size={80} /></div>
-              <p className="text-xs text-blue-200 uppercase tracking-wider font-bold mb-1 relative z-10">Grand Total</p>
-              <p className="text-4xl font-black tracking-tight relative z-10">
-                ₹{(Number(total) + Number(advocateFee || 0) * 0.18).toFixed(2)}              </p>
-              <div className="mt-2 inline-flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full text-xs font-medium text-white backdrop-blur-sm relative z-10">
-                <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+            <div className="bg-[#F8FAFC] border border-blue-100 rounded-2xl -mx-2 px-6 py-5 mb-6 text-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-5"><Landmark size={80} /></div>
+              <p className="text-[11px] text-[#64748B] uppercase tracking-wider font-extrabold mb-1 relative z-10">Grand Total</p>
+              <p className="text-3xl sm:text-4xl font-black text-[#2563EB] tracking-tight relative z-10">
+                ₹{(Number(total) + Number(advocateFee || 0) * 0.18).toFixed(2)}
+              </p>
+              <div className="mt-2 inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full text-xs font-bold text-amber-700 relative z-10">
+                <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
                 Pending Payment
               </div>
             </div>
@@ -801,10 +802,10 @@ export default function CourtFeeCalView() {
             {hasPermission("Finance Management", "add") && (
               <button
                 onClick={handleSendPayment}
-                className="w-full flex items-center justify-center gap-2 bg-white text-[#0F172A] font-extrabold py-4 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-white/10 group"
+                className="w-full flex items-center justify-center gap-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-extrabold py-3.5 rounded-xl transition-all shadow-md active:scale-[0.98] cursor-pointer text-sm"
               >
-                Send Payment Request
-                <Send size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                <span>Send Payment Request</span>
+                <Send size={16} />
               </button>
             )}
 

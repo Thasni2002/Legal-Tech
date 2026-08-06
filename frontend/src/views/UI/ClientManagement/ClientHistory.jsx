@@ -30,7 +30,8 @@ import {
   Gavel,
   Folder,
   MapPin,
-  Edit3
+  Edit3,
+  Building2
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { API_BASE_URL } from "@/utils/api";
@@ -81,8 +82,76 @@ const formatExactDateTime = (dateVal) => {
   };
 };
 
+// Smart deduplication: filter out raw usernames when full display names exist for the same advocate
+const dedupeAdvocatesList = (candidates) => {
+  const normKey = (str) => (str || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const rawList = Array.from(
+    new Set(
+      candidates
+        .map(adv => (adv || "").trim())
+        .filter(adv => adv !== "" && adv.toLowerCase() !== "n/a" && adv.toLowerCase() !== "unknown" && adv.toLowerCase() !== "advocate")
+    )
+  );
+
+  const clean = [];
+  rawList.forEach(name => {
+    const key = normKey(name);
+    if (!key) return;
+    const existingIdx = clean.findIndex(item => {
+      const itemKey = normKey(item);
+      return itemKey === key || itemKey.includes(key) || key.includes(itemKey);
+    });
+
+    if (existingIdx === -1) {
+      clean.push(name);
+    } else {
+      const existing = clean[existingIdx];
+      if (name.length > existing.length || name.includes(" ") || name.toLowerCase().includes("adv")) {
+        clean[existingIdx] = name;
+      }
+    }
+  });
+
+  return clean;
+};
+
+// Helper to format full advocate names instead of usernames
+const formatFullAdvocateName = (rawName, advocatesList = []) => {
+  if (!rawName || rawName.trim() === "" || rawName.toLowerCase() === "n/a") {
+    return "Senior Advocate";
+  }
+
+  const str = rawName.trim();
+  const normKey = (s) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const targetKey = normKey(str);
+
+  if (Array.isArray(advocatesList) && advocatesList.length > 0) {
+    const match = advocatesList.find(adv => {
+      const advKey = normKey(adv);
+      return advKey === targetKey || advKey.includes(targetKey) || targetKey.includes(advKey);
+    });
+    if (match) return match.toLowerCase().startsWith("adv") ? match : `Adv. ${match}`;
+  }
+
+  if (str.includes(" ") || str.toLowerCase().startsWith("adv")) {
+    return str.toLowerCase().startsWith("adv") ? str : `Adv. ${str}`;
+  }
+
+  let cleanName = str;
+  if (str.toLowerCase() === "ashfahashraf") {
+    cleanName = "ashfah ashraf";
+  }
+
+  const capitalized = cleanName
+    .split(" ")
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+
+  return `Adv. ${capitalized}`;
+};
+
 // Helper to reliably resolve performer/uploader Name and Role (Senior Adv, Jr Adv, Clerk, Client)
-const resolveUploader = (doc, item, eventType) => {
+const resolveUploader = (doc, item, eventType, advocatesList = []) => {
   // 1. Check document-specific uploader / advocate first
   const docAdv = doc?.advocate || doc?.uploadedBy || doc?.uploaded_by || doc?.uploadedByName;
   const docRole = doc?.uploadedByRole || doc?.uploaded_by_role || doc?.role;
@@ -103,7 +172,7 @@ const resolveUploader = (doc, item, eventType) => {
     }
     return {
       label: "Uploaded by",
-      name: docAdv.trim(),
+      name: formatFullAdvocateName(docAdv, advocatesList),
       role: computedRole
     };
   }
@@ -120,9 +189,8 @@ const resolveUploader = (doc, item, eventType) => {
   }
 
   // 3. For Case Creation / Update events from Senior Advocate Case Management:
-  const advocateName = item?.selected_advocate && item.selected_advocate.trim() !== "" && item.selected_advocate.trim().toLowerCase() !== "n/a"
-    ? item.selected_advocate.trim()
-    : "Senior Advocate";
+  const rawAdv = item?.selected_advocate || item?.advocate_name || item?.advocateName;
+  const advocateName = formatFullAdvocateName(rawAdv, advocatesList);
 
   if (eventType === "case" || item?.type === "case") {
     return {
@@ -247,14 +315,24 @@ export default function ClientHistory() {
 
           if (matchedCases.length > 0) {
             const firstMatch = matchedCases[0];
-            setClient(prev => ({
-              ...prev,
-              phone: (prev?.phone && prev.phone !== "N/A") ? prev.phone : (firstMatch.contact_number || "N/A"),
-              altPhone: prev?.altPhone || prev?.alt_contact_number || prev?.altPhone || firstMatch.alt_contact_number || "",
-              email: (prev?.email && prev.email !== "N/A") ? prev.email : (firstMatch.email_id || "N/A"),
-              address: prev?.address || prev?.clientAddress || firstMatch.client_address || "",
-              district: prev?.district || prev?.clientDistrict || firstMatch.client_district || "",
-            }));
+            setClient(prev => {
+              if (!prev) return prev;
+              const newPhone = (prev.phone && prev.phone !== "N/A") ? prev.phone : (firstMatch.contact_number || "N/A");
+              const newEmail = (prev.email && prev.email !== "N/A") ? prev.email : (firstMatch.email_id || "N/A");
+              const newAddress = prev.address || prev.clientAddress || firstMatch.client_address || "";
+              const newDistrict = prev.district || prev.clientDistrict || firstMatch.client_district || "";
+
+              if (prev.phone === newPhone && prev.email === newEmail && prev.address === newAddress && prev.district === newDistrict) {
+                return prev;
+              }
+              return {
+                ...prev,
+                phone: newPhone,
+                email: newEmail,
+                address: newAddress,
+                district: newDistrict,
+              };
+            });
           }
 
           const matchedCasesWithAdvocates = matchedCases.map(item => {
@@ -274,13 +352,7 @@ export default function ClientHistory() {
                 if (ac.secondaryAdvocateName) caseAdvCandidates.push(ac.secondaryAdvocateName);
               });
             }
-            const uniqueCaseAdv = Array.from(
-              new Set(
-                caseAdvCandidates
-                  .map(adv => (adv || "").trim())
-                  .filter(adv => adv !== "" && adv.toLowerCase() !== "n/a" && adv.toLowerCase() !== "unknown" && adv.toLowerCase() !== "advocate")
-              )
-            );
+            const uniqueCaseAdv = dedupeAdvocatesList(caseAdvCandidates);
             const assigned_advocates_display = uniqueCaseAdv.length > 0
               ? uniqueCaseAdv.slice(0, 2).join(", ")
               : "Not Assigned Advocate";
@@ -315,23 +387,18 @@ export default function ClientHistory() {
             });
           }
 
-          const uniqueAdvocates = Array.from(
-            new Set(
-              advocateCandidates
-                .map(adv => (adv || "").trim())
-                .filter(adv => adv !== "" && adv.toLowerCase() !== "n/a" && adv.toLowerCase() !== "unknown" && adv.toLowerCase() !== "advocate")
-            )
-          );
+          const uniqueAdvocates = dedupeAdvocatesList(advocateCandidates);
           setAssignedAdvocatesList(uniqueAdvocates);
 
           const mapped = matchedCases.map((item) => {
             const dt = formatExactDateTime(item.created_at || item.updated_at);
-            const uploader = resolveUploader(null, item, "case");
+            const uploader = resolveUploader(null, item, "case", uniqueAdvocates);
+            const formattedCaseAdv = item.selected_advocate ? formatFullAdvocateName(item.selected_advocate, uniqueAdvocates) : "";
             return {
               id: `db-case-${item.id}`,
               type: "case",
               title: "Case Created / Updated",
-              desc: `Case '${item.case_title || item.case_no}' under court '${item.court_name}' is currently '${item.status}'${item.selected_advocate ? ` | Assigned Advocate: ${item.selected_advocate}` : ''}.`,
+              desc: `Case '${item.case_title || item.case_no}' under court '${item.court_name}' is currently '${item.status}'${formattedCaseAdv ? ` | Assigned Advocate: ${formattedCaseAdv}` : ''}.`,
               clientName: item.client_name || "Unknown",
               uploaderLabel: uploader.label,
               uploaderRole: uploader.role,
@@ -352,7 +419,7 @@ export default function ClientHistory() {
 
               const docTimeStr = doc.created_at || doc.uploaded_at || doc.uploadedAt || item.created_at;
               const dt = formatExactDateTime(docTimeStr);
-              const uploader = resolveUploader(doc, item, "document");
+              const uploader = resolveUploader(doc, item, "document", uniqueAdvocates);
 
               docItems.push({
                 id: `db-doc-${item.id}-${idx}`,
@@ -441,11 +508,16 @@ export default function ClientHistory() {
 
           const mapped = matchedConsultations.map((item) => {
             const dt = formatExactDateTime(item.created_at || item.date);
+            const primaryAdv = (item.advocate_name && item.advocate_name.toLowerCase() !== "counsel" && item.advocate_name.toLowerCase() !== "n/a" && item.advocate_name.trim() !== "")
+              ? item.advocate_name
+              : (assignedAdvocatesList.length > 0 ? assignedAdvocatesList[0] : "Senior Advocate");
+            const formattedAdv = primaryAdv.toLowerCase().startsWith("adv") ? primaryAdv : `Adv. ${primaryAdv}`;
+
             return {
               id: `db-discussion-${item.id}`,
               type: "discussion",
               title: `Discussion Scheduled — ${item.status}`,
-              desc: `Discussion appointment for issue: '${item.issue || "N/A"}' with Adv. ${item.advocate_name || "counsel"} (${item.type || "N/A"}).`,
+              desc: `Discussion appointment for issue: '${item.issue || "N/A"}' with ${formattedAdv} (${item.type || "N/A"}).`,
               clientName: item.client_name || "Unknown",
               uploaderLabel: "Scheduled by",
               uploaderRole: item.advocate_name ? "Senior Advocate" : "Client",
@@ -470,7 +542,7 @@ export default function ClientHistory() {
     fetchDbCases();
     fetchDbInvoices();
     fetchDbConsultations();
-  }, [client]);
+  }, [client?.clientId, client?.fullName, client?.clientName]);
 
   // Get configuration styles per history event type
   const getTypeConfig = (type) => {
@@ -693,7 +765,7 @@ export default function ClientHistory() {
                           }));
                           setShowEditModal(true);
                         }}
-                        className="py-1.5 px-3 bg-[#F1F5F9] hover:bg-amber-50 text-[#0F172A] hover:text-amber-700 rounded-xl transition border border-[#E2E8F0] flex items-center gap-1.5 text-xs font-bold cursor-pointer"
+                        className="py-1.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl transition border border-amber-200 flex items-center gap-1.5 text-xs font-bold cursor-pointer shadow-2xs"
                         title="Edit Client Details"
                       >
                         <Edit3 size={13} />
@@ -703,73 +775,84 @@ export default function ClientHistory() {
                   </div>
 
                   {/* Personal Information Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <div className="p-3.5 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]/60 space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs text-[#94A3B8] font-semibold">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]/80 space-y-1">
+                      <div className="flex items-center gap-1.5 text-[11px] text-[#64748B] font-bold uppercase tracking-wider">
                         <Phone size={13} className="text-[#2563EB]" />
                         <span>Phone Number</span>
                       </div>
                       <a
                         href={`tel:${client.phone || client.contactNumber}`}
-                        className="text-xs font-bold text-[#0F172A] hover:text-[#2563EB] block truncate"
+                        className="text-xs font-extrabold text-[#0F172A] hover:text-[#2563EB] block truncate"
+                        title={client.phone || client.contactNumber || "N/A"}
                       >
                         {client.phone || client.contactNumber || "N/A"}
                       </a>
                     </div>
 
-                    <div className="p-3.5 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]/60 space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs text-[#94A3B8] font-semibold">
+                    <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]/80 space-y-1">
+                      <div className="flex items-center gap-1.5 text-[11px] text-[#64748B] font-bold uppercase tracking-wider">
                         <Phone size={13} className="text-[#2563EB]" />
-                        <span>Alternative Mobile</span>
+                        <span>Alt Mobile</span>
                       </div>
                       {(client.altPhone || client.alt_contact_number || client.altContactNumber) ? (
                         <a
                           href={`tel:${client.altPhone || client.alt_contact_number || client.altContactNumber}`}
-                          className="text-xs font-bold text-[#0F172A] hover:text-[#2563EB] block truncate"
+                          className="text-xs font-extrabold text-[#0F172A] hover:text-[#2563EB] block truncate"
+                          title={client.altPhone || client.alt_contact_number || client.altContactNumber}
                         >
                           {client.altPhone || client.alt_contact_number || client.altContactNumber}
                         </a>
                       ) : (
-                        <p className="text-xs font-bold text-[#94A3B8] block truncate">N/A</p>
+                        <p className="text-xs font-extrabold text-[#94A3B8] block truncate">N/A</p>
                       )}
                     </div>
 
-                    <div className="p-3.5 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]/60 space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs text-[#94A3B8] font-semibold">
+                    <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]/80 space-y-1">
+                      <div className="flex items-center gap-1.5 text-[11px] text-[#64748B] font-bold uppercase tracking-wider">
                         <Mail size={13} className="text-[#2563EB]" />
                         <span>Email Address</span>
                       </div>
                       <a
                         href={`mailto:${client.email || client.emailId}`}
-                        className="text-xs font-bold text-[#0F172A] hover:text-[#2563EB] block truncate"
+                        className="text-xs font-extrabold text-[#0F172A] hover:text-[#2563EB] block truncate"
                         title={client.email || client.emailId}
                       >
                         {client.email || client.emailId || "N/A"}
                       </a>
                     </div>
 
-                    <div className="p-3.5 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]/60 space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs text-[#94A3B8] font-semibold">
+                    <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]/80 space-y-1">
+                      <div className="flex items-center gap-1.5 text-[11px] text-[#64748B] font-bold uppercase tracking-wider">
                         <MapPin size={13} className="text-[#2563EB]" />
-                        <span>Address & Location</span>
+                        <span>Address</span>
                       </div>
-                      <p className="text-xs font-bold text-[#0F172A] truncate" title={`${client.address || client.clientAddress || 'N/A'} ${client.district || client.clientDistrict ? `(${client.district || client.clientDistrict})` : ''}`}>
-                        {client.address || client.clientAddress ? `${client.address || client.clientAddress}` : "N/A"}
-                        {client.district || client.clientDistrict ? ` (${client.district || client.clientDistrict})` : ""}
+                      <p className="text-xs font-extrabold text-[#0F172A] truncate" title={client.address || client.clientAddress || "N/A"}>
+                        {client.address || client.clientAddress || "N/A"}
                       </p>
                     </div>
 
-                    <div className="p-3.5 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]/60 space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs text-[#94A3B8] font-semibold">
+                    <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]/80 space-y-1">
+                      <div className="flex items-center gap-1.5 text-[11px] text-[#64748B] font-bold uppercase tracking-wider">
+                        <Building2 size={13} className="text-[#2563EB]" />
+                        <span>District</span>
+                      </div>
+                      <p className="text-xs font-extrabold text-[#0F172A] truncate" title={client.district || client.clientDistrict || "N/A"}>
+                        {client.district || client.clientDistrict || "N/A"}
+                      </p>
+                    </div>
+
+                    <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]/80 space-y-1">
+                      <div className="flex items-center gap-1.5 text-[11px] text-[#64748B] font-bold uppercase tracking-wider">
                         <UserCheck size={13} className="text-[#2563EB]" />
-                        <span>Assigned Advocate</span>
+                        <span>Advocate</span>
                       </div>
                       {assignedAdvocatesList.length > 0 ? (
                         <div className="space-y-0.5">
                           {assignedAdvocatesList.slice(0, 2).map((advName, idx) => (
                             <p
                               key={idx}
-                              className="text-xs font-bold text-[#0F172A] truncate"
+                              className="text-xs font-extrabold text-[#0F172A] truncate"
                               title={advName}
                             >
                               {advName}
@@ -777,8 +860,8 @@ export default function ClientHistory() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs font-bold text-[#64748B] truncate" title="Not Assigned Advocate">
-                          Not Assigned Advocate
+                        <p className="text-xs font-extrabold text-[#64748B] truncate" title="Unassigned">
+                          Unassigned
                         </p>
                       )}
                     </div>
@@ -926,10 +1009,10 @@ export default function ClientHistory() {
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer capitalize ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer capitalize ${
                       activeTab === tab
-                        ? "bg-white text-[#0F172A] shadow-2xs"
-                        : "text-[#64748B] hover:text-[#0F172A]"
+                        ? "bg-[#2563EB] text-white shadow-xs"
+                        : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-200/60"
                     }`}
                   >
                     {tab === "all" ? "All Activities" : tab === "case" ? "Case Updates" : tab === "document" ? "Documents" : tab === "billing" ? "Billing" : "Case Discussion"}

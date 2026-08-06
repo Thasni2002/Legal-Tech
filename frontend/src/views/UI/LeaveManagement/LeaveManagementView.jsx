@@ -788,8 +788,8 @@ export default function LeaveManagementView({
           </div>
         ) : (
           <>
-            {/* Mobile Native Card View (< 640px) */}
-            <div className="block sm:hidden divide-y divide-slate-100">
+            {/* Mobile & Tablet Card View (< 768px) */}
+            <div className="block md:hidden divide-y divide-slate-100 p-2 sm:p-4 bg-[#F8FAFC]">
               {paginatedLeaves.map((req) => {
                 const isOwnRequest = user?.id === req.user_id;
                 const statusColor =
@@ -799,10 +799,10 @@ export default function LeaveManagementView({
                   : "bg-amber-50 text-amber-700 border-amber-200";
 
                 return (
-                  <div key={req.id} className="p-4 space-y-3 bg-white">
-                    <div className="flex items-center justify-between gap-2">
+                  <div key={req.id} className="p-4 rounded-xl bg-white border border-[#E2E8F0] space-y-3 mb-3 shadow-2xs">
+                    <div className="flex items-start justify-between gap-2">
                       <div>
-                        <h4 className="text-xs sm:text-sm font-extrabold text-slate-900">{req.applicant_name}</h4>
+                        <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 capitalize">{req.applicant_name}</h4>
                         <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md mt-0.5 inline-block">
                           {req.applicant_role}
                         </span>
@@ -814,53 +814,55 @@ export default function LeaveManagementView({
 
                     <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-1.5 text-xs text-slate-700">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-900">{req.leave_type}</span>
-                        <span className="font-mono text-slate-500 font-bold">{getDurationDisplay(req)}</span>
+                        <span className="font-extrabold text-slate-900">{req.leave_type}</span>
+                        <span className="font-mono text-slate-600 font-bold">{getDurationDisplay(req)}</span>
                       </div>
                       <p className="text-slate-600 text-[11px] font-medium leading-relaxed">{req.description || "No description provided."}</p>
-                      <div className="text-[11px] text-blue-600 font-semibold pt-1 border-t border-slate-200/60 flex items-center gap-1">
+                      <div className="text-[11px] text-blue-600 font-semibold pt-1.5 border-t border-slate-200/60 flex items-center gap-1">
                         <CalendarIcon size={12} /> {req.from_date} to {req.to_date}
                       </div>
                     </div>
 
                     {/* Approver / Actions */}
-                    <div className="flex items-center justify-between gap-2 pt-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
                       <div className="text-[11px] text-slate-500 font-medium">
                         {req.approver_name ? `Approved by ${req.approver_name}` : "Pending review"}
                       </div>
-                      {canApprove && req.status === "Pending" && perms.edit && !isOwnRequest && (
-                        <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 ml-auto">
+                        {canApprove && req.status === "Pending" && perms.edit && !isOwnRequest && (
+                          <>
+                            <button
+                              onClick={() => { setSelectedLeave(req); setActionType("Approved"); setShowActionModal(true); }}
+                              className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[11px] font-bold shadow-2xs"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => { setSelectedLeave(req); setActionType("Rejected"); setShowActionModal(true); }}
+                              className="px-2.5 py-1 bg-rose-600 text-white rounded-lg text-[11px] font-bold shadow-2xs"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                        {req.status === "Pending" && (isOwnRequest || viewMode === "junior") && (
                           <button
-                            onClick={() => { setSelectedLeave(req); setActionType("Approved"); setShowActionModal(true); }}
-                            className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[11px] font-bold"
+                            onClick={() => setDeleteLeaveId(req.id)}
+                            className="px-2.5 py-1 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px] transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                            title="Delete Pending Leave Request"
                           >
-                            Approve
+                            <Trash2 size={12} />
+                            <span>Delete</span>
                           </button>
-                          <button
-                            onClick={() => { setSelectedLeave(req); setActionType("Rejected"); setShowActionModal(true); }}
-                            className="px-2.5 py-1 bg-rose-600 text-white rounded-lg text-[11px] font-bold"
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      )}
-                      {req.status === "Pending" && (isOwnRequest || viewMode === "junior") && (
-                        <button
-                          onClick={() => setDeleteLeaveId(req.id)}
-                          className="px-2.5 py-1 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px] transition cursor-pointer flex items-center gap-1"
-                          title="Delete Pending Leave Request"
-                        >
-                          <Trash2 size={12} />
-                          <span>Delete</span>
-                        </button>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            {/* Desktop & Tablet Table (>= 640px) */}
+            {/* Desktop Table (>= 768px) */}
             {(() => {
               const hasPendingActions = paginatedLeaves.some((req) => {
                 const isOwnRequest = user?.id === req.user_id;
@@ -871,8 +873,8 @@ export default function LeaveManagementView({
               });
 
               return (
-                <div className="hidden sm:block w-full max-w-full overflow-x-auto min-w-0">
-                  <table className="w-full min-w-[750px] text-left text-xs border-collapse">
+                <div className="hidden md:block w-full max-w-full overflow-x-auto min-w-0">
+                  <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
                         <th className="py-3.5 px-4">Applicant</th>
@@ -979,7 +981,7 @@ export default function LeaveManagementView({
 
             {/* Table Pagination Controls */}
             {filteredLeaves.length > 0 && (
-              <div className="px-4 py-3.5 border-t border-slate-100 bg-white flex flex-col sm:flex-row justify-between items-center gap-3">
+              <div className="px-4 py-3.5 border-t border-slate-100 bg-white flex flex-col sm:flex-row justify-between items-center gap-3 pb-10 sm:pb-3.5">
                 <span className="text-xs text-slate-500 font-medium">
                   Showing <span className="font-bold text-slate-800">{(activeCurrentPage - 1) * ITEMS_PER_PAGE + 1}</span> to{" "}
                   <span className="font-bold text-slate-800">{Math.min(activeCurrentPage * ITEMS_PER_PAGE, filteredLeaves.length)}</span> of{" "}

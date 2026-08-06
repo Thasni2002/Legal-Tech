@@ -763,29 +763,53 @@ export default function CaseView() {
         )}
 
         {/* Pagination Controls */}
-        {filteredCases.length > (viewMode === "grid" ? 6 : 5) && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-[#F1F5F9] bg-[#F8FAFC]/50">
-            <span className="text-xs text-[#64748B] font-semibold">
-              Page {casesPage + 1} of {Math.ceil(filteredCases.length / (viewMode === "grid" ? 6 : 5))}
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCasesPage(p => Math.max(0, p - 1))}
-                disabled={casesPage === 0}
-                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 transition cursor-pointer select-none font-bold text-xs"
-              >
-                &lt;
-              </button>
-              <button
-                onClick={() => setCasesPage(p => Math.min(Math.ceil(filteredCases.length / (viewMode === "grid" ? 6 : 5)) - 1, p + 1))}
-                disabled={(casesPage + 1) * (viewMode === "grid" ? 6 : 5) >= filteredCases.length}
-                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 transition cursor-pointer select-none font-bold text-xs"
-              >
-                &gt;
-              </button>
+        {filteredCases.length > (viewMode === "grid" ? 6 : 5) && (() => {
+          const pageSize = viewMode === "grid" ? 6 : 5;
+          const total = filteredCases.length;
+          const totalPages = Math.ceil(total / pageSize);
+          const startIdx = casesPage * pageSize + 1;
+          const endIdx = Math.min((casesPage + 1) * pageSize, total);
+
+          return (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-4 border-t border-[#E2E8F0] bg-[#F8FAFC]/50">
+              <p className="text-xs font-semibold text-slate-500">
+                Showing <span className="font-bold text-slate-800">{startIdx}</span> to <span className="font-bold text-slate-800">{endIdx}</span> of <span className="font-bold text-slate-800">{total}</span> entries
+              </p>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setCasesPage(p => Math.max(0, p - 1))}
+                  disabled={casesPage === 0}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:hover:bg-transparent transition cursor-pointer"
+                >
+                  &lt; Prev
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => (
+                  <button
+                    type="button"
+                    key={i}
+                    onClick={() => setCasesPage(i)}
+                    className={`w-8 h-8 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer ${
+                      casesPage === i
+                        ? "bg-[#2563EB] text-white shadow-xs"
+                        : "text-slate-600 hover:bg-slate-100 border border-transparent"
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setCasesPage(p => Math.min(totalPages - 1, p + 1))}
+                  disabled={(casesPage + 1) * pageSize >= total}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:hover:bg-transparent transition cursor-pointer"
+                >
+                  Next &gt;
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* ══════════════════════════════════════════════

@@ -479,7 +479,7 @@ export default function ClientView() {
                             }));
                             router.push("/client-management/view-history");
                           }}
-                          className="flex-1 py-1.5 px-3 bg-[#F1F5F9] hover:bg-blue-50 text-[#0F172A] hover:text-[#2563EB] rounded-xl transition border border-[#E2E8F0] flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer"
+                          className="flex-1 py-1.5 px-3 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-xl transition border border-blue-200 flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer"
                           title="View Client"
                         >
                           <Eye size={13} />
@@ -500,7 +500,7 @@ export default function ClientView() {
                               }));
                               setShowEditModal(true);
                             }}
-                            className="py-1.5 px-3 bg-[#F1F5F9] hover:bg-amber-50 text-[#0F172A] hover:text-amber-700 rounded-xl transition border border-[#E2E8F0] flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer"
+                            className="py-1.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl transition border border-amber-200 flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer"
                             title="Edit Client"
                           >
                             <Edit3 size={13} />
@@ -511,7 +511,7 @@ export default function ClientView() {
                         {hasPermission("Client Management", "delete") && (
                           <button
                             onClick={() => handleDelete(client.clientId)}
-                            className="py-1.5 px-3 bg-[#F1F5F9] hover:bg-red-50 text-[#0F172A] hover:text-red-600 rounded-xl transition border border-[#E2E8F0] flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer"
+                            className="py-1.5 px-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition border border-red-200 flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer"
                             title="Delete Client"
                           >
                             <Trash2 size={13} />
@@ -533,24 +533,24 @@ export default function ClientView() {
         {viewMode === "list" && (
           <>
             {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto rounded-xl border border-[#E2E8F0]">
+            <div className="hidden md:block overflow-x-auto rounded-2xl border border-[#E2E8F0] min-w-0">
           {loading ? (
             <div className="py-12 text-center text-[#64748B]">
               <RefreshCw size={20} className="animate-spin mx-auto mb-2 text-[#2563EB]" />
               <p className="text-xs">Loading client overview...</p>
             </div>
           ) : paginatedClients.length > 0 ? (
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-[#E2E8F0] text-[10px] font-bold text-[#64748B] uppercase tracking-wider bg-[#F8FAFC]">
-                  <th className="py-3 px-4">Client Profile</th>
-                  <th className="py-3 px-4">Contact Details</th>
-                  <th className="py-3 px-4">Court Room</th>
-                  <th className="py-3 px-4 text-center">Cases</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+            <table className="w-full min-w-[850px] table-fixed divide-y divide-[#E2E8F0] text-left">
+              <thead className="bg-[#F8FAFC]">
+                <tr>
+                  <th className="py-3.5 px-4 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[25%]">Client Profile</th>
+                  <th className="py-3.5 px-4 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[25%]">Contact Details</th>
+                  <th className="py-3.5 px-4 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[22%]">Court Room</th>
+                  <th className="py-3.5 px-4 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[10%] text-center">Cases</th>
+                  <th className="py-3.5 px-4 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[18%] text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#F1F5F9] text-xs">
+              <tbody className="divide-y divide-[#F1F5F9] text-xs bg-white">
                 {paginatedClients.map((client) => {
                   const initials = client.clientName ? client.clientName.charAt(0).toUpperCase() : "?";
                   const statusLower = (client.status || "").toLowerCase();
@@ -562,7 +562,7 @@ export default function ClientView() {
                       key={client.clientId}
                       className="group hover:bg-[#F8FAFC] transition-colors"
                     >
-                      <td className="py-3 px-4">
+                      <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
                           {client.profileImage ? (
                             <img
@@ -584,7 +584,7 @@ export default function ClientView() {
                         </div>
                       </td>
 
-                      <td className="py-3 px-4 text-xs text-[#64748B]">
+                      <td className="py-3.5 px-4 text-xs text-[#64748B]">
                         <div className="flex flex-col gap-0.5">
                           <a
                             href={`tel:${client.contactNumber}`}
@@ -604,18 +604,18 @@ export default function ClientView() {
                         </div>
                       </td>
 
-                      <td className="py-3 px-4 text-xs font-medium text-[#0F172A]">
+                      <td className="py-3.5 px-4 text-xs font-medium text-[#0F172A] break-words">
                         {client.courtName}
                       </td>
 
-                      <td className="py-3 px-4 text-xs text-center font-bold text-[#0F172A]">
-                        <span className="px-2 py-0.5 rounded-md bg-[#F1F5F9] border border-[#E2E8F0]">
+                      <td className="py-3.5 px-4 text-xs text-center font-bold text-[#0F172A]">
+                        <span className="px-2.5 py-0.5 rounded-md bg-[#F1F5F9] border border-[#E2E8F0] inline-block">
                           {client.activeCases}
                         </span>
                       </td>
 
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex gap-2 justify-end">
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap overflow-hidden">
+                        <div className="flex items-center justify-center gap-2 shrink-0">
                           <button
                             onClick={() => {
                               localStorage.setItem("clientData", JSON.stringify({
@@ -635,11 +635,10 @@ export default function ClientView() {
                               }));
                               router.push("/client-management/view-history");
                             }}
-                            title="View Client"
-                            className="p-1.5 bg-[#F1F5F9] hover:bg-blue-50 text-[#0F172A] hover:text-[#2563EB] rounded-lg cursor-pointer transition border border-[#E2E8F0] flex items-center gap-1 text-[11px] font-bold"
+                            title="View Client History"
+                            className="p-2 rounded-full bg-blue-50 text-[#2563EB] hover:bg-blue-100 transition cursor-pointer flex items-center justify-center border border-blue-100 shadow-2xs shrink-0"
                           >
-                            <Eye size={12} />
-                            View
+                            <Eye size={14} />
                           </button>
 
                           {hasPermission("Client Management", "edit") && (
@@ -656,11 +655,10 @@ export default function ClientView() {
                                 }));
                                 setShowEditModal(true);
                               }}
-                              title="Edit Client"
-                              className="p-1.5 bg-[#F1F5F9] hover:bg-amber-50 text-[#0F172A] hover:text-amber-700 rounded-lg cursor-pointer transition border border-[#E2E8F0] flex items-center gap-1 text-[11px] font-bold"
+                              title="Edit Client Details"
+                              className="p-2 rounded-full bg-amber-50 text-amber-600 hover:bg-amber-100 transition cursor-pointer flex items-center justify-center border border-amber-100 shadow-2xs shrink-0"
                             >
-                              <Edit3 size={12} />
-                              Edit
+                              <Edit3 size={14} />
                             </button>
                           )}
 
@@ -668,10 +666,9 @@ export default function ClientView() {
                             <button
                               onClick={() => handleDelete(client.clientId)}
                               title="Delete Client"
-                              className="p-1.5 bg-[#F1F5F9] hover:bg-red-50 text-[#0F172A] hover:text-red-600 rounded-lg cursor-pointer transition border border-[#E2E8F0] flex items-center gap-1 text-[11px] font-bold"
+                              className="p-2 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer flex items-center justify-center border border-red-100 shadow-2xs shrink-0"
                             >
-                              <Trash2 size={12} />
-                              Delete
+                              <Trash2 size={14} />
                             </button>
                           )}
                         </div>
@@ -765,7 +762,7 @@ export default function ClientView() {
                         router.push("/client-management/view-history");
                       }}
                       title="View Client"
-                      className="flex-1 py-1.5 bg-[#F1F5F9] hover:bg-blue-50 text-[#0F172A] hover:text-[#2563EB] rounded-lg font-bold text-xs transition border border-[#E2E8F0] flex items-center justify-center gap-1 cursor-pointer"
+                      className="flex-1 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-lg font-bold text-xs transition border border-blue-200 flex items-center justify-center gap-1 cursor-pointer"
                     >
                       <Eye size={12} />
                       View
@@ -786,7 +783,7 @@ export default function ClientView() {
                           );
                           setShowEditModal(true);
                         }}
-                        className="flex-1 py-1.5 bg-[#F1F5F9] hover:bg-amber-50 text-[#0F172A] hover:text-amber-700 rounded-lg font-bold text-xs transition border border-[#E2E8F0] flex items-center justify-center gap-1"
+                        className="flex-1 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg font-bold text-xs transition border border-amber-200 flex items-center justify-center gap-1 cursor-pointer"
                       >
                         <Edit3 size={12} />
                         Edit
@@ -796,7 +793,7 @@ export default function ClientView() {
                     {hasPermission("Client Management", "delete") && (
                       <button
                         onClick={() => handleDelete(client.clientId)}
-                        className="py-1.5 px-2.5 bg-[#F1F5F9] hover:bg-red-50 text-[#0F172A] hover:text-red-600 rounded-lg font-bold text-xs transition border border-[#E2E8F0] flex items-center justify-center gap-1"
+                        className="py-1.5 px-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg font-bold text-xs transition border border-red-200 flex items-center justify-center gap-1 cursor-pointer"
                       >
                         <Trash2 size={12} />
                       </button>
@@ -813,29 +810,51 @@ export default function ClientView() {
         )}
 
         {/* Pagination Controls */}
-        {filteredClients.length > ITEMS_PER_PAGE && (
-          <div className="flex items-center justify-between gap-2 pt-3 border-t border-[#F1F5F9]">
-            <span className="text-xs text-[#64748B] font-semibold">
-              Page {clientsPage + 1} of {totalPages} ({filteredClients.length} clients)
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setClientsPage((p) => Math.max(0, p - 1))}
-                disabled={clientsPage === 0}
-                className="flex items-center justify-center px-3 py-1 rounded-lg border border-[#E2E8F0] text-[#64748B] hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent transition cursor-pointer select-none font-bold text-xs"
-              >
-                &lt; Prev
-              </button>
-              <button
-                onClick={() => setClientsPage((p) => Math.min(totalPages - 1, p + 1))}
-                disabled={(clientsPage + 1) * ITEMS_PER_PAGE >= filteredClients.length}
-                className="flex items-center justify-center px-3 py-1 rounded-lg border border-[#E2E8F0] text-[#64748B] hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent transition cursor-pointer select-none font-bold text-xs"
-              >
-                Next &gt;
-              </button>
+        {filteredClients.length > ITEMS_PER_PAGE && (() => {
+          const total = filteredClients.length;
+          const startIdx = clientsPage * ITEMS_PER_PAGE + 1;
+          const endIdx = Math.min((clientsPage + 1) * ITEMS_PER_PAGE, total);
+
+          return (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-4 border-t border-[#E2E8F0] bg-[#F8FAFC]/50">
+              <p className="text-xs font-semibold text-slate-500">
+                Showing <span className="font-bold text-slate-800">{startIdx}</span> to <span className="font-bold text-slate-800">{endIdx}</span> of <span className="font-bold text-slate-800">{total}</span> entries
+              </p>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setClientsPage((p) => Math.max(0, p - 1))}
+                  disabled={clientsPage === 0}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:hover:bg-transparent transition cursor-pointer"
+                >
+                  &lt; Prev
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => (
+                  <button
+                    type="button"
+                    key={i}
+                    onClick={() => setClientsPage(i)}
+                    className={`w-8 h-8 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer ${
+                      clientsPage === i
+                        ? "bg-[#2563EB] text-white shadow-xs"
+                        : "text-slate-600 hover:bg-slate-100 border border-transparent"
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setClientsPage((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={(clientsPage + 1) * ITEMS_PER_PAGE >= total}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:hover:bg-transparent transition cursor-pointer"
+                >
+                  Next &gt;
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* Edit Modal */}

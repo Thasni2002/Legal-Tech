@@ -9,6 +9,7 @@ import {
   Search,
   Eye,
   Trash2,
+  Edit3,
   LayoutGrid,
   List,
 } from "lucide-react";
@@ -414,10 +415,10 @@ export default function LawfirmView() {
                       <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#F1F5F9]">
                         <button
                           onClick={() => router.push(`/lawfirm-management/view?id=${item.id}`)}
-                          className="px-3 py-1.5 rounded-xl bg-[#F1F5F9] text-[#64748B] hover:bg-blue-100 hover:text-blue-600 transition-colors text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                          className="px-3 py-1.5 rounded-xl bg-blue-50 text-[#2563EB] border border-blue-200 hover:bg-blue-100 transition-colors text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
                         >
                           <Eye size={14} />
-                          View Profile
+                          <span>View Profile</span>
                         </button>
                         {hasPermission("Law Firm Management", "delete") && (
                           <button
@@ -426,7 +427,7 @@ export default function LawfirmView() {
                               setDeleteId(item.id);
                               setShowDeleteModal(true);
                             }}
-                            className="p-1.5 rounded-xl bg-[#F1F5F9] text-[#64748B] hover:bg-red-100 hover:text-red-600 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors cursor-pointer shadow-2xs"
                             title="Delete Member"
                           >
                             <Trash2 size={14} />
@@ -440,8 +441,76 @@ export default function LawfirmView() {
 
               {/* LIST VIEW */}
               {membersViewMode === "list" && (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+                <>
+                  {/* MOBILE CARD VIEW FOR MEMBERS */}
+                  <div className="block md:hidden space-y-3.5 p-4 bg-[#F8FAFC]">
+                    {filteredAdvocates.slice(advocatesPage * 5, (advocatesPage + 1) * 5).map((item) => (
+                      <div key={item.id} className="bg-white p-4 rounded-xl border border-[#E2E8F0] space-y-3 shadow-2xs">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={
+                                item.profileImage
+                                  ? item.profileImage
+                                  : `https://ui-avatars.com/api/?name=${encodeURIComponent(item.advocateName || (item.role === 'Clerk' ? 'Clerk' : 'Advocate'))}&background=E2E8F0&color=64748B&rounded=true&bold=true`
+                              }
+                              alt={item.advocateName || "Member"}
+                              className="w-10 h-10 rounded-full object-cover border border-[#E2E8F0] shrink-0"
+                            />
+                            <div>
+                              <h4 className="font-extrabold text-[#0F172A] text-sm">{item.advocateName}</h4>
+                              <p className="text-xs text-[#64748B] font-medium truncate max-w-[180px]">
+                                {item.emailAddress || item.email || "No Email"}
+                              </p>
+                            </div>
+                          </div>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            item.status === "Active" || !item.status ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                          }`}>
+                            {item.status || "Active"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs text-[#64748B] bg-[#F8FAFC] p-2.5 rounded-lg border border-[#E2E8F0]/60">
+                          <div>
+                            <span className="text-[10px] font-bold text-[#94A3B8] uppercase block">Role</span>
+                            <span className="font-extrabold text-[#0F172A]">{item.role || "Junior Advocate"}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] font-bold text-[#94A3B8] uppercase block">Phone</span>
+                            <span className="font-bold text-[#475569]">{item.phoneNumber || "-"}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#F1F5F9]">
+                          <button
+                            onClick={() => router.push(`/lawfirm-management/view?id=${item.id}`)}
+                            className="px-3 py-1.5 rounded-xl bg-blue-50 text-[#2563EB] border border-blue-200 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                          >
+                            <Eye size={14} />
+                            <span>View Profile</span>
+                          </button>
+                          {hasPermission("Law Firm Management", "delete") && (
+                            <button
+                              onClick={() => {
+                                setDeleteType("advocate");
+                                setDeleteId(item.id);
+                                setShowDeleteModal(true);
+                              }}
+                              className="p-1.5 rounded-xl bg-red-50 text-red-600 border border-red-200 cursor-pointer shadow-2xs"
+                              title="Delete Member"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* DESKTOP TABLE VIEW FOR MEMBERS */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full">
                     <thead className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
                       <tr>
                         <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
@@ -524,7 +593,8 @@ export default function LawfirmView() {
                                 onClick={() =>
                                   router.push(`/lawfirm-management/view?id=${item.id}`)
                                 }
-                                className="w-9 h-9 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-blue-100 hover:text-blue-600 flex items-center justify-center transition-colors"
+                                className="w-9 h-9 rounded-full bg-blue-50 text-[#2563EB] border border-blue-200 hover:bg-blue-100 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+                                title="View Profile"
                               >
                                 <Eye size={16} />
                               </button>
@@ -535,7 +605,9 @@ export default function LawfirmView() {
                                     setDeleteType("advocate");
                                     setDeleteId(item.id);
                                     setShowDeleteModal(true);
-                                  }} className="w-9 h-9 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors"
+                                  }}
+                                  className="w-9 h-9 rounded-full bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+                                  title="Delete Member"
                                 >
                                   <Trash2 size={16} />
                                 </button>
@@ -547,30 +619,56 @@ export default function LawfirmView() {
                     </tbody>
                   </table>
                 </div>
+              </>
               )}
 
               {/* Pagination Controls */}
-              {filteredAdvocates.length > 5 && (
-                <div className="flex items-center justify-center gap-2 py-4 border-t border-[#E2E8F0] bg-[#F8FAFC]/50">
-                  <span className="text-xs text-[#64748B] font-semibold">
-                    Page {advocatesPage + 1} of {Math.ceil(filteredAdvocates.length / 5)}
-                  </span>
-                  <button
-                    onClick={() => setAdvocatesPage(p => Math.max(0, p - 1))}
-                    disabled={advocatesPage === 0}
-                    className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
-                  >
-                    &lt;
-                  </button>
-                  <button
-                    onClick={() => setAdvocatesPage(p => Math.min(Math.ceil(filteredAdvocates.length / 5) - 1, p + 1))}
-                    disabled={(advocatesPage + 1) * 5 >= filteredAdvocates.length}
-                    className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
-                  >
-                    &gt;
-                  </button>
-                </div>
-              )}
+              {filteredAdvocates.length > 5 && (() => {
+                const total = filteredAdvocates.length;
+                const totalPages = Math.ceil(total / 5);
+                const startIdx = advocatesPage * 5 + 1;
+                const endIdx = Math.min((advocatesPage + 1) * 5, total);
+
+                return (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-4 border-t border-[#E2E8F0] bg-[#F8FAFC]/50">
+                    <p className="text-xs font-semibold text-slate-500">
+                      Showing <span className="font-bold text-slate-800">{startIdx}</span> to <span className="font-bold text-slate-800">{endIdx}</span> of <span className="font-bold text-slate-800">{total}</span> entries
+                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setAdvocatesPage(p => Math.max(0, p - 1))}
+                        disabled={advocatesPage === 0}
+                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:hover:bg-transparent transition cursor-pointer"
+                      >
+                        &lt; Prev
+                      </button>
+                      {Array.from({ length: totalPages }, (_, i) => (
+                        <button
+                          type="button"
+                          key={i}
+                          onClick={() => setAdvocatesPage(i)}
+                          className={`w-8 h-8 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer ${
+                            advocatesPage === i
+                              ? "bg-[#2563EB] text-white shadow-xs"
+                              : "text-slate-600 hover:bg-slate-100 border border-transparent"
+                          }`}
+                        >
+                          {i + 1}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setAdvocatesPage(p => Math.min(totalPages - 1, p + 1))}
+                        disabled={(advocatesPage + 1) * 5 >= total}
+                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:hover:bg-transparent transition cursor-pointer"
+                      >
+                        Next &gt;
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
             </>
           ) : (
             <div className="p-12 text-center flex flex-col items-center">
@@ -736,44 +834,23 @@ export default function LawfirmView() {
             </div>
           )}
 
-          {/* LIST VIEW */}
+          {/* CASES CONTENT */}
           {casesViewMode === "list" && (
-            <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-                <tr>
-                  <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                    Case Name
-                  </th>
-                  <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                    Case ID
-                  </th>
-                  <th className="hidden sm:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                    Advocates
-                  </th>
-                  <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-center text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-[#F1F5F9]">
+            <>
+              {/* MOBILE CARD VIEW FOR ASSIGNED CASES */}
+              <div className="block md:hidden space-y-3.5 p-4 bg-[#F8FAFC]">
                 {filteredAssignedCases
                   .slice(casesPage * 5, (casesPage + 1) * 5)
                   .map((item) => (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-slate-50/50 transition duration-200 group"
-                    >
-                      <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-bold text-[#0F172A]">{item.case_name}</td>
-                      <td className="hidden sm:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">{item.case_id_code || item.case_number || (item.case_id ? `CASE-#${item.case_id}` : `#${item.id}`)}</td>
-                      <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">
-                        <div
-                          onClick={() => setSelectedViewCase(item)}
-                          className="flex items-center -space-x-2 overflow-hidden cursor-pointer group/adv hover:scale-105 transition-transform"
-                          title={`Click to view Assigned Advocates:\n• Primary: ${item.advocate_name || 'N/A'}\n• Standby: ${item.secondary_advocate_name || item.secondaryAdvocateName || 'None'}`}
-                        >
-                          {/* Primary Advocate Avatar */}
+                    <div key={item.id} className="bg-white p-4 rounded-xl border border-[#E2E8F0] space-y-3 shadow-2xs">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-extrabold text-[#0F172A] text-sm">{item.case_name}</h4>
+                          <p className="text-xs text-[#64748B] font-mono mt-0.5">
+                            {item.case_id_code || item.case_number || (item.case_id ? `CASE-#${item.case_id}` : `#${item.id}`)}
+                          </p>
+                        </div>
+                        <div className="flex items-center -space-x-2 overflow-hidden shrink-0">
                           {(() => {
                             const pImg = getAdvocateProfileImage(item.advocate_name);
                             const fallbackUrl = item.advocate_name
@@ -783,13 +860,10 @@ export default function LawfirmView() {
                               <img
                                 src={pImg || fallbackUrl}
                                 alt={item.advocate_name || "Primary Advocate"}
-                                title={`Primary Advocate: ${item.advocate_name || 'N/A'} (Click to view details)`}
-                                className="inline-block w-8 h-8 rounded-full ring-2 ring-white object-cover shadow-xs group-hover/adv:ring-blue-400 transition-all"
+                                className="w-8 h-8 rounded-full ring-2 ring-white object-cover shadow-xs"
                               />
                             );
                           })()}
-
-                          {/* Standby Advocate Avatar */}
                           {(item.secondary_advocate_name || item.secondaryAdvocateName) && (() => {
                             const secName = item.secondary_advocate_name || item.secondaryAdvocateName;
                             const sImg = getAdvocateProfileImage(secName);
@@ -798,68 +872,211 @@ export default function LawfirmView() {
                               <img
                                 src={sImg || fallbackUrl}
                                 alt={secName}
-                                title={`Standby Advocate: ${secName} (Click to view details)`}
-                                className="inline-block w-8 h-8 rounded-full ring-2 ring-amber-400 object-cover shadow-xs group-hover/adv:ring-amber-500 transition-all"
+                                className="w-8 h-8 rounded-full ring-2 ring-amber-400 object-cover shadow-xs"
                               />
                             );
                           })()}
                         </div>
-                      </td>
+                      </div>
 
-                      {/* Actions */}
-                      <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5">
-                        <div className="flex justify-center gap-2">
+                      <div className="flex items-center justify-between text-xs text-[#64748B] bg-[#F8FAFC] p-2.5 rounded-lg border border-[#E2E8F0]/60">
+                        <span className="font-semibold text-[#64748B]">Assigned Counsel:</span>
+                        <span className="font-bold text-[#0F172A] truncate max-w-[180px]">
+                          {item.advocate_name || "Primary Advocate"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#F1F5F9]">
+                        <button
+                          onClick={() => setSelectedViewCase(item)}
+                          className="w-8 h-8 rounded-full bg-blue-50 text-[#2563EB] border border-blue-200 flex items-center justify-center cursor-pointer shadow-2xs"
+                          title="View Details"
+                        >
+                          <Eye size={15} />
+                        </button>
+                        <button
+                          onClick={() => setSelectedViewCase(item)}
+                          className="w-8 h-8 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center cursor-pointer shadow-2xs"
+                          title="Edit / Reassign"
+                        >
+                          <Edit3 size={14} />
+                        </button>
+                        {hasPermission("Law Firm Management", "delete") && (
                           <button
-                            onClick={() => setSelectedViewCase(item)}
-                            className="w-8 h-8 rounded-full bg-blue-50 text-[#2563EB] hover:bg-blue-100 flex items-center justify-center transition-colors shadow-xs cursor-pointer"
-                            title="View Details & Edit"
+                            onClick={() => {
+                              setDeleteType("case");
+                              setDeleteId(item.id);
+                              setShowDeleteModal(true);
+                            }}
+                            className="w-8 h-8 rounded-full bg-red-50 text-red-600 border border-red-200 flex items-center justify-center cursor-pointer shadow-2xs"
+                            title="Delete Assignment"
                           >
-                            <Eye size={15} />
+                            <Trash2 size={14} />
                           </button>
-
-                          {hasPermission("Law Firm Management", "delete") && (
-                            <button
-                              onClick={() => {
-                                setDeleteType("case");
-                                setDeleteId(item.id);
-                                setShowDeleteModal(true);
-                              }} className="w-8 h-8 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors cursor-pointer"
-                              title="Delete Assignment"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
+                        )}
+                      </div>
+                    </div>
                   ))}
-              </tbody>
-            </table>
-          </div>
+              </div>
+
+              {/* DESKTOP TABLE VIEW FOR ASSIGNED CASES */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
+                    <tr>
+                      <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                        Case Name
+                      </th>
+                      <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                        Case ID
+                      </th>
+                      <th className="hidden sm:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-left text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                        Advocates
+                      </th>
+                      <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-center text-[11px] font-bold uppercase tracking-widest text-[#64748B]">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-[#F1F5F9]">
+                    {filteredAssignedCases
+                      .slice(casesPage * 5, (casesPage + 1) * 5)
+                      .map((item) => (
+                        <tr
+                          key={item.id}
+                          className="hover:bg-slate-50/50 transition duration-200 group"
+                        >
+                          <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-bold text-[#0F172A]">{item.case_name}</td>
+                          <td className="hidden sm:table-cell px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">{item.case_id_code || item.case_number || (item.case_id ? `CASE-#${item.case_id}` : `#${item.id}`)}</td>
+                          <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 text-sm font-medium text-[#475569]">
+                            <div
+                              onClick={() => setSelectedViewCase(item)}
+                              className="flex items-center -space-x-2 overflow-hidden cursor-pointer group/adv hover:scale-105 transition-transform"
+                              title={`Click to view Assigned Advocates:\n• Primary: ${item.advocate_name || 'N/A'}\n• Standby: ${item.secondary_advocate_name || item.secondaryAdvocateName || 'None'}`}
+                            >
+                              {/* Primary Advocate Avatar */}
+                              {(() => {
+                                const pImg = getAdvocateProfileImage(item.advocate_name);
+                                const fallbackUrl = item.advocate_name
+                                  ? `https://ui-avatars.com/api/?name=${encodeURIComponent(item.advocate_name)}&background=2563EB&color=FFFFFF&rounded=true&bold=true`
+                                  : `https://ui-avatars.com/api/?name=Advocate&background=E2E8F0&color=64748B&rounded=true&bold=true`;
+                                return (
+                                  <img
+                                    src={pImg || fallbackUrl}
+                                    alt={item.advocate_name || "Primary Advocate"}
+                                    title={`Primary Advocate: ${item.advocate_name || 'N/A'} (Click to view details)`}
+                                    className="inline-block w-8 h-8 rounded-full ring-2 ring-white object-cover shadow-xs group-hover/adv:ring-blue-400 transition-all"
+                                  />
+                                );
+                              })()}
+
+                              {/* Standby Advocate Avatar */}
+                              {(item.secondary_advocate_name || item.secondaryAdvocateName) && (() => {
+                                const secName = item.secondary_advocate_name || item.secondaryAdvocateName;
+                                const sImg = getAdvocateProfileImage(secName);
+                                const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(secName)}&background=F59E0B&color=FFFFFF&rounded=true&bold=true`;
+                                return (
+                                  <img
+                                    src={sImg || fallbackUrl}
+                                    alt={secName}
+                                    title={`Standby Advocate: ${secName} (Click to view details)`}
+                                    className="inline-block w-8 h-8 rounded-full ring-2 ring-amber-400 object-cover shadow-xs group-hover/adv:ring-amber-500 transition-all"
+                                  />
+                                );
+                              })()}
+                            </div>
+                          </td>
+
+                          {/* Actions */}
+                          <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5">
+                            <div className="flex justify-center gap-2">
+                              <button
+                                onClick={() => setSelectedViewCase(item)}
+                                className="w-8 h-8 rounded-full bg-blue-50 text-[#2563EB] border border-blue-200 hover:bg-blue-100 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+                                title="View Assignment Details"
+                              >
+                                <Eye size={15} />
+                              </button>
+
+                              <button
+                                onClick={() => setSelectedViewCase(item)}
+                                className="w-8 h-8 rounded-full bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+                                title="Edit / Reassign Case"
+                              >
+                                <Edit3 size={14} />
+                              </button>
+
+                              {hasPermission("Law Firm Management", "delete") && (
+                                <button
+                                  onClick={() => {
+                                    setDeleteType("case");
+                                    setDeleteId(item.id);
+                                    setShowDeleteModal(true);
+                                  }}
+                                  className="w-8 h-8 rounded-full bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+                                  title="Delete Assignment"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
 
           {/* Pagination Controls */}
-          {filteredAssignedCases.length > 5 && (
-            <div className="flex items-center justify-center gap-2 py-4 border-t border-[#E2E8F0] bg-[#F8FAFC]/50">
-              <span className="text-xs text-[#64748B] font-semibold">
-                Page {casesPage + 1} of {Math.ceil(filteredAssignedCases.length / 5)}
-              </span>
-              <button
-                onClick={() => setCasesPage(p => Math.max(0, p - 1))}
-                disabled={casesPage === 0}
-                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
-              >
-                &lt;
-              </button>
-              <button
-                onClick={() => setCasesPage(p => Math.min(Math.ceil(filteredAssignedCases.length / 5) - 1, p + 1))}
-                disabled={(casesPage + 1) * 5 >= filteredAssignedCases.length}
-                className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#2563EB] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition cursor-pointer select-none font-bold text-xs"
-              >
-                &gt;
-              </button>
-            </div>
-          )}
+          {filteredAssignedCases.length > 5 && (() => {
+            const total = filteredAssignedCases.length;
+            const totalPages = Math.ceil(total / 5);
+            const startIdx = casesPage * 5 + 1;
+            const endIdx = Math.min((casesPage + 1) * 5, total);
+
+            return (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-4 border-t border-[#E2E8F0] bg-[#F8FAFC]/50">
+                <p className="text-xs font-semibold text-slate-500">
+                  Showing <span className="font-bold text-slate-800">{startIdx}</span> to <span className="font-bold text-slate-800">{endIdx}</span> of <span className="font-bold text-slate-800">{total}</span> entries
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setCasesPage(p => Math.max(0, p - 1))}
+                    disabled={casesPage === 0}
+                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:hover:bg-transparent transition cursor-pointer"
+                  >
+                    &lt; Prev
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => (
+                    <button
+                      type="button"
+                      key={i}
+                      onClick={() => setCasesPage(i)}
+                      className={`w-8 h-8 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer ${
+                        casesPage === i
+                          ? "bg-[#2563EB] text-white shadow-xs"
+                          : "text-slate-600 hover:bg-slate-100 border border-transparent"
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setCasesPage(p => Math.min(totalPages - 1, p + 1))}
+                    disabled={(casesPage + 1) * 5 >= total}
+                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:hover:bg-transparent transition cursor-pointer"
+                  >
+                    Next &gt;
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
       {showDeleteModal && createPortal(

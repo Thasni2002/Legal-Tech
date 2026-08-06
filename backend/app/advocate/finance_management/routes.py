@@ -123,30 +123,18 @@ def get_stats(
 # -----------------------------
 @router.get("/clients")
 def get_registered_clients(db: Session = Depends(get_db)):
-    users = db.query(User).filter(User.role == "Client").all()
     cases = db.query(Case).all()
     
     client_dict = {}
     
-    # Process registered clients
-    for user in users:
-        client_dict[user.username.lower().strip()] = {
-            "id": user.id,
-            "name": user.username,
-            "email": user.email or "",
-            "mobile": user.phone or "",
-            "case_number": "",
-            "cases": []
-        }
-        
-    # Process cases to find case numbers and add unregistered clients
+    # Process clients exclusively from Case table
     for case in cases:
         client_name = case.client_name
-        if not client_name:
+        if not client_name or not client_name.strip():
             continue
             
         key = client_name.lower().strip()
-        case_no_str = case.case_no or case.case_id or f"Case #{case.id}"
+        case_no_str = case.case_no or (f"CASE-#{case.case_id}" if case.case_id else f"Case #{case.id}")
         case_info = {
             "id": case.id,
             "case_no": case_no_str,
@@ -154,23 +142,21 @@ def get_registered_clients(db: Session = Depends(get_db)):
         }
         
         if key not in client_dict:
-            # Add client from Case Management
             client_dict[key] = {
-                "id": case.id + 10000,
-                "name": client_name,
+                "id": case.id,
+                "name": client_name.strip(),
                 "email": case.email_id or "",
                 "mobile": case.contact_number or "",
                 "case_number": case_no_str,
-                "cases": []
+                "cases": [case_info]
             }
-
-        if not any(c["id"] == case.id for c in client_dict[key]["cases"]):
-            client_dict[key]["cases"].append(case_info)
-
-    # Set default case_number if cases list is populated
-    for client in client_dict.values():
-        if client["cases"] and not client["case_number"]:
-            client["case_number"] = client["cases"][0]["case_no"]
+        else:
+            if not any(c["id"] == case.id for c in client_dict[key]["cases"]):
+                client_dict[key]["cases"].append(case_info)
+            if not client_dict[key]["email"] and case.email_id:
+                client_dict[key]["email"] = case.email_id
+            if not client_dict[key]["mobile"] and case.contact_number:
+                client_dict[key]["mobile"] = case.contact_number
 
     return list(client_dict.values())
 
