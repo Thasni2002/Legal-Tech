@@ -69,7 +69,7 @@ export default function LeaveManagementView({
   const [search, setSearch] = useState("");
   const [timePeriod, setTimePeriod] = useState("all"); // "all" | "this_week" | "this_month" | "this_year" | "custom"
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 6;
+  const ITEMS_PER_PAGE = 8;
 
   const handleTimePeriodChange = (period) => {
     setTimePeriod(period);
@@ -896,9 +896,15 @@ export default function LeaveManagementView({
                         <td className="py-3.5 px-4 max-w-[220px]">
                           <p className="truncate text-slate-600">{req.description || "—"}</p>
                         </td>
-                        <td className="py-3.5 px-4 font-mono font-semibold text-slate-700">
-                          <div>{req.from_date}</div>
-                          <div className="text-[10px] text-slate-400">to {req.to_date}</div>
+                        <td className="py-3.5 px-4 font-mono font-semibold text-slate-700 whitespace-nowrap">
+                          {req.from_date === req.to_date || !req.to_date ? (
+                            <div className="leading-snug">{req.from_date}</div>
+                          ) : (
+                            <div className="flex flex-col leading-snug">
+                              <span>{req.from_date}</span>
+                              <span className="text-[10px] text-slate-500 font-sans mt-0.5">to {req.to_date}</span>
+                            </div>
+                          )}
                         </td>
                         <td className="py-3.5 px-4 font-bold text-slate-900">
                           {getDurationDisplay(req)}
@@ -959,32 +965,46 @@ export default function LeaveManagementView({
 
             {/* Table Pagination Controls */}
             {filteredLeaves.length > 0 && (
-              <div className="px-4 py-3.5 border-t border-slate-100 bg-slate-50/60 flex flex-col sm:flex-row justify-between items-center gap-3">
+              <div className="px-4 py-3.5 border-t border-slate-100 bg-white flex flex-col sm:flex-row justify-between items-center gap-3">
                 <span className="text-xs text-slate-500 font-medium">
                   Showing <span className="font-bold text-slate-800">{(activeCurrentPage - 1) * ITEMS_PER_PAGE + 1}</span> to{" "}
                   <span className="font-bold text-slate-800">{Math.min(activeCurrentPage * ITEMS_PER_PAGE, filteredLeaves.length)}</span> of{" "}
-                  <span className="font-bold text-slate-800">{filteredLeaves.length}</span> leave records
+                  <span className="font-bold text-slate-800">{filteredLeaves.length}</span> entries
                 </span>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={activeCurrentPage === 1}
-                    className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                    className="px-3.5 py-1.5 rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition cursor-pointer flex items-center gap-1 shadow-2xs"
                   >
-                    <ChevronLeft size={14} /> Previous
+                    <ChevronLeft size={14} /> Prev
                   </button>
 
-                  <span className="text-xs font-bold text-slate-700 px-3 py-1.5 bg-white border border-slate-200 rounded-xl shadow-2xs">
-                    {activeCurrentPage} / {totalPages}
-                  </span>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
+                    const isActive = pageNum === activeCurrentPage;
+                    return (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`w-8 h-8 rounded-full text-xs transition cursor-pointer flex items-center justify-center ${
+                          isActive
+                            ? "bg-[#2563EB] text-white font-extrabold shadow-sm"
+                            : "bg-white border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
 
                   <button
                     type="button"
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={activeCurrentPage === totalPages}
-                    className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                    disabled={activeCurrentPage >= totalPages}
+                    className="px-3.5 py-1.5 rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition cursor-pointer flex items-center gap-1 shadow-2xs"
                   >
                     Next <ChevronRight size={14} />
                   </button>

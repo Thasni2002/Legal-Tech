@@ -17,6 +17,7 @@ import {
   Search,
   Filter,
   Briefcase,
+  User,
 } from "lucide-react";
 import useModulePermission from "@/utils/useModulePermission";
 import { getLoggedInUser } from "@/utils/auth";
@@ -914,7 +915,7 @@ export default function JuniorCalendarView() {
                   </div>
                 </div>
 
-                {/* Case Details */}
+                {/* Case Details Sidebar Card */}
                 <div className="bg-white rounded-3xl border border-[#E2E8F0] p-5 shadow-sm space-y-4">
                   <h2 className="font-extrabold text-[#0F172A] text-lg flex items-center gap-2 border-b border-[#E2E8F0] pb-3">
                     <FileText className="w-5 h-5 text-indigo-600" />
@@ -924,50 +925,64 @@ export default function JuniorCalendarView() {
                   {selectedEventDetails ? (
                     <div className="space-y-4">
                       <div>
-                        <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider block">Case / Event Name</span>
-                        <h3 className="text-base font-bold text-[#0F172A] mt-0.5">{selectedEventDetails.title}</h3>
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider block">Case / Event Title</span>
+                          <span className={`px-2 py-0.5 text-[9px] font-extrabold rounded-full ${getStatusColor(selectedEventDetails.status)}`}>
+                            {selectedEventDetails.status}
+                          </span>
+                        </div>
+                        <h3 className="text-sm font-extrabold text-[#0F172A] leading-snug">{selectedEventDetails.title}</h3>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-2xl border border-[#E2E8F0]">
-                        <div>
+                      <div className="grid grid-cols-2 gap-2.5 bg-slate-50 p-3 rounded-2xl border border-[#E2E8F0]">
+                        <div className="min-w-0">
                           <span className="text-[9px] font-bold text-[#64748B] uppercase tracking-wider block">Case Number</span>
-                          <span className="text-xs font-bold text-[#64748B]">{selectedEventDetails.caseNo || "N/A"}</span>
+                          <span className="text-xs font-extrabold text-[#0F172A] truncate block mt-0.5">{selectedEventDetails.caseNo || "N/A"}</span>
                         </div>
-                        <div>
-                          <span className="text-[9px] font-bold text-[#64748B] uppercase tracking-wider block">Type</span>
-                          <span className="text-xs font-bold text-[#64748B]">{selectedEventDetails.type}</span>
+                        <div className="min-w-0">
+                          <span className="text-[9px] font-bold text-[#64748B] uppercase tracking-wider block">Case Type</span>
+                          <span className="text-xs font-extrabold text-[#0F172A] truncate block mt-0.5">{selectedEventDetails.type || "N/A"}</span>
                         </div>
                       </div>
 
-                      <div className="space-y-2 text-sm text-[#64748B]">
-                        <div className="flex gap-2 items-start">
-                          <MapPin className="w-4 h-4 text-[#64748B] mt-0.5 shrink-0" />
-                          <div>
-                            <span className="text-[10px] font-bold text-[#64748B] block leading-none">Court Venue</span>
-                            <span className="text-xs font-medium text-[#64748B]">{selectedEventDetails.court || "Not Specified"}</span>
+                      <div className="space-y-3 text-xs text-[#64748B]">
+                        <div className="flex gap-2.5 items-start">
+                          <div className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 shrink-0 mt-0.5">
+                            <MapPin className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block">Court / Forum</span>
+                            <span className="text-xs font-bold text-[#0F172A] block mt-0.5">{selectedEventDetails.court || "Not Specified"}</span>
                           </div>
                         </div>
 
-                        <div className="flex gap-2 items-start">
-                          <Clock className="w-4 h-4 text-[#64748B] mt-0.5 shrink-0" />
-                          <div>
-                            <span className="text-[10px] font-bold text-[#64748B] block leading-none">Schedule Time</span>
-                            <span className="text-xs font-medium text-[#64748B]">
+                        <div className="flex gap-2.5 items-start">
+                          <div className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 shrink-0 mt-0.5">
+                            <Clock className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block">Date & Time</span>
+                            <span className="text-xs font-bold text-[#0F172A] block mt-0.5">
                               {formatWeekdayMonthDay(selectedEventDetails.date)} at {formatTime(selectedEventDetails.time)}
                             </span>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-3">
-                        <span className="text-[9px] font-bold text-[#2563EB] uppercase tracking-wider block">Assigned By</span>
-                        <span className="text-xs font-bold text-[#64748B] mt-0.5 block">{selectedEventDetails.senior}</span>
+                        <div className="flex gap-2.5 items-start">
+                          <div className="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center text-[#2563EB] shrink-0 mt-0.5">
+                            <User className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-[10px] font-bold text-[#2563EB] uppercase tracking-wider block">Assigned By</span>
+                            <span className="text-xs font-extrabold text-[#2563EB] block mt-0.5">{selectedEventDetails.senior || "Senior Advocate"}</span>
+                          </div>
+                        </div>
                       </div>
 
                       {selectedEventDetails.notes && (
-                        <div>
-                          <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider block">Agenda Notes</span>
-                          <p className="text-xs text-[#64748B] bg-slate-50 p-3 rounded-2xl mt-1 leading-relaxed border border-[#E2E8F0]">
+                        <div className="w-full min-w-0">
+                          <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider block mb-1">Agenda Notes</span>
+                          <p className="text-xs text-[#475569] bg-slate-50 p-3 rounded-2xl leading-relaxed border border-[#E2E8F0] break-words break-all overflow-hidden">
                             {selectedEventDetails.notes}
                           </p>
                         </div>
@@ -1222,7 +1237,7 @@ export default function JuniorCalendarView() {
                             </div>
 
                             {event.notes && (
-                              <p className="text-xs text-[#64748B] bg-white/50 p-2.5 rounded-xl border border-[#E2E8F0]/40 mt-2 max-w-xl leading-relaxed">
+                              <p className="text-xs text-[#64748B] bg-white/50 p-2.5 rounded-xl border border-[#E2E8F0]/40 mt-2 max-w-xl leading-relaxed break-words break-all overflow-hidden">
                                 {event.notes}
                               </p>
                             )}
@@ -1343,7 +1358,7 @@ export default function JuniorCalendarView() {
                             </div>
 
                             {evt.notes && (
-                              <p className="text-xs text-[#64748B] bg-white p-3 rounded-2xl border border-[#E2E8F0] mt-2 max-w-xl leading-relaxed">
+                              <p className="text-xs text-[#64748B] bg-white p-3 rounded-2xl border border-[#E2E8F0] mt-2 max-w-xl leading-relaxed break-words break-all overflow-hidden">
                                 {evt.notes}
                               </p>
                             )}
@@ -1443,8 +1458,19 @@ export default function JuniorCalendarView() {
                       <Briefcase size={14} />
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">Case Type</p>
-                      <p className="text-sm font-semibold text-[#0F172A] mt-0.5">{selectedEventDetails.type}</p>
+                      <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">Case Number & Type</p>
+                      <p className="text-sm font-semibold text-[#0F172A] mt-0.5">
+                        {selectedEventDetails.caseNo ? `Case #${selectedEventDetails.caseNo}` : "Standalone Event"} · {selectedEventDetails.type || "N/A"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 w-8 h-8 rounded-lg bg-[#F1F5F9] flex items-center justify-center text-indigo-600 flex-shrink-0">
+                      <User size={14} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">Assigned Advocate</p>
+                      <p className="text-sm font-semibold text-[#0F172A] mt-0.5">{selectedEventDetails.senior || "Senior Advocate"}</p>
                     </div>
                   </div>
                 </div>
@@ -1455,7 +1481,7 @@ export default function JuniorCalendarView() {
                   <h4 className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                     <FileText size={13} /> Agenda Notes
                   </h4>
-                  <p className="text-sm text-[#475569] leading-relaxed">
+                  <p className="text-sm text-[#475569] leading-relaxed break-words break-all overflow-hidden">
                     {selectedEventDetails.notes}
                   </p>
                 </div>

@@ -7,6 +7,7 @@ import {
   Briefcase,
   Clock,
   Pin,
+  MessageSquare,
 } from "lucide-react";
 
 const COLUMNS = [
@@ -110,6 +111,15 @@ function TaskCard({ task, onOpen, colKey, perms, onPinToggle }) {
           {priority.label}
         </span>
         <div className="flex items-center gap-1.5 ml-auto shrink-0">
+          {task.unread_count > 0 && (
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-600 text-white font-extrabold text-[10px] shadow-sm animate-pulse"
+              title={`${task.unread_count} new message(s)`}
+            >
+              <MessageSquare size={11} className="fill-white" />
+              {task.unread_count}
+            </span>
+          )}
           {(task.is_pinned || (hovered && perms?.edit)) && (
             <button
               onClick={(e) => {

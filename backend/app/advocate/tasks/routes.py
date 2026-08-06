@@ -112,7 +112,7 @@ async def create_task(
     else:
         senior_name = current_user.username or "Assigner"
     task = svc.create_task(db, data, current_user.id, senior_name)
-    task_dict = svc.task_to_dict(task)
+    task_dict = svc.task_to_dict(task, current_user_id=current_user.id, db=db)
 
     # Send email notification to junior / assignee
     junior = db.query(User).filter(User.id == data.junior_advocate_id).first()
@@ -138,7 +138,7 @@ def list_tasks(
     else:
         tasks = svc.get_all_tasks(db)
 
-    return [svc.task_to_dict(t) for t in tasks]
+    return [svc.task_to_dict(t, current_user_id=current_user.id, db=db) for t in tasks]
 
 
 @router.get("/{task_id}")
@@ -157,7 +157,7 @@ def get_task(
         raise HTTPException(status_code=403, detail="Access denied")
 
     messages = svc.get_task_messages(db, task_id)
-    return svc.task_to_dict(task, messages)
+    return svc.task_to_dict(task, messages, current_user_id=current_user.id, db=db)
 
 
 @router.put("/{task_id}")
@@ -179,7 +179,7 @@ async def edit_task(
         raise HTTPException(status_code=403, detail="Access denied")
 
     updated = svc.update_task(db, task_id, data)
-    return svc.task_to_dict(updated)
+    return svc.task_to_dict(updated, current_user_id=current_user.id, db=db)
 
 
 @router.patch("/{task_id}/status")
@@ -199,7 +199,7 @@ async def update_status(
         raise HTTPException(status_code=403, detail="Access denied")
 
     updated = svc.update_task_status(db, task_id, data.status)
-    task_dict = svc.task_to_dict(updated)
+    task_dict = svc.task_to_dict(updated, current_user_id=current_user.id, db=db)
 
     changer_name = current_user.username or "Advocate"
 
@@ -233,7 +233,7 @@ def delete_task(
 
 
 # ─────────────────────────────────────────────────────────────
-# Messages
+# Messages & Read Status
 # ─────────────────────────────────────────────────────────────
 
 @router.get("/{task_id}/messages")
@@ -250,20 +250,7 @@ def list_messages(
     if "junior" in role and task.junior_advocate_id != current_user.id:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    msgs = svc.get_task_messages(db, task_id)
-    return [
-        {
-            "id": m.id,
-            "task_id": m.task_id,
-            "sender_id": m.sender_id,
-            "sender_name": m.sender_name,
-            "sender_role": m.sender_role,
-            "message": m.message,
-            "message_type": m.message_type,
-            "created_at": m.created_at.isoformat() if m.created_at else None,
-        }
-        for m in msgs
-    ]
+    return svc.get_task_messages_with_read_status(db, task)
 
 
 @router.post("/{task_id}/messages")
@@ -284,7 +271,7 @@ async def post_message(
 
     sender_name = current_user.username or "Unknown"
     msg = svc.add_task_message(db, task_id, current_user.id, sender_name, current_user.role or "", data)
-    task_dict = svc.task_to_dict(task)
+    task_dict = svc.task_to_dict(task, current_user_id=current_user.id, db=db)
 
     # Notify the other party
     if is_junior:
@@ -304,5 +291,23 @@ async def post_message(
         "sender_role": msg.sender_role,
         "message": msg.message,
         "message_type": msg.message_type,
-        "created_at": msg.created_at.isoformat() if msg.created_at else None,
+        "created_at": f"{msg.created_at.isoformat()}Z" if msg.created_at else None,
     }
+
+
+@router.post("/{task_id}/read")
+def mark_task_read(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    task = svc.get_task(db, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    role = (current_user.role or "").lower()
+    if "junior" in role and task.junior_advocate_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    svc.mark_task_messages_as_read(db, current_user.id, task_id)
+    return {"status": "ok", "task_id": task_id, "unread_count": 0}

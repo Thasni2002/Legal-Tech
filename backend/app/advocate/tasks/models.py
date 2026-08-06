@@ -55,3 +55,15 @@ class TaskMessage(Base):
     # Optional tag: progress | completed | todo | review | general
     message_type = Column(String(50), default="general")
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class TaskReadState(Base):
+    """Tracks the last read message ID for a user on a task."""
+    __tablename__ = "advocate_task_read_states"
+
+    id = Column(Integer, primary_key=True, index=True)
+    task_id = Column(Integer, ForeignKey("advocate_tasks.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    last_read_message_id = Column(Integer, default=0)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+

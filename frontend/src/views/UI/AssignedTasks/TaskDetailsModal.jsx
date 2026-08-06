@@ -19,6 +19,8 @@ import {
   Trash2,
   AlertTriangle,
   Pin,
+  Check,
+  CheckCheck,
 } from "lucide-react";
 import { API_BASE_URL } from "@/utils/api";
 import { getLoggedInUser } from "@/utils/auth";
@@ -47,11 +49,22 @@ const PRIORITY_CONFIG = {
 
 function formatTime(dateStr) {
   if (!dateStr) return "";
-  const d = new Date(dateStr);
-  return d.toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  let str = String(dateStr);
+  if (!str.endsWith("Z") && !str.includes("+") && !str.includes("Z")) {
+    str += "Z";
+  }
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
-export default function TaskDetailsModal({ task: initialTask, onClose, onStatusChange, isSenior, onEdit, perms, onDelete, onPinToggle }) {
+export default function TaskDetailsModal({ task: initialTask, onClose, onStatusChange, isSenior, onEdit, perms, onDelete, onPinToggle, onReadMessages }) {
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => {
@@ -93,19 +106,40 @@ export default function TaskDetailsModal({ task: initialTask, onClose, onStatusC
 
   const user = getLoggedInUser();
 
+  const markAsRead = async (taskId) => {
+    if (!taskId) return;
+    const token = localStorage.getItem("token");
+    try {
+      await fetch(`${API_BASE_URL}/advocate/tasks/${taskId}/read`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (onReadMessages) {
+        onReadMessages(taskId);
+      }
+    } catch (e) {
+      console.error("Error marking task messages as read:", e);
+    }
+  };
+
   useEffect(() => {
     if (!mounted || !task?.id) return;
     fetchMessages();
+    const interval = setInterval(() => {
+      fetchMessages(true);
+    }, 5000);
+    return () => clearInterval(interval);
   }, [task?.id, mounted]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const fetchMessages = async () => {
+  const fetchMessages = async (silent = false) => {
     const token = localStorage.getItem("token");
-    setLoadingMessages(true);
+    if (!silent) setLoadingMessages(true);
     try {
+      await markAsRead(task.id);
       const res = await fetch(`${API_BASE_URL}/advocate/tasks/${task.id}/messages`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -116,7 +150,7 @@ export default function TaskDetailsModal({ task: initialTask, onClose, onStatusC
     } catch (e) {
       console.error("Error fetching messages:", e);
     } finally {
-      setLoadingMessages(false);
+      if (!silent) setLoadingMessages(false);
     }
   };
 
@@ -497,7 +531,7 @@ export default function TaskDetailsModal({ task: initialTask, onClose, onStatusC
                         alignItems: mine ? "flex-end" : "flex-start",
                       }}
                     >
-                      {/* Sender + time */}
+                      {/* Sender header */}
                       <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
                         <img
                           src={`https://ui-avatars.com/api/?name=${encodeURIComponent(msg.sender_name || "U")}&background=${mine ? "2563EB" : "D97706"}&color=fff&size=40&rounded=true&bold=true`}
@@ -507,7 +541,6 @@ export default function TaskDetailsModal({ task: initialTask, onClose, onStatusC
                         <span style={{ fontSize: "11px", color: "#94A3B8", fontWeight: 500 }}>
                           {mine ? "You" : (msg.sender_name || "Advocate")}
                         </span>
-                        <span style={{ fontSize: "10px", color: "#CBD5E1" }}>{formatTime(msg.created_at)}</span>
                       </div>
 
                       {/* Bubble */}
@@ -527,7 +560,7 @@ export default function TaskDetailsModal({ task: initialTask, onClose, onStatusC
                             alignItems: "center",
                             gap: "4px",
                             marginBottom: "5px",
-                            opacity: 0.8,
+                            opacity: 0.85,
                           }}>
                             <TypeIcon size={10} />
                             <span style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -535,7 +568,33 @@ export default function TaskDetailsModal({ task: initialTask, onClose, onStatusC
                             </span>
                           </div>
                         )}
-                        {msg.message}
+                        <div>{msg.message}</div>
+
+                        {/* Bottom timestamp + read ticks */}
+                        <div style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "flex-end",
+                          gap: "4px",
+                          marginTop: "6px",
+                          fontSize: "10px",
+                          color: mine ? "rgba(255,255,255,0.8)" : "#94A3B8",
+                          fontWeight: 500,
+                        }}>
+                          <span>{formatTime(msg.created_at)}</span>
+                          {mine && (
+                            <span
+                              style={{ display: "inline-flex", alignItems: "center" }}
+                              title={msg.is_read ? "Seen by recipient" : "Sent"}
+                            >
+                              {msg.is_read ? (
+                                <CheckCheck size={13} className="text-sky-300 stroke-[2.5]" />
+                              ) : (
+                                <Check size={13} className="text-white/70 stroke-[2.5]" />
+                              )}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );

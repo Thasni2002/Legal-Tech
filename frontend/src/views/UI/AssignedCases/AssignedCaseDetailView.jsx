@@ -157,12 +157,15 @@ export default function AssignedCaseDetailView({
   const isJuniorAdvocate =
     loggedInUser && loggedInUser.role && loggedInUser.role.toLowerCase().includes("junior");
 
-  // Resolve case title reliably
-  const caseDisplayTitle =
-    selectedCase?.title ||
-    selectedCase?.caseTitle ||
-    selectedCase?.case_title ||
-    (selectedCase?.caseNo ? `Case #${selectedCase.caseNo}` : "Assigned Case");
+  // Resolve case title reliably with sensitive case masking for Junior Advocate
+  const isConfidential = isJuniorAdvocate && isSensitiveCase(selectedCase);
+  const caseDisplayTitle = isConfidential
+    ? "Confidential Case (Restricted)"
+    : (selectedCase?.title ||
+       selectedCase?.case_name ||
+       selectedCase?.caseTitle ||
+       selectedCase?.case_title ||
+       (selectedCase?.caseNo ? `Case #${selectedCase.caseNo}` : "Assigned Case"));
 
   // ─── eCourts fetch ────────────────────────────────────────────────────────────
   const fetchECourtsData = async () => {
