@@ -461,7 +461,40 @@ export default function AssignedCaseDetailView({
 
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="w-full max-w-full min-w-0 mx-auto pb-6 sm:pb-10 animate-in fade-in duration-200 overflow-hidden">
+    <div className="w-full max-w-full min-w-0 mx-auto pb-6 sm:pb-10 animate-in fade-in duration-200 overflow-hidden relative">
+      {/* Top-Right Floating Sleek Red Hearing Alert Badge (Outside Header & Tabs) */}
+      {hearingAlert && (
+        <div className="flex justify-end w-full mb-2.5 z-50 relative">
+          <style jsx>{`
+            @keyframes badgePulse {
+              0%, 100% { transform: scale(1); box-shadow: 0 10px 15px -3px rgba(220, 38, 38, 0.3); }
+              50% { transform: scale(1.15); box-shadow: 0 20px 25px -5px rgba(220, 38, 38, 0.55); }
+            }
+            .animate-badge-focus {
+              animation: badgePulse 1.6s ease-in-out infinite;
+            }
+          `}</style>
+          <div className="inline-flex items-center gap-3 bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white px-4 py-2.5 rounded-2xl border border-red-500 shadow-xl shadow-red-600/30 animate-badge-focus cursor-pointer z-50">
+            {/* Live Status Radar Ping Dot */}
+            <span className="relative flex h-3 w-3 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+            </span>
+            <div className="flex flex-col leading-tight">
+              <span className="text-[9px] text-red-100 font-extrabold tracking-widest uppercase">NEXT HEARING ALERT</span>
+              <span className="text-xs sm:text-sm font-black tracking-wide text-white flex items-center gap-2">
+                {hearingAlert.dateFormatted}
+                {hearingAlert.daysText && (
+                  <span className="text-[10px] font-black bg-white text-red-700 px-2 py-0.5 rounded-md uppercase shadow-xs">
+                    {hearingAlert.daysText}
+                  </span>
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl sm:rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden w-full max-w-full min-w-0">
 
         {/* ── Case Header ──────────────────────────────────────────────────────── */}
@@ -496,72 +529,45 @@ export default function AssignedCaseDetailView({
             </div>
           </div>
 
-          {/* Action Buttons Bar - View Summary & View Similar Cases */}
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full xl:w-auto shrink-0">
-            <button
-              id="btn-view-summary-assigned"
-              onClick={() => {
-                try {
-                  const targetId = selectedCase.caseId || selectedCase.case_id || selectedCase.id;
-                  const saved = JSON.parse(localStorage.getItem(`saved_briefs_${targetId}`) || "[]");
-                  if (saved && saved.length > 0) {
-                    setViewBriefModal(saved[0]);
-                  } else {
+          {/* Action Buttons Bar */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full xl:w-auto shrink-0 flex-wrap justify-end">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full xl:w-auto shrink-0">
+              <button
+                id="btn-view-summary-assigned"
+                onClick={() => {
+                  try {
+                    const targetId = selectedCase.caseId || selectedCase.case_id || selectedCase.id;
+                    const saved = JSON.parse(localStorage.getItem(`saved_briefs_${targetId}`) || "[]");
+                    if (saved && saved.length > 0) {
+                      setViewBriefModal(saved[0]);
+                    } else {
+                      router.push(`/case-management/similar-cases/${targetId}`);
+                    }
+                  } catch (e) {
+                    const targetId = selectedCase.caseId || selectedCase.case_id || selectedCase.id;
                     router.push(`/case-management/similar-cases/${targetId}`);
                   }
-                } catch (e) {
+                }}
+                className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-xs hover:shadow active:scale-95 cursor-pointer text-center min-w-0"
+              >
+                <Eye size={14} className="shrink-0" />
+                <span className="truncate">View Summary</span>
+              </button>
+
+              <button
+                id="btn-similar-cases-assigned"
+                onClick={() => {
                   const targetId = selectedCase.caseId || selectedCase.case_id || selectedCase.id;
                   router.push(`/case-management/similar-cases/${targetId}`);
-                }
-              }}
-              className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-xs hover:shadow active:scale-95 cursor-pointer text-center min-w-0"
-            >
-              <Eye size={14} className="shrink-0" />
-              <span className="truncate">View Summary</span>
-            </button>
-
-            <button
-              id="btn-similar-cases-assigned"
-              onClick={() => {
-                const targetId = selectedCase.caseId || selectedCase.case_id || selectedCase.id;
-                router.push(`/case-management/similar-cases/${targetId}`);
-              }}
-              className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white text-xs font-extrabold transition shadow-xs hover:shadow active:scale-95 cursor-pointer text-center min-w-0"
-            >
-              <Search size={14} className="shrink-0" />
-              <span className="truncate">View Similar Cases</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Hearing Alert Banner (Always Visible Outside Tabs) */}
-        {hearingAlert && (
-          <div className="p-3.5 sm:p-4 bg-slate-50 border-b border-slate-200">
-            <div className={`p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md transition-all ${hearingAlert.bannerClass}`}>
-              <div className="flex items-center gap-3.5 min-w-0">
-                <div className="text-2xl sm:text-3xl shrink-0 leading-none">{hearingAlert.icon}</div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="text-sm sm:text-base font-black uppercase tracking-wider leading-tight">{hearingAlert.title}</h4>
-                    {hearingAlert.daysText && (
-                      <span className={`text-[10px] sm:text-xs uppercase px-2.5 py-0.5 rounded-full ${hearingAlert.badgeClass}`}>
-                        {hearingAlert.daysText}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs opacity-90 font-medium mt-1">
-                    Scheduled Hearing Date: <strong className="font-bold underline">{hearingAlert.dateFormatted}</strong>
-                  </p>
-                </div>
-              </div>
-              <div className="shrink-0 flex items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/20">
-                <span className="text-xs font-extrabold bg-white/20 backdrop-blur-xs px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 shadow-2xs">
-                  <Clock size={14} /> {hearingAlert.dateFormatted}
-                </span>
-              </div>
+                }}
+                className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white text-xs font-extrabold transition shadow-xs hover:shadow active:scale-95 cursor-pointer text-center min-w-0"
+              >
+                <Search size={14} className="shrink-0" />
+                <span className="truncate">View Similar Cases</span>
+              </button>
             </div>
           </div>
-        )}
+        </div>
 
         {/* ── Tab Bar Navigation ────────────────────────────────────────────────── */}
         <div className="border-b border-[#F1F5F9] bg-[#F8FAFC] p-3 sm:p-4 w-full max-w-full min-w-0">
