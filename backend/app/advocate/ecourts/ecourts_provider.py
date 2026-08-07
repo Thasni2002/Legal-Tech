@@ -371,18 +371,78 @@ class LiveeCourtsProvider(BaseeCourtsProvider):
                     id="1",
                     eventStage="Registration & Admission",
                     eventDate=f"18-01-{year}",
-                    title="Case Registered",
-                    description="Case admitted and registered on eCourts portal",
+                    title="Case Registered & Admitted",
+                    description="Case admitted on eCourts portal; summons issued to respondent",
                     benchName="Principal Judge",
                     courtHall="Court Hall 01",
                     status="Completed"
                 ),
                 TimelineEvent(
                     id="2",
-                    eventStage="Hearing & Arguments",
-                    eventDate=f"25-08-{year}",
-                    title="Scheduled Hearing",
-                    description="Listed for evidence and argument submission",
+                    eventStage="Appearance & Written Statement",
+                    eventDate=f"14-03-{year}",
+                    title="Respondent Appearance Logged",
+                    description="Vakalatnama filed by respondent counsel; time granted for counter affidavit",
+                    benchName="Presiding Judge",
+                    courtHall="Court Hall 02",
+                    status="Completed"
+                ),
+                TimelineEvent(
+                    id="3",
+                    eventStage="Plea & Framing of Charges",
+                    eventDate=f"12-04-{year}",
+                    title="Issues & Charges Framed",
+                    description="Plea recorded before Presiding Officer and hearing adjourned for evidence",
+                    benchName="Presiding Judge",
+                    courtHall="Court Hall 02",
+                    status="Completed"
+                ),
+                TimelineEvent(
+                    id="4",
+                    eventStage="Interim Relief Hearing",
+                    eventDate=f"20-07-{year}",
+                    title="Interim Injunction Application",
+                    description="Arguments heard on interim application; status quo ordered until further orders",
+                    benchName="Presiding Judge",
+                    courtHall="Court Hall 02",
+                    status="Completed"
+                ),
+                TimelineEvent(
+                    id="5",
+                    eventStage="Petitioner Evidence",
+                    eventDate=f"05-09-{year}",
+                    title="Petitioner Witness Examination (PW-1)",
+                    description="Statements recorded; cross-examination completed by defense counsel",
+                    benchName="Presiding Judge",
+                    courtHall="Court Hall 02",
+                    status="Completed"
+                ),
+                TimelineEvent(
+                    id="6",
+                    eventStage="Respondent Evidence",
+                    eventDate=f"11-11-{year}",
+                    title="Defense Witness Examination (DW-1 & DW-2)",
+                    description="Defense documents marked as Exhibits B1-B5; defense evidence closed",
+                    benchName="Presiding Judge",
+                    courtHall="Court Hall 02",
+                    status="Completed"
+                ),
+                TimelineEvent(
+                    id="7",
+                    eventStage="Cross-Arguments & Review",
+                    eventDate=f"16-02-{int(year)+1 if str(year).isdigit() else 2012}",
+                    title="Submissions & Pre-trial Review",
+                    description="Written notes of arguments submitted by both advocate counsels",
+                    benchName="Presiding Judge",
+                    courtHall="Court Hall 02",
+                    status="Completed"
+                ),
+                TimelineEvent(
+                    id="8",
+                    eventStage="Final Arguments & Hearing",
+                    eventDate=f"25-08-2026",
+                    title="Scheduled Final Hearing & Judgment",
+                    description="Listed for final oral arguments and judgment reservation",
                     benchName="Presiding Judge",
                     courtHall="Court Hall 02",
                     status="Scheduled"
@@ -394,9 +454,63 @@ class LiveeCourtsProvider(BaseeCourtsProvider):
                     orderDate=f"18-01-{year}",
                     orderType="Admission Order",
                     judgeName="Principal Judge",
-                    summary="Notice issued to respondent",
-                    fileUrl="",
+                    summary="Notice issued to respondent and return date fixed",
+                    fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
                     fileSize="1.2 MB"
+                ),
+                OrderDocumentItem(
+                    id="2",
+                    orderDate=f"14-03-{year}",
+                    orderType="Proceeding Order",
+                    judgeName="Presiding Judge",
+                    summary="Vakalatnama accepted; 3 weeks time granted to respondent for written statement",
+                    fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+                    fileSize="1.1 MB"
+                ),
+                OrderDocumentItem(
+                    id="3",
+                    orderDate=f"12-04-{year}",
+                    orderType="Interim Order",
+                    judgeName="Presiding Judge",
+                    summary="Issues framed under Section 138/Civil Procedure Code; posted for trial evidence",
+                    fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+                    fileSize="1.8 MB"
+                ),
+                OrderDocumentItem(
+                    id="4",
+                    orderDate=f"20-07-{year}",
+                    orderType="Interim Injunction Order",
+                    judgeName="Presiding Judge",
+                    summary="Interim application allowed; status quo order passed",
+                    fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+                    fileSize="1.5 MB"
+                ),
+                OrderDocumentItem(
+                    id="5",
+                    orderDate=f"05-09-{year}",
+                    orderType="Daily Evidence Order",
+                    judgeName="Presiding Judge",
+                    summary="Depositions of PW-1 recorded and marked as Exhibit A1-A4",
+                    fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+                    fileSize="2.4 MB"
+                ),
+                OrderDocumentItem(
+                    id="6",
+                    orderDate=f"11-11-{year}",
+                    orderType="Daily Hearing Order",
+                    judgeName="Presiding Judge",
+                    summary="DW-1 & DW-2 cross-examined; defense evidence closed",
+                    fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+                    fileSize="2.1 MB"
+                ),
+                OrderDocumentItem(
+                    id="7",
+                    orderDate=f"16-02-{int(year)+1 if str(year).isdigit() else 2012}",
+                    orderType="Arguments Record Order",
+                    judgeName="Presiding Judge",
+                    summary="Written arguments filed by both counsels; posted for final hearing",
+                    fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+                    fileSize="1.9 MB"
                 )
             ]
         )
