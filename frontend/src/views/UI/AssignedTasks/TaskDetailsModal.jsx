@@ -589,11 +589,17 @@ export default function TaskDetailsModal({ task: initialTask, onClose, onStatusC
                 </div>
               )}
 
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <User size={14} color="#64748B" />
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                <User size={14} color="#64748B" style={{ marginTop: "3px" }} />
                 <div>
-                  <div style={{ fontSize: "10px", color: "#94A3B8", fontWeight: 600, textTransform: "uppercase" }}>Assigned To</div>
-                  <div style={{ fontSize: "12.5px", color: "#374151", fontWeight: 500 }}>{task.junior_name || "Junior Advocate"}</div>
+                  <div style={{ fontSize: "10px", color: "#94A3B8", fontWeight: 600, textTransform: "uppercase" }}>
+                    {task.assignment_type === "group" ? "Assigned Group" : "Assigned To"}
+                  </div>
+                  <div style={{ fontSize: "12.5px", color: "#374151", fontWeight: 500 }}>
+                    {task.assignees && task.assignees.length > 0
+                      ? task.assignees.map((a) => `${a.user_name} (${a.user_role})`).join(", ")
+                      : task.junior_name || "Assignee"}
+                  </div>
                 </div>
               </div>
 

@@ -53,7 +53,13 @@ export default function TaskFormModal({ onClose, onSaved, editTask = null }) {
     description: editTask?.description || "",
     priority: editTask?.priority || "Medium",
     due_date: editTask?.due_date || "",
+    assignment_type: editTask?.assignment_type || "single",
     junior_advocate_id: editTask?.junior_advocate_id || "",
+    assigned_user_ids: editTask?.assignees?.length
+      ? editTask.assignees.map((a) => a.user_id)
+      : editTask?.junior_advocate_id
+      ? [editTask.junior_advocate_id]
+      : [],
     case_id: editTask?.case_id || "",
     case_title: editTask?.case_title || "",
     case_no: editTask?.case_no || "",
@@ -69,6 +75,20 @@ export default function TaskFormModal({ onClose, onSaved, editTask = null }) {
       fetchWorkflowDocumentsForJunior(editTask.junior_advocate_id);
     }
   }, []);
+
+  const toggleGroupAssignee = (userId) => {
+    setForm((f) => {
+      const exists = f.assigned_user_ids.includes(userId);
+      const updated = exists
+        ? f.assigned_user_ids.filter((id) => id !== userId)
+        : [...f.assigned_user_ids, userId];
+      return {
+        ...f,
+        assigned_user_ids: updated,
+        junior_advocate_id: updated[0] || "",
+      };
+    });
+  };
 
   const fetchLeaveRequests = async () => {
     const token = localStorage.getItem("token");
@@ -109,17 +129,23 @@ export default function TaskFormModal({ onClose, onSaved, editTask = null }) {
       });
       if (res.ok) {
         const users = await res.json();
-        staffList = users.filter((u) => u.role && (u.role.toLowerCase().includes("junior") || u.role.toLowerCase().includes("clerk") || u.role.toLowerCase().includes("advocate")));
+        staffList = users.filter((u) => {
+          const r = (u.role || "").toLowerCase();
+          return (r.includes("junior") || r.includes("clerk")) && !r.includes("client");
+        });
       }
 
-      // Also fetch from lawfirm-management/ to ensure all newly added Clerks & Advocates are included
+      // Also fetch from lawfirm-management/ to ensure all newly added Clerks & Junior Advocates are included
       try {
         const resAdv = await fetch(`${API_BASE_URL}/lawfirm-management/`);
         if (resAdv.ok) {
           const advs = await resAdv.json();
           advs.forEach((adv) => {
+            const advRole = (adv.role || "").toLowerCase();
+            const isTargetRole = (advRole.includes("junior") || advRole.includes("clerk")) && !advRole.includes("client");
             const advName = adv.advocateName || adv.advocate_name || "";
             if (
+              isTargetRole &&
               advName &&
               !staffList.some(
                 (s) =>
@@ -132,7 +158,7 @@ export default function TaskFormModal({ onClose, onSaved, editTask = null }) {
                 username: advName,
                 first_name: advName,
                 last_name: `(${adv.role || "Staff"})`,
-                role: adv.role || "Advocate",
+                role: adv.role || "Junior Advocate",
               });
             }
           });
@@ -417,16 +443,34 @@ export default function TaskFormModal({ onClose, onSaved, editTask = null }) {
     e.preventDefault();
     setError("");
     if (!form.title.trim()) { setError("Task title is required."); return; }
-    if (!form.junior_advocate_id) { setError("Please select an Assignee."); return; }
+
+    const isGroup = form.assignment_type === "group";
+    if (isGroup) {
+      if (!form.assigned_user_ids || form.assigned_user_ids.length === 0) {
+        setError("Please select at least one assignee for the group task.");
+        return;
+      }
+    } else {
+      if (!form.junior_advocate_id) {
+        setError("Please select an Assignee.");
+        return;
+      }
+    }
 
     const isCaseSelected = Boolean(form.case_id);
     const pool = isCaseSelected ? getAssignedStaffForCase(form.case_id) : juniors;
-    const selected = pool.find((s) => String(s.id) === String(form.junior_advocate_id));
 
-    if (selected && (selected.isOnLeave || checkIsOnLeave(selected))) {
-      const advName = selected.username || `${selected.firstName || selected.first_name || ""} ${selected.lastName || selected.last_name || ""}`.trim() || "Selected Advocate";
-      setError(`Cannot assign task to ${advName} because they are currently on leave today.`);
-      return;
+    const checkedIds = isGroup
+      ? form.assigned_user_ids
+      : [parseInt(form.junior_advocate_id, 10)];
+
+    for (const uid of checkedIds) {
+      const selected = pool.find((s) => String(s.id) === String(uid));
+      if (selected && (selected.isOnLeave || checkIsOnLeave(selected))) {
+        const advName = selected.username || `${selected.firstName || selected.first_name || ""} ${selected.lastName || selected.last_name || ""}`.trim() || "Selected Member";
+        setError(`Cannot assign task to ${advName} because they are currently on leave today.`);
+        return;
+      }
     }
 
     const token = localStorage.getItem("token");
@@ -437,7 +481,9 @@ export default function TaskFormModal({ onClose, onSaved, editTask = null }) {
         description: form.description,
         priority: form.priority,
         due_date: form.due_date || null,
-        junior_advocate_id: parseInt(form.junior_advocate_id, 10),
+        assignment_type: form.assignment_type,
+        junior_advocate_id: isGroup ? (form.assigned_user_ids[0] || null) : parseInt(form.junior_advocate_id, 10),
+        assigned_user_ids: isGroup ? form.assigned_user_ids.map(id => parseInt(id, 10)) : [parseInt(form.junior_advocate_id, 10)].filter(Boolean),
         case_id: form.case_id ? parseInt(form.case_id, 10) : null,
         case_title: form.case_title || null,
         case_no: form.case_no || null,
@@ -624,6 +670,55 @@ export default function TaskFormModal({ onClose, onSaved, editTask = null }) {
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {/* Assignment Mode Selection (Single vs Group) */}
+            <div style={{ background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "12px", padding: "14px" }}>
+              <label style={{ ...labelStyle, marginBottom: "8px" }}>Assignment Mode *</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, assignment_type: "single" }))}
+                  style={{
+                    padding: "10px",
+                    borderRadius: "8px",
+                    border: form.assignment_type === "single" ? "2px solid #2563EB" : "1px solid #CBD5E1",
+                    background: form.assignment_type === "single" ? "#EFF6FF" : "#FFF",
+                    color: form.assignment_type === "single" ? "#1E40AF" : "#475569",
+                    fontWeight: 700,
+                    fontSize: "13px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <User size={15} />
+                  <span>Single Assignee</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, assignment_type: "group" }))}
+                  style={{
+                    padding: "10px",
+                    borderRadius: "8px",
+                    border: form.assignment_type === "group" ? "2px solid #2563EB" : "1px solid #CBD5E1",
+                    background: form.assignment_type === "group" ? "#EFF6FF" : "#FFF",
+                    color: form.assignment_type === "group" ? "#1E40AF" : "#475569",
+                    fontWeight: 700,
+                    fontSize: "13px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <span>👥 Group Assignment</span>
+                </button>
+              </div>
+            </div>
+
             <div>
               <label style={labelStyle}>Task Title *</label>
               <input
@@ -707,20 +802,75 @@ export default function TaskFormModal({ onClose, onSaved, editTask = null }) {
             </div>
 
             <div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
                 <label style={{ ...labelStyle, marginBottom: 0 }}>
                   <User size={10} style={{ marginRight: "4px", display: "inline" }} />
-                  Assign To *
+                  {form.assignment_type === "group" ? "Select Group Assignees (Advocates & Clerks) *" : "Assign To *"}
                 </label>
               </div>
+
               {(() => {
                 const isCaseSelected = Boolean(form.case_id);
                 const filterAssignee = (j) => {
                   if (editTask && String(j.id) === String(editTask?.junior_advocate_id)) return true;
-                  return !isCurrentUser(j);
+                  const r = (j.role || "").toLowerCase();
+                  const isTarget = (r.includes("junior") || r.includes("clerk")) && !r.includes("client");
+                  return isTarget && !isCurrentUser(j);
                 };
                 const caseStaff = getAssignedStaffForCase(form.case_id).filter(filterAssignee);
                 const availableJuniors = juniors.filter(filterAssignee);
+                const staffList = isCaseSelected ? caseStaff : availableJuniors;
+
+                if (form.assignment_type === "group") {
+                  return (
+                    <div style={{ border: "1.5px solid #E2E8F0", borderRadius: "10px", padding: "10px", background: "#FFF", maxHeight: "200px", overflowY: "auto" }}>
+                      {staffList.length === 0 ? (
+                        <p style={{ fontSize: "12px", color: "#64748B", margin: 0 }}>No eligible assignees available.</p>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                          {staffList.map((j) => {
+                            const isChecked = form.assigned_user_ids.includes(j.id);
+                            const onLeave = j.isOnLeave || checkIsOnLeave(j);
+                            const displayName = j.username || `${j.firstName || j.first_name || ""} ${j.lastName || j.last_name || ""}`.trim() || `User #${j.id}`;
+                            const roleLabel = j.roleTag || j.role || "Staff";
+
+                            return (
+                              <label
+                                key={j.uniqueKey || j.id}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  padding: "8px 10px",
+                                  borderRadius: "8px",
+                                  background: isChecked ? "#EFF6FF" : "#F8FAFC",
+                                  border: isChecked ? "1px solid #BFDBFE" : "1px solid #E2E8F0",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <div style={{ display: "flex", itemsCenter: "center", gap: "8px" }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => toggleGroupAssignee(j.id)}
+                                    style={{ width: "16px", height: "16px", cursor: "pointer" }}
+                                  />
+                                  <span style={{ fontSize: "13px", fontWeight: 600, color: onLeave ? "#DC2626" : "#0F172A" }}>
+                                    {onLeave ? "[ON LEAVE TODAY] " : ""}
+                                    {displayName}
+                                  </span>
+                                </div>
+                                <span style={{ fontSize: "11px", fontWeight: 700, color: "#64748B", background: "#E2E8F0", padding: "2px 8px", borderRadius: "12px" }}>
+                                  {roleLabel}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
 
                 return (
                   <select
