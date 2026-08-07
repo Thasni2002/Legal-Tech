@@ -185,7 +185,7 @@ def create_consultation(db: Session, data: ConsultationCreate, background_tasks:
         meeting_link=meet_link,
         issue=data.issue,
         fee=data.fee,
-        status="Pending Advocate"
+        status=data.status or "Pending Advocate"
     )
     db.add(new_consultation)
     db.commit()

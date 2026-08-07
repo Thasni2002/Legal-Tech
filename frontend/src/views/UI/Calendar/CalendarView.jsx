@@ -22,7 +22,9 @@ import {
   Filter,
   Briefcase,
   FileText,
-  Bookmark
+  Bookmark,
+  CalendarCheck,
+  Video
 } from "lucide-react";
 import { format } from "date-fns";
 import { usePermissions } from "@/utils/usePermissions";
@@ -228,6 +230,10 @@ const getTypeColor = (type) => {
       return "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100";
     case "Holiday":
       return "bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100 font-semibold";
+    case "Free Slot":
+      return "bg-amber-50 border-amber-300 text-amber-900 hover:bg-amber-100 font-bold";
+    case "Case Discussion":
+      return "bg-sky-50 border-sky-300 text-sky-900 hover:bg-sky-100 font-bold";
     default:
       return "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100";
   }
@@ -388,33 +394,188 @@ export default function CalendarView() {
     notes: "",
   });
 
-  // --- Dynamic Events ---
   const [events, setEvents] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [isCustomClientName, setIsCustomClientName] = useState(false);
+  const [generatingMeetLink, setGeneratingMeetLink] = useState(false);
+  const [alertModal, setAlertModal] = useState({ show: false, title: "", message: "", type: "warning" });
+
+  const showAlert = (message, title = "Notice", type = "warning") => {
+    setAlertModal({ show: true, title, message, type });
+  };
+
+  const generateCalendarMeetLink = async (clientName, date, time) => {
+    setGeneratingMeetLink(true);
+    const token = localStorage.getItem("token");
+    try {
+      const client = clientName || "Client";
+      const d = date || new Date().toISOString().split("T")[0];
+      const t = time || "10:00 AM";
+      const headers = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await fetch(
+        `${API_BASE_URL}/consultations/generate-meet-link?client_name=${encodeURIComponent(client)}&date=${encodeURIComponent(d)}&time=${encodeURIComponent(t)}`,
+        { headers }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data.meeting_link) {
+          setEventForm((prev) => ({ ...prev, court: data.meeting_link }));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to generate meet link for calendar slot:", err);
+    } finally {
+      setGeneratingMeetLink(false);
+    }
+  };
 
   useEffect(() => {
     fetchCases();
+    fetchClients();
   }, []);
+
+  const fetchClients = async () => {
+    try {
+      const uniqueClientsMap = new Map();
+      uniqueClientsMap.set("free slot available", { id: "free", clientName: "Free Slot Available" });
+
+      try {
+        const resUsers = await fetch(`${API_BASE_URL}/permissions/users`);
+        if (resUsers.ok) {
+          const usersData = await resUsers.json();
+          usersData.forEach((u) => {
+            if (u.role && u.role.toLowerCase() === "client") {
+              const firstName = (u.firstName || u.first_name || "").trim();
+              const lastName = (u.lastName || u.last_name || "").trim();
+              const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+              const displayName = fullName || u.username;
+              if (displayName) {
+                const key = displayName.toLowerCase();
+                if (!uniqueClientsMap.has(key)) {
+                  uniqueClientsMap.set(key, { id: u.id, clientName: displayName, email: u.email || "" });
+                }
+              }
+            }
+          });
+        }
+      } catch (e) {}
+
+      try {
+        const resClientMgmt = await fetch(`${API_BASE_URL}/client-management/`);
+        if (resClientMgmt.ok) {
+          const clientsData = await resClientMgmt.json();
+          clientsData.forEach((c) => {
+            const cName = (c.name || c.client_name || c.clientName || "").trim();
+            if (cName) {
+              const key = cName.toLowerCase();
+              if (!uniqueClientsMap.has(key)) {
+                uniqueClientsMap.set(key, { id: c.id || cName, clientName: cName, email: c.email || c.email_id || "" });
+              }
+            }
+          });
+        }
+      } catch (e) {}
+
+      try {
+        const resCases = await fetch(`${API_BASE_URL}/case-management/`);
+        if (resCases.ok) {
+          const casesData = await resCases.json();
+          casesData.forEach((c) => {
+            const cName = (c.clientName || c.client_name || "").trim();
+            if (cName) {
+              const key = cName.toLowerCase();
+              if (!uniqueClientsMap.has(key)) {
+                uniqueClientsMap.set(key, { id: cName, clientName: cName, email: c.emailId || c.email_id || "" });
+              }
+            }
+          });
+        }
+      } catch (e) {}
+
+      setClients(Array.from(uniqueClientsMap.values()));
+    } catch (err) {
+      console.error("Failed to fetch clients for calendar:", err);
+    }
+  };
 
   const fetchCases = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/case-management/`);
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        const mappedEvents = data
-          .filter((c) => c.next_hearing_date) // Only cases with hearing date
-          .map((c) => ({
-            id: String(c.id),
-            title: c.case_title || "Untitled Case",
-            date: c.next_hearing_date ? c.next_hearing_date.split("T")[0] : "",
-            time: "10:00", // Default time as requested
-            type: c.case_type || "Civil",
-            caseNo: c.case_no || "Unknown",
-            court: c.court_name || "Unknown Court",
-            status: c.status || "Pending",
-            notes: c.case_description || "",
-          }));
-        setEvents(mappedEvents);
+      let caseEvents = [];
+      try {
+        const res = await fetch(`${API_BASE_URL}/case-management/`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            caseEvents = data
+              .filter((c) => c.next_hearing_date) // Only cases with hearing date
+              .map((c) => ({
+                id: String(c.id),
+                title: c.case_title || "Untitled Case",
+                date: c.next_hearing_date ? c.next_hearing_date.split("T")[0] : "",
+                time: "10:00", // Default time as requested
+                type: c.case_type || "Civil",
+                caseNo: c.case_no || "Unknown",
+                court: c.court_name || "Unknown Court",
+                status: c.status || "Pending",
+                notes: c.case_description || "",
+              }));
+          }
+        }
+      } catch (errCases) {
+        console.error("Failed to fetch cases for calendar:", errCases);
       }
+
+      let consultationEvents = [];
+      try {
+        const resConsult = await fetch(`${API_BASE_URL}/consultations`);
+        if (resConsult.ok) {
+          const consultData = await resConsult.json();
+          if (Array.isArray(consultData)) {
+            consultationEvents = consultData.map((c) => {
+              let formatted24h = "10:00";
+              try {
+                if (c.time && (c.time.includes("AM") || c.time.includes("PM"))) {
+                  const parts = c.time.split(" ");
+                  const t = parts[0];
+                  const modifier = parts[1];
+                  let [hours, minutes] = t.split(":");
+                  let h = parseInt(hours, 10);
+                  if (modifier === "PM" && h < 12) h += 12;
+                  if (modifier === "AM" && h === 12) h = 0;
+                  formatted24h = `${String(h).padStart(2, "0")}:${minutes || "00"}`;
+                } else if (c.time) {
+                  formatted24h = c.time.slice(0, 5);
+                }
+              } catch (e) {
+                formatted24h = "10:00";
+              }
+
+              const dateClean = c.date ? String(c.date).split("T")[0] : "";
+              const isFreeSlot = (c.client_name || "").toLowerCase().includes("free slot") || (c.client_name || "").toLowerCase().includes("available");
+
+              return {
+                id: `consultation-${c.id}`,
+                title: isFreeSlot ? `Free Slot (${c.time})` : `Case Discussion: ${c.client_name}`,
+                date: dateClean,
+                time: formatted24h,
+                type: isFreeSlot ? "Free Slot" : "Case Discussion",
+                caseNo: c.type || "Discussion",
+                court: c.meeting_link ? "Google Meet" : "Office / Online",
+                status: c.status || "Scheduled",
+                notes: `Client: ${c.client_name} | Type: ${c.type || 'N/A'} | Status: ${c.status || 'Scheduled'} | Link: ${c.meeting_link || 'N/A'}`,
+                isConsultation: true,
+                consultationId: c.id
+              };
+            });
+          }
+        }
+      } catch (errConsult) {
+        console.error("Failed to fetch consultations for calendar:", errConsult);
+      }
+
+      setEvents([...caseEvents, ...consultationEvents]);
     } catch (err) {
       console.error("Failed to fetch calendar cases:", err);
     }
@@ -587,10 +748,16 @@ export default function CalendarView() {
 
   // --- CRUD Handlers ---
   const handleOpenAddModal = (dateStr = "") => {
+    const todayStr = getDateString(new Date());
+    const targetDate = dateStr || getDateString(selectedDate);
+    if (targetDate < todayStr) {
+      showAlert("Cannot schedule events or free slots for past dates. Please select today or a future date.", "Past Date Restricted", "warning");
+      return;
+    }
     setEditingId(null);
     setEventForm({
       title: "",
-      date: dateStr || getDateString(selectedDate),
+      date: targetDate,
       time: "10:00",
       type: "Civil",
       caseNo: "",
@@ -637,11 +804,59 @@ export default function CalendarView() {
     }
   };
 
-  const handleSaveEvent = (e) => {
+  const handleSaveEvent = async (e) => {
     e.preventDefault();
-    if (!eventForm.title || !eventForm.date || !eventForm.time || !eventForm.type) {
-      alert("Please fill in the Title, Date, Time, and Type fields.");
+    const todayStr = getDateString(new Date());
+    if (eventForm.date < todayStr) {
+      showAlert("Cannot schedule events or free slots for past dates. Please select today or a future date.", "Past Date Restricted", "warning");
       return;
+    }
+    const typeVal = eventForm.isCaseDiscussionSlot ? (eventForm.type || "Free Slot") : eventForm.type;
+    if (!eventForm.title || !eventForm.date || !eventForm.time || !typeVal) {
+      showAlert("Please fill in the Title, Date, Time, and Type fields.", "Incomplete Form", "warning");
+      return;
+    }
+
+    if (eventForm.isCaseDiscussionSlot || eventForm.type === "Free Slot" || eventForm.type === "Case Discussion") {
+      try {
+        const timeFormatted = formatTime(eventForm.time);
+        const selectedClient = clients.find(c => (c.clientName || "").trim().toLowerCase() === (eventForm.title || "").trim().toLowerCase());
+        const clientEmail = selectedClient ? (selectedClient.email || selectedClient.emailId || "") : "";
+        const isFreeSlot = (eventForm.title || "").toLowerCase().includes("free slot") || (eventForm.title || "").toLowerCase().includes("available");
+
+        if (!eventForm.meetingType || eventForm.meetingType === "Meeting Type") {
+          showAlert("Please select a meeting type (Video Call, Chat, or Person to Person).", "Select Meeting Type", "warning");
+          return;
+        }
+
+        const consultationPayload = {
+          client_name: eventForm.title || "Free Slot Available",
+          client_email: clientEmail,
+          type: eventForm.meetingType,
+          date: eventForm.date,
+          time: timeFormatted,
+          meeting_link: eventForm.court || "",
+          issue: eventForm.notes || "Case Discussion Appointment",
+          status: isFreeSlot ? "Pending Client" : "Approved"
+        };
+
+        const res = await fetch(`${API_BASE_URL}/consultations/book`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(consultationPayload)
+        });
+
+        if (res.ok) {
+          await fetchCases();
+          setShowEventModal(false);
+          setEditingId(null);
+          return;
+        } else {
+          showAlert("Failed to save appointment / free slot to Case Discussion.", "Save Failed", "error");
+        }
+      } catch (err) {
+        console.error("Error saving case discussion slot:", err);
+      }
     }
 
     if (editingId) {
@@ -679,19 +894,52 @@ export default function CalendarView() {
         </div>
 
         {hasPermission("Calendar", "add") && (
-          <div className="flex justify-end">
+          <div className="flex flex-wrap items-center justify-end gap-3">
             <button
-              onClick={() => { setEditingId(null);  setEventForm({
-        title: "",
-        date: getDateString(selectedDate),
-        time: "",
-        type: "Civil",
-        caseNo: "",
-        court: "",
-        status: "Pending",
-        notes: "",
-      }); setShowEventModal(true); }}
-              className="flex items-center gap-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-colors"
+              type="button"
+              onClick={() => {
+                const todayStr = getDateString(new Date());
+                const targetDate = getDateString(selectedDate);
+                const validDate = targetDate >= todayStr ? targetDate : todayStr;
+                setEditingId(null);
+                setEventForm({
+                  title: "Free Slot Available",
+                  date: validDate,
+                  time: "10:00",
+                  type: "Free Slot",
+                  meetingType: "Meeting Type",
+                  caseNo: "FREE-SLOT",
+                  court: "",
+                  status: "Pending",
+                  notes: "",
+                  isCaseDiscussionSlot: true
+                });
+                setShowEventModal(true);
+              }}
+              className="flex items-center gap-2 bg-[#F59E0B] hover:bg-[#D97706] text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-colors cursor-pointer"
+            >
+              <CalendarCheck className="h-5 w-5" />
+              <span>+ Add Free Slot</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setEditingId(null);
+                setEventForm({
+                  title: "",
+                  date: getDateString(selectedDate),
+                  time: "10:00",
+                  type: "Civil",
+                  caseNo: "",
+                  court: "",
+                  status: "Pending",
+                  notes: "",
+                  isCaseDiscussionSlot: false
+                });
+                setShowEventModal(true);
+              }}
+              className="flex items-center gap-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-colors cursor-pointer"
             >
               <Plus className="h-5 w-5" />
               <span>Add Event</span>
@@ -1900,8 +2148,19 @@ export default function CalendarView() {
                         <MapPin size={14} />
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">Court / Venue</p>
-                        <p className="text-sm font-semibold text-[#0F172A] mt-0.5">{selectedEventDetails.court || "Not Specified"}</p>
+                        <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">Court / Venue / Meeting Link</p>
+                        {selectedEventDetails.court && (selectedEventDetails.court.startsWith("http") || selectedEventDetails.court.includes("meet.google.com")) ? (
+                          <a
+                            href={selectedEventDetails.court}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#2563EB] hover:underline mt-1 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200"
+                          >
+                            <Video size={14} /> Join Video Call Meeting
+                          </a>
+                        ) : (
+                          <p className="text-sm font-semibold text-[#0F172A] mt-0.5">{selectedEventDetails.court || "Not Specified"}</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1961,7 +2220,7 @@ export default function CalendarView() {
           document.body
         )}
 
-        {/* --- ADD / EDIT EVENT MODAL --- */}
+        {/* --- ADD / EDIT EVENT & FREE SLOT MODAL --- */}
         {showEventModal && mounted && createPortal(
           <div 
             className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fade-in"
@@ -1971,6 +2230,7 @@ export default function CalendarView() {
               className="bg-white rounded-3xl p-5 sm:p-6 w-full max-w-xl shadow-2xl border border-[#E2E8F0] flex flex-col max-h-[96vh]"
               onClick={(e) => e.stopPropagation()}
             >
+              {/* Header */}
               <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3 mb-3">
                 <div className="flex items-center gap-2">
                   <button
@@ -1982,136 +2242,336 @@ export default function CalendarView() {
                     <ChevronLeft className="h-5 w-5" />
                   </button>
                   <h2 className="text-lg md:text-xl font-black text-[#0F172A]">
-                    {editingId ? "Edit Event details" : "Schedule New Event"}
+                    {editingId
+                      ? "Edit Event details"
+                      : eventForm.isCaseDiscussionSlot
+                      ? "Add Free Slot (Case Discussion)"
+                      : "Schedule New Event"}
                   </h2>
                 </div>
-                <span className="text-[10px] font-bold uppercase px-3 py-1 bg-[#F8FAFC] text-[#64748B] rounded-full border border-[#E2E8F0]">
-                  Advocate Log
+                <span className={`text-[10px] font-bold uppercase px-3 py-1 rounded-full border ${
+                  eventForm.isCaseDiscussionSlot
+                    ? "bg-amber-50 text-amber-800 border-amber-200"
+                    : "bg-[#F8FAFC] text-[#64748B] border-[#E2E8F0]"
+                }`}>
+                  {eventForm.isCaseDiscussionSlot ? "Case Discussion Slot" : "Advocate Log"}
                 </span>
               </div>
 
-              <form onSubmit={handleSaveEvent} className="space-y-2.5 flex-1 overflow-visible">
+              {/* Segmented Switcher: Free Slot vs Event */}
+              {!editingId && (
+                <div className="grid grid-cols-2 p-1 bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl mb-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEventForm((prev) => ({
+                        ...prev,
+                        isCaseDiscussionSlot: true,
+                        title: prev.title === "" || prev.title === "Free Appointment Slot" ? "Free Slot Available" : prev.title,
+                        meetingType: prev.meetingType || "Meeting Type"
+                      }))
+                    }
+                    className={`py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                      eventForm.isCaseDiscussionSlot
+                        ? "bg-[#F59E0B] text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    }`}
+                  >
+                    <CalendarCheck size={14} /> Add Free Slot
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEventForm((prev) => ({
+                        ...prev,
+                        isCaseDiscussionSlot: false,
+                        title: prev.title === "Free Slot Available" || prev.title === "Free Appointment Slot" ? "" : prev.title,
+                        type: prev.type === "Free Slot" ? "Civil" : prev.type
+                      }))
+                    }
+                    className={`py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                      !eventForm.isCaseDiscussionSlot
+                        ? "bg-[#2563EB] text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    }`}
+                  >
+                    <Plus size={14} /> Add Event
+                  </button>
+                </div>
+              )}
+
+              <form onSubmit={handleSaveEvent} className="space-y-3 flex-1 overflow-y-auto pr-1">
                 
-                {/* Title */}
-                <div>
-                  <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
-                    Event / Case Title *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Property Dispute Hearing, Bail Plea"
-                    value={eventForm.title}
-                    onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
-                    className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl px-3.5 py-2 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
-                  />
-                </div>
+                {/* Free Slot & Case Discussion Appointment Form Fields */}
+                {eventForm.isCaseDiscussionSlot ? (
+                  <>
+                    {/* Client Name Field */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-bold text-[#475569] uppercase tracking-wider">
+                          Client Name *
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setIsCustomClientName(!isCustomClientName)}
+                          className="text-[11px] font-bold text-[#2563EB] hover:underline cursor-pointer"
+                        >
+                          {isCustomClientName ? "← Select from Client List" : "+ Type Custom Name"}
+                        </button>
+                      </div>
 
-                {/* Grid Date & Time */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
-                      Date *
-                    </label>
-                    <CustomDatePicker
-                      selected={eventForm.date}
-                      onChange={(dateStr) => setEventForm({ ...eventForm, date: dateStr })}
-                      minDate={new Date()}
-                      required
-                    />
-                  </div>
+                      {isCustomClientName ? (
+                        <input
+                          type="text"
+                          required
+                          placeholder="Type client name or slot label (e.g. Free Slot Available)..."
+                          value={eventForm.title}
+                          onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
+                          className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl p-3 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition font-medium"
+                        />
+                      ) : (
+                        <select
+                          value={eventForm.title || "Free Slot Available"}
+                          required
+                          onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
+                          className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl p-3 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition cursor-pointer font-medium"
+                        >
+                          <option value="Free Slot Available">Free Slot Available (Open for any client)</option>
+                          <option disabled value="">Select Client</option>
+                          {clients
+                            .filter((c) => (c.clientName || "").toLowerCase() !== "free slot available")
+                            .map((c, i) => (
+                              <option key={i} value={c.clientName}>
+                                👤 {c.clientName} {c.email ? `(${c.email})` : ""}
+                              </option>
+                            ))}
+                        </select>
+                      )}
+                    </div>
 
-                  <div>
-                    <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
-                      Time *
-                    </label>
-                    <CustomTimePicker
-                      value={eventForm.time}
-                      onChange={(timeStr) => setEventForm({ ...eventForm, time: timeStr })}
-                      required
-                    />
-                  </div>
-                </div>
+                    {/* Date & Time */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block mb-1 text-xs font-bold text-[#475569] uppercase tracking-wider">
+                          Date *
+                        </label>
+                        <CustomDatePicker
+                          selected={eventForm.date}
+                          onChange={(dateStr) => setEventForm({ ...eventForm, date: dateStr })}
+                          minDate={new Date()}
+                          required
+                        />
+                      </div>
 
-                {/* Case Details Grid */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
-                      Case Type *
-                    </label>
-                    <select
-                      value={eventForm.type}
-                      required
-                      onChange={(e) => setEventForm({ ...eventForm, type: e.target.value })}
-                      className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl px-3.5 py-2 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition appearance-none cursor-pointer"
-                    >
-                      <option value="Civil">Civil</option>
-                      <option value="Criminal">Criminal</option>
-                      <option value="Corporate">Corporate</option>
-                      <option value="Family">Family</option>
-                      <option value="Consumer">Consumer</option>
-                    </select>
-                  </div>
+                      <div>
+                        <label className="block mb-1 text-xs font-bold text-[#475569] uppercase tracking-wider">
+                          Time *
+                        </label>
+                        <CustomTimePicker
+                          value={eventForm.time}
+                          onChange={(timeStr) => setEventForm({ ...eventForm, time: timeStr })}
+                          required
+                        />
+                      </div>
+                    </div>
 
-                  <div>
-                    <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
-                      Status *
-                    </label>
-                    <select
-                      value={eventForm.status}
-                      required
-                      onChange={(e) => setEventForm({ ...eventForm, status: e.target.value })}
-                      className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl px-3.5 py-2 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition appearance-none cursor-pointer"
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Completed">Completed</option>
-                    </select>
-                  </div>
-                </div>
+                    {/* Type & Google Meet Link */}
+                    <div className={`grid grid-cols-1 ${eventForm.meetingType === "Video Call" ? "sm:grid-cols-2" : "sm:grid-cols-1"} gap-3`}>
+                      <div>
+                        <label className="block mb-1 text-xs font-bold text-[#475569] uppercase tracking-wider">
+                          Type *
+                        </label>
+                        <select
+                          value={eventForm.meetingType || "Meeting Type"}
+                          required
+                          onChange={(e) => {
+                            const selectedType = e.target.value;
+                            setEventForm((prev) => {
+                              const updated = { ...prev, meetingType: selectedType };
+                              if (selectedType === "Video Call") {
+                                if (!prev.court) {
+                                  generateCalendarMeetLink(prev.title, prev.date, prev.time);
+                                }
+                              } else {
+                                updated.court = "";
+                              }
+                              return updated;
+                            });
+                          }}
+                          className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl p-3 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition appearance-none cursor-pointer font-medium"
+                        >
+                          <option value="Meeting Type">Meeting Type</option>
+                          <option value="Video Call">Video Call</option>
+                          <option value="Chat">Chat</option>
+                          <option value="Person to Person">Person to Person</option>
+                        </select>
+                      </div>
 
-                {/* Case No & Court Venue */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
-                      Case No (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. CS/890/2023"
-                      value={eventForm.caseNo}
-                      onChange={(e) => setEventForm({ ...eventForm, caseNo: e.target.value })}
-                      className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl px-3.5 py-2 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
-                    />
-                  </div>
+                      {eventForm.meetingType === "Video Call" && (
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-bold text-[#475569] uppercase tracking-wider">
+                              Google Meet Link
+                            </label>
+                            <button
+                              type="button"
+                              disabled={generatingMeetLink}
+                              onClick={() => generateCalendarMeetLink(eventForm.title, eventForm.date, eventForm.time)}
+                              className="text-[10px] font-bold text-[#2563EB] hover:underline cursor-pointer flex items-center gap-1"
+                            >
+                              {generatingMeetLink ? "Generating..." : "⚡ Auto Generate"}
+                            </button>
+                          </div>
+                          <input
+                            type="text"
+                            placeholder={generatingMeetLink ? "Generating Meet link..." : "e.g. https://meet.google.com/abc-def"}
+                            value={eventForm.court}
+                            onChange={(e) => setEventForm({ ...eventForm, court: e.target.value })}
+                            className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl p-3 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition font-medium"
+                          />
+                        </div>
+                      )}
+                    </div>
 
-                  <div>
-                    <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
-                      Court / Venue (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Civil Court, Prayagraj"
-                      value={eventForm.court}
-                      onChange={(e) => setEventForm({ ...eventForm, court: e.target.value })}
-                      className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl px-3.5 py-2 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
-                    />
-                  </div>
-                </div>
+                    {/* Agenda Notes / Issue Description */}
+                    <div>
+                      <label className="block mb-1 text-xs font-bold text-[#475569] uppercase tracking-wider">
+                        Notes / Issue Description (Optional)
+                      </label>
+                      <textarea
+                        rows="2"
+                        placeholder="Legal issue, case context, or required documents..."
+                        value={eventForm.notes}
+                        onChange={(e) => setEventForm({ ...eventForm, notes: e.target.value })}
+                        className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl p-3 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition resize-none font-medium"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  /* Standard Case Event Mode Form Fields */
+                  <>
+                    {/* Title */}
+                    <div>
+                      <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
+                        Event / Case Title *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Property Dispute Hearing, Bail Plea"
+                        value={eventForm.title}
+                        onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
+                        className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl px-3.5 py-2 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+                      />
+                    </div>
 
-                {/* Notes/Agenda Description */}
-                <div>
-                  <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
-                    Agenda Notes / Description
-                  </label>
-                  <textarea
-                    rows="2"
-                    placeholder="Brief outline of case agenda, client context, or required documents..."
-                    value={eventForm.notes}
-                    onChange={(e) => setEventForm({ ...eventForm, notes: e.target.value })}
-                    className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl px-3.5 py-2 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition resize-none"
-                  />
-                </div>
+                    {/* Grid Date & Time */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
+                          Date *
+                        </label>
+                        <CustomDatePicker
+                          selected={eventForm.date}
+                          onChange={(dateStr) => setEventForm({ ...eventForm, date: dateStr })}
+                          minDate={new Date()}
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
+                          Time *
+                        </label>
+                        <CustomTimePicker
+                          value={eventForm.time}
+                          onChange={(timeStr) => setEventForm({ ...eventForm, time: timeStr })}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Case Details Grid */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
+                          Case Type *
+                        </label>
+                        <select
+                          value={eventForm.type}
+                          required
+                          onChange={(e) => setEventForm({ ...eventForm, type: e.target.value })}
+                          className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl px-3.5 py-2 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition appearance-none cursor-pointer"
+                        >
+                          <option value="Civil">Civil</option>
+                          <option value="Criminal">Criminal</option>
+                          <option value="Corporate">Corporate</option>
+                          <option value="Family">Family</option>
+                          <option value="Consumer">Consumer</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
+                          Status *
+                        </label>
+                        <select
+                          value={eventForm.status}
+                          required
+                          onChange={(e) => setEventForm({ ...eventForm, status: e.target.value })}
+                          className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl px-3.5 py-2 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition appearance-none cursor-pointer"
+                        >
+                          <option value="Pending">Pending</option>
+                          <option value="In Progress">In Progress</option>
+                          <option value="Completed">Completed</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Case No & Court Venue */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
+                          Case No (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. CS/890/2023"
+                          value={eventForm.caseNo}
+                          onChange={(e) => setEventForm({ ...eventForm, caseNo: e.target.value })}
+                          className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl px-3.5 py-2 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
+                          Court / Venue (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Civil Court, Prayagraj"
+                          value={eventForm.court}
+                          onChange={(e) => setEventForm({ ...eventForm, court: e.target.value })}
+                          className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl px-3.5 py-2 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Notes/Agenda Description */}
+                    <div>
+                      <label className="block mb-1 text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
+                        Agenda Notes / Description
+                      </label>
+                      <textarea
+                        rows="2"
+                        placeholder="Brief outline of case agenda, client context, or required documents..."
+                        value={eventForm.notes}
+                        onChange={(e) => setEventForm({ ...eventForm, notes: e.target.value })}
+                        className="w-full border border-[#E2E8F0] bg-[#F8FAFC]/50 rounded-xl px-3.5 py-2 text-sm text-[#0F172A] outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition resize-none"
+                      />
+                    </div>
+                  </>
+                )}
 
                 {/* Dialog Footer Actions */}
                 <div className="flex justify-end gap-3 pt-3 mt-1 border-t border-[#E2E8F0]">
@@ -2124,9 +2584,17 @@ export default function CalendarView() {
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition shadow-md shadow-[#2563EB]/10 cursor-pointer"
+                    className={`px-6 py-2 rounded-xl font-bold text-xs transition shadow-md cursor-pointer text-white ${
+                      eventForm.isCaseDiscussionSlot
+                        ? "bg-[#F59E0B] hover:bg-[#D97706] shadow-[#F59E0B]/20"
+                        : "bg-[#2563EB] hover:bg-blue-700 shadow-[#2563EB]/20"
+                    }`}
                   >
-                    {editingId ? "Save Changes" : "Create Event"}
+                    {editingId
+                      ? "Save Changes"
+                      : eventForm.isCaseDiscussionSlot
+                      ? "+ Schedule Meeting / Appointment"
+                      : "Create Event"}
                   </button>
                 </div>
 
@@ -2165,6 +2633,45 @@ export default function CalendarView() {
                   className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm transition shadow-lg shadow-red-500/20 flex-1"
                 >
                   Delete
+                </button>
+              </div>
+            </div>
+          </div>,
+        document.body
+      )}
+
+        {/* --- BEAUTIFUL CUSTOM ALERT MODAL --- */}
+        {alertModal.show && mounted && createPortal(
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[99999] p-4 animate-fade-in"
+            onClick={() => setAlertModal({ show: false, title: "", message: "", type: "warning" })}
+          >
+            <div 
+              className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-[#E2E8F0] p-6 text-center animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={`mx-auto w-14 h-14 rounded-2xl flex items-center justify-center mb-4 ${
+                alertModal.type === "error"
+                  ? "bg-rose-50 text-rose-600 border border-rose-200"
+                  : "bg-amber-50 text-amber-600 border border-amber-200"
+              }`}>
+                <AlertCircle size={28} />
+              </div>
+
+              <h3 className="text-xl font-extrabold text-[#0F172A] mb-2">
+                {alertModal.title || "Notice"}
+              </h3>
+              <p className="text-sm font-medium text-[#64748B] mb-6 leading-relaxed">
+                {alertModal.message}
+              </p>
+
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setAlertModal({ show: false, title: "", message: "", type: "warning" })}
+                  className="w-full py-3 bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-extrabold text-sm rounded-xl transition cursor-pointer shadow-md shadow-blue-500/20"
+                >
+                  OK, Got It
                 </button>
               </div>
             </div>
