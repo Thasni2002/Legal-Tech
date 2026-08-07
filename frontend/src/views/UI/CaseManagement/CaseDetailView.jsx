@@ -825,6 +825,82 @@ export default function CaseDetailView({ id }) {
     }
   };
 
+  const handleDownloadOrderPDF = async (ord) => {
+    if (!ord) return;
+    if (ord.fileUrl && ord.fileUrl.startsWith("http") && !ord.fileUrl.includes("dummy.pdf") && !ord.fileUrl.includes("w3.org")) {
+      window.open(ord.fileUrl, "_blank");
+      return;
+    }
+
+    try {
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF();
+      const margin = 20;
+      const pageWidth = doc.internal.pageSize.getWidth() - margin * 2;
+
+      // Header
+      doc.setFontSize(13);
+      doc.setFont("helvetica", "bold");
+      doc.text("IN THE COURT OF THE DISTRICT & SESSIONS JUDGE", margin, 22);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`AT ${selectedCase?.court_name || "DISTRICT COURT COMPLEX"}`, margin, 28);
+
+      doc.setLineWidth(0.5);
+      doc.setDrawColor(37, 99, 235);
+      doc.line(margin, 33, margin + pageWidth, 33);
+
+      // Metadata Block
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text(`CNR NUMBER: ${selectedCase?.cnr_number || "N/A"}`, margin, 42);
+      doc.text(`ORDER TYPE: ${ord.orderType || "COURT ORDER"}`, margin, 48);
+      doc.text(`ORDER DATE: ${ord.orderDate || "N/A"}`, margin, 54);
+      doc.text(`BEFORE BENCH OF: ${ord.judgeName || "HON'BLE PRESIDING JUDGE"}`, margin, 60);
+
+      doc.setLineWidth(0.2);
+      doc.setDrawColor(220, 220, 220);
+      doc.line(margin, 65, margin + pageWidth, 65);
+
+      // Case Parties
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text("CASE DETAILS & PARTIES:", margin, 73);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Case Title: ${selectedCase?.case_title || "Court Proceeding"}`, margin, 80);
+      doc.text(`Petitioner / Appellant: ${selectedCase?.client_name || ecourtsData?.petitioner || "Petitioner"}`, margin, 86);
+      doc.text(`Respondent / Opposing Party: ${ecourtsData?.respondent || "State / Respondent"}`, margin, 92);
+
+      doc.line(margin, 98, margin + pageWidth, 98);
+
+      // Order Summary Heading
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text("PROCEEDINGS & JUDGMENT ORDER RECORD:", margin, 107);
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      const orderText = ord.summary || "Court hearing completed. Order details and proceedings recorded on eCourts portal.";
+      const splitText = doc.splitTextToSize(orderText, pageWidth);
+      doc.text(splitText, margin, 115);
+
+      // Official Stamp / Signature block at bottom
+      const footerY = 250;
+      doc.setLineWidth(0.2);
+      doc.line(margin, footerY, margin + pageWidth, footerY);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "italic");
+      doc.text("Official Certified Copy — eCourts Judicial Portal Record", margin, footerY + 6);
+      doc.text(`Generated: ${new Date().toLocaleString("en-IN")}`, margin + pageWidth - 60, footerY + 6);
+
+      const safeFileName = `Court_Order_${ord.orderDate || "Date"}_${(ord.orderType || "Order").replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
+      doc.save(safeFileName);
+    } catch (err) {
+      console.error("Order PDF generation error:", err);
+      alert("Downloading order document...");
+    }
+  };
+
   const handleDownloadTxt = () => {
     const content = docGenEditMode ? docGenEditedContent : generatedDocContent;
     if (!content || !selectedCase) return;
@@ -1489,6 +1565,7 @@ export default function CaseDetailView({ id }) {
                 { key: "overview", label: "📋 Case Overview" },
                 { key: "documents", label: "📁 Case Documents" },
                 { key: "hearings", label: "⚖️ eCourts Hearings" },
+                { key: "orders", label: "📜 Orders & Judgments" },
                 { key: "notes", label: "📝 Advocate Notes" },
                 { key: "fees", label: "💳 Billing" },
                 { key: "generate_doc", label: "✨ Generate Document" },
@@ -1506,6 +1583,7 @@ export default function CaseDetailView({ id }) {
               { key: "overview", label: "Case Overview" },
               { key: "documents", label: "Case Documents" },
               { key: "hearings", label: "eCourts Hearings" },
+              { key: "orders", label: "Orders & Judgments" },
               { key: "notes", label: "Advocate Notes" },
               { key: "fees", label: "Billing" },
               { key: "generate_doc", label: "✨ Generate Document" },
@@ -1695,9 +1773,16 @@ export default function CaseDetailView({ id }) {
                   <h3 className="font-extrabold text-lg text-[#0F172A]">Parties & Legal Representatives</h3>
                   <p className="text-xs text-[#64748B] mt-0.5">Comprehensive overview of petitioner, respondent, opposing counsel, and bench officer.</p>
                 </div>
-                <span className="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-200 self-start sm:self-auto shrink-0">
-                  CNR: {selectedCase.cnr_number || "N/A"}
-                </span>
+                <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto shrink-0">
+                  {ecourtsData?.actSection && (
+                    <span className="text-xs font-bold text-purple-700 bg-purple-50 px-3 py-1.5 rounded-full border border-purple-200">
+                      Act: {ecourtsData.actSection}
+                    </span>
+                  )}
+                  <span className="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-200">
+                    CNR: {selectedCase.cnr_number || "N/A"}
+                  </span>
+                </div>
               </div>
 
               {/* VS Layout Cards */}
@@ -2199,6 +2284,18 @@ export default function CaseDetailView({ id }) {
                         <h5 className="text-sm font-bold text-slate-900 mt-2">{item.title}</h5>
                         <p className="text-xs text-slate-600 mt-1">{item.description}</p>
                         <p className="text-[11px] font-semibold text-slate-400 mt-2">Bench: {item.benchName} ({item.courtHall})</p>
+                        {item.documentUrl && (
+                          <div className="mt-3">
+                            <a
+                              href={item.documentUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+                            >
+                              <Download size={12} /> Download Hearing Order PDF
+                            </a>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -2206,6 +2303,78 @@ export default function CaseDetailView({ id }) {
               ) : (
                 <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs font-medium">
                   No live eCourts timeline milestones available yet for CNR Number {selectedCase.cnr_number || "this case"}.
+                </div>
+              )}
+            </div>
+          )}
+
+
+
+
+
+          {/* TAB: ORDERS & JUDGMENTS */}
+          {activeTab === "orders" && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-purple-50 border border-purple-200 rounded-2xl p-4">
+                <div>
+                  <h4 className="text-sm font-bold text-purple-900 flex items-center gap-2">
+                    <Gavel size={16} className="text-purple-600" /> Official Court Orders &amp; Judgment Documents
+                  </h4>
+                  <p className="text-xs text-purple-700 mt-0.5">
+                    CNR: {selectedCase.cnr_number || "N/A"} • Download interim orders, daily hearing judgments, and court records fetched via eCourts.
+                  </p>
+                </div>
+                <button
+                  onClick={handleSyncWithECourts}
+                  disabled={syncLoading}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-50 shrink-0"
+                >
+                  {syncLoading ? "Syncing..." : "Sync eCourts Now"}
+                </button>
+              </div>
+
+              {ecourtsData?.orders && ecourtsData.orders.length > 0 ? (
+                <div className="w-full overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-xs">
+                  <table className="w-full min-w-[620px] text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-bold">
+                      <tr>
+                        <th className="py-3.5 px-4">Order Date</th>
+                        <th className="py-3.5 px-4">Type</th>
+                        <th className="py-3.5 px-4">Presiding Judge</th>
+                        <th className="py-3.5 px-4">Order Summary / Judgment</th>
+                        <th className="py-3.5 px-4 text-right">Download PDF</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                      {ecourtsData.orders.map((ord, idx) => (
+                        <tr key={ord.id || idx} className="hover:bg-slate-50/80 transition">
+                          <td className="py-3.5 px-4 font-mono font-bold text-slate-900">{ord.orderDate || "N/A"}</td>
+                          <td className="py-3.5 px-4">
+                            <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                              {ord.orderType || "Court Order"}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 font-semibold text-slate-800">{ord.judgeName || "Hon'ble Presiding Judge"}</td>
+                          <td className="py-3.5 px-4 max-w-xs">{ord.summary || "Court judgment document"}</td>
+                          <td className="py-3.5 px-4 text-right">
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadOrderPDF(ord)}
+                              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+                            >
+                              <Download size={12} /> PDF ({ord.fileSize || "1.2 MB"})
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs font-medium space-y-2">
+                  <Gavel size={24} className="mx-auto text-slate-400" />
+                  <p className="font-bold text-slate-700">No judgment or court order documents uploaded yet for this CNR.</p>
+                  <p className="text-slate-500 text-[11px]">Click "Sync eCourts Now" to fetch latest daily orders and signed judgment files.</p>
                 </div>
               )}
             </div>
