@@ -24,7 +24,7 @@ from app.advocate.case_management.routes import router as case_router
 from app.utils.scheduler import start_scheduler
 from app.advocate.dashboard import router as dashboard_router
 from app.advocate.tasks import router as tasks_router
-from app.advocate.tasks.models import Task, TaskMessage
+from app.advocate.tasks.models import Task, TaskMessage, TaskAssignee
 from app.advocate.case_management.models import CaseDocumentWorkflow, CaseNote
 from app.advocate.confidential_vault.routes import router as vault_router
 from app.advocate.confidential_vault.models import ConfidentialCaseAuditLog  # ensure table is created

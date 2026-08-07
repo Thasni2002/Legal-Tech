@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from .models import Task, TaskMessage, TaskReadState
+from .models import Task, TaskAssignee, TaskMessage, TaskReadState
 from .schemas import TaskCreate, TaskUpdate, TaskStatusUpdate, TaskMessageCreate
 from app.authapp.models import User
 from datetime import datetime
@@ -11,14 +11,37 @@ from datetime import datetime
 # ─────────────────────────────────────────────────────────────
 
 def create_task(db: Session, data: TaskCreate, senior_id: int, senior_name: str) -> Task:
-    junior = db.query(User).filter(User.id == data.junior_advocate_id).first()
-    if junior:
-        if junior.first_name or junior.last_name:
-            junior_name = f"{junior.first_name or ''} {junior.last_name or ''}".strip()
-        else:
-            junior_name = junior.username
+    assignment_type = data.assignment_type or "single"
+
+    # Determine assigned user IDs
+    assigned_uids = []
+    if data.assigned_user_ids:
+        assigned_uids = [int(uid) for uid in data.assigned_user_ids if uid]
+    elif data.junior_advocate_id:
+        assigned_uids = [int(data.junior_advocate_id)]
+
+    first_junior_id = assigned_uids[0] if assigned_uids else data.junior_advocate_id
+
+    # Resolve junior_name & assignees
+    assigned_users = db.query(User).filter(User.id.in_(assigned_uids)).all() if assigned_uids else []
+    user_map = {u.id: u for u in assigned_users}
+
+    assignee_names = []
+    for uid in assigned_uids:
+        u = user_map.get(uid)
+        if u:
+            if u.first_name or u.last_name:
+                name = f"{u.first_name or ''} {u.last_name or ''}".strip()
+            else:
+                name = u.username or f"User #{u.id}"
+            assignee_names.append(name)
+
+    if assignment_type == "group" and len(assignee_names) > 1:
+        junior_name = ", ".join(assignee_names)
+    elif assignee_names:
+        junior_name = assignee_names[0]
     else:
-        junior_name = "Junior Advocate"
+        junior_name = "Assignee"
 
     task = Task(
         title=data.title,
@@ -27,7 +50,8 @@ def create_task(db: Session, data: TaskCreate, senior_id: int, senior_name: str)
         status="todo",
         due_date=data.due_date,
         senior_advocate_id=senior_id,
-        junior_advocate_id=data.junior_advocate_id,
+        junior_advocate_id=first_junior_id,
+        assignment_type=assignment_type,
         case_id=data.case_id,
         case_title=data.case_title,
         case_no=data.case_no,
@@ -39,6 +63,23 @@ def create_task(db: Session, data: TaskCreate, senior_id: int, senior_name: str)
     db.add(task)
     db.commit()
     db.refresh(task)
+
+    # Save to TaskAssignee table
+    for uid in assigned_uids:
+        u = user_map.get(uid)
+        if u:
+            if u.first_name or u.last_name:
+                uname = f"{u.first_name or ''} {u.last_name or ''}".strip()
+            else:
+                uname = u.username or f"User #{u.id}"
+            assignee = TaskAssignee(
+                task_id=task.id,
+                user_id=u.id,
+                user_name=uname,
+                user_role=u.role or "Staff"
+            )
+            db.add(assignee)
+    db.commit()
     return task
 
 
@@ -52,9 +93,12 @@ def get_all_tasks(db: Session) -> List[Task]:
 
 
 def get_tasks_for_junior(db: Session, junior_id: int) -> List[Task]:
-    """Only tasks assigned to a specific junior."""
+    """Tasks assigned to a specific junior or clerk (single or group assignee)."""
+    assigned_task_ids = [
+        row[0] for row in db.query(TaskAssignee.task_id).filter(TaskAssignee.user_id == junior_id).all()
+    ]
     return db.query(Task).filter(
-        Task.junior_advocate_id == junior_id
+        (Task.junior_advocate_id == junior_id) | (Task.id.in_(assigned_task_ids))
     ).order_by(Task.created_at.desc()).all()
 
 
@@ -62,17 +106,36 @@ def update_task(db: Session, task_id: int, data: TaskUpdate) -> Optional[Task]:
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
         return None
-    for field, value in data.dict(exclude_unset=True).items():
+
+    update_dict = data.dict(exclude_unset=True)
+    assigned_user_ids = update_dict.pop("assigned_user_ids", None)
+
+    for field, value in update_dict.items():
         setattr(task, field, value)
-        if field == "junior_advocate_id":
-            junior = db.query(User).filter(User.id == value).first()
-            if junior:
-                if junior.first_name or junior.last_name:
-                    task.junior_name = f"{junior.first_name or ''} {junior.last_name or ''}".strip()
-                else:
-                    task.junior_name = junior.username
-            else:
-                task.junior_name = "Junior Advocate"
+
+    if assigned_user_ids is not None or "junior_advocate_id" in update_dict:
+        uids = assigned_user_ids if assigned_user_ids is not None else ([data.junior_advocate_id] if data.junior_advocate_id else [])
+        if uids:
+            task.junior_advocate_id = uids[0]
+            # Replace assignees in TaskAssignee table
+            db.query(TaskAssignee).filter(TaskAssignee.task_id == task_id).delete()
+            users = db.query(User).filter(User.id.in_(uids)).all()
+            user_map = {u.id: u for u in users}
+            names = []
+            for uid in uids:
+                u = user_map.get(uid)
+                if u:
+                    uname = f"{u.first_name or ''} {u.last_name or ''}".strip() if (u.first_name or u.last_name) else (u.username or f"User #{u.id}")
+                    names.append(uname)
+                    db.add(TaskAssignee(
+                        task_id=task.id,
+                        user_id=u.id,
+                        user_name=uname,
+                        user_role=u.role or "Staff"
+                    ))
+            if names:
+                task.junior_name = ", ".join(names) if getattr(task, "assignment_type", "single") == "group" and len(names) > 1 else names[0]
+
     db.commit()
     db.refresh(task)
     return task
@@ -92,7 +155,8 @@ def delete_task(db: Session, task_id: int) -> bool:
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
         return False
-    # Cascade delete messages & read states
+    # Cascade delete assignees, messages & read states
+    db.query(TaskAssignee).filter(TaskAssignee.task_id == task_id).delete()
     db.query(TaskMessage).filter(TaskMessage.task_id == task_id).delete()
     db.query(TaskReadState).filter(TaskReadState.task_id == task_id).delete()
     db.delete(task)
@@ -163,6 +227,16 @@ def mark_task_messages_as_read(db: Session, user_id: int, task_id: int):
     db.commit()
 
 
+def get_task_assignees(db: Session, task_id: int) -> List[dict]:
+    assignees = db.query(TaskAssignee).filter(TaskAssignee.task_id == task_id).all()
+    return [{
+        "id": a.id,
+        "user_id": a.user_id,
+        "user_name": a.user_name,
+        "user_role": a.user_role,
+    } for a in assignees]
+
+
 def get_task_messages_with_read_status(db: Session, task: Task) -> List[dict]:
     """Fetch task messages and determine read receipts (is_read: True/False)."""
     msgs = get_task_messages(db, task.id)
@@ -175,7 +249,11 @@ def get_task_messages_with_read_status(db: Session, task: Task) -> List[dict]:
         .all()
     )
     user_read_map = {rs.user_id: rs.last_read_message_id for rs in read_states}
-    task_users = {task.senior_advocate_id, task.junior_advocate_id}
+    
+    assignee_ids = [a.user_id for a in db.query(TaskAssignee).filter(TaskAssignee.task_id == task.id).all()]
+    if not assignee_ids and task.junior_advocate_id:
+        assignee_ids = [task.junior_advocate_id]
+    task_users = set(assignee_ids) | {task.senior_advocate_id}
 
     result = []
     for m in msgs:
@@ -232,6 +310,8 @@ def task_to_dict(
             .count()
         )
 
+    assignees = get_task_assignees(db, task.id) if db else []
+
     base = {
         "id": task.id,
         "title": task.title,
@@ -241,6 +321,8 @@ def task_to_dict(
         "due_date": task.due_date,
         "senior_advocate_id": task.senior_advocate_id,
         "junior_advocate_id": task.junior_advocate_id,
+        "assignment_type": getattr(task, "assignment_type", "single") or "single",
+        "assignees": assignees,
         "case_id": task.case_id,
         "case_title": task.case_title,
         "case_no": task.case_no,

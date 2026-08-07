@@ -8,7 +8,9 @@ class TaskCreate(BaseModel):
     description: Optional[str] = None
     priority: Optional[str] = "Medium"
     due_date: Optional[str] = None
-    junior_advocate_id: int
+    junior_advocate_id: Optional[int] = None
+    assignment_type: Optional[str] = "single"  # "single" or "group"
+    assigned_user_ids: Optional[List[int]] = []
     # Optional case link
     case_id: Optional[int] = None
     case_title: Optional[str] = None
@@ -23,6 +25,9 @@ class TaskUpdate(BaseModel):
     priority: Optional[str] = None
     due_date: Optional[str] = None
     status: Optional[str] = None
+    junior_advocate_id: Optional[int] = None
+    assignment_type: Optional[str] = None
+    assigned_user_ids: Optional[List[int]] = None
     case_id: Optional[int] = None
     case_title: Optional[str] = None
     case_no: Optional[str] = None

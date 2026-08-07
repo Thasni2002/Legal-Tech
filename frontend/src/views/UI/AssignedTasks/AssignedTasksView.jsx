@@ -32,12 +32,19 @@ const STATS_CONFIG = [
 const PRIORITY_FILTERS = ["All", "Urgent", "High", "Medium", "Low"];
 
 export default function AssignedTasksView({ isJuniorView = false }) {
-  const { perms, loading: permsLoading } = useModulePermission(
-    isJuniorView ? "Junior Assigned Tasks" : "Assigned Tasks"
-  );
   const user = getLoggedInUser();
   const role = (user?.role || "").toLowerCase();
-  const isSenior = !role.includes("junior");
+  const isClerk = role.includes("clerk");
+  const isJunior = role.includes("junior");
+  const isSenior = !isJunior && !isClerk;
+
+  const moduleKey = isClerk
+    ? "Clerk Assigned Tasks"
+    : isJuniorView || isJunior
+    ? "Junior Assigned Tasks"
+    : "Assigned Tasks";
+
+  const { perms, loading: permsLoading } = useModulePermission(moduleKey);
 
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);

@@ -104,12 +104,19 @@ function TaskCard({ task, onOpen, colKey, perms, onPinToggle }) {
       onMouseLeave={() => setHovered(false)}
     >
       <div className="flex items-center justify-between mb-2 gap-2">
-        <span
-          className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border shrink-0"
-          style={{ background: priority.bg, color: priority.color, borderColor: `${priority.color}30` }}
-        >
-          {priority.label}
-        </span>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span
+            className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border shrink-0"
+            style={{ background: priority.bg, color: priority.color, borderColor: `${priority.color}30` }}
+          >
+            {priority.label}
+          </span>
+          {task.assignment_type === "group" && (
+            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
+              👥 Group Task
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-1.5 ml-auto shrink-0">
           {task.unread_count > 0 && (
             <span
@@ -154,10 +161,10 @@ function TaskCard({ task, onOpen, colKey, perms, onPinToggle }) {
       <div className="border-t border-slate-100 pt-2.5 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
           <div className="w-5 h-5 rounded-full bg-blue-100 border border-blue-200 text-[#2563EB] text-[9px] font-black flex items-center justify-center shrink-0">
-            {(task.junior_name || "JA").split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
+            {task.assignment_type === "group" ? "👥" : (task.junior_name || "JA").split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
           </div>
-          <span className="text-[11px] font-semibold text-slate-600 truncate">
-            {task.junior_name || "Junior Advocate"}
+          <span className="text-[11px] font-semibold text-slate-600 truncate" title={task.junior_name}>
+            {task.junior_name || "Assignee"}
           </span>
         </div>
 

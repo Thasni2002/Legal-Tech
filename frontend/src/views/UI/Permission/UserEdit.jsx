@@ -22,6 +22,7 @@ const ALL_MODULES = [
   "Assigned Cases",
   "Assigned Tasks",
   "Junior Assigned Tasks",
+  "Clerk Assigned Tasks",
   "Client Section",
   "Consultation",
   "Case Tracking",

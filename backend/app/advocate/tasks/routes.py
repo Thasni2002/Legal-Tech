@@ -45,6 +45,20 @@ def get_current_user(authorization: Optional[str] = Header(None), db: Session = 
 # Email helpers
 # ─────────────────────────────────────────────────────────────
 
+def user_can_access_task(task, user: User, db: Session) -> bool:
+    role = (user.role or "").lower()
+    if "senior" in role or "admin" in role or user.id == task.senior_advocate_id:
+        return True
+    if task.junior_advocate_id == user.id:
+        return True
+    assignees = svc.get_task_assignees(db, task.id)
+    return any(a["user_id"] == user.id for a in assignees)
+
+
+# ─────────────────────────────────────────────────────────────
+# Email helpers
+# ─────────────────────────────────────────────────────────────
+
 from app.utils.email_templates import (
     build_task_assignment_email,
     build_task_status_email,
@@ -117,10 +131,12 @@ async def create_task(
     task = svc.create_task(db, data, current_user.id, senior_name)
     task_dict = svc.task_to_dict(task, current_user_id=current_user.id, db=db)
 
-    # Send email notification to junior / assignee
-    junior = db.query(User).filter(User.id == data.junior_advocate_id).first()
-    if junior and junior.email:
-        await _notify_task_assigned(task_dict, junior.email)
+    # Notify assignees
+    assigned_uids = [a["user_id"] for a in task_dict.get("assignees", [])] or ([data.junior_advocate_id] if data.junior_advocate_id else [])
+    for uid in assigned_uids:
+        junior = db.query(User).filter(User.id == uid).first()
+        if junior and junior.email:
+            await _notify_task_assigned(task_dict, junior.email)
 
     return task_dict
 
@@ -132,14 +148,14 @@ def list_tasks(
 ):
     """
     Senior/Admin: all tasks.
-    Junior: only tasks assigned to them.
+    Junior/Clerk: tasks assigned to them (single or group).
     """
     role = (current_user.role or "").lower()
-    is_junior = "junior" in role
-    if is_junior:
-        tasks = svc.get_tasks_for_junior(db, current_user.id)
-    else:
+    is_senior_or_admin = "senior" in role or "admin" in role
+    if is_senior_or_admin:
         tasks = svc.get_all_tasks(db)
+    else:
+        tasks = svc.get_tasks_for_junior(db, current_user.id)
 
     return [svc.task_to_dict(t, current_user_id=current_user.id, db=db) for t in tasks]
 
@@ -154,9 +170,7 @@ def get_task(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # Access control: junior can only see their own tasks
-    role = (current_user.role or "").lower()
-    if "junior" in role and task.junior_advocate_id != current_user.id:
+    if not user_can_access_task(task, current_user, db):
         raise HTTPException(status_code=403, detail="Access denied")
 
     messages = svc.get_task_messages(db, task_id)
@@ -174,11 +188,7 @@ async def edit_task(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    role = (current_user.role or "").lower()
-    is_senior_or_admin = "junior" not in role
-
-    # Juniors can only update status of their own tasks
-    if not is_senior_or_admin and task.junior_advocate_id != current_user.id:
+    if not user_can_access_task(task, current_user, db):
         raise HTTPException(status_code=403, detail="Access denied")
 
     updated = svc.update_task(db, task_id, data)
@@ -196,25 +206,21 @@ async def update_status(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    role = (current_user.role or "").lower()
-    is_junior = "junior" in role
-    if is_junior and task.junior_advocate_id != current_user.id:
+    if not user_can_access_task(task, current_user, db):
         raise HTTPException(status_code=403, detail="Access denied")
 
     updated = svc.update_task_status(db, task_id, data.status)
     task_dict = svc.task_to_dict(updated, current_user_id=current_user.id, db=db)
 
-    changer_name = current_user.username or "Advocate"
+    changer_name = current_user.username or "User"
 
-    # Notify the OTHER party via email
-    if is_junior:
-        senior = db.query(User).filter(User.id == task.senior_advocate_id).first()
-        if senior and senior.email:
-            await _notify_status_change(task_dict, senior.email, data.status, changer_name)
-    else:
-        junior = db.query(User).filter(User.id == task.junior_advocate_id).first()
-        if junior and junior.email:
-            await _notify_status_change(task_dict, junior.email, data.status, changer_name)
+    # Notify other assignees + senior
+    recipients_uids = set([a["user_id"] for a in task_dict.get("assignees", [])]) | {task.senior_advocate_id}
+    recipients_uids.discard(current_user.id)
+    for uid in recipients_uids:
+        u = db.query(User).filter(User.id == uid).first()
+        if u and u.email:
+            await _notify_status_change(task_dict, u.email, data.status, changer_name)
 
     return task_dict
 
@@ -227,7 +233,7 @@ def delete_task(
 ):
     role = (current_user.role or "").lower()
     if "junior" in role:
-        raise HTTPException(status_code=403, detail="Only Senior Advocates can delete tasks")
+        raise HTTPException(status_code=403, detail="Only Senior Advocates and Admins can delete tasks")
 
     success = svc.delete_task(db, task_id)
     if not success:
@@ -249,8 +255,7 @@ def list_messages(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    role = (current_user.role or "").lower()
-    if "junior" in role and task.junior_advocate_id != current_user.id:
+    if not user_can_access_task(task, current_user, db):
         raise HTTPException(status_code=403, detail="Access denied")
 
     return svc.get_task_messages_with_read_status(db, task)
@@ -295,24 +300,20 @@ async def post_message(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    role = (current_user.role or "").lower()
-    is_junior = "junior" in role
-    if is_junior and task.junior_advocate_id != current_user.id:
+    if not user_can_access_task(task, current_user, db):
         raise HTTPException(status_code=403, detail="Access denied")
 
     sender_name = current_user.username or "Unknown"
     msg = svc.add_task_message(db, task_id, current_user.id, sender_name, current_user.role or "", data)
     task_dict = svc.task_to_dict(task, current_user_id=current_user.id, db=db)
 
-    # Notify the other party
-    if is_junior:
-        senior = db.query(User).filter(User.id == task.senior_advocate_id).first()
-        if senior and senior.email:
-            await _notify_new_message(task_dict, senior.email, sender_name, data.message)
-    else:
-        junior = db.query(User).filter(User.id == task.junior_advocate_id).first()
-        if junior and junior.email:
-            await _notify_new_message(task_dict, junior.email, sender_name, data.message)
+    # Notify other assignees + senior
+    recipients_uids = set([a["user_id"] for a in task_dict.get("assignees", [])]) | {task.senior_advocate_id}
+    recipients_uids.discard(current_user.id)
+    for uid in recipients_uids:
+        u = db.query(User).filter(User.id == uid).first()
+        if u and u.email:
+            await _notify_new_message(task_dict, u.email, sender_name, data.message)
 
     return {
         "id": msg.id,
@@ -339,9 +340,9 @@ def mark_task_read(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    role = (current_user.role or "").lower()
-    if "junior" in role and task.junior_advocate_id != current_user.id:
+    if not user_can_access_task(task, current_user, db):
         raise HTTPException(status_code=403, detail="Access denied")
 
     svc.mark_task_messages_as_read(db, current_user.id, task_id)
     return {"status": "ok", "task_id": task_id, "unread_count": 0}
+

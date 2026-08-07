@@ -24,7 +24,10 @@ class Task(Base):
 
     # Assigned users (IDs)
     senior_advocate_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    junior_advocate_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    junior_advocate_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    # Assignment type: single | group
+    assignment_type = Column(String(50), default="single")
 
     # Optional case linkage
     case_id = Column(Integer, nullable=True)           # FK to case_management_cases.id (nullable for standalone)
@@ -40,6 +43,19 @@ class Task(Base):
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class TaskAssignee(Base):
+    """Maps multiple assignees (Junior Advocates / Clerks) to a Task."""
+    __tablename__ = "advocate_task_assignees"
+
+    id = Column(Integer, primary_key=True, index=True)
+    task_id = Column(Integer, ForeignKey("advocate_tasks.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_name = Column(String(255), nullable=True)
+    user_role = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 
 
 class TaskMessage(Base):
