@@ -171,7 +171,7 @@ export default function AssignedCasesView() {
         return {
           id: item.id,
           caseId: item.case_id,
-          caseIdCode: item.case_id_code || item.case_number || (item.case_id ? `CASE-#${item.case_id}` : `#${item.id}`),
+          caseIdCode: item.client_id || item.case_id_code || item.case_number || (item.case_id ? `CASE-#${item.case_id}` : `#${item.id}`),
           title: displayTitle,
           rawTitle: rawTitle,
           caseNo: item.case_number || item.caseNo || "N/A",
@@ -606,7 +606,7 @@ export default function AssignedCasesView() {
               <table className="w-full min-w-[980px] table-fixed divide-y divide-[#E2E8F0] text-left">
                 <thead className="bg-[#F8FAFC]">
                   <tr>
-                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[24%]">Case ID</th>
+                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[24%]">Client ID</th>
                     <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[14%]">Client</th>
                     <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[15%]">Court</th>
                     <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[13%]">Next Hearing</th>

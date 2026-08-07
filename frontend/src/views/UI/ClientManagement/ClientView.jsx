@@ -103,7 +103,7 @@ export default function ClientView() {
 
           if (!clientMap[name]) {
             clientMap[name] = {
-              clientId: `CUST-${String(idCounter).padStart(4, '0')}`,
+              clientId: c.client_id || `CLT-2026-${String(idCounter).padStart(3, '0')}`,
               clientName: matchedProfile.advocateName || name,
               contactNumber: matchedProfile.phoneNumber || c.contact_number || "N/A",
               altPhone: c.alt_contact_number || "",

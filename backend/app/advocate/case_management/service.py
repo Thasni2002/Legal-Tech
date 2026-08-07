@@ -39,6 +39,7 @@ def create_case(db: Session, data: CaseCreate, current_user=None):
 
     new_case = Case(
         case_id=data.caseId,
+        client_id=data.clientId,
         case_title=data.caseTitle,
         case_no=data.caseNo,
         case_type=data.caseType,
@@ -192,6 +193,8 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
 
     if data.caseId is not None:
         case.case_id = data.caseId
+    if data.clientId is not None:
+        case.client_id = data.clientId
     if data.caseTitle is not None:
         case.case_title = data.caseTitle
     if data.caseNo is not None:
@@ -355,14 +358,31 @@ def generate_legal_document(db: Session, case_id: int, user_prompt: str):
     Case Number: {case.case_no}
     Case Type: {case.case_type}
     Client Name: {case.client_name}
+    Client Role: {case.client_role or 'Petitioner'}
+    Client Address: {case.client_address or 'N/A'}
+    Client District/State: {case.client_district or 'N/A'}
+    Contact Number: {case.contact_number or 'N/A'}
+    Alt Contact Number: {case.alt_contact_number or 'N/A'}
+    Email ID: {case.email_id or 'N/A'}
+    Client ID: {case.client_id or 'N/A'}
+    CNR Number: {case.cnr_number or 'N/A'}
     Court: {case.court_name} ({case.court_type})
-    Case Description: {case.case_description}
+    Next Hearing Date: {case.next_hearing_date or 'N/A'}
+    Assigned Advocate: {case.selected_advocate or 'N/A'}
+    Case Description/Facts: {case.case_description}
     Status: {case.status}
+    Today's Date: {datetime.now().strftime('%d/%m/%Y')}
     """
     
     full_prompt = f"""
-You are an expert legal assistant. Use the following context about a legal case to generate the requested document. 
-Format the output in clean Markdown. Include appropriate placeholders like [Signature] or [Date] where necessary.
+You are an expert legal advocate assistant. Draft the actual legal court document/notice with ALL specific case details filled in directly into the body.
+
+CRITICAL INSTRUCTIONS:
+1. ALWAYS fill in ALL actual case details (Client Name, Client Address, Contact Number, Email, Court Name, CNR Number, Case Number, Hearing Date, Advocate Name, Date) directly into the text.
+2. DO NOT leave generic bracketed placeholders like [Chamber / Office Address], [Contact Number], [Email Address], [Date], [City, Ernakulam, Kerala - Pin Code], [CNR Number], [Court Name], [Client Name] if the information is present in the context above. Use the real data provided.
+3. If specific chamber details are unprovided, use standard High Court chamber formatting with advocate name ({case.selected_advocate or 'Advocate'}).
+4. Format the output in clean, professional Markdown suitable for print.
+5. Use `**bold text**` for party names, court titles, case numbers, and section headers. Use `==highlighted text==` for key legal grounds, statutory sections, and crucial deadlines.
 
 Context:
 {context}

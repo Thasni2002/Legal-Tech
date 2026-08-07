@@ -273,7 +273,7 @@ export default function CaseTracking() {
         };
       }
       map[name].cases.push({
-        id: c.case_id || `C-${c.id}`,
+        id: c.client_id || c.case_id || `CLT-2026-${c.id}`,
         dbId: c.id,
         name: c.case_title,
         status: c.status,
@@ -472,7 +472,7 @@ export default function CaseTracking() {
                     Case Parameters
                   </h3>
                   {[
-                    ["Case ID", selectedCase.id],
+                    ["Client ID", selectedCase.id],
                     ["Case Title", selectedCase.name],
                     ["Case No.", selectedCase.case_no || "N/A"],
                     ["Advocate", selectedCase.selected_advocate || "N/A"],
@@ -1177,7 +1177,7 @@ export default function CaseTracking() {
                             <thead>
                               <tr className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider bg-[#F8FAFC] border-b border-[#E2E8F0]">
                                 <th className="px-5 py-3">#</th>
-                                <th className="px-5 py-3">Case ID</th>
+                                <th className="px-5 py-3">Client ID</th>
                                 <th className="px-5 py-3">Case Title</th>
                                 <th className="px-5 py-3">Court</th>
                                 <th className="px-5 py-3">Status</th>

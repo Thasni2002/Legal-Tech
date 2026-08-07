@@ -441,12 +441,6 @@ const getCourtsForCategoryAndDistrict = (category, district, showAll = false) =>
   return { courts: categoryFiltered, canFilter };
 };
 
-const normalizePhone = (phoneStr) => {
-  if (!phoneStr) return "";
-  const digits = String(phoneStr).replace(/\D/g, "");
-  return digits.length >= 10 ? digits.slice(-10) : digits;
-};
-
 // Error message component
 function ErrorMsg({ message }) {
   if (!message) return null;
@@ -482,6 +476,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
   const [formData, setFormData] = useState({
     cnrNumber: "",
     caseId: "",
+    clientId: "",
     caseTitle: "",
     caseNo: "",
     caseType: "",
@@ -639,59 +634,6 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
             ? `Case Stage: ${data.caseStage}\nPetitioner: ${fetchedClientName || "N/A"}\nRespondent: ${data.respondent || "N/A"}\nPresiding Judge: ${data.presidingJudge || "N/A"}`
             : (formData.facts || "Case details auto-imported from eCourts."));
 
-      // ── Existing client dual-phone cross-check ──
-      // Check both primary AND alt number of selected client against CNR's recorded phones.
-      if (clientMode === "existing" && (formData.contactNumber || formData.altContactNumber)) {
-        const selectedPrimary = normalizePhone(formData.contactNumber);
-        const selectedAlt = normalizePhone(formData.altContactNumber);
-
-        // Find the case in DB that has this exact CNR
-        const matchedCase = existingCases.find(
-          c => c.cnr_number && c.cnr_number.trim().toUpperCase() === cnr
-        );
-
-        const cnrPrimaryRaw = (matchedCase?.contact_number || data.contactNumber || data.petitionerPhone || data.phone || data.mobile || "").trim();
-        const cnrAltRaw = (matchedCase?.alt_contact_number || "").trim();
-
-        const cnrPrimary = normalizePhone(cnrPrimaryRaw);
-        const cnrAlt = normalizePhone(cnrAltRaw);
-
-        if (cnrPrimary || cnrAlt) {
-          // Match passes if ANY of the combinations match
-          const phoneMatch =
-            (cnrPrimary && (cnrPrimary === selectedPrimary || cnrPrimary === selectedAlt)) ||
-            (cnrAlt     && (cnrAlt     === selectedPrimary || cnrAlt     === selectedAlt));
-
-          if (!phoneMatch) {
-            // Build context: find which cases own the CNR phones
-            const cnrPhoneCases = existingCases
-              .filter(c => {
-                const p = normalizePhone(c.contact_number);
-                const a = normalizePhone(c.alt_contact_number);
-                return (cnrPrimary && (p === cnrPrimary || a === cnrPrimary)) ||
-                       (cnrAlt && (p === cnrAlt || a === cnrAlt));
-              })
-              .map(c => c.case_no || c.case_id || `#${c.id}`)
-              .filter(Boolean)
-              .filter((v, i, arr) => arr.indexOf(v) === i)
-              .slice(0, 3);
-
-            setCnrPhoneMismatch({
-              ecourtsName: fetchedClientName,
-              selectedPrimary: formData.contactNumber || "—",
-              selectedAlt: formData.altContactNumber || "—",
-              cnrPrimary: cnrPrimaryRaw || "Unmatched",
-              cnrAlt: cnrAltRaw || "—",
-              cnr,
-              cnrCases: cnrPhoneCases,
-            });
-            setEcourtsLoading(false);
-            return; // Abort auto-fill
-          }
-        }
-        // Phone matches — proceed to fill
-      }
-
       const courtInfo = findStateAndDistrictByCourt(finalCourtName || districtFetched || "");
       const stateFetched = data.state || data.courtState || courtInfo.state || "Kerala";
 
@@ -753,11 +695,9 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
 
   const [selectedAdvocate, setSelectedAdvocate] = useState("");
   const [clientMode, setClientMode] = useState(""); // "" | "new" | "existing"
-  const [existingClients, setExistingClients] = useState([]); // unique clients by name (legacy, for display)
-  const [clientsByPhone, setClientsByPhone] = useState({}); // phone -> { clientName, contactNumber, emailId, ... , cases[] }
+  const [existingClients, setExistingClients] = useState([]); // List of clients with clientId
   const [existingUsers, setExistingUsers] = useState([]);
   const [existingCases, setExistingCases] = useState([]);
-  const [cnrPhoneMismatch, setCnrPhoneMismatch] = useState(null); // null | { ecourtsName, selectedPhone, cnrPhone, cnr }
   const [originalEmail, setOriginalEmail] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSubtype, setSelectedSubtype] = useState("");
@@ -869,90 +809,80 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
   // ─── Fetch existing clients ───
   const fetchClients = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/case-management/`);
-      const data = await res.json();
-      const casesArray = Array.isArray(data)
-        ? data
-        : Array.isArray(data.results)
-        ? data.results
-        : Array.isArray(data.data)
-        ? data.data
-        : [];
-      
-      setExistingCases(casesArray);
+      // Fetch next client ID for continuous numbering
+      let nextClientId = "";
+      try {
+        const nextRes = await fetch(`${API_BASE_URL}/clients/next-id`);
+        if (nextRes.ok) {
+          const nextData = await nextRes.json();
+          nextClientId = nextData.client_id;
+        }
+      } catch (err) {
+        console.error("Failed to fetch next client ID:", err);
+      }
 
-      // ── Build phone-keyed client map (primary identity by phone) ──
-      const phoneMap = {};
-      const uniqueClients = [];
-      const seenPhones = new Set();
+      // Fetch existing client records
+      let clientList = [];
+      try {
+        const clientRes = await fetch(`${API_BASE_URL}/clients/`);
+        if (clientRes.ok) {
+          clientList = await clientRes.json();
+        }
+      } catch (err) {
+        console.error("Failed to fetch clients list:", err);
+      }
 
-      casesArray.forEach(c => {
-        const phone = (c.contact_number || "").trim();
-        const altPhone = (c.alt_contact_number || "").trim();
-        if (!phone) return;
+      // Also gather cases for existing client mapping
+      const caseRes = await fetch(`${API_BASE_URL}/case-management/`);
+      let casesArray = [];
+      if (caseRes.ok) {
+        const casesData = await caseRes.json();
+        casesArray = Array.isArray(casesData)
+          ? casesData
+          : Array.isArray(casesData.results)
+          ? casesData.results
+          : [];
+        setExistingCases(casesArray);
+      }
 
-        if (!phoneMap[phone]) {
-          phoneMap[phone] = {
+      const clientMap = {};
+      clientList.forEach((c) => {
+        if (c.client_id) {
+          clientMap[c.client_id] = {
+            clientId: c.client_id,
+            clientName: c.full_name || "",
+            contactNumber: c.phone || "",
+            altContactNumber: c.alt_phone || "",
+            emailId: c.email || "",
+            clientAddress: c.address || "",
+            clientDistrict: c.district || "",
+          };
+        }
+      });
+
+      casesArray.forEach((c) => {
+        const cid = c.client_id || `CLT-2026-${String(c.id).padStart(3, "0")}`;
+        if (!clientMap[cid] && c.client_name) {
+          clientMap[cid] = {
+            clientId: cid,
             clientName: c.client_name || "",
-            contactNumber: phone,
-            altContactNumber: altPhone,
+            contactNumber: c.contact_number || "",
+            altContactNumber: c.alt_contact_number || "",
             emailId: c.email_id || "",
             clientRole: c.client_role || "",
             clientAddress: c.client_address || "",
             clientDistrict: c.client_district || "",
-            cases: [],
           };
-        }
-        phoneMap[phone].cases.push({
-          id: c.id,
-          caseId: c.case_id,
-          cnrNumber: c.cnr_number || "",
-          caseTitle: c.case_title || "",
-          caseNo: c.case_no || "",
-          status: c.status || "",
-        });
-
-        // Also index by alt phone so lookup works from either number
-        if (altPhone && !phoneMap[altPhone]) {
-          phoneMap[altPhone] = phoneMap[phone];
-        }
-
-        // Flat list for dropdown (unique by primary phone only)
-        if (!seenPhones.has(phone)) {
-          seenPhones.add(phone);
-          uniqueClients.push(phoneMap[phone]);
         }
       });
 
-      setClientsByPhone(phoneMap);
-      setExistingClients(uniqueClients);
+      setExistingClients(Object.values(clientMap));
 
-      // Generate sequential Case ID based on continuous database count
-      if (!isEditMode) {
-        const currentYear = new Date().getFullYear();
-        let maxSeq = 0;
-        casesArray.forEach(c => {
-          if (c.case_id && typeof c.case_id === 'string') {
-            const parts = c.case_id.split("-");
-            const lastNum = parseInt(parts[parts.length - 1], 10);
-            if (!isNaN(lastNum) && lastNum > maxSeq) {
-              maxSeq = lastNum;
-            }
-          }
-          if (c.id && typeof c.id === 'number' && c.id > maxSeq) {
-            maxSeq = c.id;
-          }
-        });
-        const nextSeq = String(maxSeq + 1).padStart(3, "0");
-        const generated = `case-${currentYear}-${nextSeq}`;
-        setFormData(prev => ({ ...prev, caseId: generated }));
+      if (!isEditMode && nextClientId) {
+        setFormData((prev) => ({ ...prev, clientId: nextClientId, caseId: nextClientId }));
       }
     } catch (err) {
       console.error("Failed to fetch clients:", err);
-      if (!isEditMode) {
-        const currentYear = new Date().getFullYear();
-        setFormData(prev => (prev.caseId ? prev : { ...prev, caseId: `case-${currentYear}-001` }));
-      }
     }
   };
 
@@ -970,10 +900,6 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
   };
 
   useEffect(() => {
-    if (!isEditMode) {
-      const currentYear = new Date().getFullYear();
-      setFormData(prev => (prev.caseId ? prev : { ...prev, caseId: `case-${currentYear}-001` }));
-    }
     fetchClients();
     fetchUsers();
     if (isEditMode) {
@@ -1006,6 +932,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
         return "";
       }
       case "caseId":
+      case "clientId":
         // Auto-generated — no validation needed
         return "";
       case "caseTitle":
@@ -1094,77 +1021,48 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
     }
   }
 
-  // Existing client selection — keyed by phone number for uniqueness
+  // Existing client selection — keyed by Client ID (CLT-YYYY-XXX)
   const handleExistingClientChange = (e) => {
-    const selectedPhone = e.target.value; // value is contactNumber (phone)
-    if (!selectedPhone) {
-      setFormData(prev => ({ ...prev, clientName: "", contactNumber: "", altContactNumber: "", emailId: "", clientRole: "", clientAddress: "", clientDistrict: "", tempPassword: "" }));
-      setCnrPhoneMismatch(null);
+    const selectedClientId = e.target.value;
+    if (!selectedClientId) {
+      setFormData((prev) => ({
+        ...prev,
+        clientId: "",
+        clientName: "",
+        contactNumber: "",
+        altContactNumber: "",
+        emailId: "",
+        clientRole: "",
+        clientAddress: "",
+        clientDistrict: "",
+        tempPassword: "",
+      }));
       return;
     }
-    const client = clientsByPhone[selectedPhone];
+    const client = existingClients.find((c) => c.clientId === selectedClientId);
     if (client) {
-      const selectedPrimary = normalizePhone(client.contactNumber);
-      const selectedAlt = normalizePhone(client.altContactNumber);
-
-      // Check if a CNR number is already entered in the form
-      const cnr = (formData.cnrNumber || "").trim().toUpperCase();
-      if (cnr && cnr.length === 16) {
-        const matchedCase = existingCases.find(
-          c => c.cnr_number && c.cnr_number.trim().toUpperCase() === cnr
-        );
-        if (matchedCase) {
-          const cnrPrimaryRaw = (matchedCase.contact_number || "").trim();
-          const cnrAltRaw = (matchedCase.alt_contact_number || "").trim();
-          const cnrPrimary = normalizePhone(cnrPrimaryRaw);
-          const cnrAlt = normalizePhone(cnrAltRaw);
-
-          if (cnrPrimary || cnrAlt) {
-            const phoneMatch =
-              (cnrPrimary && (cnrPrimary === selectedPrimary || cnrPrimary === selectedAlt)) ||
-              (cnrAlt     && (cnrAlt     === selectedPrimary || cnrAlt     === selectedAlt));
-
-            if (!phoneMatch) {
-              const cnrPhoneCases = existingCases
-                .filter(c => {
-                  const p = normalizePhone(c.contact_number);
-                  const a = normalizePhone(c.alt_contact_number);
-                  return (cnrPrimary && (p === cnrPrimary || a === cnrPrimary)) ||
-                         (cnrAlt && (p === cnrAlt || a === cnrAlt));
-                })
-                .map(c => c.case_no || c.case_id || `#${c.id}`)
-                .filter(Boolean)
-                .filter((v, i, arr) => arr.indexOf(v) === i)
-                .slice(0, 3);
-
-              setCnrPhoneMismatch({
-                ecourtsName: client.clientName,
-                selectedPrimary: client.contactNumber || "—",
-                selectedAlt: client.altContactNumber || "—",
-                cnrPrimary: cnrPrimaryRaw || "Unmatched",
-                cnrAlt: cnrAltRaw || "—",
-                cnr,
-                cnrCases: cnrPhoneCases,
-              });
-            }
-          }
-        }
-      }
-
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
+        clientId: client.clientId,
         clientName: client.clientName,
-        contactNumber: client.contactNumber,
+        contactNumber: client.contactNumber || "",
         altContactNumber: client.altContactNumber || "",
-        emailId: client.emailId,
+        emailId: client.emailId || "",
         clientRole: client.clientRole || prev.clientRole,
         clientAddress: client.clientAddress || prev.clientAddress,
         clientDistrict: client.clientDistrict || prev.clientDistrict,
         tempPassword: "",
       }));
-      setErrors(prev => ({ ...prev, clientName: "", contactNumber: "", altContactNumber: "", emailId: "", tempPassword: "" }));
+      setErrors((prev) => ({
+        ...prev,
+        clientName: "",
+        contactNumber: "",
+        altContactNumber: "",
+        emailId: "",
+        tempPassword: "",
+      }));
     } else {
-      setFormData(prev => ({ ...prev, clientName: selectedPhone, contactNumber: "", altContactNumber: "", emailId: "", tempPassword: "" }));
+      setFormData((prev) => ({ ...prev, clientId: selectedClientId }));
     }
   };
 
@@ -1452,7 +1350,8 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
 
       const payload = {
         cnrNumber: formData.cnrNumber || null,
-        caseId: formData.caseId || "",
+        caseId: formData.clientId || formData.caseId || "",
+        clientId: formData.clientId || null,
         caseTitle: formData.caseTitle,
         caseNo: formData.caseNo,
         caseType: formData.caseType,
@@ -1618,91 +1517,6 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
 
   return (
     <>
-      {/* ===== CNR PHONE MISMATCH POPUP ===== */}
-      {cnrPhoneMismatch && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl p-7 max-w-md w-full mx-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-11 h-11 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                <span className="text-red-600 text-xl font-bold">!</span>
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-[#0F172A]">Phone Number Mismatch</h3>
-                <p className="text-xs text-[#64748B]">CNR <span className="font-mono font-semibold">{cnrPhoneMismatch.cnr}</span> does not belong to this client</p>
-              </div>
-            </div>
-
-            {/* Selected client phones */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
-              <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-2">Selected Client's Numbers</p>
-              <div className="flex gap-4">
-                <div>
-                  <p className="text-[11px] text-[#64748B]">Primary</p>
-                  <p className="font-bold text-[#0F172A] text-sm">{cnrPhoneMismatch.selectedPrimary}</p>
-                </div>
-                {cnrPhoneMismatch.selectedAlt && (
-                  <div>
-                    <p className="text-[11px] text-[#64748B]">Alternative</p>
-                    <p className="font-bold text-[#0F172A] text-sm">{cnrPhoneMismatch.selectedAlt}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* CNR record phones */}
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
-              <p className="text-xs font-bold text-red-700 uppercase tracking-wide mb-2">Numbers on CNR Record</p>
-              <div className="flex gap-4 mb-2">
-                <div>
-                  <p className="text-[11px] text-[#64748B]">Primary</p>
-                  <p className="font-bold text-red-600 text-sm">{cnrPhoneMismatch.cnrPrimary || "—"}</p>
-                </div>
-                {cnrPhoneMismatch.cnrAlt && (
-                  <div>
-                    <p className="text-[11px] text-[#64748B]">Alternative</p>
-                    <p className="font-bold text-red-600 text-sm">{cnrPhoneMismatch.cnrAlt}</p>
-                  </div>
-                )}
-              </div>
-              {cnrPhoneMismatch.cnrCases && cnrPhoneMismatch.cnrCases.length > 0 && (
-                <div className="pt-2 border-t border-red-200">
-                  <p className="text-[11px] text-red-700">
-                    These numbers are linked to case(s):{" "}
-                    <span className="font-bold">{cnrPhoneMismatch.cnrCases.join(", ")}</span>
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <p className="text-xs text-[#64748B] mb-5 leading-relaxed">
-              Please select the correct existing client (whose primary or alternative number matches this CNR), or switch to <strong>New Client</strong>.
-            </p>
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setCnrPhoneMismatch(null);
-                  setFormData(prev => ({ ...prev, cnrNumber: "" }));
-                  setAutoFetchedCnr("");
-                  lastFetchedCnrRef.current = "";
-                }}
-                className="flex-1 px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-sm rounded-xl transition"
-              >
-                Clear CNR
-              </button>
-              <button
-                type="button"
-                onClick={() => setCnrPhoneMismatch(null)}
-                className="flex-1 px-4 py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition"
-              >
-                Change Client
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ===== SUCCESS POPUP ===== */}
       {showSuccessPopup && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
@@ -1854,15 +1668,15 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                     </div>
                     {clientMode === "existing" ? (
                       <select
-                        name="clientName"
-                        value={formData.contactNumber}
+                        name="clientId"
+                        value={formData.clientId || ""}
                         onChange={handleExistingClientChange}
                         className={`${baseInputClass} ${getBorderClass("clientName")}`}
                       >
-                        <option value="">— Select Client —</option>
+                        <option value="">— Select Existing Client ID —</option>
                         {existingClients.map((c, i) => (
-                          <option key={i} value={c.contactNumber}>
-                            {c.clientName} ({c.contactNumber})
+                          <option key={i} value={c.clientId}>
+                            {c.clientId} — {c.clientName}
                           </option>
                         ))}
                       </select>
@@ -1878,6 +1692,23 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                     )}
                     {touched.clientName && errors.clientName && <ErrorMsg message={errors.clientName} />}
                   </div>
+
+                  {/* Client ID (Auto) field */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client ID</label>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">Auto</span>
+                    </div>
+                    <input
+                      type="text"
+                      name="clientId"
+                      value={formData.clientId || ""}
+                      readOnly
+                      placeholder="e.g. CLT-2026-001"
+                      className={`${baseInputClass} bg-slate-50 text-[#475569] cursor-not-allowed border-[#E2E8F0] font-mono font-bold`}
+                    />
+                  </div>
+
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Contact Number</label>
@@ -1896,6 +1727,10 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                       className={`${baseInputClass} ${getBorderClass("emailId")} ${clientMode === "existing" ? "bg-gray-50" : ""}`} />
                     {touched.emailId && errors.emailId && <ErrorMsg message={errors.emailId} />}
                   </div>
+                </div>
+
+                {/* Address, State, and District Row */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client Role</label>
@@ -1913,11 +1748,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                     </select>
                     {touched.clientRole && errors.clientRole && <ErrorMsg message={errors.clientRole} />}
                   </div>
-                </div>
-
-                {/* Address, State, and District Row */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-                  <div className="md:col-span-2">
+                  <div className="md:col-span-1">
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client Address</label>
                     </div>
@@ -2123,21 +1954,6 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                   className={`${baseInputClass} ${getBorderClass("caseNo")} ${isECourtsFetched ? "bg-slate-100 cursor-not-allowed text-slate-600" : ""}`}
                 />
                 {touched.caseNo && errors.caseNo && <ErrorMsg message={errors.caseNo} />}
-              </div>
-
-              {/* Case ID — auto-generated */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Case ID</label>
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">Auto</span>
-                </div>
-                <input
-                  type="text"
-                  name="caseId"
-                  value={formData.caseId || ""}
-                  readOnly
-                  className={`${baseInputClass} bg-slate-50 text-[#475569] cursor-not-allowed border-[#E2E8F0]`}
-                />
               </div>
 
               {/* Current Date */}

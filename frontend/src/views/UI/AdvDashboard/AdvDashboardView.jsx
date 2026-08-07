@@ -499,7 +499,7 @@ export default function AdvDashboardView() {
                                 <table className="w-full divide-y divide-[#E2E8F0]">
                                     <thead className="bg-[#F8FAFC]">
                                         <tr>
-                                            <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#64748B]">Case ID</th>
+                                            <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#64748B]">Client ID</th>
                                             <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#64748B]">Client</th>
                                             <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#64748B]">Type</th>
                                             <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#64748B]">Court</th>
@@ -509,7 +509,7 @@ export default function AdvDashboardView() {
                                     <tbody className="divide-y divide-[#F1F5F9] bg-white">
                                         {data?.activeCases?.length > 0 ? data.activeCases.map((c, i) => (
                                             <tr key={`active-panel-${i}`} className="hover:bg-slate-50 transition-colors">
-                                                <td className="px-5 py-3 text-xs font-mono text-[#64748B]">{c.case_id || c.case_no || "—"}</td>
+                                                <td className="px-5 py-3 text-xs font-mono text-[#64748B]">{c.client_id || c.case_id || c.case_no || "—"}</td>
                                                 <td className="px-5 py-3 text-sm font-semibold text-[#0F172A]">{c.client_name || "—"}</td>
                                                 <td className="px-5 py-3 text-xs text-[#475569]">{c.case_type || "—"}</td>
                                                 <td className="px-5 py-3 text-xs text-[#475569]">{c.court_name || "—"}</td>
@@ -635,7 +635,7 @@ export default function AdvDashboardView() {
                         <table className="w-full table-auto divide-y divide-[#E2E8F0]">
                             <thead className="bg-[#F8FAFC]">
                                 <tr>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case ID</th>
+                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client ID</th>
                                     <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client</th>
                                     <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
                                     <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Court</th>
@@ -650,7 +650,7 @@ export default function AdvDashboardView() {
                                             key={`case-overview-${index}`}
                                             className="hover:bg-[#F8FAFC] transition-colors duration-150"
                                         >
-                                            <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">{c.case_id}</td>
+                                            <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">{c.client_id || c.case_id}</td>
                                             <td className="p-4 text-sm text-[#475569] break-words">{c.client_name}</td>
                                             <td className="p-4 text-sm text-[#475569] break-words">{c.type}</td>
                                             <td className="p-4 text-sm text-[#475569] break-words">{c.court}</td>

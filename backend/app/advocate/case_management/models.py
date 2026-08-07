@@ -13,6 +13,7 @@ class Case(Base):
     id = Column(Integer, primary_key=True, index=True)
 
     case_id = Column(String(100))
+    client_id = Column(String(100), index=True, nullable=True)
     cnr_number = Column(String(100), nullable=True)
     case_title = Column(String(255))
     case_no = Column(String(100))

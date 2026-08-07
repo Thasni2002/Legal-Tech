@@ -22,7 +22,9 @@ import {
     Eye,
     RefreshCw,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Printer,
+    ChevronDown
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from 'react-markdown';
@@ -179,14 +181,94 @@ export default function DocumentGenerationView() {
             setGeneratedDoc(updatedDoc.content);
             setEditedContent(updatedDoc.content);
             setIsEditing(false);
-            
-            setHistory(prev => prev.map(h => h.id === activeHistoryId ? updatedDoc : h));
+            fetchHistory();
         } catch (err) {
-            console.error("Save edit error:", err);
-            alert("Error saving edits: " + err.message);
+            console.error("Error saving document edit:", err);
+            alert("Failed to save changes. Please try again.");
         } finally {
             setIsSavingEdit(false);
         }
+    };
+
+    const [printFormatMenuOpen, setPrintFormatMenuOpen] = useState(false);
+
+    const handlePrintDocument = (pageSize = "A4") => {
+        const content = isEditing ? editedContent : generatedDoc;
+        if (!content) return;
+
+        const printWindow = window.open("", "_blank");
+        if (!printWindow) {
+            alert("Please allow popups in your browser to print the document.");
+            return;
+        }
+
+        const pageCss = pageSize === "Legal" ? "legal" : pageSize === "Letter" ? "letter" : "A4";
+        const titleText = `${activeCaseTitle || "AI Legal Document"} ${activeCaseNo ? `(${activeCaseNo})` : ""}`;
+
+        const formattedPrintHtml = content
+          .replace(/^# (.*?)$/gm, '<h1 style="font-size: 16pt; font-weight: bold; text-align: center; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-top: 16px;">$1</h1>')
+          .replace(/^## (.*?)$/gm, '<h2 style="font-size: 14pt; font-weight: bold; margin-top: 14px;">$1</h2>')
+          .replace(/^### (.*?)$/gm, '<h3 style="font-size: 12pt; font-weight: bold; margin-top: 12px;">$1</h3>')
+          .replace(/==(.*?)==/g, '<mark style="background-color: #fef08a; color: #713f12; padding: 2px 5px; border-radius: 4px; font-weight: bold; border: 1px solid #fde047;">$1</mark>')
+          .replace(/--(.*?)--/g, '<mark style="background-color: #fef08a; color: #713f12; padding: 2px 5px; border-radius: 4px; font-weight: bold; border: 1px solid #fde047;">$1</mark>')
+          .replace(/<mark>(.*?)<\/mark>/gi, '<mark style="background-color: #fef08a; color: #713f12; padding: 2px 5px; border-radius: 4px; font-weight: bold; border: 1px solid #fde047;">$1</mark>')
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/<b>(.*?)<\/b>/gi, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>${titleText}</title>
+              <style>
+                @page {
+                  size: ${pageCss} portrait;
+                  margin: 20mm;
+                }
+                body {
+                  font-family: 'Times New Roman', Times, Georgia, serif;
+                  font-size: 12pt;
+                  line-height: 1.6;
+                  color: #000;
+                  margin: 0;
+                  padding: 0;
+                  white-space: pre-wrap;
+                  word-wrap: break-word;
+                }
+                .header-info {
+                  text-align: right;
+                  font-size: 9pt;
+                  font-family: Arial, sans-serif;
+                  color: #666;
+                  border-bottom: 1px solid #ddd;
+                  padding-bottom: 6px;
+                  margin-bottom: 20px;
+                }
+                mark {
+                  background-color: #fef08a !important;
+                  color: #713f12 !important;
+                  padding: 2px 5px;
+                  border-radius: 4px;
+                  font-weight: bold;
+                  -webkit-print-color-adjust: exact;
+                  print-color-adjust: exact;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="header-info">${titleText} | Paper Size: ${pageSize}</div>
+              <div class="content">${formattedPrintHtml}</div>
+            </body>
+          </html>
+        `);
+
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 300);
     };
 
     const triggerDeleteHistoryItem = (e, id) => {
@@ -543,9 +625,63 @@ export default function DocumentGenerationView() {
                                         </button>
                                     )}
 
+                                    {/* Print Button with format dropdown */}
+                                    <div className="relative inline-block text-left">
+                                        <button
+                                            type="button"
+                                            onClick={() => setPrintFormatMenuOpen(prev => !prev)}
+                                            className="text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 border border-blue-200"
+                                            title="Print document in selected format"
+                                        >
+                                            <Printer className="w-3.5 h-3.5" />
+                                            Print <ChevronDown className="w-3 h-3" />
+                                        </button>
+
+                                        {printFormatMenuOpen && (
+                                            <div className="absolute right-0 mt-1.5 w-44 rounded-xl bg-white border border-slate-200 shadow-xl z-50 py-1.5 animate-in fade-in zoom-in-95 duration-150">
+                                                <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1">
+                                                    Select Paper Format:
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        handlePrintDocument("A4");
+                                                        setPrintFormatMenuOpen(false);
+                                                    }}
+                                                    className="w-full text-left px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition"
+                                                >
+                                                    <span>📄 A4 Format</span>
+                                                    <span className="text-[10px] text-slate-400 font-normal">210×297mm</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        handlePrintDocument("Legal");
+                                                        setPrintFormatMenuOpen(false);
+                                                    }}
+                                                    className="w-full text-left px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition"
+                                                >
+                                                    <span>📜 Legal Format</span>
+                                                    <span className="text-[10px] text-slate-400 font-normal">8.5×14in</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        handlePrintDocument("Letter");
+                                                        setPrintFormatMenuOpen(false);
+                                                    }}
+                                                    className="w-full text-left px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition"
+                                                >
+                                                    <span>✉️ Letter Format</span>
+                                                    <span className="text-[10px] text-slate-400 font-normal">8.5×11in</span>
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+
                                     <button 
                                         onClick={() => handleDownloadPdf(generatedDoc, activeCaseTitle)}
-                                        className="text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 border border-blue-200"
+                                        className="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 border border-emerald-200"
                                     >
                                         <Download className="w-3.5 h-3.5" />
                                         Download PDF

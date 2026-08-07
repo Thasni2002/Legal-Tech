@@ -484,7 +484,7 @@ export default function ClientPayments() {
                 <thead>
                   <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0] text-slate-600 text-[11px] font-bold uppercase tracking-wider">
                     <th className="p-3.5">Invoice ID</th>
-                    <th className="p-3.5">Case ID</th>
+                    <th className="p-3.5">Client ID</th>
                     <th className="p-3.5">Date</th>
                     <th className="p-3.5">Subtotal</th>
                     <th className="p-3.5">GST</th>
@@ -498,7 +498,7 @@ export default function ClientPayments() {
                   {paginatedDueInvoices.map((inv) => (
                     <tr key={inv.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="p-3.5 font-mono font-bold text-[#0F172A]">#{inv.id}</td>
-                      <td className="p-3.5 font-bold text-slate-800">{inv.case_number || "General Consultation"}</td>
+                      <td className="p-3.5 font-bold text-slate-800">{inv.client_id || inv.case_number || "General Consultation"}</td>
                       <td className="p-3.5 text-slate-500 font-semibold">{new Date(inv.created_at).toLocaleDateString()}</td>
                       <td className="p-3.5">₹{inv.subtotal}</td>
                       <td className="p-3.5">₹{inv.gst}</td>
@@ -674,7 +674,7 @@ export default function ClientPayments() {
                 <thead>
                   <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0] text-slate-600 text-[11px] font-bold uppercase tracking-wider">
                     <th className="p-3.5">#Invoice ID</th>
-                    <th className="p-3.5">Case ID</th>
+                    <th className="p-3.5">Client ID</th>
                     <th className="p-3.5">Payment Date</th>
                     <th className="p-3.5 text-right">Amount</th>
                     <th className="p-3.5 text-center">Status</th>
@@ -686,7 +686,7 @@ export default function ClientPayments() {
                   {paginatedPaidInvoices.map((inv) => (
                     <tr key={inv.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="p-3.5 font-mono text-xs text-slate-500 font-bold">#{inv.id}</td>
-                      <td className="p-3.5 font-bold text-slate-800">{inv.case_number || "Consultation"}</td>
+                      <td className="p-3.5 font-bold text-slate-800">{inv.client_id || inv.case_number || "Consultation"}</td>
                       <td className="p-3.5 text-slate-500 font-semibold">{new Date(inv.created_at).toLocaleDateString()}</td>
                       <td className="p-3.5 text-right font-extrabold text-[#0F172A]">₹{inv.grand_total.toFixed(2)}</td>
                       <td className="p-3.5 text-center">

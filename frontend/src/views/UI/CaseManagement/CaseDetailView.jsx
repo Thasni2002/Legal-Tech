@@ -35,6 +35,17 @@ import {
   Check,
   History,
   MapPin,
+  Printer,
+  ChevronDown,
+  Bold,
+  Highlighter,
+  Italic,
+  Underline,
+  Heading1,
+  Heading2,
+  Heading3,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { findStateAndDistrictByCourt } from "@/utils/districtCourts";
 import { usePermissions } from "@/utils/usePermissions";
@@ -432,6 +443,166 @@ export default function CaseDetailView({ id }) {
   const [activeDocHistoryId, setActiveDocHistoryId] = useState(null);
   const [savingDocEdit, setSavingDocEdit] = useState(false);
   const [saveEditSuccess, setSaveEditSuccess] = useState(false);
+  const [printFormatMenuOpen, setPrintFormatMenuOpen] = useState(false);
+
+  // Helper to auto-fill unreplaced placeholders in templates using actual case context
+  const autoFillCasePlaceholders = (text, caseObj) => {
+    if (!text || typeof text !== "string" || !caseObj) return text || "";
+
+    const todayStr = new Date().toLocaleDateString("en-GB");
+    const advocateName = caseObj.selected_advocate || caseObj.advocateName || getLoggedInUser()?.username || "Advocate JEMSHIYA JAMEEL";
+    const clientName = caseObj.client_name || "Client";
+    const clientDistrict = caseObj.client_district || caseObj.client_address || "Ernakulam, Kerala";
+    const contactNo = caseObj.contact_number || caseObj.contactNumber || "N/A";
+    const emailId = caseObj.email_id || caseObj.emailId || "N/A";
+    const cnrNo = caseObj.cnr_number || caseObj.cnrNumber || "N/A";
+    const caseNo = caseObj.case_no || caseObj.caseNo || "N/A";
+    const courtName = caseObj.court_name || caseObj.courtName || "High Court of Kerala / Labour Court";
+
+    return text
+      .replace(/\[\s*Date\s*\]/gi, todayStr)
+      .replace(/\[\s*Date\/Month\/Year\s*\]/gi, todayStr)
+      .replace(/\[\s*Contact Number\s*\]/gi, contactNo)
+      .replace(/\[\s*Phone Number\s*\]/gi, contactNo)
+      .replace(/\[\s*Email Address\s*\]/gi, emailId)
+      .replace(/\[\s*Email\s*\]/gi, emailId)
+      .replace(/\[\s*Chamber\s*\/\s*Office Address\s*\]/gi, `Chamber No. 402, High Court Advocates Association, High Court Building`)
+      .replace(/\[\s*City,\s*Ernakulam,\s*Kerala\s*-\s*Pin Code\s*\]/gi, `${clientDistrict} - 682031`)
+      .replace(/\[\s*Client Name\s*\]/gi, clientName)
+      .replace(/\[\s*Court Name\s*\]/gi, courtName)
+      .replace(/\[\s*CNR Number\s*\]/gi, cnrNo)
+      .replace(/\[\s*Case Number\s*\]/gi, caseNo)
+      .replace(/\[\s*Case No\.?\s*\]/gi, caseNo)
+      .replace(/\[\s*Advocate Name\s*\]/gi, advocateName);
+  };
+
+  const [docEditFullPage, setDocEditFullPage] = useState(false);
+
+  const applyDocTextareaFormatting = (type) => {
+    const textarea = document.getElementById("doc-edit-textarea");
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = docGenEditedContent;
+
+    let selectedText = text.substring(start, end);
+    let wrapped = "";
+
+    if (type === "bold") {
+      selectedText = selectedText || "Bold Text";
+      wrapped = `**${selectedText}**`;
+    } else if (type === "italic") {
+      selectedText = selectedText || "Italic Text";
+      wrapped = `*${selectedText}*`;
+    } else if (type === "underline") {
+      selectedText = selectedText || "Underlined Text";
+      wrapped = `<u>${selectedText}</u>`;
+    } else if (type === "highlight") {
+      selectedText = selectedText || "Highlighted Text";
+      wrapped = `==${selectedText}==`;
+    } else if (type === "h1") {
+      selectedText = selectedText || "Heading 1";
+      wrapped = `\n# ${selectedText}\n`;
+    } else if (type === "h2") {
+      selectedText = selectedText || "Heading 2";
+      wrapped = `\n## ${selectedText}\n`;
+    } else if (type === "h3") {
+      selectedText = selectedText || "Heading 3";
+      wrapped = `\n### ${selectedText}\n`;
+    }
+
+    const newText = text.substring(0, start) + wrapped + text.substring(end);
+    setDocGenEditedContent(newText);
+
+    setTimeout(() => {
+      textarea.focus();
+      const selectOffset = (type === "bold" || type === "highlight") ? 2 : (type === "italic") ? 1 : 3;
+      textarea.setSelectionRange(start + selectOffset, start + wrapped.length - selectOffset);
+    }, 50);
+  };
+
+  const handlePrintDocument = (pageSize = "A4") => {
+    const rawContent = docGenEditMode ? docGenEditedContent : generatedDocContent;
+    if (!rawContent) return;
+
+    const content = autoFillCasePlaceholders(rawContent, selectedCase);
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Please allow popups in your browser to print the document.");
+      return;
+    }
+
+    const pageCss = pageSize === "Legal" ? "legal" : pageSize === "Letter" ? "letter" : "A4";
+    const titleText = `${docGenTitle || "Legal Document"} — Case #${selectedCase?.case_no || ""}`;
+
+    // Convert markdown/HTML bold, headings, and highlight tags into inline styled elements for printing
+    const formattedPrintHtml = content
+      .replace(/^# (.*?)$/gm, '<h1 style="font-size: 16pt; font-weight: bold; text-align: center; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-top: 16px;">$1</h1>')
+      .replace(/^## (.*?)$/gm, '<h2 style="font-size: 14pt; font-weight: bold; margin-top: 14px;">$1</h2>')
+      .replace(/^### (.*?)$/gm, '<h3 style="font-size: 12pt; font-weight: bold; margin-top: 12px;">$1</h3>')
+      .replace(/==(.*?)==/g, '<mark style="background-color: #fef08a; color: #713f12; padding: 2px 5px; border-radius: 4px; font-weight: bold; border: 1px solid #fde047;">$1</mark>')
+      .replace(/--(.*?)--/g, '<mark style="background-color: #fef08a; color: #713f12; padding: 2px 5px; border-radius: 4px; font-weight: bold; border: 1px solid #fde047;">$1</mark>')
+      .replace(/<mark>(.*?)<\/mark>/gi, '<mark style="background-color: #fef08a; color: #713f12; padding: 2px 5px; border-radius: 4px; font-weight: bold; border: 1px solid #fde047;">$1</mark>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/<b>(.*?)<\/b>/gi, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${titleText}</title>
+          <style>
+            @page {
+              size: ${pageCss} portrait;
+              margin: 20mm;
+            }
+            body {
+              font-family: 'Times New Roman', Times, Georgia, serif;
+              font-size: 12pt;
+              line-height: 1.6;
+              color: #000;
+              margin: 0;
+              padding: 0;
+              white-space: pre-wrap;
+              word-wrap: break-word;
+            }
+            .header-info {
+              text-align: right;
+              font-size: 9pt;
+              font-family: Arial, sans-serif;
+              color: #666;
+              border-bottom: 1px solid #ddd;
+              padding-bottom: 6px;
+              margin-bottom: 20px;
+            }
+            mark {
+              background-color: #fef08a !important;
+              color: #713f12 !important;
+              padding: 2px 5px;
+              border-radius: 4px;
+              font-weight: bold;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header-info">${titleText} | Paper Size: ${pageSize}</div>
+          <div class="content">${formattedPrintHtml}</div>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 300);
+  };
 
   const fetchCaseDocHistory = async (caseId) => {
     if (!caseId) return;
@@ -535,8 +706,9 @@ export default function CaseDetailView({ id }) {
       }
 
       const data = await res.json();
-      setGeneratedDocContent(data.document || "");
-      setDocGenEditedContent(data.document || "");
+      const filledDoc = autoFillCasePlaceholders(data.document || "", selectedCase);
+      setGeneratedDocContent(filledDoc);
+      setDocGenEditedContent(filledDoc);
       setActiveDocHistoryId(data.id || null);
       setDocGenEditMode(false);
       fetchCaseDocHistory(selectedCase.id);
@@ -572,7 +744,7 @@ export default function CaseDetailView({ id }) {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          caseId: selectedCase.case_id,
+          clientId: selectedCase.client_id || selectedCase.case_id,
           cnrNumber: selectedCase.cnr_number,
           caseTitle: selectedCase.case_title,
           caseNo: selectedCase.case_no,
@@ -1422,7 +1594,7 @@ export default function CaseDetailView({ id }) {
                 <div className="bg-[#F8FAFC] rounded-2xl p-4 sm:p-5 border border-[#F1F5F9] space-y-4">
                   <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Case Details</h4>
                   <InfoRow icon={<Hash size={14} />} label="CNR Number" value={selectedCase.cnr_number} />
-                  <InfoRow icon={<Hash size={14} />} label="Case ID" value={selectedCase.case_id} />
+                  <InfoRow icon={<Hash size={14} />} label="Client ID" value={selectedCase.client_id || selectedCase.case_id} />
                   <InfoRow
                     icon={<Scale size={14} />}
                     label="Case Type"
@@ -1720,8 +1892,8 @@ export default function CaseDetailView({ id }) {
                   <p className="text-sm font-bold text-[#0F172A] mt-0.5 truncate">{selectedCase.case_title}</p>
                 </div>
                 <div className="bg-purple-50 border border-purple-100 rounded-xl px-4 py-2.5">
-                  <p className="text-[10px] text-[#64748B] font-bold uppercase tracking-wide">Case ID</p>
-                  <p className="text-sm font-bold text-[#7C3AED] mt-0.5 font-mono truncate">{selectedCase.case_id || selectedCase.case_no}</p>
+                  <p className="text-[10px] text-[#64748B] font-bold uppercase tracking-wide">Client ID</p>
+                  <p className="text-sm font-bold text-[#7C3AED] mt-0.5 font-mono truncate">{selectedCase.client_id || selectedCase.case_id || selectedCase.case_no}</p>
                 </div>
                 <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2.5">
                   <p className="text-[10px] text-[#64748B] font-bold uppercase tracking-wide">Court</p>
@@ -2447,6 +2619,60 @@ export default function CaseDetailView({ id }) {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
+                      {/* Print Document with Format Options */}
+                      <div className="relative inline-block text-left">
+                        <button
+                          type="button"
+                          onClick={() => setPrintFormatMenuOpen((prev) => !prev)}
+                          disabled={!generatedDocContent}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold text-xs transition cursor-pointer disabled:opacity-50"
+                          title="Print Document with format options (A4, Legal, Letter)"
+                        >
+                          <Printer size={13} /> Print <ChevronDown size={11} />
+                        </button>
+
+                        {printFormatMenuOpen && (
+                          <div className="absolute right-0 mt-1.5 w-44 rounded-xl bg-white border border-slate-200 shadow-xl z-50 py-1.5 animate-in fade-in zoom-in-95 duration-150">
+                            <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1">
+                              Select Paper Format:
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handlePrintDocument("A4");
+                                setPrintFormatMenuOpen(false);
+                              }}
+                              className="w-full text-left px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition"
+                            >
+                              <span>📄 A4 Format</span>
+                              <span className="text-[10px] text-slate-400 font-normal">210×297mm</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handlePrintDocument("Legal");
+                                setPrintFormatMenuOpen(false);
+                              }}
+                              className="w-full text-left px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition"
+                            >
+                              <span>📜 Legal Format</span>
+                              <span className="text-[10px] text-slate-400 font-normal">8.5×14in</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handlePrintDocument("Letter");
+                                setPrintFormatMenuOpen(false);
+                              }}
+                              className="w-full text-left px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between transition"
+                            >
+                              <span>✉️ Letter Format</span>
+                              <span className="text-[10px] text-slate-400 font-normal">8.5×11in</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
                       {/* Download PDF */}
                       <button
                         onClick={handleDownloadPDF}
@@ -2554,16 +2780,14 @@ export default function CaseDetailView({ id }) {
                         <p className="text-xs font-bold text-slate-600">Generating legal document using case context...</p>
                       </div>
                     ) : docGenEditMode ? (
-                      <textarea
-                        rows={16}
+                      <VisualLegalDocEditor
                         value={docGenEditedContent}
-                        onChange={(e) => setDocGenEditedContent(e.target.value)}
-                        className="w-full p-4 font-mono text-xs text-[#0F172A] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        onChange={(newVal) => setDocGenEditedContent(newVal)}
+                        fullPage={docEditFullPage}
+                        onToggleFullPage={() => setDocEditFullPage((prev) => !prev)}
                       />
                     ) : (
-                      <div className="prose prose-slate max-w-none text-xs font-sans whitespace-pre-wrap leading-relaxed text-[#0F172A] bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-                        {generatedDocContent}
-                      </div>
+                      <FormattedLegalDoc content={generatedDocContent} />
                     )}
                   </div>
                 </div>
@@ -2976,6 +3200,306 @@ export default function CaseDetailView({ id }) {
       )}
     </div>
   );
+}
+
+// ─── Formatted Legal Document Renderer (Headings, Bold, Italic, Underline & Highlight Support) ────
+export function FormattedLegalDoc({ content }) {
+  if (!content) return null;
+
+  const lines = String(content).split("\n");
+
+  return (
+    <div className="text-xs font-sans leading-relaxed text-[#0F172A] bg-slate-50/50 p-6 rounded-2xl border border-slate-200 space-y-2 select-text min-h-[400px]">
+      {lines.map((line, lIdx) => {
+        const trimmed = line.trim();
+        if (!trimmed) return <div key={lIdx} className="h-2" />;
+
+        if (trimmed.startsWith("# ")) {
+          return (
+            <h1 key={lIdx} className="text-lg font-black text-[#0F172A] border-b border-slate-200 pb-1.5 pt-3 tracking-tight">
+              {renderFormattedText(trimmed.replace(/^#\s+/, ""))}
+            </h1>
+          );
+        }
+        if (trimmed.startsWith("## ")) {
+          return (
+            <h2 key={lIdx} className="text-base font-extrabold text-[#0F172A] pt-2 tracking-tight">
+              {renderFormattedText(trimmed.replace(/^##\s+/, ""))}
+            </h2>
+          );
+        }
+        if (trimmed.startsWith("### ")) {
+          return (
+            <h3 key={lIdx} className="text-sm font-bold text-[#1E293B] pt-1">
+              {renderFormattedText(trimmed.replace(/^###\s+/, ""))}
+            </h3>
+          );
+        }
+
+        const isBoldRef = trimmed.startsWith("**Ref.") || trimmed.startsWith("**TO:");
+
+        return (
+          <p key={lIdx} className={isBoldRef ? "font-bold text-slate-900" : ""}>
+            {renderFormattedText(line)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+function renderFormattedText(text) {
+  if (!text) return null;
+
+  const parts = [];
+  const regex = /(==(.*?)==|--(.*?)--|<mark>(.*?)<\/mark>|\*\*(.*?)\*\*|<b>(.*?)<\/b>|<strong>(.*?)<\/strong>|\*(.*?)\*|<i>(.*?)<\/i>|<em>(.*?)<\/em>|<u>(.*?)<\/u>)/gi;
+
+  let lastIndex = 0;
+  let match;
+  let keyCounter = 0;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+
+    const highlightedContent = match[2] !== undefined ? match[2] : match[3] !== undefined ? match[3] : match[4];
+    const boldContent = match[5] !== undefined ? match[5] : match[6] !== undefined ? match[6] : match[7];
+    const italicContent = match[8] !== undefined ? match[8] : match[9] !== undefined ? match[9] : match[10];
+    const underlineContent = match[11];
+
+    if (highlightedContent !== undefined) {
+      parts.push(
+        <mark
+          key={`hl-${keyCounter++}`}
+          className="bg-yellow-200 text-yellow-950 font-bold px-1.5 py-0.5 rounded border border-yellow-300 shadow-2xs inline-block"
+        >
+          {renderFormattedText(highlightedContent)}
+        </mark>
+      );
+    } else if (boldContent !== undefined) {
+      parts.push(
+        <strong key={`b-${keyCounter++}`} className="font-extrabold text-[#0F172A]">
+          {renderFormattedText(boldContent)}
+        </strong>
+      );
+    } else if (italicContent !== undefined) {
+      parts.push(
+        <em key={`i-${keyCounter++}`} className="italic font-medium text-[#1E293B]">
+          {renderFormattedText(italicContent)}
+        </em>
+      );
+    } else if (underlineContent !== undefined) {
+      parts.push(
+        <u key={`u-${keyCounter++}`} className="underline underline-offset-2 font-semibold">
+          {renderFormattedText(underlineContent)}
+        </u>
+      );
+    }
+
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
+}
+
+// ─── Visual WYSIWYG Document Editor Component ─────────────────────────────
+import { useRef as useEditorRef } from "react";
+
+export function VisualLegalDocEditor({ value, onChange, fullPage, onToggleFullPage }) {
+  const editorRef = useEditorRef(null);
+  const isUpdatingRef = useEditorRef(false);
+
+  useEffect(() => {
+    if (editorRef.current && !isUpdatingRef.current) {
+      const converted = markdownToHtml(value || "");
+      if (editorRef.current.innerHTML !== converted) {
+        editorRef.current.innerHTML = converted;
+      }
+    }
+  }, [value]);
+
+  const handleInput = () => {
+    if (editorRef.current) {
+      isUpdatingRef.current = true;
+      onChange(htmlToMarkdown(editorRef.current.innerHTML));
+      setTimeout(() => {
+        isUpdatingRef.current = false;
+      }, 50);
+    }
+  };
+
+  const exec = (cmd, arg = null) => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+
+    if (cmd === "highlight") {
+      document.execCommand("backColor", false, "#fef08a");
+      document.execCommand("hiliteColor", false, "#fef08a");
+    } else {
+      document.execCommand(cmd, false, arg);
+    }
+    handleInput();
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Rich WYSIWYG Formatting Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-slate-100/90 rounded-xl border border-slate-200 text-xs shadow-2xs">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="font-bold text-slate-500 uppercase text-[10px] tracking-wider pr-1">Format:</span>
+
+          {/* Headings H1, H2, H3 */}
+          <button
+            type="button"
+            onClick={() => exec("formatBlock", "<h1>")}
+            className="px-2 py-1 bg-white hover:bg-slate-200 text-slate-800 font-extrabold rounded-lg border border-slate-300 flex items-center gap-1 shadow-2xs cursor-pointer transition text-xs"
+            title="Heading 1"
+          >
+            <Heading1 size={13} className="text-indigo-600" /> H1
+          </button>
+          <button
+            type="button"
+            onClick={() => exec("formatBlock", "<h2>")}
+            className="px-2 py-1 bg-white hover:bg-slate-200 text-slate-800 font-bold rounded-lg border border-slate-300 flex items-center gap-1 shadow-2xs cursor-pointer transition text-xs"
+            title="Heading 2"
+          >
+            <Heading2 size={13} className="text-indigo-600" /> H2
+          </button>
+          <button
+            type="button"
+            onClick={() => exec("formatBlock", "<h3>")}
+            className="px-2 py-1 bg-white hover:bg-slate-200 text-slate-800 font-bold rounded-lg border border-slate-300 flex items-center gap-1 shadow-2xs cursor-pointer transition text-xs"
+            title="Heading 3"
+          >
+            <Heading3 size={13} className="text-indigo-600" /> H3
+          </button>
+
+          <div className="h-4 w-px bg-slate-300 mx-1" />
+
+          {/* Bold, Italic, Underline */}
+          <button
+            type="button"
+            onClick={() => exec("bold")}
+            className="px-2.5 py-1 bg-white hover:bg-slate-200 text-slate-900 font-black rounded-lg border border-slate-300 flex items-center gap-1 shadow-2xs cursor-pointer transition text-xs"
+            title="Bold"
+          >
+            <Bold size={13} /> Bold
+          </button>
+          <button
+            type="button"
+            onClick={() => exec("italic")}
+            className="px-2.5 py-1 bg-white hover:bg-slate-200 text-slate-800 italic font-semibold rounded-lg border border-slate-300 flex items-center gap-1 shadow-2xs cursor-pointer transition text-xs"
+            title="Italic"
+          >
+            <Italic size={13} /> Italic
+          </button>
+          <button
+            type="button"
+            onClick={() => exec("underline")}
+            className="px-2.5 py-1 bg-white hover:bg-slate-200 text-slate-800 underline font-semibold rounded-lg border border-slate-300 flex items-center gap-1 shadow-2xs cursor-pointer transition text-xs"
+            title="Underline"
+          >
+            <Underline size={13} /> Underline
+          </button>
+          <button
+            type="button"
+            onClick={() => exec("highlight")}
+            className="px-2.5 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-950 font-bold rounded-lg border border-yellow-300 flex items-center gap-1 shadow-2xs cursor-pointer transition text-xs"
+            title="Highlight"
+          >
+            <Highlighter size={13} className="text-yellow-700" /> Highlight
+          </button>
+        </div>
+
+        {/* Full Page Toggle */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onToggleFullPage}
+            className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg border border-indigo-200 flex items-center gap-1 shadow-2xs cursor-pointer transition text-xs"
+          >
+            {fullPage ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+            {fullPage ? "Normal View" : "Full Page View"}
+          </button>
+        </div>
+      </div>
+
+      {/* Visual ContentEditable Area */}
+      <div
+        ref={editorRef}
+        contentEditable
+        onInput={handleInput}
+        className={`w-full p-6 text-xs text-[#0F172A] bg-white border border-slate-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 shadow-inner leading-relaxed transition-all overflow-y-auto ${
+          fullPage ? "min-h-[85vh] h-[85vh]" : "min-h-[550px] lg:min-h-[650px]"
+        }`}
+        style={{
+          fontFamily: "'Inter', sans-serif",
+          outline: "none"
+        }}
+      />
+    </div>
+  );
+}
+
+export function markdownToHtml(md) {
+  if (!md) return "";
+  let html = String(md);
+
+  html = html.replace(/\r\n/g, "\n");
+
+  html = html.replace(/^# (.*?)$/gm, "<h1>$1</h1>");
+  html = html.replace(/^## (.*?)$/gm, "<h2>$2</h2>");
+  html = html.replace(/^### (.*?)$/gm, "<h3>$3</h3>");
+
+  html = html.replace(/<u>(.*?)<\/u>/gi, "<u>$1</u>");
+
+  html = html.replace(/==(.*?)==/g, '<mark style="background-color: #fef08a; color: #713f12; padding: 2px 4px; border-radius: 4px; font-weight: bold;">$1</mark>');
+  html = html.replace(/--(.*?)--/g, '<mark style="background-color: #fef08a; color: #713f12; padding: 2px 4px; border-radius: 4px; font-weight: bold;">$1</mark>');
+  html = html.replace(/<mark>(.*?)<\/mark>/gi, '<mark style="background-color: #fef08a; color: #713f12; padding: 2px 4px; border-radius: 4px; font-weight: bold;">$1</mark>');
+
+  html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/<b>(.*?)<\/b>/gi, "<strong>$1</strong>");
+
+  html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
+  html = html.replace(/<i>(.*?)<\/i>/gi, "<em>$1</em>");
+
+  html = html.replace(/\n/g, "<br/>");
+
+  return html;
+}
+
+export function htmlToMarkdown(html) {
+  if (!html) return "";
+  let md = String(html);
+
+  md = md.replace(/<h1>(.*?)<\/h1>/gi, "\n# $1\n");
+  md = md.replace(/<h2>(.*?)<\/h2>/gi, "\n## $1\n");
+  md = md.replace(/<h3>(.*?)<\/h3>/gi, "\n### $1\n");
+
+  md = md.replace(/<mark[^>]*>(.*?)<\/mark>/gi, "==$1==");
+  md = md.replace(/<span style="background-color:[^"]*">(.*?)<\/span>/gi, "==$1==");
+
+  md = md.replace(/<strong>(.*?)<\/strong>/gi, "**$1**");
+  md = md.replace(/<b>(.*?)<\/b>/gi, "**$1**");
+
+  md = md.replace(/<em>(.*?)<\/em>/gi, "*$1*");
+  md = md.replace(/<i>(.*?)<\/i>/gi, "*$1*");
+
+  md = md.replace(/<u>(.*?)<\/u>/gi, "<u>$1</u>");
+
+  md = md.replace(/<br\s*\/?>/gi, "\n");
+  md = md.replace(/<div><br\/><\/div>/gi, "\n");
+  md = md.replace(/<div>/gi, "\n");
+  md = md.replace(/<\/div>/gi, "");
+  md = md.replace(/<p>/gi, "");
+  md = md.replace(/<\/p>/gi, "\n\n");
+
+  return md.trim();
 }
 
 
