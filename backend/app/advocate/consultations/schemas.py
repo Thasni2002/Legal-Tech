@@ -14,6 +14,7 @@ class ConsultationCreate(ConsultationBase):
     client_id: Optional[int] = None
     client_email: Optional[str] = None
     meeting_link: Optional[str] = None
+    status: Optional[str] = None
 
 class ConsultationStart(BaseModel):
     client_name: str

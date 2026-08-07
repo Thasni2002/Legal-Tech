@@ -122,9 +122,15 @@ export default function ConsultationsView() {
                     item.status === "Pending Advocate"
                 );
 
-                // History: Approved, Rescheduled, or Pending Client
+                // History/Scheduled Meetings: Approved, Pending Advocate, Pending Client, Rescheduled, Scheduled, Available, Pending
                 const hist = mappedData.filter(item =>
-                    item.status === "Approved" || item.status === "Pending Advocate" || item.status === "Pending Client" || item.status === "Rescheduled"
+                    item.status === "Approved" ||
+                    item.status === "Pending Advocate" ||
+                    item.status === "Pending Client" ||
+                    item.status === "Rescheduled" ||
+                    item.status === "Scheduled" ||
+                    item.status === "Available" ||
+                    item.status === "Pending"
                 );
 
                 setAppointments(appts);
@@ -390,12 +396,53 @@ export default function ConsultationsView() {
                 showToast("Failed to start/schedule consultation.", "error");
             }
         } catch (err) {
-            console.error("Error creating consultation:", err);
-            showToast("Error connecting to server.", "error");
+            console.error("Error starting consultation:", err);
+            showToast("Server error while creating consultation.", "error");
+        }
+    };
+
+    const handleAddFreeAppointmentSlot = async () => {
+        if (!consultationDate) {
+            setAlertModal({ show: true, title: "Missing Date", message: "Please select a date for the free slot." });
+            return;
+        }
+        if (!consultationTime) {
+            setAlertModal({ show: true, title: "Missing Time", message: "Please select a time for the free slot." });
+            return;
         }
 
+        const freeSlotMeeting = {
+            client_name: "Free Slot Available",
+            client_email: "",
+            type: consultationType === "Meeting Type" || consultationType === "Consultation Type" ? "Video Call" : consultationType,
+            date: consultationDate,
+            time: consultationTime,
+            meeting_link: meetingLink || "",
+            status: "Pending Client",
+        };
 
+        try {
+            const res = await fetch(`${API_BASE_URL}/consultations/book`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(freeSlotMeeting)
+            });
 
+            if (res.ok) {
+                setConsultationDate("");
+                setConsultationTime("");
+                setMeetingLink("");
+                setSelectedTimeDate(null);
+                setToast({ show: true, message: "Free appointment slot created directly in Case Discussion and Senior Advocate Calendar!", type: "success" });
+                setTimeout(() => setToast({ show: false, message: "", type: "success" }), 4000);
+                await fetchConsultations(user);
+            } else {
+                setAlertModal({ show: true, title: "Failed to Add Free Slot", message: "Could not add free appointment slot." });
+            }
+        } catch (err) {
+            console.error("Error adding free appointment slot:", err);
+            setAlertModal({ show: true, title: "Error", message: "Server error while adding free appointment slot." });
+        }
     };
 
     const handleDeleteConsultation = async () => {
@@ -915,6 +962,7 @@ export default function ConsultationsView() {
                 </div>
                 <div className="mt-8 flex justify-end">
                     <button
+                        type="button"
                         onClick={handleStartConsultation}
                         className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white px-6 py-3 rounded-xl font-bold text-xs sm:text-sm tracking-wide transition-all shadow-xs hover:shadow active:scale-95 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
                     >
