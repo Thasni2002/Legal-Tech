@@ -1,7 +1,13 @@
 "use client";
 
 import { API_BASE_URL } from "@/utils/api";
-import { DISTRICT_COURTS } from "@/utils/districtCourts";
+import {
+  DISTRICT_COURTS,
+  getAllStates,
+  getDistrictsByState,
+  getCourtsByDistrict,
+  findStateAndDistrictByCourt
+} from "@/utils/districtCourts";
 import { getLoggedInUser } from "@/utils/auth";
 
 import { useState, useEffect, useRef } from "react";
@@ -486,6 +492,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
     altContactNumber: "",
     emailId: "",
     clientAddress: "",
+    clientState: "",
     clientDistrict: "",
     tempPassword: "",
     courtName: "",
@@ -504,6 +511,8 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
   const [showCasePwd, setShowCasePwd]       = useState(false);
   const [vaultError, setVaultError]         = useState("");
   // ─────────────────────────────────────────────────────────────────────
+
+
 
   const [loadingEdit, setLoadingEdit] = useState(false);
   const [ecourtsLoading, setEcourtsLoading] = useState(false);
@@ -683,6 +692,9 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
         // Phone matches — proceed to fill
       }
 
+      const courtInfo = findStateAndDistrictByCourt(finalCourtName || districtFetched || "");
+      const stateFetched = data.state || data.courtState || courtInfo.state || "Kerala";
+
       setFormData((prev) => ({
         ...prev,
         cnrNumber: data.cnrNumber || cnr,
@@ -696,6 +708,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
         clientRole: prev.clientRole || "Petitioner",
         emailId: prev.emailId || "",
         tempPassword: prev.tempPassword || autoPassword,
+        clientState: stateFetched || prev.clientState,
         clientDistrict: districtFetched || prev.clientDistrict,
         facts: cleanFacts,
       }));
@@ -796,12 +809,14 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
         emailId: data.email_id || "",
         clientRole: data.client_role || "",
         clientAddress: data.client_address || "",
+        clientState: data.client_state || (findStateAndDistrictByCourt(data.court_name || data.client_district || "").state) || "Kerala",
         clientDistrict: data.client_district || "",
         courtName: data.court_name || "",
         courtType: data.court_type || "",
         status: data.status || "Active",
         nextHearingDate: data.next_hearing_date || "",
       });
+
       setSelectedAdvocate(data.selected_advocate || "");
       setOriginalEmail(data.email_id || "");
       if (data.documents) {
@@ -1900,8 +1915,8 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                   </div>
                 </div>
 
-                {/* Address and District Row */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {/* Address, State, and District Row */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
                   <div className="md:col-span-2">
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client Address</label>
@@ -1918,15 +1933,30 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client State / UT</label>
+                    </div>
+                    <input
+                      type="text"
+                      name="clientState"
+                      placeholder="Auto-fetched from eCourts"
+                      value={formData.clientState || ""}
+                      onChange={handleChange}
+                      readOnly={clientMode === "existing" || isECourtsFetched}
+                      className={`${baseInputClass} ${getBorderClass("clientState")} ${(clientMode === "existing" || isECourtsFetched) ? "bg-slate-100 cursor-not-allowed text-slate-700 font-medium" : ""}`}
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
                       <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client District / Location</label>
                     </div>
                     <input
                       type="text"
                       name="clientDistrict"
-                      placeholder="e.g. Kannur, Pathanamthitta, Ernakulam"
+                      placeholder="Auto-fetched from eCourts"
                       value={formData.clientDistrict || ""}
-                      readOnly={true}
-                      className={`${baseInputClass} ${getBorderClass("clientDistrict")} bg-slate-100 cursor-not-allowed text-slate-700 font-medium`}
+                      onChange={handleChange}
+                      readOnly={clientMode === "existing" || isECourtsFetched}
+                      className={`${baseInputClass} ${getBorderClass("clientDistrict")} ${(clientMode === "existing" || isECourtsFetched) ? "bg-slate-100 cursor-not-allowed text-slate-700 font-medium" : ""}`}
                     />
                   </div>
                 </div>
@@ -2160,6 +2190,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                 )}
               </div>
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -2170,8 +2201,9 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                   name="courtName"
                   placeholder="Auto-fetched from eCourts"
                   value={formData.courtName || ""}
-                  readOnly={true}
-                  className={`${baseInputClass} ${getBorderClass("courtName")} bg-slate-100 cursor-not-allowed text-slate-700 font-medium`}
+                  onChange={handleChange}
+                  readOnly={isECourtsFetched}
+                  className={`${baseInputClass} ${getBorderClass("courtName")} ${isECourtsFetched ? "bg-slate-100 cursor-not-allowed text-slate-700 font-medium" : ""}`}
                 />
                 {touched.courtName && errors.courtName && <ErrorMsg message={errors.courtName} />}
               </div>
@@ -2184,8 +2216,9 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                   name="courtType"
                   placeholder="Auto-fetched from eCourts"
                   value={formData.courtType || ""}
-                  readOnly={true}
-                  className={`${baseInputClass} ${getBorderClass("courtType")} bg-slate-100 cursor-not-allowed text-slate-700 font-medium`}
+                  onChange={handleChange}
+                  readOnly={isECourtsFetched}
+                  className={`${baseInputClass} ${getBorderClass("courtType")} ${isECourtsFetched ? "bg-slate-100 cursor-not-allowed text-slate-700 font-medium" : ""}`}
                 />
                 {touched.courtType && errors.courtType && <ErrorMsg message={errors.courtType} />}
               </div>

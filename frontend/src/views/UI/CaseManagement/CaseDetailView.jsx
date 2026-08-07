@@ -34,7 +34,9 @@ import {
   FileCheck,
   Check,
   History,
+  MapPin,
 } from "lucide-react";
+import { findStateAndDistrictByCourt } from "@/utils/districtCourts";
 import { usePermissions } from "@/utils/usePermissions";
 import { getLoggedInUser, getAuthHeaders } from "@/utils/auth";
 import { isSensitiveCase } from "@/utils/caseSensitivity";
@@ -44,6 +46,111 @@ import VaultResetModal from "@/components/vault/VaultResetModal";
 import SimilarCasesClient from "@/app/case-management/similar-cases/[id]/SimilarCasesClient";
 import OCRPanel from "./OCRPanel";
 import DocumentViewerModal from "@/components/common/DocumentViewerModal";
+
+// Helper to compute Hearing Date alert status and days-remaining countdown
+export function getHearingAlertInfo(rawHearingDate) {
+  if (!rawHearingDate) return null;
+
+  let hearingDate = null;
+  const str = String(rawHearingDate).trim();
+
+  if (str.includes("/")) {
+    const parts = str.split("/");
+    if (parts.length === 3 && parts[2].length === 4) {
+      hearingDate = new Date(parts[2], parts[1] - 1, parts[0]);
+    }
+  } else if (str.includes("-")) {
+    hearingDate = new Date(str);
+  }
+
+  if (!hearingDate || isNaN(hearingDate.getTime())) {
+    return {
+      type: "none",
+      dateFormatted: str,
+      title: `Hearing: ${str}`,
+      daysText: "",
+      bannerClass: "bg-slate-800 text-white",
+      badgeClass: "bg-slate-700 text-white",
+      icon: "📅",
+    };
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const target = new Date(hearingDate);
+  target.setHours(0, 0, 0, 0);
+
+  const diffTime = target.getTime() - today.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 3600 * 24));
+
+  const dateFormatted = hearingDate.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+  if (diffDays === 0) {
+    return {
+      type: "today",
+      diffDays,
+      dateFormatted,
+      bannerClass: "bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white border-2 border-red-500 shadow-lg animate-pulse",
+      badgeClass: "bg-white text-red-700 font-black tracking-wider uppercase shadow-xs",
+      icon: "🚨",
+      title: "HEARING TODAY!",
+      daysText: "Today",
+    };
+  }
+  if (diffDays > 0 && diffDays <= 3) {
+    return {
+      type: "urgent",
+      diffDays,
+      dateFormatted,
+      bannerClass: "bg-gradient-to-r from-red-600 to-rose-700 text-white border border-red-800 shadow-md",
+      badgeClass: "bg-red-100 text-red-800 font-black border border-red-200 uppercase",
+      icon: "🚨",
+      title: `Next Hearing in ${diffDays} Day${diffDays > 1 ? "s" : ""}`,
+      daysText: `${diffDays} Day${diffDays > 1 ? "s" : ""} Remaining`,
+    };
+  }
+  if (diffDays > 3 && diffDays <= 7) {
+    return {
+      type: "upcoming",
+      diffDays,
+      dateFormatted,
+      bannerClass: "bg-gradient-to-r from-amber-500 to-orange-600 text-white border border-amber-700 shadow-sm",
+      badgeClass: "bg-amber-100 text-amber-900 font-extrabold border border-amber-200 uppercase",
+      icon: "⚠️",
+      title: `Next Hearing in ${diffDays} Days`,
+      daysText: `${diffDays} Days Remaining`,
+    };
+  }
+  if (diffDays > 7) {
+    return {
+      type: "future",
+      diffDays,
+      dateFormatted,
+      bannerClass: "bg-gradient-to-r from-blue-600 to-indigo-700 text-white border border-blue-800 shadow-xs",
+      badgeClass: "bg-blue-100 text-blue-900 font-bold border border-blue-200 uppercase",
+      icon: "📅",
+      title: `Next Hearing in ${diffDays} Days`,
+      daysText: `${diffDays} Days Remaining`,
+    };
+  }
+
+  const absDays = Math.abs(diffDays);
+  return {
+    type: "past",
+    diffDays,
+    dateFormatted,
+    bannerClass: "bg-slate-100 text-slate-800 border border-slate-300",
+    badgeClass: "bg-slate-200 text-slate-700 font-bold uppercase",
+    icon: "🔴",
+    title: `Hearing Passed (${absDays} Day${absDays > 1 ? "s" : ""} Ago)`,
+    daysText: `${absDays} Day${absDays > 1 ? "s" : ""} Ago`,
+  };
+}
 
 // Helper to get status badge styling and icon
 function getStatusBadgeStyle(status) {
@@ -1053,6 +1160,8 @@ export default function CaseDetailView({ id }) {
     );
   }
 
+  const hearingAlert = getHearingAlertInfo(selectedCase?.next_hearing_date || selectedCase?.nextHearingDate);
+
   return (
     <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 animate-in fade-in zoom-in-95 duration-500">
       {/* Page Header Card */}
@@ -1138,6 +1247,33 @@ export default function CaseDetailView({ id }) {
         </div>
       </div>
 
+      {/* Hearing Alert Banner (Always Visible Outside Tabs) */}
+      {hearingAlert && (
+        <div className={`p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md transition-all ${hearingAlert.bannerClass}`}>
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="text-2xl sm:text-3xl shrink-0 leading-none">{hearingAlert.icon}</div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-sm sm:text-base font-black uppercase tracking-wider leading-tight">{hearingAlert.title}</h4>
+                {hearingAlert.daysText && (
+                  <span className={`text-[10px] sm:text-xs uppercase px-2.5 py-0.5 rounded-full ${hearingAlert.badgeClass}`}>
+                    {hearingAlert.daysText}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs opacity-90 font-medium mt-1">
+                Scheduled Hearing Date: <strong className="font-bold underline">{hearingAlert.dateFormatted}</strong>
+              </p>
+            </div>
+          </div>
+          <div className="shrink-0 flex items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/20">
+            <span className="text-xs font-extrabold bg-white/20 backdrop-blur-xs px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 shadow-2xs">
+              <Clock size={14} /> {hearingAlert.dateFormatted}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Layout */}
       <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] overflow-hidden flex flex-col min-h-[500px]">
         {/* Tabs Section (Mobile Dropdown Select + Desktop Horizontal Tabs) */}
@@ -1197,6 +1333,7 @@ export default function CaseDetailView({ id }) {
           {/* TAB: OVERVIEW */}
           {activeTab === "overview" && (
             <div className="space-y-6">
+
               {/* Status row with editable dropdown */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3 flex-wrap">
@@ -1270,18 +1407,47 @@ export default function CaseDetailView({ id }) {
                         : selectedCase.case_type
                     }
                   />
+                  <InfoRow
+                    icon={<Clock size={14} />}
+                    label="Next Hearing Date"
+                    value={
+                      hearingAlert ? (
+                        <span className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-[#0F172A]">{hearingAlert.dateFormatted}</span>
+                          {hearingAlert.daysText && (
+                            <span className={`text-[10px] uppercase px-2 py-0.5 rounded-full ${hearingAlert.badgeClass}`}>
+                              {hearingAlert.daysText}
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        selectedCase.next_hearing_date || "To be scheduled"
+                      )
+                    }
+                  />
                 </div>
                 <div className="bg-[#F8FAFC] rounded-2xl p-4 sm:p-5 border border-[#F1F5F9] space-y-4">
                   <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Court Information</h4>
                   <InfoRow icon={<Building2 size={14} />} label="Court Name" value={selectedCase.court_name} />
                   <InfoRow icon={<Gavel size={14} />} label="Court Type" value={selectedCase.court_type} />
+                  <InfoRow
+                    icon={<MapPin size={14} />}
+                    label="State / UT"
+                    value={
+                      selectedCase.state ||
+                      selectedCase.client_state ||
+                      findStateAndDistrictByCourt(selectedCase.court_name || selectedCase.client_district || "").state ||
+                      "Kerala"
+                    }
+                  />
                 </div>
                 <div className="bg-[#F8FAFC] rounded-2xl p-4 sm:p-5 border border-[#F1F5F9] space-y-4 md:col-span-2">
                   <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Client Information</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <InfoRow icon={<User size={14} />} label="Client Name" value={isJuniorAdvocate && isSensitiveCase(selectedCase) ? "Confidential (Restricted)" : selectedCase.client_name} />
                     <InfoRow icon={<Phone size={14} />} label="Contact Number" value={isJuniorAdvocate && isSensitiveCase(selectedCase) ? "Confidential (Restricted)" : selectedCase.contact_number} />
                     <InfoRow icon={<Mail size={14} />} label="Email Address" value={isJuniorAdvocate && isSensitiveCase(selectedCase) ? "Confidential (Restricted)" : selectedCase.email_id} />
+                    <InfoRow icon={<MapPin size={14} />} label="District / Location" value={selectedCase.client_district || findStateAndDistrictByCourt(selectedCase.court_name || "").district || "—"} />
                   </div>
                 </div>
               </div>

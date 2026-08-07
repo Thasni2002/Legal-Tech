@@ -8,7 +8,7 @@ import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import InputField from "@/components/InputField/InputField";
 import SelectField from "@/components/SelectField/SelectField";
-import { DISTRICT_COURTS } from "@/utils/districtCourts";
+import { getAllStates, getDistrictsByState, getCourtsByDistrict, findStateAndDistrictByCourt, DISTRICT_COURTS } from "@/utils/districtCourts";
 
 export default function LawfirmAdd({ onCancel, initialData }) {
   const router = useRouter();
@@ -54,10 +54,6 @@ export default function LawfirmAdd({ onCancel, initialData }) {
     });
   }
 
-
-
-
-
   const [formData, setFormData] = useState({
     id: null,
     advocateName: "",
@@ -78,17 +74,16 @@ export default function LawfirmAdd({ onCancel, initialData }) {
     ...sanitizedInitialData,
   });
 
+  const [practiceState, setPracticeState] = useState(() => {
+    const pc = sanitizedInitialData.practiceCourt || "";
+    const info = findStateAndDistrictByCourt(pc);
+    return info.state || "Kerala";
+  });
+
   const [practiceDistrict, setPracticeDistrict] = useState(() => {
     const pc = sanitizedInitialData.practiceCourt || "";
-    if (pc.includes(" - ")) {
-      return pc.split(" - ")[0];
-    }
-    for (const [dist, courts] of Object.entries(DISTRICT_COURTS)) {
-      if (courts.includes(pc)) {
-        return dist;
-      }
-    }
-    return "";
+    const info = findStateAndDistrictByCourt(pc);
+    return info.district || "";
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -594,13 +589,30 @@ export default function LawfirmAdd({ onCancel, initialData }) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 
+              {/* Practice State */}
+              <div>
+                <SelectField
+                  label="Practice State / UT"
+                  options={getAllStates()}
+                  name="practiceState"
+                  value={practiceState}
+                  onChange={(e) => {
+                    const st = e.target.value;
+                    setPracticeState(st);
+                    setPracticeDistrict("");
+                    setFormData(prev => ({ ...prev, practiceCourt: "" }));
+                  }}
+                />
+              </div>
+
               {/* Practice District */}
               <div>
                 <SelectField
                   label="Practice District"
-                  options={Object.keys(DISTRICT_COURTS)}
+                  options={getDistrictsByState(practiceState)}
                   name="practiceDistrict"
                   value={practiceDistrict}
+                  disabled={!practiceState}
                   onChange={(e) => {
                     const dist = e.target.value;
                     setPracticeDistrict(dist);
@@ -613,7 +625,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
               <div>
                 <SelectField
                   label="Practice Court"
-                  options={practiceDistrict ? DISTRICT_COURTS[practiceDistrict] : []}
+                  options={getCourtsByDistrict(practiceState, practiceDistrict)}
                   name="practiceCourt"
                   value={formData.practiceCourt.includes(" - ") ? formData.practiceCourt.split(" - ")[1] : formData.practiceCourt}
                   disabled={!practiceDistrict}
