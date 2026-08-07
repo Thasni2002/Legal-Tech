@@ -35,7 +35,8 @@ class DocumentSchema(BaseModel):
 
 # Create Case Schema
 class CaseCreate(BaseModel):
-    caseId: str
+    caseId: Optional[str] = None
+    clientId: Optional[str] = None
     cnrNumber: Optional[str] = None
     caseTitle: str
     caseNo: str
@@ -67,6 +68,7 @@ class CaseCreate(BaseModel):
 # Update Case Schema
 class CaseUpdate(BaseModel):
     caseId: Optional[str] = None
+    clientId: Optional[str] = None
     cnrNumber: Optional[str] = None
     caseTitle: Optional[str] = None
     caseNo: Optional[str] = None

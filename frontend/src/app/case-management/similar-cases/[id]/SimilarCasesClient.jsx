@@ -169,7 +169,7 @@ export default function SimilarCasesClient({ caseId }) {
 LEGAL TECH ENTERPRISE — MASTER AI STRATEGIC LEGAL BRIEF
 ================================================================================
 Case Title: ${caseData.case_title || "N/A"}
-Case ID: #${caseId} | Case No: ${caseData.case_no || "N/A"} | CNR: ${caseData.cnr_number || "N/A"}
+Client ID: #${caseData.client_id || caseId} | Case No: ${caseData.case_no || "N/A"} | CNR: ${caseData.cnr_number || "N/A"}
 Court: ${caseData.court_name || "N/A"}
 Generated Date: ${timeStr}
 Estimated Win Likelihood: ${master.winProbability || 75}%

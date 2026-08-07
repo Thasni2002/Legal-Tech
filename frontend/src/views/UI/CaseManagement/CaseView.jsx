@@ -416,7 +416,7 @@ export default function CaseView() {
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex flex-wrap items-center gap-1.5">
                             <span className="text-xs font-mono font-bold text-[#2563EB] bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
-                              {item.case_id}
+                              {item.client_id || item.case_id}
                             </span>
                             {item.case_no && (
                               <span className="text-[11px] font-semibold text-[#334155] bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
@@ -530,7 +530,7 @@ export default function CaseView() {
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-[#F8FAFC] border-b border-[#F1F5F9]">
-                    {["Case Name", "Case ID", "Client", "Court", "Status", "Actions"].map((h) => (
+                    {["Case Name", "Client ID", "Client", "Court", "Status", "Actions"].map((h) => (
                       <th key={h} className="px-5 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider">
                         {h}
                       </th>
@@ -578,7 +578,7 @@ export default function CaseView() {
                           <td className="px-5 py-4">
                             <div className="flex flex-col gap-1">
                               <span className="text-xs font-mono font-bold text-[#2563EB] bg-blue-50 px-2.5 py-1 rounded-lg w-fit">
-                                {item.case_id}
+                                {item.client_id || item.case_id}
                               </span>
                               {item.case_no && (
                                 <span className="text-xs font-semibold text-[#334155] bg-slate-100 px-2 py-0.5 rounded w-fit border border-slate-200">

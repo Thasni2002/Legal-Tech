@@ -282,7 +282,7 @@ const InvoiceHistoryView = ({
                     <tr className="border-b border-slate-200 text-slate-600 text-xs font-semibold bg-slate-50 uppercase tracking-wide">
                       <th className="px-4 py-3">#ID</th>
                       <th className="px-4 py-3">Client</th>
-                      <th className="px-4 py-3">Case ID</th>
+                      <th className="px-4 py-3">Client ID</th>
                       <th className="px-4 py-3">Date</th>
                       <th className="px-4 py-3 text-right">Grand Total</th>
                       <th className="px-4 py-3 text-center">Status</th>
@@ -326,9 +326,9 @@ const InvoiceHistoryView = ({
                                   </div>
                                 </td>
 
-                                {/* Case ID */}
+                                {/* Client ID */}
                                 <td className="px-4 py-3 font-mono text-xs text-slate-600">
-                                  {inv.case_number || "—"}
+                                  {inv.client_id || inv.case_number || "—"}
                                 </td>
 
                                 {/* Date */}

@@ -51,6 +51,41 @@ def get_clients(
     return db.query(Client).all()
 
 
+# Get next continuous Client ID (CLT-YYYY-XXX)
+@router.get("/next-id")
+def get_next_client_id(db: Session = Depends(get_db)):
+    from app.advocate.case_management.models import Case as MgmtCase
+    current_year = datetime.now().year
+    clients = db.query(Client).all()
+    cases = db.query(MgmtCase).all()
+
+    max_seq = 0
+    for c in clients:
+        if c.client_id:
+            parts = str(c.client_id).split("-")
+            try:
+                num = int(parts[-1])
+                if num > max_seq:
+                    max_seq = num
+            except ValueError:
+                pass
+        if c.id and c.id > max_seq:
+            max_seq = c.id
+
+    for k in cases:
+        if k.client_id:
+            parts = str(k.client_id).split("-")
+            try:
+                num = int(parts[-1])
+                if num > max_seq:
+                    max_seq = num
+            except ValueError:
+                pass
+
+    next_seq = str(max_seq + 1).zfill(3)
+    return {"client_id": f"CLT-{current_year}-{next_seq}"}
+
+
 # Get client documents
 @router.get(
     "/documents/view",

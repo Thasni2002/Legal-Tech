@@ -960,7 +960,7 @@ function ClerkDocumentsContent() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50 text-slate-700 text-xs font-extrabold uppercase tracking-wider border-b border-slate-200">
-                        <th className="py-3.5 px-5 w-32">Case ID / No</th>
+                        <th className="py-3.5 px-5 w-32">Client ID / No</th>
                         <th className="py-3.5 px-5">Case Title</th>
                         <th className="py-3.5 px-5 w-40">Client Name</th>
                         <th className="py-3.5 px-5 w-48">Court</th>
@@ -975,7 +975,7 @@ function ClerkDocumentsContent() {
                         return (
                           <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
                             <td className="py-4 px-5 font-mono font-bold text-purple-700 text-xs whitespace-nowrap">
-                              {c.case_id || c.case_no}
+                              {c.client_id || c.case_id || c.case_no}
                             </td>
                             <td className="py-4 px-5 font-bold text-slate-900">
                               <span className="line-clamp-2">{c.case_title}</span>
@@ -1112,8 +1112,8 @@ function ClerkDocumentsContent() {
                 <p className="text-xs sm:text-sm font-bold text-slate-900 mt-0.5 truncate">{selectedCase.case_title}</p>
               </div>
               <div className="bg-purple-50 border border-purple-100 rounded-xl px-4 py-2.5">
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Case ID</p>
-                <p className="text-xs sm:text-sm font-bold text-purple-700 mt-0.5 font-mono truncate">{selectedCase.case_id || selectedCase.case_no}</p>
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Client ID</p>
+                <p className="text-xs sm:text-sm font-bold text-purple-700 mt-0.5 font-mono truncate">{selectedCase.client_id || selectedCase.case_id || selectedCase.case_no}</p>
               </div>
               <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2.5">
                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Court</p>
