@@ -31,7 +31,17 @@ import {
   Folder,
   MapPin,
   Edit3,
-  Building2
+  Building2,
+  Sparkles,
+  Upload,
+  Trash2,
+  CheckCircle2,
+  Share2,
+  Printer,
+  Copy,
+  FileCheck,
+  ListChecks,
+  Check
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { API_BASE_URL } from "@/utils/api";
@@ -1225,7 +1235,7 @@ export default function ClientHistory() {
       )}
 
       {/* Edit Client Modal */}
-      {showEditModal && mounted && createPortal(
+      {showEditModal && mounted && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[10000] flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
           <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl">
             <ClientEdit

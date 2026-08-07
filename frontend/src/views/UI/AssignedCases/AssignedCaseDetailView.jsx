@@ -27,7 +27,10 @@ import {
   Hash,
   Send,
   AlertCircle,
+  MapPin,
 } from "lucide-react";
+import { findStateAndDistrictByCourt } from "@/utils/districtCourts";
+import { getHearingAlertInfo } from "@/views/UI/CaseManagement/CaseDetailView";
 import { getLoggedInUser } from "@/utils/auth";
 import { isSensitiveCase } from "@/utils/caseSensitivity";
 import DocumentViewerModal from "@/components/common/DocumentViewerModal";
@@ -454,6 +457,8 @@ export default function AssignedCaseDetailView({
 
   if (!selectedCase) return null;
 
+  const hearingAlert = getHearingAlertInfo(selectedCase.hearing || selectedCase.next_hearing_date || selectedCase.nextHearingDate);
+
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="w-full max-w-full min-w-0 mx-auto pb-6 sm:pb-10 animate-in fade-in duration-200 overflow-hidden">
@@ -528,6 +533,35 @@ export default function AssignedCaseDetailView({
             </button>
           </div>
         </div>
+
+        {/* Hearing Alert Banner (Always Visible Outside Tabs) */}
+        {hearingAlert && (
+          <div className="p-3.5 sm:p-4 bg-slate-50 border-b border-slate-200">
+            <div className={`p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md transition-all ${hearingAlert.bannerClass}`}>
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="text-2xl sm:text-3xl shrink-0 leading-none">{hearingAlert.icon}</div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="text-sm sm:text-base font-black uppercase tracking-wider leading-tight">{hearingAlert.title}</h4>
+                    {hearingAlert.daysText && (
+                      <span className={`text-[10px] sm:text-xs uppercase px-2.5 py-0.5 rounded-full ${hearingAlert.badgeClass}`}>
+                        {hearingAlert.daysText}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs opacity-90 font-medium mt-1">
+                    Scheduled Hearing Date: <strong className="font-bold underline">{hearingAlert.dateFormatted}</strong>
+                  </p>
+                </div>
+              </div>
+              <div className="shrink-0 flex items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/20">
+                <span className="text-xs font-extrabold bg-white/20 backdrop-blur-xs px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 shadow-2xs">
+                  <Clock size={14} /> {hearingAlert.dateFormatted}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Tab Bar Navigation ────────────────────────────────────────────────── */}
         <div className="border-b border-[#F1F5F9] bg-[#F8FAFC] p-3 sm:p-4 w-full max-w-full min-w-0">
@@ -653,6 +687,16 @@ export default function AssignedCaseDetailView({
                   <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">Court Information</h4>
                   <InfoRow icon={<Building2 size={14} />} label="Court / Forum" value={selectedCase.court} />
                   <InfoRow icon={<Calendar size={14} />} label="Next Hearing Date" value={selectedCase.hearing || "To be scheduled"} />
+                  <InfoRow
+                    icon={<MapPin size={14} />}
+                    label="State / UT"
+                    value={
+                      selectedCase.state ||
+                      selectedCase.client_state ||
+                      findStateAndDistrictByCourt(selectedCase.court || "").state ||
+                      "Kerala"
+                    }
+                  />
                 </div>
               </div>
 
