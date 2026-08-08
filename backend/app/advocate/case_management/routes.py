@@ -121,12 +121,24 @@ def delete_ai_document(
     return {"message": "Document deleted successfully"}
 
 
+@router.get("/{case_id}/timeline")
+def fetch_case_timeline(
+    case_id: int,
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+):
+    from .service import get_case_timeline
+    events = get_case_timeline(db, case_id, current_user)
+    return events
+
+
 @router.get("/{case_id}")
 def fetch_case(
     case_id: int,
     current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
+
     """
     SECURITY: Returns 404 for confidential cases if the requester is not the owner.
     Intentionally 404 (not 403) to prevent existence leakage.
