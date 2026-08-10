@@ -47,6 +47,7 @@ import { createPortal } from "react-dom";
 import { API_BASE_URL } from "@/utils/api";
 import DocumentViewerModal from "@/components/common/DocumentViewerModal";
 import ClientEdit from "./ClientEdit";
+import { CaseTimelineView } from "@/views/UI/CaseManagement/CaseDetailView";
 
 // Helper to accurately convert backend UTC timestamps into local IST 12-hour AM/PM time
 const formatExactDateTime = (dateVal) => {
@@ -245,6 +246,12 @@ export default function ClientHistory() {
   const [assignedAdvocatesList, setAssignedAdvocatesList] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [mounted, setMounted] = useState(false);
+
+  // Dedicated Case Timeline States
+  const [selectedTimelineCaseId, setSelectedTimelineCaseId] = useState(null);
+  const [timelineEvents, setTimelineEvents] = useState([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [selectedTimelineEvent, setSelectedTimelineEvent] = useState(null);
 
   useEffect(() => {
     setMounted(true);
@@ -554,6 +561,46 @@ export default function ClientHistory() {
     fetchDbConsultations();
   }, [client?.clientId, client?.fullName, client?.clientName]);
 
+  // Fetch Timeline Events for Selected Case
+  const fetchCaseTimeline = async (caseId, silent = false) => {
+    if (!caseId) return;
+    if (!silent) setTimelineLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/case-management/${caseId}/timeline`);
+      if (res.ok) {
+        const data = await res.json();
+        setTimelineEvents(data);
+      } else {
+        setTimelineEvents([]);
+      }
+    } catch (err) {
+      console.error("Error fetching case timeline in ClientHistory:", err);
+      setTimelineEvents([]);
+    } finally {
+      if (!silent) setTimelineLoading(false);
+    }
+  };
+
+  // Sync selected case for timeline when clientCases is updated
+  useEffect(() => {
+    if (clientCases && clientCases.length > 0) {
+      if (!selectedTimelineCaseId || !clientCases.some(c => c.id === selectedTimelineCaseId)) {
+        setSelectedTimelineCaseId(clientCases[0].id);
+      }
+    } else {
+      setSelectedTimelineCaseId(null);
+    }
+  }, [clientCases]);
+
+  // Trigger timeline fetch when switching to timeline tab or changing selected case
+  useEffect(() => {
+    if (mainTab === "timeline" && selectedTimelineCaseId) {
+      fetchCaseTimeline(selectedTimelineCaseId);
+    }
+  }, [mainTab, selectedTimelineCaseId]);
+
+  const selectedTimelineCaseObj = clientCases.find(c => c.id === selectedTimelineCaseId) || (clientCases.length > 0 ? clientCases[0] : null);
+
   // Get configuration styles per history event type
   const getTypeConfig = (type) => {
     switch (type) {
@@ -715,6 +762,18 @@ export default function ClientHistory() {
           >
             <Activity size={16} />
             <span>Activities</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMainTab("timeline")}
+            className={`py-3 px-4 border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+              mainTab === "timeline"
+                ? "border-[#2563EB] text-[#2563EB]"
+                : "border-transparent text-[#64748B] hover:text-[#0F172A]"
+            }`}
+          >
+            <Clock size={16} />
+            <span>Timeline</span>
           </button>
         </div>
 
@@ -1221,6 +1280,113 @@ export default function ClientHistory() {
               )}
             </div>
           </>
+        )}
+
+        {/* TAB 3: TIMELINE TAB */}
+        {mainTab === "timeline" && (
+          <div className="p-4 sm:p-6 bg-slate-50/40 space-y-6">
+            {/* Case Selector Card */}
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#F1F5F9] pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-[#2563EB] flex items-center justify-center shrink-0">
+                    <Briefcase size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-[#0F172A] text-base sm:text-lg">
+                      Case Timeline Stream
+                    </h3>
+                    <p className="text-xs text-[#64748B]">
+                      Select a court case below to view its chronological progress, document uploads, hearings, and activity history.
+                    </p>
+                  </div>
+                </div>
+
+                {clientCases.length > 1 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-[#64748B] whitespace-nowrap">Select Case:</span>
+                    <select
+                      value={selectedTimelineCaseId || ""}
+                      onChange={(e) => setSelectedTimelineCaseId(Number(e.target.value))}
+                      className="rounded-xl border border-[#E2E8F0] bg-white px-3 py-1.5 text-xs text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all cursor-pointer font-bold shadow-2xs max-w-[260px] truncate"
+                    >
+                      {clientCases.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.case_title || c.case_no || `Case #${c.id}`} ({c.court_name || 'Court'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {clientCases.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold text-[#0F172A] uppercase tracking-wider">
+                      Associated Cases ({clientCases.length})
+                    </span>
+                    {selectedTimelineCaseObj && (
+                      <span className="text-xs text-[#64748B]">
+                        Active Case No: <strong className="text-[#0F172A] font-bold">{selectedTimelineCaseObj.case_no || "N/A"}</strong>
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2.5">
+                    {clientCases.map((c) => {
+                      const isSelected = selectedTimelineCaseId === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setSelectedTimelineCaseId(c.id)}
+                          className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-2.5 shadow-2xs ${
+                            isSelected
+                              ? "bg-[#2563EB] text-white border-[#2563EB] ring-2 ring-[#2563EB]/20"
+                              : "bg-white text-[#0F172A] border-[#E2E8F0] hover:border-[#2563EB] hover:bg-blue-50/50"
+                          }`}
+                        >
+                          <Gavel size={14} className={isSelected ? "text-white" : "text-[#2563EB]"} />
+                          <div className="text-left">
+                            <div className="truncate max-w-[220px]">
+                              {c.case_title || c.case_no || `Case #${c.id}`}
+                            </div>
+                            <div className={`text-[10px] ${isSelected ? "text-blue-100" : "text-[#64748B]"}`}>
+                              {c.court_name || "Court"} &bull; {c.status || "Active"}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="py-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                  <Clock size={32} className="text-slate-300 mx-auto mb-2" />
+                  <p className="text-xs font-bold text-slate-600">No cases found for this client</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Timeline events will appear once a court case is created or linked.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Case Timeline Stream view */}
+            {selectedTimelineCaseId && (
+              <CaseTimelineView
+                selectedCase={selectedTimelineCaseObj}
+                events={timelineEvents}
+                loading={timelineLoading}
+                selectedEvent={selectedTimelineEvent}
+                onSelectEvent={setSelectedTimelineEvent}
+                onRefresh={() => fetchCaseTimeline(selectedTimelineCaseId)}
+                onViewDocument={(doc) => setSelectedDoc({
+                  fileUrl: doc.url || doc.fileUrl || (typeof doc.file === "string" && (doc.file.startsWith("data:") || doc.file.startsWith("http") || doc.file.startsWith("/")) ? doc.file : null),
+                  title: doc.file || doc.file_name || doc.documentType || "Document",
+                  badge: doc.documentType
+                })}
+              />
+            )}
+          </div>
         )}
       </div>
 

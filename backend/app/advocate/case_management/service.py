@@ -729,10 +729,31 @@ def get_case_timeline(db: Session, case_id: int, current_user=None):
         raw_docs = case.documents
 
     for idx, doc in enumerate(raw_docs):
-        doc_file = doc.get("file", f"Document_{idx+1}")
-        doc_type = doc.get("documentType", "Uploaded Document")
-        doc_adv = doc.get("advocate", case.selected_advocate or "Advocate")
-        doc_date = doc.get("date", created_date_str)
+        if not isinstance(doc, dict):
+            continue
+
+        raw_file = doc.get("file") or doc.get("filename") or doc.get("file_name") or doc.get("name")
+        raw_url = doc.get("url") or doc.get("file_url") or doc.get("fileUrl") or doc.get("path") or ""
+
+        doc_type = doc.get("documentType") or doc.get("document_type") or doc.get("type") or "Uploaded Document"
+        doc_adv = doc.get("advocate") or doc.get("uploaded_by") or doc.get("uploadedBy") or case.selected_advocate or "Advocate"
+        doc_date = doc.get("date") or doc.get("uploadedAt") or doc.get("uploaded_at") or created_date_str
+
+        # If raw_file is a string "None" or None, treat as empty
+        if raw_file == "None":
+            raw_file = None
+
+        doc_url = str(raw_url).strip() if raw_url else ""
+        doc_file = str(raw_file).strip() if raw_file else ""
+
+        if not doc_file and doc_url:
+            doc_file = doc_url.split("/")[-1].split("?")[0]
+
+        if not doc_file:
+            doc_file = f"{doc_type}.pdf" if doc_type and doc_type != "Uploaded Document" else f"Document_{idx+1}"
+
+        if not doc_url and doc_file and (doc_file.startswith("http://") or doc_file.startswith("https://") or doc_file.startswith("data:")):
+            doc_url = doc_file
 
         events.append({
             "id": f"evt-doc-{idx}",
@@ -750,7 +771,7 @@ def get_case_timeline(db: Session, case_id: int, current_user=None):
                 "file_name": doc_file,
                 "document_type": doc_type,
                 "uploaded_by": doc_adv,
-                "url": doc.get("url", ""),
+                "url": doc_url,
                 "has_password": bool(doc.get("password"))
             }
         })

@@ -42,15 +42,20 @@ export default function DocumentViewerModal({ document: docProp, fileUrl, title,
   };
 
   const getEffectiveUrl = () => {
-    if (rawFileUrl) {
+    if (rawFileUrl && rawFileUrl.trim() !== "" && rawFileUrl !== "null" && rawFileUrl !== "undefined") {
       if (rawFileUrl.startsWith("data:") || rawFileUrl.startsWith("blob:")) return rawFileUrl;
       if (rawFileUrl.startsWith("http://") || rawFileUrl.startsWith("https://")) return rawFileUrl;
       if (rawFileUrl.startsWith("/")) return `${API_BASE_URL}${rawFileUrl}`;
       return `${API_BASE_URL}/uploads/${encodeURIComponent(rawFileUrl)}`;
     }
-    if (cleanTitle) {
-      if (cleanTitle.startsWith("data:") || cleanTitle.startsWith("http")) return cleanTitle;
-      return `${API_BASE_URL}/uploads/${encodeURIComponent(cleanTitle)}`;
+    if (cleanTitle && cleanTitle.trim() !== "") {
+      if (cleanTitle.startsWith("data:") || cleanTitle.startsWith("http://") || cleanTitle.startsWith("https://") || cleanTitle.startsWith("/")) {
+        return cleanTitle.startsWith("/") ? `${API_BASE_URL}${cleanTitle}` : cleanTitle;
+      }
+      const hasExt = /\.(pdf|png|jpe?g|gif|webp|svg|docx?|xlsx?|txt|md|html|json)$/i.test(cleanTitle);
+      if (hasExt) {
+        return `${API_BASE_URL}/uploads/${encodeURIComponent(cleanTitle)}`;
+      }
     }
     return "";
   };
@@ -227,6 +232,36 @@ export default function DocumentViewerModal({ document: docProp, fileUrl, title,
     };
   }, [isJunior]);
 
+  const [isZoomed, setIsZoomed] = useState(false);
+
+  const handleOpenInTab = (e) => {
+    if (e) e.preventDefault();
+    if (!normalizedUrl) return;
+
+    if (normalizedUrl.startsWith("data:")) {
+      try {
+        const parts = normalizedUrl.split(",");
+        const mime = parts[0].match(/:(.*?);/)[1] || "image/png";
+        const bstr = atob(parts[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, "_blank");
+      } catch (err) {
+        const win = window.open();
+        if (win) {
+          win.document.write(`<iframe src="${normalizedUrl}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+        }
+      }
+    } else {
+      window.open(normalizedUrl, "_blank");
+    }
+  };
+
   const handleDownload = () => {
     if (!normalizedUrl) return;
 
@@ -235,10 +270,10 @@ export default function DocumentViewerModal({ document: docProp, fileUrl, title,
       return;
     }
 
-    if (normalizedUrl.startsWith("data:")) {
+    if (normalizedUrl.startsWith("data:") || normalizedUrl.startsWith("blob:")) {
       try {
         const parts = normalizedUrl.split(",");
-        const mime = parts[0].match(/:(.*?);/)[1];
+        const mime = parts[0].match(/:(.*?);/)[1] || "application/octet-stream";
         const bstr = atob(parts[1]);
         let n = bstr.length;
         const u8arr = new Uint8Array(n);
@@ -249,17 +284,44 @@ export default function DocumentViewerModal({ document: docProp, fileUrl, title,
         const blobUrl = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = blobUrl;
-        a.download = cleanTitle || "document";
+
+        let ext = mime.split("/")[1] || "png";
+        if (ext === "jpeg") ext = "jpg";
+        let downloadName = cleanTitle || "document";
+        if (!downloadName.includes(".")) {
+          downloadName = `${downloadName}.${ext}`;
+        }
+
+        a.download = downloadName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(blobUrl);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
       } catch (err) {
-        console.error("Base64 download failed, fallback to direct open:", err);
-        window.open(normalizedUrl, "_blank");
+        console.error("Base64 download failed:", err);
       }
     } else {
-      window.location.href = normalizedUrl + "?download=true";
+      fetch(normalizedUrl)
+        .then((res) => res.blob())
+        .then((blob) => {
+          const blobUrl = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = blobUrl;
+          a.download = cleanTitle || "document";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        })
+        .catch(() => {
+          const a = document.createElement("a");
+          a.href = normalizedUrl;
+          a.download = cleanTitle || "document";
+          a.target = "_blank";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        });
     }
   };
 
@@ -292,7 +354,7 @@ export default function DocumentViewerModal({ document: docProp, fileUrl, title,
           }
         `}} />
       )}
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl flex flex-col max-h-[90vh] overflow-hidden secure-document-viewer">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-5xl flex flex-col max-h-[92vh] overflow-hidden secure-document-viewer">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50 shrink-0">
           <div className="flex items-center gap-3">
@@ -318,10 +380,12 @@ export default function DocumentViewerModal({ document: docProp, fileUrl, title,
                   <Download size={13} /> Download
                 </button>
                 {normalizedUrl && (
-                  <a href={normalizedUrl} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-lg transition">
+                  <button
+                    onClick={handleOpenInTab}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
+                  >
                     <ExternalLink size={13} /> Open in Tab
-                  </a>
+                  </button>
                 )}
               </>
             )}
@@ -331,7 +395,7 @@ export default function DocumentViewerModal({ document: docProp, fileUrl, title,
           </div>
         </div>
         {/* Viewer Body */}
-        <div className="flex-1 overflow-auto bg-slate-100 flex items-center justify-center min-h-[400px] relative">
+        <div className="flex-1 overflow-auto bg-slate-100 flex items-center justify-center min-h-[420px] relative">
           
           {/* Blackout Locked Overlay */}
           <div 
@@ -395,8 +459,41 @@ export default function DocumentViewerModal({ document: docProp, fileUrl, title,
                 )}
               </div>
             ) : isImage ? (
-              <div className="p-6">
-                <img src={viewerUrl} alt={cleanTitle || "Document"} className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-lg" />
+              <div className="w-full h-full overflow-auto flex flex-col items-center justify-center p-4 bg-slate-950/95 relative min-h-[520px]">
+                {/* HD Zoom Controls Toolbar */}
+                <div className="absolute top-3 right-3 flex items-center gap-2 z-30 bg-slate-900/90 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-slate-700/80 shadow-2xl">
+                  <button
+                    onClick={() => setIsZoomed(prev => !prev)}
+                    className="text-xs font-bold text-slate-300 hover:text-white transition cursor-pointer"
+                    title="Toggle Fit / Original"
+                  >
+                    {isZoomed ? "📐 Fit to Screen" : "🔍 Original Scale"}
+                  </button>
+                  <div className="w-px h-3.5 bg-slate-700 mx-1" />
+                  <button
+                    onClick={() => setIsZoomed(true)}
+                    className="px-2 py-0.5 text-[11px] font-mono font-bold text-cyan-400 hover:text-cyan-200 bg-slate-800 hover:bg-slate-700 rounded-md transition cursor-pointer"
+                    title="200% High Detail Zoom"
+                  >
+                    200% HD
+                  </button>
+                </div>
+                <div className="w-full h-full flex items-center justify-center overflow-auto p-4">
+                  <img
+                    src={viewerUrl}
+                    alt={cleanTitle || "Document"}
+                    onClick={() => setIsZoomed(prev => !prev)}
+                    className={`transition-all duration-200 cursor-zoom-in rounded-lg shadow-2xl ${
+                      isZoomed
+                        ? "max-w-none max-h-none w-auto h-auto scale-125 my-8"
+                        : "max-w-full max-h-[78vh] object-contain"
+                    }`}
+                    style={{
+                      imageRendering: "-webkit-optimize-contrast",
+                      WebkitFontSmoothing: "antialiased",
+                    }}
+                  />
+                </div>
               </div>
             ) : isAudio ? (
               <div className="p-12 flex flex-col items-center justify-center gap-4 bg-white rounded-xl border border-slate-200 w-full max-w-md mx-auto my-8 shadow-sm">

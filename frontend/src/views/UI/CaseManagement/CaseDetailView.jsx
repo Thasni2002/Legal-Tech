@@ -4061,35 +4061,55 @@ export function CaseTimelineView({
                 </div>
               )}
 
-              {selectedEvent.type === "document_uploaded" && (
-                <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-3.5 space-y-3 text-xs">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-[9px] font-bold text-purple-700 uppercase tracking-wider">Document File Name</p>
-                      <p className="font-extrabold text-slate-900 mt-0.5 truncate">{selectedEvent.metadata?.file_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-bold text-purple-700 uppercase tracking-wider">Document Type</p>
-                      <p className="font-extrabold text-slate-900 mt-0.5">{selectedEvent.metadata?.document_type}</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-bold text-purple-700 uppercase tracking-wider">Uploaded By</p>
-                      <p className="font-extrabold text-slate-900 mt-0.5">{selectedEvent.metadata?.uploaded_by}</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-bold text-purple-700 uppercase tracking-wider">Security Protection</p>
-                      <p className="font-extrabold text-slate-900 mt-0.5">{selectedEvent.metadata?.has_password ? "Protected with PIN" : "Standard File"}</p>
-                    </div>
-                  </div>
+              {selectedEvent.type === "document_uploaded" && (() => {
+                const meta = selectedEvent.metadata || {};
+                const url = (meta.url || "").trim();
+                const file = (meta.file_name || "").trim();
+                const hasValidUrl = url && url !== "null" && url !== "undefined";
+                const hasValidFile = file && (file.startsWith("http://") || file.startsWith("https://") || file.startsWith("data:") || file.startsWith("/") || /\.(pdf|png|jpe?g|gif|webp|svg|docx?|xlsx?|txt|md|html|json)$/i.test(file));
+                const canView = hasValidUrl || hasValidFile;
 
-                  <button
-                    onClick={() => onViewDocument && onViewDocument({ file: selectedEvent.metadata?.file_name, url: selectedEvent.metadata?.url, documentType: selectedEvent.metadata?.document_type })}
-                    className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition cursor-pointer shadow-xs active:scale-95 text-xs"
-                  >
-                    <FileText size={13} /> Open &amp; View Document
-                  </button>
-                </div>
-              )}
+                return (
+                  <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-3.5 space-y-3 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-[9px] font-bold text-purple-700 uppercase tracking-wider">Document File Name</p>
+                        <p className="font-extrabold text-slate-900 mt-0.5 truncate">{meta.file_name || "Case Document"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-bold text-purple-700 uppercase tracking-wider">Document Type</p>
+                        <p className="font-extrabold text-slate-900 mt-0.5">{meta.document_type || "Uploaded Document"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-bold text-purple-700 uppercase tracking-wider">Uploaded By</p>
+                        <p className="font-extrabold text-slate-900 mt-0.5">{meta.uploaded_by || "Advocate"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-bold text-purple-700 uppercase tracking-wider">Security Protection</p>
+                        <p className="font-extrabold text-slate-900 mt-0.5">{meta.has_password ? "Protected with PIN" : "Standard File"}</p>
+                      </div>
+                    </div>
+
+                    {canView ? (
+                      <button
+                        onClick={() => onViewDocument && onViewDocument({
+                          file: meta.file_name,
+                          url: meta.url,
+                          fileUrl: meta.url,
+                          documentType: meta.document_type
+                        })}
+                        className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition cursor-pointer shadow-xs active:scale-95 text-xs"
+                      >
+                        <FileText size={13} /> Open &amp; View Document
+                      </button>
+                    ) : (
+                      <div className="p-2.5 bg-purple-100/70 border border-purple-200/80 rounded-xl text-center text-purple-900 text-[11px] font-bold shadow-2xs">
+                        ℹ️ Record logged — No digital file binary (PDF/Image) was uploaded with this document entry.
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {(selectedEvent.type === "discussion_request_sent" || selectedEvent.type === "discussion_approved") && (
                 <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-3.5 space-y-3 text-xs">
@@ -4176,12 +4196,3 @@ export function CaseTimelineView({
   </div>
   );
 }
-
-
-
-
-
-
-
-
-

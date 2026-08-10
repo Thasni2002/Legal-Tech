@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { API_BASE_URL } from "@/utils/api";
 
-export default function Sidebar({ isCollapsed, setIsCollapsed }) {
+export default function Sidebar({ isCollapsed, setIsCollapsed, onModuleCountChange }) {
   const router = useRouter();
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false); // Mobile drawer overlay state
@@ -263,6 +263,14 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
       .filter((mod) => mod.items.length > 0);
   }, [modules, customPermissions, rolePermissions, user]);
 
+  const hasMultipleModules = filteredModules.length > 1;
+
+  useEffect(() => {
+    if (onModuleCountChange) {
+      onModuleCountChange(hasMultipleModules);
+    }
+  }, [hasMultipleModules, onModuleCountChange]);
+
   // Auto-detect current active module based on URL pathname
   useEffect(() => {
     if (!pathname) return;
@@ -340,82 +348,84 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         />
       )}
 
-      {/* Main Container for 2-Tier Sidebar */}
+      {/* Main Container for Sidebar */}
       <div
         className={`fixed top-0 left-0 h-screen z-50 flex transition-transform duration-300 ease-in-out font-poppins ${
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
-        {/* Tier 1: Primary Icon Rail (Width 72px) */}
-        <aside className="w-[72px] h-screen bg-[#0F172A] text-slate-300 flex flex-col justify-between items-center py-4 border-r border-slate-800 flex-shrink-0 z-20 select-none font-poppins">
-          {/* Logo Mark */}
-          <div className="flex flex-col items-center gap-1 mb-4">
-            <Link
-              href="/"
-              className="w-11 h-11 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20 hover:scale-105 transition-transform"
-              title="Legal Tech Enterprise"
-            >
-              <Scale size={24} />
-            </Link>
-            <span className="text-[9px] font-black uppercase tracking-widest text-blue-400 font-legaltech">LT</span>
-          </div>
+        {/* Tier 1: Primary Icon Rail (Width 72px) — Rendered ONLY when user has access to multiple modules */}
+        {hasMultipleModules && (
+          <aside className="w-[72px] h-screen bg-[#0F172A] text-slate-300 flex flex-col justify-between items-center py-4 border-r border-slate-800 flex-shrink-0 z-20 select-none font-poppins">
+            {/* Logo Mark */}
+            <div className="flex flex-col items-center gap-1 mb-4">
+              <Link
+                href="/"
+                className="w-11 h-11 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20 hover:scale-105 transition-transform"
+                title="Legal Tech Enterprise"
+              >
+                <Scale size={24} />
+              </Link>
+              <span className="text-[9px] font-black uppercase tracking-widest text-blue-400 font-legaltech">LT</span>
+            </div>
 
-          {/* Module Icons Navigation */}
-          <nav className="flex-1 flex flex-col gap-3 items-center w-full px-2 overflow-y-auto no-scrollbar py-2">
-            {filteredModules.map((mod) => {
-              const isActive = activeModuleId === mod.id;
-              const IconComp = mod.icon;
-              return (
-                <button
-                  key={mod.id}
-                  onClick={() => handleModuleClick(mod.id)}
-                  className={`group relative w-12 flex flex-col items-center justify-center py-2.5 px-1 rounded-2xl transition-all duration-200 ${
-                    isActive
-                      ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 font-bold"
-                      : "text-slate-400 hover:text-white hover:bg-slate-800/80 font-semibold"
-                  }`}
-                  title={mod.title}
-                >
-                  <IconComp size={20} className={isActive ? "text-white" : "group-hover:scale-110 transition-transform"} />
-                  <span className="text-[10.5px] tracking-tight mt-1 truncate max-w-full font-poppins font-semibold">
-                    {mod.shortLabel}
-                  </span>
+            {/* Module Icons Navigation */}
+            <nav className="flex-1 flex flex-col gap-3 items-center w-full px-2 overflow-y-auto no-scrollbar py-2">
+              {filteredModules.map((mod) => {
+                const isActive = activeModuleId === mod.id;
+                const IconComp = mod.icon;
+                return (
+                  <button
+                    key={mod.id}
+                    onClick={() => handleModuleClick(mod.id)}
+                    className={`group relative w-12 flex flex-col items-center justify-center py-2.5 px-1 rounded-2xl transition-all duration-200 ${
+                      isActive
+                        ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 font-bold"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800/80 font-semibold"
+                    }`}
+                    title={mod.title}
+                  >
+                    <IconComp size={20} className={isActive ? "text-white" : "group-hover:scale-110 transition-transform"} />
+                    <span className="text-[10.5px] tracking-tight mt-1 truncate max-w-full font-poppins font-semibold">
+                      {mod.shortLabel}
+                    </span>
 
-                  {/* Active Indicator Bar on left edge */}
-                  {isActive && (
-                    <span className="absolute -left-2 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-blue-400 rounded-r-full" />
-                  )}
-                </button>
-              );
-            })}
-          </nav>
+                    {/* Active Indicator Bar on left edge */}
+                    {isActive && (
+                      <span className="absolute -left-2 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-blue-400 rounded-r-full" />
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
 
-          {/* User Profile Avatar at Bottom */}
-          <div className="pt-2 border-t border-slate-800/80 w-full flex flex-col items-center">
-            <Link
-              href="/profile-management"
-              className="group relative p-1 rounded-full hover:ring-2 hover:ring-blue-500 transition-all"
-              title={user ? `${user.username} (${user.role})` : "Profile"}
-            >
-              {user ? (
-                <img
-                  src={
-                    profileImage ||
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent([user.firstName || user.first_name, user.lastName || user.last_name].filter(Boolean).join(" ") || user.username)}&background=2563EB&color=fff&rounded=true&bold=true&size=150`
-                  }
-                  alt="Profile"
-                  className="w-9 h-9 rounded-full object-cover ring-2 ring-slate-700 group-hover:scale-105 transition-transform"
-                />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 font-bold">
-                  ?
-                </div>
-              )}
-            </Link>
-          </div>
-        </aside>
+            {/* User Profile Avatar at Bottom */}
+            <div className="pt-2 border-t border-slate-800/80 w-full flex flex-col items-center">
+              <Link
+                href="/profile-management"
+                className="group relative p-1 rounded-full hover:ring-2 hover:ring-blue-500 transition-all"
+                title={user ? `${user.username} (${user.role})` : "Profile"}
+              >
+                {user ? (
+                  <img
+                    src={
+                      profileImage ||
+                      `https://ui-avatars.com/api/?name=${encodeURIComponent([user.firstName || user.first_name, user.lastName || user.last_name].filter(Boolean).join(" ") || user.username)}&background=2563EB&color=fff&rounded=true&bold=true&size=150`
+                    }
+                    alt="Profile"
+                    className="w-9 h-9 rounded-full object-cover ring-2 ring-slate-700 group-hover:scale-105 transition-transform"
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 font-bold">
+                    ?
+                  </div>
+                )}
+              </Link>
+            </div>
+          </aside>
+        )}
 
-        {/* Tier 2: Secondary Expandable Drawer (Width 230px) */}
+        {/* Tier 2: Secondary Section Drawer (Width 230px) */}
         <aside
           className={`h-screen bg-white border-r border-[#E2E8F0] shadow-sm flex flex-col transition-all duration-300 ease-in-out overflow-hidden z-10 font-poppins ${
             isCollapsed ? "w-0 opacity-0 pointer-events-none" : "w-[230px] opacity-100"
@@ -423,21 +433,28 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         >
           {/* Drawer Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-[#E2E8F0] bg-slate-50/50">
-            <div className="flex flex-col min-w-0">
-              <span className="text-[10px] font-black tracking-widest text-blue-600 uppercase font-legaltech mb-0.5">
-                LEGAL TECH
-              </span>
-              <h3 className="text-sm font-extrabold text-[#0F172A] truncate tracking-tight font-poppins">
-                {activeModule?.title || "Workspace"}
-              </h3>
+            <div className="flex items-center gap-2.5 min-w-0">
+              {!hasMultipleModules && (
+                <div className="w-8 h-8 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-lg flex items-center justify-center text-white shadow-xs shrink-0">
+                  <Scale size={18} />
+                </div>
+              )}
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] font-black tracking-widest text-blue-600 uppercase font-legaltech mb-0.5">
+                  LEGAL TECH
+                </span>
+                <h3 className="text-sm font-extrabold text-[#0F172A] truncate tracking-tight font-poppins">
+                  {activeModule?.title || "Workspace"}
+                </h3>
+              </div>
             </div>
 
             {/* Collapse Toggle Button */}
             <button
               onClick={() => setIsCollapsed(true)}
-              className="p-1.5 rounded-lg bg-slate-200/70 hover:bg-slate-300 text-slate-600 hover:text-slate-900 transition-colors"
-              title="Collapse sub-menu"
-              aria-label="Collapse sub-menu"
+              className="p-1.5 rounded-lg bg-slate-200/70 hover:bg-slate-300 text-slate-600 hover:text-slate-900 transition-colors shrink-0"
+              title="Collapse menu"
+              aria-label="Collapse menu"
             >
               <ChevronLeft size={16} />
             </button>
@@ -481,7 +498,33 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
             })}
           </nav>
 
-
+          {/* Profile Card Footer when Single Module Sidebar mode */}
+          {!hasMultipleModules && user && (
+            <div className="p-3 border-t border-[#E2E8F0] bg-slate-50/50 flex items-center justify-between font-poppins">
+              <Link
+                href="/profile-management"
+                className="flex items-center gap-2.5 min-w-0 hover:opacity-80 transition-opacity"
+                title="View Profile"
+              >
+                <img
+                  src={
+                    profileImage ||
+                    `https://ui-avatars.com/api/?name=${encodeURIComponent([user.firstName || user.first_name, user.lastName || user.last_name].filter(Boolean).join(" ") || user.username)}&background=2563EB&color=fff&rounded=true&bold=true&size=150`
+                  }
+                  alt="Profile"
+                  className="w-8 h-8 rounded-full object-cover ring-2 ring-blue-100 shrink-0"
+                />
+                <div className="flex flex-col min-w-0">
+                  <span className="text-xs font-extrabold text-[#0F172A] truncate leading-tight">
+                    {[user.firstName || user.first_name, user.lastName || user.last_name].filter(Boolean).join(" ") || user.username}
+                  </span>
+                  <span className="text-[10px] text-slate-500 capitalize truncate">
+                    {user.role || "User"}
+                  </span>
+                </div>
+              </Link>
+            </div>
+          )}
         </aside>
       </div>
 
@@ -489,8 +532,10 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
       {isCollapsed && (
         <button
           onClick={() => setIsCollapsed(false)}
-          className="fixed bottom-6 left-[84px] z-40 hidden md:flex items-center gap-1.5 px-3 py-2 bg-[#0F172A] text-white text-xs font-semibold rounded-full shadow-xl hover:bg-blue-600 transition-all border border-slate-700"
-          title="Expand sub-menu"
+          className={`fixed bottom-6 z-40 hidden md:flex items-center gap-1.5 px-3 py-2 bg-[#0F172A] text-white text-xs font-semibold rounded-full shadow-xl hover:bg-blue-600 transition-all border border-slate-700 ${
+            hasMultipleModules ? "left-[84px]" : "left-4"
+          }`}
+          title="Expand menu"
         >
           <Layers size={14} />
           <span>{activeModule?.shortLabel || "Menu"}</span>
