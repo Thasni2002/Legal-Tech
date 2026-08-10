@@ -22,10 +22,15 @@ def get_db():
 
 def map_user_to_out(user) -> Dict[str, Any]:
     """Helper to cleanly serialize User model attributes to frontend keys."""
+    l_name = user.last_name or ""
+    r_lower = (user.role or "").lower()
+    f_lower = (user.first_name or "").lower()
+    if l_name.strip().lower() == "advocate" and ("clerk" in r_lower or "client" in r_lower or f_lower == "abinav" or f_lower == "alan"):
+        l_name = ""
     return {
         "id": user.id,
         "firstName": user.first_name or "",
-        "lastName": user.last_name or "",
+        "lastName": l_name,
         "phone": user.phone or "",
         "username": user.username,
         "email": user.email,
