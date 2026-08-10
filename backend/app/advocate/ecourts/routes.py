@@ -40,13 +40,13 @@ def get_ecourts_metrics(
 
 
 @router.post("/lookup", response_model=eCourtsCaseDetails)
-def lookup_cnr(data: CNRLookupRequest):
-    return lookup_cnr_service(data.cnrNumber)
+def lookup_cnr(data: CNRLookupRequest, db: Session = Depends(get_db)):
+    return lookup_cnr_service(data.cnrNumber, db)
 
 
 @router.post("/search", response_model=List[eCourtsCaseDetails])
-def search_cases(data: CaseSearchRequest):
-    return search_cases_service(data)
+def search_cases(data: CaseSearchRequest, db: Session = Depends(get_db)):
+    return search_cases_service(data, db)
 
 
 @router.post("/sync/{case_id}", response_model=SyncCaseResponse)
@@ -59,11 +59,12 @@ def sync_case(
 
 @router.get("/cause-list", response_model=List[CauseListItem])
 def get_cause_list(
-    courtName: Optional[str] = Query(None),
-    date: Optional[str] = Query(None),
-    advocateName: Optional[str] = Query(None),
+    court_name: Optional[str] = Query(None, alias="courtName"),
+    date_str: Optional[str] = Query(None, alias="date"),
+    advocate_name: Optional[str] = Query(None, alias="advocateName"),
+    db: Session = Depends(get_db)
 ):
-    return get_cause_list_service(courtName, date, advocateName)
+    return get_cause_list_service(court_name, date_str, advocate_name, db)
 
 
 @router.post("/similar-cases", response_model=SimilarCasesResponse)
