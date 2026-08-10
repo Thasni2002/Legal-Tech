@@ -180,13 +180,14 @@ export function useMessaging() {
     fetchConversations();
     fetchUnreadCount();
 
+    // Auto-refresh unread counts & conversations every 15 seconds (optimized to prevent TCP socket exhaustion)
     const interval = setInterval(() => {
       fetchConversations();
       fetchUnreadCount();
       if (activeConvId) {
         fetchMessages(activeConvId);
       }
-    }, 3000);
+    }, 15000);
 
     return () => clearInterval(interval);
   }, [fetchConversations, fetchUnreadCount, fetchMessages, activeConvId]);

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Upload, Eye, Trash, FileText, Download, ExternalLink, X, ClipboardList, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Upload, Eye, Trash, FileText, Download, ExternalLink, X, ClipboardList, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import useModulePermission from "@/utils/useModulePermission";
 import { getLoggedInUser } from "@/utils/auth";
 import { API_BASE_URL } from "@/utils/api";
@@ -33,16 +33,15 @@ const documentCategories = {
     "Call Records", "CCTV Images", "Audio Recording Transcript", "Video Recording Transcript"
   ],
   "Court Documents": [
-    "Summons", "Notice", "Warrant", "Court Order", "Interim Order", "Judgment", "Decree",
-    "Commission Report", "Advocate Commission Report", "Court Fee Receipt", "Filing Receipt",
-    "Certified Copy", "Cause List"
+    "Summons", "Notice", "Warrant", "Court Order", "Interim Order", "Final Judgment",
+    "Decree", "Commission Report", "Expert Opinion Report", "Deposition/Statement",
+    "Cross-Examination Statement", "Case Diary", "Bail Bond"
   ],
-  "Advocate Documents": [
-    "Vakalatnama", "Memo of Appearance", "Memo", "Case Diary", "Case Notes", "Brief Notes",
-    "Written Arguments", "Synopsis", "List of Witnesses", "List of Documents"
-  ],
-  "Witness Documents": [
-    "Witness Statement", "Chief Examination", "Cross Examination", "Re-Examination", "Expert Opinion"
+  "Corporate/Commercial": [
+    "MoA (Memorandum of Association)", "AoA (Articles of Association)",
+    "Incorporation Certificate", "Board Resolution", "Shareholder Agreement",
+    "Commercial Contract", "NDA (Non-Disclosure Agreement)", "MoU (Memorandum of Understanding)",
+    "Vendor Agreement", "Employment Contract", "Partnership Deed", "LLP Agreement", "IPR Registration Document"
   ]
 };
 
@@ -61,6 +60,7 @@ export default function ClientDocuments() {
   const [documentName, setDocumentName] = useState("");
   const [documentType, setDocumentType] = useState("");
   const [file, setFile] = useState(null);
+  const fileInputRef = useRef(null);
   const [documents, setDocuments] = useState([]);
   const [loadingDocs, setLoadingDocs] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState(null);
@@ -73,6 +73,57 @@ export default function ClientDocuments() {
   const [successToast, setSuccessToast] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [uploading, setUploading] = useState(false);
+
+  const uploadFormRef = useRef(null);
+  const [editingDoc, setEditingDoc] = useState(null);
+
+  const findCategoryForType = (typeStr) => {
+    if (!typeStr) return "Evidence/Documents";
+    for (const [cat, types] of Object.entries(documentCategories)) {
+      if (types.includes(typeStr)) return cat;
+    }
+    return "Evidence/Documents";
+  };
+
+  const handleEditClick = (doc) => {
+    setEditingDoc(doc);
+
+    // Auto-select associated case
+    const matchedCaseObj = matchedCases.find(
+      (c) => c.id.toString() === (doc.case_db_id || "").toString() || c.case_title === doc.caseTitle
+    );
+    if (matchedCaseObj) {
+      setSelectedCaseId(matchedCaseObj.id.toString());
+    }
+
+    // Auto-select category and type
+    const category = findCategoryForType(doc.documentType || doc.type);
+    setDocumentCategory(category);
+    setDocumentType(doc.documentType || doc.type || "");
+
+    // Clear file selection initially
+    setFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
+    // Smooth scroll to Upload form
+    if (uploadFormRef.current) {
+      uploadFormRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingDoc(null);
+    setDocumentCategory("");
+    setDocumentType("");
+    setFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   useEffect(() => {
     setCurrentPage(1);
@@ -151,6 +202,109 @@ export default function ClientDocuments() {
   }, [loading, perms.view, user]);
 
   const handleUpload = async () => {
+    if (editingDoc) {
+      // ── UPDATE FLOW ──
+      const finalDocType = documentType || documentCategory;
+      if (!finalDocType || !selectedCaseId) {
+        alert("Please select a case, document category, and document type");
+        return;
+      }
+
+      const targetCase = matchedCases.find(c => c.id.toString() === selectedCaseId.toString());
+      if (!targetCase) {
+        alert("Selected case not found.");
+        return;
+      }
+
+      setUploading(true);
+      try {
+        let uploadedUrl = editingDoc.fileUrl;
+        let fileNameToSave = editingDoc.fileName;
+
+        if (file) {
+          const formDataObj = new FormData();
+          formDataObj.append("file", file);
+
+          const uploadRes = await fetch(`${API_BASE_URL}/case-management/upload`, {
+            method: "POST",
+            body: formDataObj,
+          });
+
+          if (!uploadRes.ok) {
+            throw new Error("Failed to upload file to storage server");
+          }
+
+          const uploadData = await uploadRes.json();
+          uploadedUrl = uploadData.url;
+          fileNameToSave = file.name;
+        }
+
+        const currentDocs = Array.isArray(targetCase.documents) ? targetCase.documents : [];
+        const updatedDocs = currentDocs.map(d => {
+          const isTarget = (d.url && d.url === editingDoc.fileUrl) || (d.file && d.file === editingDoc.fileName);
+          if (isTarget) {
+            return {
+              ...d,
+              documentType: finalDocType,
+              file: fileNameToSave,
+              url: uploadedUrl || d.url,
+            };
+          }
+          return d;
+        });
+
+        const payload = {
+          caseId: targetCase.case_id,
+          cnrNumber: targetCase.cnr_number,
+          caseTitle: targetCase.case_title,
+          caseNo: targetCase.case_no,
+          caseType: targetCase.case_type,
+          caseDes: targetCase.case_description,
+          clientName: targetCase.client_name,
+          contactNumber: targetCase.contact_number,
+          emailId: targetCase.email_id,
+          courtName: targetCase.court_name,
+          courtType: targetCase.court_type,
+          status: targetCase.status,
+          selectedAdvocate: targetCase.selected_advocate,
+          documents: updatedDocs.map(d => ({
+            documentType: d.documentType,
+            advocate: d.advocate || "",
+            file: d.file,
+            url: d.url || null,
+            uploadedAt: d.uploadedAt || d.uploaded_at || null,
+            uploaded_at: d.uploadedAt || d.uploaded_at || null,
+            view: d.view !== undefined ? d.view : true,
+            upload: d.upload !== undefined ? d.upload : true,
+            edit: d.edit !== undefined ? d.edit : true,
+            delete: d.delete !== undefined ? d.delete : true,
+          })),
+          nextHearingDate: targetCase.next_hearing_date,
+        };
+
+        const response = await fetch(`${API_BASE_URL}/case-management/${targetCase.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+          setSuccessToast("Document updated successfully");
+          handleCancelEdit();
+          fetchClientDocs();
+        } else {
+          const errData = await response.json().catch(() => null);
+          throw new Error(errData?.detail || "Failed to update document");
+        }
+      } catch (err) {
+        console.error("Update document failed:", err);
+        alert(err.message || "Failed to update document. Please try again.");
+      } finally {
+        setUploading(false);
+      }
+      return;
+    }
+
     if (!perms.add) {
       alert("You do not have permission to upload documents.");
       return;
@@ -244,6 +398,9 @@ export default function ClientDocuments() {
         setDocumentCategory("");
         setDocumentType("");
         setFile(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
         fetchClientDocs();
       } else {
         const errData = await response.json().catch(() => null);
@@ -414,9 +571,11 @@ export default function ClientDocuments() {
         <div className="space-y-4 sm:space-y-6 md:space-y-8 animate-in fade-in duration-200 w-full max-w-full min-w-0">
           
           {/* Upload Section — only shown if add is allowed */}
-          <div className="bg-white rounded-2xl border border-[#E2E8F0] p-4 sm:p-6 shadow-xs space-y-4 w-full max-w-full min-w-0">
+          <div ref={uploadFormRef} className="bg-white rounded-2xl border border-[#E2E8F0] p-4 sm:p-6 shadow-xs space-y-4 w-full max-w-full min-w-0">
             <div className="pb-2 border-b border-[#F1F5F9]">
-              <h2 className="text-base sm:text-lg md:text-xl font-extrabold text-[#0F172A]">Upload New Document</h2>
+              <h2 className="text-base sm:text-lg md:text-xl font-extrabold text-[#0F172A]">
+                Upload New Document
+              </h2>
             </div>
 
             {perms.add ? (
@@ -493,11 +652,26 @@ export default function ClientDocuments() {
                     <label className="block text-[11px] sm:text-xs font-extrabold text-[#64748B] uppercase tracking-wider mb-1.5">
                       Upload File <span className="text-rose-500">*</span>
                     </label>
-                    <input
-                      type="file"
-                      onChange={(e) => setFile(e.target.files[0] || null)}
-                      className="w-full max-w-full min-w-0 rounded-xl border border-[#E2E8F0] bg-white px-2.5 py-2 text-xs text-slate-600 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-[#2563EB] hover:file:bg-blue-100 cursor-pointer shadow-xs transition truncate"
-                    />
+                    <div className="relative flex items-center w-full min-w-0">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        id="client-doc-file-input"
+                        onChange={(e) => setFile(e.target.files[0] || null)}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="client-doc-file-input"
+                        className="w-full flex items-center gap-2 rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-xs font-semibold text-[#0F172A] hover:bg-slate-50 transition cursor-pointer shadow-xs min-w-0 overflow-hidden"
+                      >
+                        <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-[#2563EB] font-bold text-xs shrink-0 border border-blue-100">
+                          Choose File
+                        </span>
+                        <span className="truncate flex-1 text-slate-600 text-xs font-medium" title={file ? file.name : editingDoc ? editingDoc.fileName : "No file chosen"}>
+                          {file ? file.name : editingDoc ? editingDoc.fileName : "No file chosen"}
+                        </span>
+                      </label>
+                    </div>
                   </div>
                 </div>
 
@@ -613,6 +787,15 @@ export default function ClientDocuments() {
                                     <Eye size={16} />
                                   </button>
                                 )}
+                                {perms.edit && (
+                                  <button
+                                    onClick={() => handleEditClick(doc)}
+                                    className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-lg transition cursor-pointer border border-amber-200"
+                                    title="Edit Document Details"
+                                  >
+                                    <Pencil size={16} />
+                                  </button>
+                                )}
                                 {perms.delete ? (
                                   <button
                                     onClick={() => handleDelete(doc.id)}
@@ -656,17 +839,28 @@ export default function ClientDocuments() {
                             {perms.view && (
                               <button
                                 onClick={() => setSelectedDoc({ fileUrl: doc.fileUrl, title: doc.fileName || doc.name, badge: doc.type })}
-                                className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-[#2563EB] font-bold rounded-lg text-xs flex items-center gap-1 border border-blue-100 cursor-pointer"
+                                className="p-1.5 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-lg border border-blue-100 cursor-pointer transition-colors"
+                                title="View Document"
                               >
-                                <Eye size={12} /> View
+                                <Eye size={14} />
+                              </button>
+                            )}
+                            {perms.edit && (
+                              <button
+                                onClick={() => handleEditClick(doc)}
+                                className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-lg border border-amber-200 cursor-pointer transition-colors"
+                                title="Edit Document"
+                              >
+                                <Pencil size={14} />
                               </button>
                             )}
                             {perms.delete && (
                               <button
                                 onClick={() => handleDelete(doc.id)}
-                                className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs border border-rose-100 cursor-pointer"
+                                className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border border-rose-100 cursor-pointer transition-colors"
+                                title="Delete Document"
                               >
-                                <Trash size={13} />
+                                <Trash size={14} />
                               </button>
                             )}
                           </div>

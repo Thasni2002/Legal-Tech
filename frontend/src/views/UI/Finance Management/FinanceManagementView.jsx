@@ -9,6 +9,7 @@ import {
   Briefcase, Scale, Receipt, Landmark, Lock
 } from "lucide-react";
 import { jsPDF } from "jspdf";
+import { generateProfessionalInvoicePDF } from "@/utils/generateProfessionalInvoicePDF";
 import InvoiceHistoryView from "./InvoiceHistoryView";
 import { usePermissions } from "@/utils/usePermissions";
 import ConfirmModal from "@/components/common/ConfirmModal";
@@ -300,95 +301,9 @@ export default function CourtFeeCalView() {
   };
 
 
-
+  // PDF Generator for Receipt / Invoice
   const generateInvoicePDF = (inv) => {
-    const doc = new jsPDF();
-
-    // Header banner - only title and invoice info, no company name
-    doc.setFillColor(37, 99, 235);
-    doc.rect(0, 0, 210, 30, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.text("INVOICE REPORT", 20, 20);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text(`Invoice #${inv.id}  |  Date: ${new Date(inv.created_at).toLocaleDateString()}`, 148, 20, { align: "right" });
-
-    // Client Information
-    doc.setTextColor(15, 23, 42);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(13);
-    doc.text("Client Information", 20, 45);
-    doc.setDrawColor(226, 232, 240);
-    doc.setLineWidth(0.5);
-    doc.line(20, 48, 190, 48);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.text(`Name: ${inv.client_name || "N/A"}`, 20, 57);
-    doc.text(`Case No: ${inv.case_number || "N/A"}`, 20, 65);
-    doc.text(`Mobile: ${inv.mobile_number || "N/A"}`, 110, 57);
-    doc.text(`Email: ${inv.email || "N/A"}`, 110, 65);
-
-    // Fee Details
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(13);
-    doc.text("Fee Details", 20, 80);
-    doc.line(20, 83, 190, 83);
-    doc.setFillColor(248, 250, 252);
-    doc.rect(20, 88, 170, 8, "F");
-    doc.setFontSize(10);
-    doc.text("Description", 25, 93);
-    doc.text("Details", 95, 93);
-    doc.text("Amount", 165, 93);
-    doc.line(20, 96, 190, 96);
-    doc.setFont("helvetica", "normal");
-
-    let y = 104;
-    const rows = [
-      [`Advocate Fee (${inv.advocate_fee_case_type || "N/A"})`, inv.advocate_fee_remarks || "N/A", inv.advocate_fee_amount],
-    ];
-    rows.forEach(([name, detail, amount]) => {
-      doc.setFontSize(10);
-      doc.text(name, 25, y);
-      doc.text(detail, 95, y);
-      doc.text(`Rs. ${Number(amount || 0).toFixed(2)}`, 165, y);
-      y += 8;
-    });
-
-    // Totals section
-    doc.line(20, y, 190, y); y += 8;
-    doc.setFontSize(10);
-    doc.text("Subtotal:", 130, y);
-    doc.text(`Rs. ${Number(inv.subtotal || 0).toFixed(2)}`, 165, y); y += 7;
-    doc.text("GST (18%):", 130, y);
-    doc.text(`Rs. ${Number(inv.gst || 0).toFixed(2)}`, 165, y); y += 7;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.text("Grand Total:", 130, y);
-    doc.text(`Rs. ${Number(inv.grand_total || 0).toFixed(2)}`, 165, y);
-
-    // Payment Status badge — placed below grand total
-    y += 10;
-    const statusColor = inv.status.toLowerCase() === "paid"
-      ? [22, 163, 74]
-      : inv.status.toLowerCase() === "overdue"
-        ? [220, 38, 38]
-        : [217, 119, 6];
-    doc.setFillColor(...statusColor);
-    doc.roundedRect(130, y - 4, 50, 7, 2, 2, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(9);
-    doc.text(`Status: ${inv.status.toUpperCase()}`, 155, y + 0.5, { align: "center" });
-
-    // Footer
-    doc.setFont("helvetica", "italic");
-    doc.setFontSize(8);
-    doc.setTextColor(100, 116, 139);
-    doc.text("This document is a computer-generated invoice and does not require a physical signature.", 20, 275);
-    doc.text("Thank you for your trust in our services.", 20, 281);
-
-    return doc;
+    return generateProfessionalInvoicePDF(inv);
   };
 
   // Download PDF for a specific saved invoice from history

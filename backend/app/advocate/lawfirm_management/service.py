@@ -332,6 +332,22 @@ def create_assigned_case(
         db.commit()
         db.refresh(existing)
 
+        # Sync case_management_cases selected_advocate
+        try:
+            from app.advocate.case_management.models import Case as CaseMgmtCase
+            target_mgmt_case = None
+            if case_dict.get("case_id"):
+                target_mgmt_case = db.query(CaseMgmtCase).filter(CaseMgmtCase.id == case_dict.get("case_id")).first()
+            if not target_mgmt_case and case_dict.get("case_number"):
+                target_mgmt_case = db.query(CaseMgmtCase).filter(CaseMgmtCase.case_no == str(case_dict.get("case_number")).strip()).first()
+            if not target_mgmt_case and case_dict.get("case_title"):
+                target_mgmt_case = db.query(CaseMgmtCase).filter(CaseMgmtCase.case_title == str(case_dict.get("case_title")).strip()).first()
+            if target_mgmt_case and case_dict.get("advocate_name"):
+                target_mgmt_case.selected_advocate = case_dict.get("advocate_name")
+                db.commit()
+        except Exception as sync_err:
+            print(f"Sync case_management_cases selected_advocate warning: {sync_err}")
+
         c_title = existing.case_title or existing.case_name or ""
         if existing.advocate_name:
             notify_advocate_case_event(db, existing.advocate_name, c_title, "assigned")
@@ -349,6 +365,22 @@ def create_assigned_case(
     db.add(new_case)
     db.commit()
     db.refresh(new_case)
+
+    # Sync case_management_cases selected_advocate
+    try:
+        from app.advocate.case_management.models import Case as CaseMgmtCase
+        target_mgmt_case = None
+        if case_dict.get("case_id"):
+            target_mgmt_case = db.query(CaseMgmtCase).filter(CaseMgmtCase.id == case_dict.get("case_id")).first()
+        if not target_mgmt_case and case_dict.get("case_number"):
+            target_mgmt_case = db.query(CaseMgmtCase).filter(CaseMgmtCase.case_no == str(case_dict.get("case_number")).strip()).first()
+        if not target_mgmt_case and case_dict.get("case_title"):
+            target_mgmt_case = db.query(CaseMgmtCase).filter(CaseMgmtCase.case_title == str(case_dict.get("case_title")).strip()).first()
+        if target_mgmt_case and case_dict.get("advocate_name"):
+            target_mgmt_case.selected_advocate = case_dict.get("advocate_name")
+            db.commit()
+    except Exception as sync_err:
+        print(f"Sync case_management_cases selected_advocate warning: {sync_err}")
 
     c_title = new_case.case_title or new_case.case_name or ""
     if new_case.advocate_name:

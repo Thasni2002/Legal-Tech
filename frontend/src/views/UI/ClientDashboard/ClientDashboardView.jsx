@@ -28,6 +28,27 @@ const isActiveCase = (status) => {
   return ACTIVE_CASE_STATUSES.has(status.toLowerCase().trim());
 };
 
+const resolveAdvocateFullName = (rawName, advocatesData = []) => {
+  if (!rawName || rawName === "—" || rawName === "Not Assigned") return "";
+  const normSearch = rawName.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (!normSearch) return "";
+  const matchedAdvocate = Array.isArray(advocatesData)
+    ? advocatesData.find((adv) => {
+        const advName = (adv.advocate_name || adv.advocateName || "").toLowerCase().trim();
+        const advNormName = advName.replace(/[^a-z0-9]/g, "");
+        const advEmail = (adv.email_address || adv.emailAddress || "").toLowerCase().trim();
+        const advNormEmail = advEmail.replace(/[^a-z0-9]/g, "");
+
+        if (advName === rawName.toLowerCase().trim()) return true;
+        if (advEmail && (advEmail === rawName.toLowerCase().trim() || (advNormEmail && advNormEmail.includes(normSearch)))) return true;
+        if (advNormName && (advNormName === normSearch || advNormName.includes(normSearch) || normSearch.includes(advNormName))) return true;
+        return false;
+      })
+    : null;
+
+  return matchedAdvocate?.advocate_name || matchedAdvocate?.advocateName || rawName;
+};
+
 export default function ClientDashboard() {
   const [userName, setUserName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -59,36 +80,119 @@ export default function ClientDashboard() {
     const fetchAll = async () => {
       setUserName(displayName);
       try {
-        const [casesData, consultData, invoicesData, advocatesData] = await Promise.all([
+        const [casesData, consultData, invoicesData, advocatesData, assignedCasesData] = await Promise.all([
           safeFetch(`${BASE_URL}/case-management/`),
           safeFetch(`${BASE_URL}/consultations`),
           safeFetch(`${BASE_URL}/finance/invoices${username ? `?client_name=${encodeURIComponent(username)}` : ""}`),
           safeFetch(`${BASE_URL}/lawfirm-management/`),
+          safeFetch(`${BASE_URL}/lawfirm-management/assigned-cases`),
         ]);
 
         setInvoices(invoicesData);
 
-        // Filter cases for this client by email or client_name matching username/fullname
-        const clientCases = Array.isArray(casesData)
-          ? (user
-            ? casesData.filter((c) => {
-              const caseEmail = (c.email_id || "").toLowerCase().trim();
-              const userEmail = (user.email || "").toLowerCase().trim();
-              if (caseEmail && userEmail && caseEmail === userEmail) {
-                return true;
-              }
-              if (c.client_name) {
-                const normalizedName = c.client_name.toLowerCase().replace(/[^a-z0-9]/g, "");
-                const normalizedUsername = (user.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-                const normalizedFull = userFullName.toLowerCase().replace(/[^a-z0-9]/g, "");
-                if (normalizedName === normalizedUsername || (normalizedFull && normalizedName === normalizedFull)) {
-                  return true;
-                }
-              }
-              return false;
-            })
-            : casesData)
+        // Helper to check if a client name or email matches logged-in user
+        const isClientMatch = (clientNameField, emailField) => {
+          if (!user) return true;
+          if (emailField && user.email && emailField.toLowerCase().trim() === user.email.toLowerCase().trim()) {
+            return true;
+          }
+          if (!clientNameField) return false;
+          const normTarget = clientNameField.toLowerCase().replace(/[^a-z0-9]/g, "");
+          const normUsername = (user.username || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+          const normFull = userFullName.toLowerCase().replace(/[^a-z0-9]/g, "");
+          const normDisplayName = (user.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+          if (normUsername && (normTarget === normUsername || normTarget.includes(normUsername) || normUsername.includes(normTarget))) return true;
+          if (normFull && (normTarget === normFull || normTarget.includes(normFull) || normFull.includes(normTarget))) return true;
+          if (normDisplayName && (normTarget === normDisplayName || normTarget.includes(normDisplayName) || normDisplayName.includes(normTarget))) return true;
+          return false;
+        };
+
+        // Filter raw cases from case-management API
+        const rawClientCases = Array.isArray(casesData)
+          ? casesData.filter((c) => isClientMatch(c.client_name, c.email_id))
           : [];
+
+        // Also merge assigned cases from assigned_cases API if not already present
+        if (Array.isArray(assignedCasesData)) {
+          assignedCasesData.forEach((ac) => {
+            if (isClientMatch(ac.client_name || ac.clientName, ac.email_address || ac.emailAddress)) {
+              const acNo = ac.case_number || ac.case_no || "";
+              const acTitle = ac.case_title || ac.case_name || "Untitled Case";
+              const existingIndex = rawClientCases.findIndex((c) =>
+                (ac.case_id && c.id && String(ac.case_id) === String(c.id)) ||
+                (acNo && c.case_no && acNo.toLowerCase().trim() === c.case_no.toLowerCase().trim()) ||
+                (acTitle && c.case_title && acTitle.toLowerCase().trim() === c.case_title.toLowerCase().trim())
+              );
+
+              if (existingIndex === -1) {
+                rawClientCases.push({
+                  id: ac.case_id || `ac-${ac.id}`,
+                  case_no: acNo,
+                  case_title: acTitle,
+                  case_type: ac.case_type || "Legal Case",
+                  court_name: ac.practice_court || ac.court_name || "Civil Court",
+                  status: ac.status || "Active",
+                  selected_advocate: ac.advocate_name || ac.advocateName || "",
+                  secondary_advocate_name: ac.secondary_advocate_name || ac.secondaryAdvocateName || "",
+                  next_hearing_date: ac.due_date || ac.next_hearing_date || null,
+                  client_name: ac.client_name || username,
+                });
+              }
+            }
+          });
+        }
+
+        // Helper to normalize strings for robust comparison
+        const normStr = (str) => (str || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+        // Enrich cases with assigned advocate full names from advocatesData & assigned_cases table
+        const mappedClientCases = rawClientCases.map((c) => {
+          // Find all matching assignment records for this case in assigned_cases table
+          const matchingAssignedList = Array.isArray(assignedCasesData)
+            ? assignedCasesData.filter((ac) => {
+                if (ac.case_id && c.id && String(ac.case_id) === String(c.id)) return true;
+                const cNoNorm = normStr(c.case_no);
+                const cTitleNorm = normStr(c.case_title);
+                const acNoNorm = normStr(ac.case_number || ac.case_no);
+                const acTitleNorm = normStr(ac.case_title || ac.case_name);
+
+                if (cNoNorm && acNoNorm && cNoNorm === acNoNorm) return true;
+                if (cTitleNorm && acTitleNorm && (cTitleNorm === acTitleNorm || cTitleNorm.includes(acTitleNorm) || acTitleNorm.includes(cTitleNorm))) return true;
+                if (cNoNorm && acTitleNorm && (cNoNorm === acTitleNorm || cNoNorm.includes(acTitleNorm) || acTitleNorm.includes(cNoNorm))) return true;
+                return false;
+              })
+            : [];
+
+          // Sort by ID descending so the latest reassignment record comes first
+          matchingAssignedList.sort((a, b) => (b.id || 0) - (a.id || 0));
+          const matchedAssigned = matchingAssignedList[0] || null;
+
+          // Priority: matchedAssigned (latest reassigned Advocate B) takes precedence over original c.selected_advocate (Advocate A)
+          const primaryAdvRaw = matchedAssigned?.advocate_name || matchedAssigned?.advocateName || c.selected_advocate || c.advocate_name || "";
+          const secondaryAdvRaw = matchedAssigned?.secondary_advocate_name || matchedAssigned?.secondaryAdvocateName || c.secondary_advocate_name || c.secondaryAdvocateName || "";
+
+          const primaryFullName = resolveAdvocateFullName(primaryAdvRaw, advocatesData);
+          const secondaryFullName = resolveAdvocateFullName(secondaryAdvRaw, advocatesData);
+
+          let displayAdvocate = "";
+          if (primaryFullName && primaryFullName !== "Not Assigned" && primaryFullName !== "—") {
+            displayAdvocate = primaryFullName;
+            if (secondaryFullName && secondaryFullName !== primaryFullName && secondaryFullName !== "—") {
+              displayAdvocate += ` & ${secondaryFullName} (Standby)`;
+            }
+          } else if (secondaryFullName && secondaryFullName !== "—") {
+            displayAdvocate = secondaryFullName;
+          }
+
+          return {
+            ...c,
+            display_advocate: displayAdvocate,
+          };
+        });
+
+        // Filter: ONLY show cases in the table if an advocate name occurs / is assigned!
+        const clientCases = mappedClientCases.filter((c) => Boolean(c.display_advocate));
 
         setCases(clientCases);
 
@@ -98,7 +202,7 @@ export default function ClientDashboard() {
           .map((c) => ({
             case_title: c.case_title || "Untitled Case",
             court: c.court_name || "Civil Court",
-            advocate_name: c.selected_advocate || "—",
+            advocate_name: c.display_advocate || "—",
             date: c.next_hearing_date,
             time: "10:00 AM",
             status: "Scheduled",
@@ -182,20 +286,26 @@ export default function ClientDashboard() {
         // Show top 4
         setActivities(recentActivities.slice(0, 4));
 
-        // Derive unique assigned advocate names across cases (primary & secondary) and hearings
+        // Derive unique assigned advocate contact cards across cases (primary & secondary) and hearings
         const advocateNamesInCases = clientCases
-          .flatMap((c) => [c.selected_advocate, c.secondary_advocate_name, c.secondaryAdvocateName])
-          .filter((name) => name && name !== "—" && name !== "");
+          .flatMap((c) => [
+            ...(c.display_advocate ? c.display_advocate.split(/&|\(Standby\)/) : []),
+            c.selected_advocate,
+            c.secondary_advocate_name,
+            c.secondaryAdvocateName,
+          ])
+          .map((name) => (name || "").replace(/[^a-zA-Z0-9\s.]/g, "").trim())
+          .filter((name) => name && name !== "—" && name !== "Not Assigned" && name.toLowerCase() !== "standby");
 
         const advocateNamesInHearings = clientHearings
-          .map((h) => h.advocate_name)
-          .filter((name) => name && name !== "—" && name !== "");
+          .flatMap((h) => (h.advocate_name ? h.advocate_name.split(/&|\(Standby\)/) : []))
+          .map((name) => (name || "").replace(/[^a-zA-Z0-9\s.]/g, "").trim())
+          .filter((name) => name && name !== "—" && name !== "Not Assigned" && name.toLowerCase() !== "standby");
 
-        const uniqueAdvocateNames = Array.from(
-          new Set([...advocateNamesInCases, ...advocateNamesInHearings])
-        );
+        const allAdvocateRawNames = [...advocateNamesInCases, ...advocateNamesInHearings];
 
-        const advocatesList = uniqueAdvocateNames.map((name) => {
+        // Map raw advocate strings to full profile objects
+        const advocatesCardList = allAdvocateRawNames.map((name) => {
           const normSearch = name.toLowerCase().replace(/[^a-z0-9]/g, "");
           const matchedAdvocate = Array.isArray(advocatesData)
             ? advocatesData.find((adv) => {
@@ -238,7 +348,19 @@ export default function ClientDashboard() {
           }
         });
 
-        setAssignedAdvocates(advocatesList);
+        // Deduplicate advocate cards strictly by unique email address (fallback to name if email missing)
+        const uniqueAdvocatesMap = new Map();
+        advocatesCardList.forEach((adv) => {
+          const cleanEmail = (adv.email || "").toLowerCase().trim();
+          const cleanName = (adv.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+          const dedupeKey = (cleanEmail && cleanEmail !== "—") ? cleanEmail : cleanName;
+
+          if (dedupeKey && !uniqueAdvocatesMap.has(dedupeKey)) {
+            uniqueAdvocatesMap.set(dedupeKey, adv);
+          }
+        });
+
+        setAssignedAdvocates(Array.from(uniqueAdvocatesMap.values()));
       } catch (err) {
         console.error("ClientDashboard fetch error:", err);
       } finally {
@@ -336,20 +458,19 @@ export default function ClientDashboard() {
       {!loading && hearings.length > 0 && (
         <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xs border border-[#E2E8F0] p-4 sm:p-6 md:p-8 overflow-hidden w-full min-w-0">
           <h2 className="text-lg sm:text-2xl font-extrabold text-[#0F172A] mb-4 sm:mb-6">Upcoming Hearings</h2>
-          
+
           {/* Mobile Native Cards (< 640px) */}
           <div className="block sm:hidden space-y-3 w-full min-w-0">
             {hearings.map((h, i) => (
               <div key={i} className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2 w-full min-w-0">
                 <div className="flex items-start justify-between gap-2 min-w-0">
                   <h4 className="text-xs font-extrabold text-[#0F172A] break-words flex-1 min-w-0">{h.case_title}</h4>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border shrink-0 ${
-                    h.status === "Scheduled"
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border shrink-0 ${h.status === "Scheduled"
                       ? "bg-blue-50 text-blue-700 border-blue-200"
                       : h.status === "Completed"
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      : "bg-amber-50 text-amber-700 border-amber-200"
-                  }`}>
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : "bg-amber-50 text-amber-700 border-amber-200"
+                    }`}>
                     {h.status}
                   </span>
                 </div>
@@ -363,32 +484,31 @@ export default function ClientDashboard() {
           </div>
 
           {/* Desktop & Tablet Table (>= 640px) */}
-          <div className="hidden sm:block w-full overflow-x-auto rounded-2xl border border-[#E2E8F0] min-w-0">
-            <table className="min-w-full divide-y divide-[#E2E8F0] text-xs sm:text-sm">
+          <div className="hidden sm:block w-full rounded-2xl border border-[#E2E8F0] min-w-0 overflow-hidden shadow-2xs">
+            <table className="w-full text-xs md:text-sm table-fixed divide-y divide-[#E2E8F0]">
               <thead className="bg-[#F8FAFC]">
                 <tr>
-                  <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case</th>
-                  <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Court</th>
-                  <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Advocate</th>
-                  <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Hearing Date</th>
-                  <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                  <th className="p-2.5 sm:p-3 md:p-4 text-left text-[10.5px] md:text-xs font-bold text-[#475569] uppercase tracking-wider w-[26%]">Case</th>
+                  <th className="p-2.5 sm:p-3 md:p-4 text-left text-[10.5px] md:text-xs font-bold text-[#475569] uppercase tracking-wider w-[20%]">Court</th>
+                  <th className="p-2.5 sm:p-3 md:p-4 text-left text-[10.5px] md:text-xs font-bold text-[#475569] uppercase tracking-wider w-[22%]">Advocate</th>
+                  <th className="p-2.5 sm:p-3 md:p-4 text-left text-[10.5px] md:text-xs font-bold text-[#475569] uppercase tracking-wider w-[14%]">Hearing Date</th>
+                  <th className="p-2.5 sm:p-3 md:p-4 text-right text-[10.5px] md:text-xs font-bold text-[#475569] uppercase tracking-wider w-[18%]">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8F0] bg-white">
                 {hearings.map((h, i) => (
                   <tr key={i} className="hover:bg-[#F8FAFC] transition-colors">
-                    <td className="p-3.5 sm:p-4 text-xs sm:text-sm font-bold text-[#0F172A] whitespace-nowrap">{h.case_title}</td>
-                    <td className="p-3.5 sm:p-4 text-xs sm:text-sm text-[#475569] whitespace-nowrap">{h.court}</td>
-                    <td className="p-3.5 sm:p-4 text-xs sm:text-sm text-[#475569] whitespace-nowrap font-medium">{h.advocate_name || "—"}</td>
-                    <td className="p-3.5 sm:p-4 text-xs sm:text-sm text-[#475569] whitespace-nowrap font-bold">{fmtDate(h.date)}</td>
-                    <td className="p-3.5 sm:p-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                        h.status === "Scheduled"
+                    <td className="p-2.5 sm:p-3 md:p-4 text-xs md:text-sm font-bold text-[#0F172A] align-top break-words">{h.case_title}</td>
+                    <td className="p-2.5 sm:p-3 md:p-4 text-xs md:text-sm text-[#475569] align-top break-words">{h.court}</td>
+                    <td className="p-2.5 sm:p-3 md:p-4 text-xs md:text-sm text-[#475569] align-top break-words font-medium">{h.advocate_name || "—"}</td>
+                    <td className="p-2.5 sm:p-3 md:p-4 text-xs md:text-sm text-[#475569] align-top font-bold whitespace-nowrap">{fmtDate(h.date)}</td>
+                    <td className="p-2.5 sm:p-3 md:p-4 align-top text-right">
+                      <span className={`inline-flex items-center justify-center text-center px-2 py-0.5 md:px-2.5 md:py-1 rounded-full text-[9.5px] sm:text-[10px] md:text-xs font-extrabold uppercase tracking-tight leading-tight max-w-full break-words border ${h.status === "Scheduled"
                           ? "bg-blue-50 text-blue-700 border-blue-200"
                           : h.status === "Completed"
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : "bg-amber-50 text-amber-700 border-amber-200"
-                      }`}>
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}>
                         {h.status}
                       </span>
                     </td>
@@ -428,18 +548,17 @@ export default function ClientDashboard() {
                       <h4 className="text-xs font-extrabold text-[#0F172A] break-words">{item.case_title}</h4>
                       <p className="text-[10px] text-slate-500 font-semibold">{item.case_type}</p>
                     </div>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border shrink-0 ${
-                      item.status === "Active"
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border shrink-0 ${item.status === "Active"
                         ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                         : item.status === "Hearing"
-                        ? "bg-blue-50 text-blue-700 border-blue-200"
-                        : "bg-amber-50 text-amber-700 border-amber-200"
-                    }`}>
+                          ? "bg-blue-50 text-blue-700 border-blue-200"
+                          : "bg-amber-50 text-amber-700 border-amber-200"
+                      }`}>
                       {item.status}
                     </span>
                   </div>
                   <div className="text-[11px] text-slate-600 pt-1 border-t border-slate-200/60 space-y-1">
-                    <p>👤 Advocate: <strong className="text-slate-800">{item.selected_advocate || item.advocate_name || "Not Assigned"}</strong></p>
+                    <p>👤 Advocate: <strong className="text-slate-800">{item.display_advocate || "Not Assigned"}</strong></p>
                     <p>🏛️ Court: <strong className="text-slate-800">{item.court_name}</strong></p>
                   </div>
                 </div>
@@ -447,33 +566,32 @@ export default function ClientDashboard() {
             </div>
 
             {/* Desktop & Tablet Table (>= 640px) */}
-            <div className="hidden sm:block w-full overflow-x-auto rounded-2xl border border-[#E2E8F0] min-w-0">
-              <table className="min-w-full divide-y divide-[#E2E8F0] text-xs sm:text-sm">
+            <div className="hidden sm:block w-full rounded-2xl border border-[#E2E8F0] min-w-0 overflow-hidden shadow-2xs">
+              <table className="w-full text-xs md:text-sm table-fixed divide-y divide-[#E2E8F0]">
                 <thead className="bg-[#F8FAFC]">
                   <tr>
-                    <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Title / Type</th>
-                    <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Advocate</th>
-                    <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Court</th>
-                    <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                    <th className="p-2.5 sm:p-3 md:p-4 text-left text-[10.5px] md:text-xs font-bold text-[#475569] uppercase tracking-wider w-[28%]">Title / Type</th>
+                    <th className="p-2.5 sm:p-3 md:p-4 text-left text-[10.5px] md:text-xs font-bold text-[#475569] uppercase tracking-wider w-[24%]">Advocate</th>
+                    <th className="p-2.5 sm:p-3 md:p-4 text-left text-[10.5px] md:text-xs font-bold text-[#475569] uppercase tracking-wider w-[22%]">Court</th>
+                    <th className="p-2.5 sm:p-3 md:p-4 text-right text-[10.5px] md:text-xs font-bold text-[#475569] uppercase tracking-wider w-[26%]">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0] bg-white">
                   {cases.map((item, index) => (
                     <tr key={index} className="hover:bg-[#F8FAFC] transition-colors">
-                      <td className="p-3.5 sm:p-4 text-xs sm:text-sm text-[#475569] whitespace-nowrap font-medium">
-                        <span className="block font-bold text-[#0F172A]">{item.case_title}</span>
-                        <span className="text-[11px] text-[#64748B]">{item.case_type}</span>
+                      <td className="p-2.5 sm:p-3 md:p-4 text-xs md:text-sm text-[#475569] font-medium align-top break-words">
+                        <span className="block font-bold text-[#0F172A] leading-snug">{item.case_title}</span>
+                        <span className="text-[11px] text-[#64748B] block mt-0.5">{item.case_type}</span>
                       </td>
-                      <td className="p-3.5 sm:p-4 text-xs sm:text-sm text-[#475569] whitespace-nowrap">{item.selected_advocate || item.advocate_name || "Not Assigned"}</td>
-                      <td className="p-3.5 sm:p-4 text-xs sm:text-sm text-[#475569] whitespace-nowrap">{item.court_name}</td>
-                      <td className="p-3.5 sm:p-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                          item.status === "Active"
+                      <td className="p-2.5 sm:p-3 md:p-4 text-xs md:text-sm text-[#475569] align-top break-words font-medium">{item.display_advocate || "Not Assigned"}</td>
+                      <td className="p-2.5 sm:p-3 md:p-4 text-xs md:text-sm text-[#475569] align-top break-words">{item.court_name}</td>
+                      <td className="p-2.5 sm:p-3 md:p-4 align-top text-right">
+                        <span className={`inline-flex items-center justify-center text-center px-2 py-0.5 md:px-2.5 md:py-1 rounded-full text-[9.5px] sm:text-[10px] md:text-xs font-extrabold uppercase tracking-tight leading-tight max-w-full break-words border ${item.status === "Active"
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                             : item.status === "Hearing"
-                            ? "bg-blue-50 text-blue-700 border-blue-200"
-                            : "bg-amber-50 text-amber-700 border-amber-200"
-                        }`}>
+                              ? "bg-blue-50 text-blue-700 border-blue-200"
+                              : "bg-amber-50 text-amber-700 border-amber-200"
+                          }`}>
                           {item.status}
                         </span>
                       </td>
@@ -516,13 +634,12 @@ export default function ClientDashboard() {
                       Meeting Type: {item.type}
                     </span>
                   </div>
-                  <span className={`self-start sm:self-auto px-2.5 py-0.5 rounded-full text-[10.5px] font-extrabold uppercase border ${
-                    item.status === "Completed"
+                  <span className={`self-start sm:self-auto px-2.5 py-0.5 rounded-full text-[10.5px] font-extrabold uppercase border ${item.status === "Completed"
                       ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                       : item.status === "In Progress"
-                      ? "bg-blue-50 text-blue-700 border-blue-200"
-                      : "bg-amber-50 text-amber-700 border-amber-200"
-                  }`}>
+                        ? "bg-blue-50 text-blue-700 border-blue-200"
+                        : "bg-amber-50 text-amber-700 border-amber-200"
+                    }`}>
                     {item.status}
                   </span>
                 </div>
@@ -573,7 +690,7 @@ export default function ClientDashboard() {
             </div>
             <span>Assigned Advocates</span>
           </h2>
-          
+
           <div className="space-y-4">
             {assignedAdvocates.map((adv, index) => (
               <div key={index} className="border border-[#E2E8F0] rounded-2xl p-4 sm:p-5 bg-white shadow-2xs">

@@ -406,33 +406,22 @@ export default function ClientConsultationHistoryView() {
                       <p>💬 Type: <strong>{item.type}</strong> ({item.duration || "30 mins"})</p>
                       {item.summary && <p className="text-slate-500 italic">Notes: &quot;{item.summary}&quot;</p>}
                     </div>
-
-                    <div className="flex justify-end pt-2 border-t border-slate-200/60">
-                      <button
-                        onClick={() => handleDeleteConsultation(item.id)}
-                        className="px-2.5 py-1 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 rounded-lg text-[11px] font-bold flex items-center gap-1 cursor-pointer"
-                      >
-                        <Trash2 size={12} />
-                        <span>Delete</span>
-                      </button>
-                    </div>
                   </div>
                 ))}
               </div>
 
               {/* Desktop & Tablet Table (>= 640px) */}
-              <div className="hidden sm:block w-full overflow-x-auto rounded-xl border border-[#E2E8F0] min-w-0">
-                <table className="min-w-full divide-y divide-[#E2E8F0] text-xs sm:text-sm">
+              <div className="hidden sm:block w-full rounded-2xl border border-[#E2E8F0] min-w-0 overflow-hidden shadow-2xs">
+                <table className="w-full text-xs md:text-sm table-fixed divide-y divide-[#E2E8F0]">
                   <thead className="bg-[#F8FAFC]">
                     <tr>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Client</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Date</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Time</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Type</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Duration</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Status</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Summary</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Action</th>
+                      <th className="p-2 sm:p-3 md:p-4 text-left text-[10px] md:text-xs font-bold text-[#64748B] uppercase tracking-wider w-[14%]">Client</th>
+                      <th className="p-2 sm:p-3 md:p-4 text-left text-[10px] md:text-xs font-bold text-[#64748B] uppercase tracking-wider w-[13%]">Date</th>
+                      <th className="p-2 sm:p-3 md:p-4 text-left text-[10px] md:text-xs font-bold text-[#64748B] uppercase tracking-wider w-[11%]">Time</th>
+                      <th className="p-2 sm:p-3 md:p-4 text-left text-[10px] md:text-xs font-bold text-[#64748B] uppercase tracking-wider w-[13%]">Type</th>
+                      <th className="p-2 sm:p-3 md:p-4 text-left text-[10px] md:text-xs font-bold text-[#64748B] uppercase tracking-wider w-[11%]">Duration</th>
+                      <th className="p-2 sm:p-3 md:p-4 text-center text-[10px] md:text-xs font-bold text-[#64748B] uppercase tracking-wider w-[22%]">Status</th>
+                      <th className="p-2 sm:p-3 md:p-4 text-left text-[10px] md:text-xs font-bold text-[#64748B] uppercase tracking-wider w-[16%]">Summary</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E2E8F0] bg-white">
@@ -449,42 +438,31 @@ export default function ClientConsultationHistoryView() {
                           <React.Fragment key={item.id}>
                             {showHeader && (
                               <tr className="bg-[#F8FAFC] border-t border-b border-[#E2E8F0]">
-                                <td colSpan={8} className="py-2.5 px-4 text-xs font-extrabold text-[#334155] tracking-wider uppercase border-l-4 border-l-[#2563EB]">
+                                <td colSpan={7} className="py-2.5 px-4 text-xs font-extrabold text-[#334155] tracking-wider uppercase border-l-4 border-l-[#2563EB]">
                                   {getBookedHeaderLabel(item.created_at || item.date)}
                                 </td>
                               </tr>
                             )}
                             <tr className="hover:bg-[#F8FAFC] transition-colors">
-                              <td className="p-3.5 sm:p-4 font-bold text-[#0F172A] capitalize whitespace-nowrap">{item.client_name || item.client}</td>
-                              <td className="p-3.5 sm:p-4 text-[#475569] whitespace-nowrap">{item.date}</td>
-                              <td className="p-3.5 sm:p-4 text-[#475569] whitespace-nowrap font-medium">{item.time || "N/A"}</td>
-                              <td className="p-3.5 sm:p-4 text-[#475569] whitespace-nowrap">{item.type}</td>
-                              <td className="p-3.5 sm:p-4 text-[#475569] whitespace-nowrap">{item.duration || "30 mins"}</td>
-                              <td className="p-3.5 sm:p-4 whitespace-nowrap">
-                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                                  item.status === 'Completed'
-                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                    : item.status === 'Approved'
+                              <td className="p-2 sm:p-3 md:p-4 text-xs md:text-sm font-bold text-[#0F172A] capitalize break-words align-top">{item.client_name || item.client}</td>
+                              <td className="p-2 sm:p-3 md:p-4 text-xs md:text-sm text-[#475569] whitespace-nowrap align-top">{item.date}</td>
+                              <td className="p-2 sm:p-3 md:p-4 text-xs md:text-sm text-[#475569] whitespace-nowrap font-medium align-top">{item.time || "N/A"}</td>
+                              <td className="p-2 sm:p-3 md:p-4 text-xs md:text-sm text-[#475569] break-words align-top">{item.type}</td>
+                              <td className="p-2 sm:p-3 md:p-4 text-xs md:text-sm text-[#475569] whitespace-nowrap align-top">{item.duration || "30 mins"}</td>
+                              <td className="p-2 sm:p-3 md:p-4 align-top text-center overflow-hidden">
+                                <span className={`inline-flex items-center justify-center text-center gap-1 px-2 py-0.5 md:px-2.5 md:py-1 rounded-full text-[9px] sm:text-[10px] md:text-xs font-extrabold uppercase tracking-tight max-w-full leading-tight border ${
+                                  item.status === 'Completed' || item.status === 'Approved'
                                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                     : item.status === 'Rescheduled'
                                     ? 'bg-amber-50 text-amber-700 border border-amber-200'
                                     : 'bg-slate-50 text-slate-700 border border-slate-200'
                                 }`}>
-                                  <CheckCircle2 size={11} />
-                                  {item.status}
+                                  <CheckCircle2 size={12} className="shrink-0" />
+                                  <span>{item.status}</span>
                                 </span>
                               </td>
-                              <td className="p-3.5 sm:p-4 text-[#475569] max-w-xs truncate" title={item.summary || "No notes yet."}>
+                              <td className="p-2 sm:p-3 md:p-4 text-xs md:text-sm text-[#475569] break-words align-top" title={item.summary || "No notes yet."}>
                                 {item.summary || "No notes yet."}
-                              </td>
-                              <td className="p-3.5 sm:p-4 whitespace-nowrap">
-                                <button
-                                  onClick={() => handleDeleteConsultation(item.id)}
-                                  className="px-3 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 hover:border-rose-200 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
-                                >
-                                  <Trash2 size={13} />
-                                  <span>Delete</span>
-                                </button>
                               </td>
                             </tr>
                           </React.Fragment>
