@@ -428,11 +428,6 @@ def seed_roles_and_permissions(db: Session) -> None:
                     delete=actions["delete"]
                 )
                 db.add(db_perm)
-            elif role_data["id"] in ["clerk", "senioradvocate"] and actions.get("view"):
-                exists.view = True
-                exists.add = actions.get("add", True)
-                exists.edit = actions.get("edit", True)
-                exists.delete = actions.get("delete", True)
 
     # Clean up any obsolete permissions not in BASE_MODULES
     db.query(Permission).filter(~Permission.module.in_(BASE_MODULES)).delete(synchronize_session=False)

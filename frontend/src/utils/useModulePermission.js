@@ -103,7 +103,11 @@ export default function useModulePermission(moduleKey) {
   useEffect(() => {
     const handleUpdate = () => resolve();
     window.addEventListener("permissions_updated", handleUpdate);
-    return () => window.removeEventListener("permissions_updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("permissions_updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
   }, [resolve]);
 
   return { perms, loading, user };
