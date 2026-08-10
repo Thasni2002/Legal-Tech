@@ -51,6 +51,7 @@ const ALL_MODULES = [
   "Format Physical File",
   "Clerk Documents",
   "Clerk Cases",
+  "Clerk Assigned Tasks",
   "Leave Management",
   "Junior Leave",
   "Clerk Leave",
@@ -107,6 +108,7 @@ const SENIOR_JUNIOR_MODULES = [
     category: "Clerk Features",
     modules: [
       { key: "Clerk Dashboard", label: "Dashboard (Clerk)" },
+      { key: "Clerk Assigned Tasks", label: "Assigned Tasks (Clerk)" },
       { key: "Court Visit", label: "Court Visit" },
       { key: "Format Physical File", label: "Format Physical File" },
       { key: "Clerk Documents", label: "Documents (Clerk)" },
@@ -272,7 +274,11 @@ export default function UsersView() {
   const getUserDisplayName = (u) => {
     if (!u) return "";
     const fn = (u.firstName || u.first_name || "").trim();
-    const ln = (u.lastName || u.last_name || "").trim();
+    let ln = (u.lastName || u.last_name || "").trim();
+    const roleNorm = (u.role || "").toLowerCase();
+    if (ln.toLowerCase() === "advocate" && (roleNorm.includes("clerk") || roleNorm.includes("client") || fn.toLowerCase() === "abinav" || fn.toLowerCase() === "alan")) {
+      ln = "";
+    }
     const full = [fn, ln].filter(Boolean).join(" ").trim();
     return full || u.username || "User";
   };
@@ -948,7 +954,7 @@ export default function UsersView() {
                     if (adv) {
                       const nameParts = (adv.advocateName || adv.advocate_name || "").trim().split(" ");
                       setFirstName(nameParts[0] || "");
-                      setLastName(nameParts.slice(1).join(" ") || "Advocate");
+                      setLastName(nameParts.slice(1).join(" "));
                       setPhoneNumber(adv.phoneNumber || adv.phone_number || "");
                       setEmailAddress(adv.emailAddress || adv.email_address || "");
                       const baseUsername = (adv.advocateName || adv.advocate_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");

@@ -225,6 +225,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, onModuleCountChan
         { name: "Court Visit", path: "/clerk/court-visit", icon: Scale, moduleKey: "Court Visit" },
         { name: "Format Physical File", path: "/clerk/format-physical-file", icon: Folder, moduleKey: "Format Physical File" },
         { name: "Documents", path: "/clerk/documents", icon: FileText, moduleKey: "Clerk Documents" },
+        { name: "Leave", path: "/clerk/leave", icon: Calendar, moduleKey: "Clerk Leave" },
       ],
     },
     {

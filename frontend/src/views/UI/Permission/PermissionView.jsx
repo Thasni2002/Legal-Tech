@@ -259,6 +259,7 @@ const DEFAULT_PERMISSIONS = {
     "Users": { view: false, add: false, edit: false, delete: false },
     "Permissions": { view: false, add: false, edit: false, delete: false },
     "Clerk Dashboard": { view: true, add: true, edit: true, delete: true },
+    "Clerk Assigned Tasks": { view: true, add: true, edit: true, delete: true },
     "Court Visit": { view: true, add: true, edit: true, delete: true },
     "Format Physical File": { view: true, add: true, edit: true, delete: true },
     "Clerk Documents": { view: true, add: true, edit: true, delete: true },

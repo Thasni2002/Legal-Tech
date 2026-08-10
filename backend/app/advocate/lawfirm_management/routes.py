@@ -125,8 +125,8 @@ async def add_advocate(
             
             # Extract first and last names
             name_parts = (new_adv.advocate_name or "").strip().split(" ")
-            first_name = name_parts[0] if name_parts else "Junior"
-            last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else "Advocate"
+            first_name = name_parts[0] if name_parts else "Staff"
+            last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
             
             # Generate username
             username = (new_adv.advocate_name or "").lower().replace(" ", "")
