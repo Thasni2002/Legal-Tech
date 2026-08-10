@@ -72,8 +72,8 @@ export default function LayoutWrapper({ children }) {
     // Run verification on mount/navigation
     verifyUser();
 
-    // Run verification periodically (every 10 seconds)
-    const interval = setInterval(verifyUser, 10000);
+    // Run verification periodically (every 60 seconds)
+    const interval = setInterval(verifyUser, 60000);
 
     return () => clearInterval(interval);
   }, [pathname, isAuthPage, router]);

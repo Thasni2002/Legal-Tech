@@ -408,13 +408,41 @@ export default function ClientConsultationView() {
     item => item.status === "Pending"
   );
 
-  // Only confirmed/approved/scheduled meetings appear in Upcoming Meetings
+  const isFutureOrTodayMeeting = (item) => {
+    if (!item || !item.date) return true;
+    try {
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+
+      let meetingDate = new Date(item.date);
+      if (isNaN(meetingDate.getTime())) {
+        const parts = String(item.date).split(/[-/.]/);
+        if (parts.length === 3) {
+          if (parts[0].length === 4) {
+            meetingDate = new Date(parts[0], parts[1] - 1, parts[2]);
+          } else {
+            meetingDate = new Date(parts[2], parts[1] - 1, parts[0]);
+          }
+        }
+      }
+
+      if (isNaN(meetingDate.getTime())) return true;
+      meetingDate.setHours(0, 0, 0, 0);
+
+      return meetingDate.getTime() >= now.getTime();
+    } catch (e) {
+      return true;
+    }
+  };
+
+  // Only confirmed/approved/scheduled future/today meetings appear in Upcoming Meetings
   // Rescheduled & Pending Client are handled in the notification action cards above
   const upcomingMeetings = appointments.filter(
     item =>
-      item.status === "Approved" ||
-      item.status === "Scheduled" ||
-      item.status === "Pending Advocate"
+      (item.status === "Approved" ||
+       item.status === "Scheduled" ||
+       item.status === "Pending Advocate") &&
+      isFutureOrTodayMeeting(item)
   );
 
   return (
@@ -958,7 +986,7 @@ export default function ClientConsultationView() {
             No upcoming meetings.
           </div>
         ) : (() => {
-          const itemsPerPage = 5;
+          const itemsPerPage = 7;
           const upcomingTotalPages = Math.ceil(upcomingMeetings.length / itemsPerPage) || 1;
           const activeUpcomingPage = Math.min(upcomingPage, upcomingTotalPages);
           const startIndex = (activeUpcomingPage - 1) * itemsPerPage;
@@ -1004,24 +1032,24 @@ export default function ClientConsultationView() {
               </div>
 
               {/* Desktop & Tablet Table (>= 640px) */}
-              <div className="hidden sm:block w-full overflow-x-auto rounded-xl border border-[#E2E8F0] min-w-0">
-                <table className="min-w-full divide-y divide-[#E2E8F0] text-xs sm:text-sm">
+              <div className="hidden sm:block w-full rounded-2xl border border-[#E2E8F0] min-w-0 overflow-hidden shadow-2xs">
+                <table className="w-full text-xs md:text-sm table-fixed divide-y divide-[#E2E8F0]">
                   <thead className="bg-[#F8FAFC]">
                     <tr>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Date</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Time</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Type</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Google Meet Link</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#64748B] uppercase tracking-wider whitespace-nowrap">Status</th>
+                      <th className="p-2.5 sm:p-3 md:p-4 text-left text-[10.5px] md:text-xs font-bold text-[#64748B] uppercase tracking-wider w-[20%]">Date</th>
+                      <th className="p-2.5 sm:p-3 md:p-4 text-left text-[10.5px] md:text-xs font-bold text-[#64748B] uppercase tracking-wider w-[14%]">Time</th>
+                      <th className="p-2.5 sm:p-3 md:p-4 text-left text-[10.5px] md:text-xs font-bold text-[#64748B] uppercase tracking-wider w-[18%]">Type</th>
+                      <th className="p-2.5 sm:p-3 md:p-4 text-left text-[10.5px] md:text-xs font-bold text-[#64748B] uppercase tracking-wider w-[26%]">Google Meet Link</th>
+                      <th className="p-2.5 sm:p-3 md:p-4 text-right text-[10.5px] md:text-xs font-bold text-[#64748B] uppercase tracking-wider w-[22%]">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E2E8F0] bg-white">
                     {paginatedUpcomingMeetings.map((item) => (
                       <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors">
-                        <td className="p-3.5 sm:p-4 text-[#475569] font-medium whitespace-nowrap">{formatDateString(item.date)}</td>
-                        <td className="p-3.5 sm:p-4 text-[#475569] font-medium whitespace-nowrap">{formatTimeString(item.time)}</td>
-                        <td className="p-3.5 sm:p-4 text-[#475569] whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                        <td className="p-2.5 sm:p-3 md:p-4 text-[#475569] font-medium whitespace-nowrap">{formatDateString(item.date)}</td>
+                        <td className="p-2.5 sm:p-3 md:p-4 text-[#475569] font-medium whitespace-nowrap">{formatTimeString(item.time)}</td>
+                        <td className="p-2.5 sm:p-3 md:p-4 text-[#475569] min-w-0">
+                          <span className={`inline-flex items-center px-2 py-0.5 md:px-2.5 md:py-1 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider max-w-full truncate ${
                             item.type === "Video Call" || item.type === "Video Consultation"
                               ? "bg-blue-50 text-blue-700 border border-blue-200"
                               : item.type === "Chat" || item.type === "Chat Consultation"
@@ -1031,29 +1059,29 @@ export default function ClientConsultationView() {
                             {item.type}
                           </span>
                         </td>
-                        <td className="p-3.5 sm:p-4 whitespace-nowrap">
+                        <td className="p-2.5 sm:p-3 md:p-4 min-w-0">
                           {item.meeting_link ? (
                             <a
                               href={item.meeting_link.startsWith("http") ? item.meeting_link : `https://${item.meeting_link}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[#2563EB] hover:text-[#1D4ED8] font-bold inline-flex items-center gap-1.5 bg-blue-50/70 border border-blue-200 px-3 py-1 rounded-lg transition-colors text-xs"
+                              className="text-[#2563EB] hover:text-[#1D4ED8] font-bold inline-flex items-center gap-1.5 bg-blue-50/70 border border-blue-200 px-2.5 py-1 rounded-lg transition-colors text-[11px] md:text-xs truncate max-w-full"
                             >
-                              <Video size={14} />
-                              <span>Open Google Meet</span>
+                              <Video size={13} className="shrink-0" />
+                              <span className="truncate">Open Google Meet</span>
                             </a>
                           ) : (
                             <span className="text-[#94A3B8] font-medium">-</span>
                           )}
                         </td>
-                        <td className="p-3.5 sm:p-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                        <td className="p-2.5 sm:p-3 md:p-4 align-top text-right">
+                          <span className={`inline-flex items-center justify-center text-center gap-1 px-2.5 py-1 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider border whitespace-nowrap ${
                             item.status === "Approved" || item.status === "Scheduled"
                               ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                               : "bg-amber-50 text-amber-700 border border-amber-200"
                           }`}>
-                            <CheckCircle2 size={11} />
-                            {item.status}
+                            <CheckCircle2 size={12} className="shrink-0" />
+                            <span>{item.status}</span>
                           </span>
                         </td>
                       </tr>
