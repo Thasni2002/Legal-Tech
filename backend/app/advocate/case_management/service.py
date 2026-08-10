@@ -616,3 +616,296 @@ User Question:
         return {"response": response_text}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI Assistant failed: {str(e)}")
+
+
+def get_case_timeline(db: Session, case_id: int, current_user=None):
+    case = db.query(Case).filter(Case.id == case_id).first()
+    if not case:
+        return []
+
+    # SECURITY Check for confidential cases
+    if case.is_confidential:
+        owner_id = getattr(current_user, 'id', None)
+        user_role = (getattr(current_user, 'role', '') or '').lower()
+        if case.confidential_owner_id != owner_id and 'admin' not in user_role:
+            return []
+
+    events = []
+
+    # 1. Case Created / Case Start Event (Earliest / Top event)
+    created_dt = case.created_at or datetime.utcnow()
+    created_date_str = created_dt.strftime("%Y-%m-%d")
+    created_time_str = created_dt.strftime("%I:%M %p")
+
+    events.append({
+        "id": f"evt-start-{case.id}",
+        "case_id": case.id,
+        "type": "case_created",
+        "category": "Case",
+        "title": "Case Created & Started",
+        "description": f"Initial onboarding and case setup for '{case.case_title}' (Case #{case.case_no}) in {case.court_name or 'Court'}.",
+        "date": created_date_str,
+        "time": created_time_str,
+        "timestamp": created_dt.isoformat(),
+        "actor": case.selected_advocate or "Senior Advocate / Law Firm",
+        "status": case.status or "Active",
+        "metadata": {
+            "case_no": case.case_no,
+            "cnr_number": case.cnr_number or "N/A",
+            "client_name": case.client_name,
+            "contact_number": case.contact_number or "N/A",
+            "email_id": case.email_id or "N/A",
+            "advocate_assigned": case.selected_advocate or "Unassigned",
+            "case_type": case.case_type or "General",
+            "court_name": case.court_name or "N/A",
+            "court_type": case.court_type or "N/A",
+            "initial_description": case.case_description or "Case registered in Legal Tech system."
+        }
+    })
+
+    # 2. Advocate Assignment / Lawfirm Assignments & Updates
+    try:
+        from app.advocate.lawfirm_management.models import AssignedCase
+        assignments = db.query(AssignedCase).filter(
+            (AssignedCase.case_id == case.id) |
+            (AssignedCase.case_id.is_(None) & (AssignedCase.case_number == case.case_no))
+        ).all()
+        for idx, ac in enumerate(assignments):
+            ac_dt = getattr(ac, 'created_at', None) or created_dt
+            events.append({
+                "id": f"evt-assign-{ac.id}",
+                "case_id": case.id,
+                "type": "advocate_assigned",
+                "category": "Approval",
+                "title": "Advocate Assigned to Case",
+                "description": f"Advocate '{ac.advocate_name}' assigned to lead Case #{case.case_no}.",
+                "date": ac_dt.strftime("%Y-%m-%d"),
+                "time": ac_dt.strftime("%I:%M %p"),
+                "timestamp": ac_dt.isoformat(),
+                "actor": "Law Firm Management",
+                "status": ac.status or "Active",
+                "metadata": {
+                    "lead_advocate": ac.advocate_name,
+                    "secondary_advocate": ac.secondary_advocate_name or "None",
+                    "practice_court": ac.practice_court or case.court_name,
+                    "assignment_notes": ac.assignment_notes or "Assigned via Law Firm Management."
+                }
+            })
+    except Exception:
+        pass
+
+    # 3. Client & Advocate Information Updates
+    if case.updated_at and case.updated_at != case.created_at:
+        events.append({
+            "id": f"evt-info-update-{case.id}",
+            "case_id": case.id,
+            "type": "case_info_updated",
+            "category": "Status Update",
+            "title": "Case Information Updated",
+            "description": f"Client details, contact info ({case.contact_number}), or case specifications were updated.",
+            "date": case.updated_at.strftime("%Y-%m-%d"),
+            "time": case.updated_at.strftime("%I:%M %p"),
+            "timestamp": case.updated_at.isoformat(),
+            "actor": case.selected_advocate or "System Admin",
+            "status": "Updated",
+            "metadata": {
+                "client_name": case.client_name,
+                "contact_number": case.contact_number,
+                "email_id": case.email_id,
+                "client_address": case.client_address or "N/A",
+                "client_district": case.client_district or "N/A",
+                "court_name": case.court_name
+            }
+        })
+
+    # 4. Documents Uploaded
+    raw_docs = []
+    if isinstance(case.documents, str):
+        try:
+            raw_docs = json.loads(case.documents or "[]")
+        except Exception:
+            raw_docs = []
+    elif isinstance(case.documents, list):
+        raw_docs = case.documents
+
+    for idx, doc in enumerate(raw_docs):
+        doc_file = doc.get("file", f"Document_{idx+1}")
+        doc_type = doc.get("documentType", "Uploaded Document")
+        doc_adv = doc.get("advocate", case.selected_advocate or "Advocate")
+        doc_date = doc.get("date", created_date_str)
+
+        events.append({
+            "id": f"evt-doc-{idx}",
+            "case_id": case.id,
+            "type": "document_uploaded",
+            "category": "Document",
+            "title": f"Document Uploaded: {doc_type}",
+            "description": f"File '{doc_file}' was added to case repository.",
+            "date": doc_date,
+            "time": "10:00 AM",
+            "timestamp": f"{doc_date}T10:00:00",
+            "actor": doc_adv,
+            "status": "Verified" if doc.get("password") else "Uploaded",
+            "metadata": {
+                "file_name": doc_file,
+                "document_type": doc_type,
+                "uploaded_by": doc_adv,
+                "url": doc.get("url", ""),
+                "has_password": bool(doc.get("password"))
+            }
+        })
+
+    # 5. Advocate Notes
+    try:
+        from .models import CaseNote
+        notes = db.query(CaseNote).filter(CaseNote.case_id == case.id).all()
+        for note in notes:
+            n_dt = note.created_at or created_dt
+            events.append({
+                "id": f"evt-note-{note.id}",
+                "case_id": case.id,
+                "type": "case_note_added",
+                "category": "Note",
+                "title": f"Case Note: {note.category}",
+                "description": note.text,
+                "date": n_dt.strftime("%Y-%m-%d"),
+                "time": n_dt.strftime("%I:%M %p"),
+                "timestamp": n_dt.isoformat(),
+                "actor": note.author or "Advocate",
+                "status": note.category,
+                "metadata": {
+                    "note_id": note.id,
+                    "category": note.category,
+                    "text": note.text,
+                    "author": note.author or "Advocate"
+                }
+            })
+    except Exception:
+        pass
+
+    # 6. AI Generated Documents
+    try:
+        from .models import AIDocumentHistory
+        ai_docs = db.query(AIDocumentHistory).filter(AIDocumentHistory.case_id == case.id).all()
+        for ai_doc in ai_docs:
+            a_dt = ai_doc.created_at or created_dt
+            events.append({
+                "id": f"evt-aidoc-{ai_doc.id}",
+                "case_id": case.id,
+                "type": "ai_document_generated",
+                "category": "Document",
+                "title": "AI Legal Document Generated",
+                "description": f"AI Legal Assistant generated document draft based on prompt: '{ai_doc.prompt[:60]}...'",
+                "date": a_dt.strftime("%Y-%m-%d"),
+                "time": a_dt.strftime("%I:%M %p"),
+                "timestamp": a_dt.isoformat(),
+                "actor": "AI Legal Assistant",
+                "status": "Generated",
+                "metadata": {
+                    "prompt": ai_doc.prompt,
+                    "content": ai_doc.content,
+                    "doc_id": ai_doc.id
+                }
+            })
+    except Exception:
+        pass
+
+    # 7. Consultations / Discussions (Client & Advocate)
+    try:
+        from app.advocate.consultations.models import Consultation
+        consults = db.query(Consultation).filter(
+            (func.lower(Consultation.client_name) == func.lower(case.client_name)) |
+            (Consultation.issue.ilike(f"%{case.case_no}%"))
+        ).all()
+        for c in consults:
+            c_dt = getattr(c, 'created_at', None) or created_dt
+            events.append({
+                "id": f"evt-consult-req-{c.id}",
+                "case_id": case.id,
+                "type": "discussion_request_sent",
+                "category": "Discussion",
+                "title": "Case Discussion Request Sent",
+                "description": f"Client '{c.client_name}' sent a {c.type} consultation request regarding '{c.issue or 'Case Strategy'}'.",
+                "date": c_dt.strftime("%Y-%m-%d"),
+                "time": c_dt.strftime("%I:%M %p"),
+                "timestamp": c_dt.isoformat(),
+                "actor": c.client_name,
+                "status": "Pending Request",
+                "metadata": {
+                    "requested_by": c.client_name,
+                    "recipient": case.selected_advocate or "Senior Advocate",
+                    "consultation_type": c.type,
+                    "issue": c.issue or "General Case Strategy",
+                    "requested_date": str(c.date),
+                    "requested_time": c.time
+                }
+            })
+
+            if c.status in ["Approved", "Scheduled", "Completed"]:
+                events.append({
+                    "id": f"evt-consult-app-{c.id}",
+                    "case_id": case.id,
+                    "type": "discussion_approved",
+                    "category": "Approval",
+                    "title": "Discussion Request Approved",
+                    "description": f"Discussion request approved by Advocate. Session scheduled for {c.date} at {c.time} ({c.type}).",
+                    "date": str(c.date),
+                    "time": c.time,
+                    "timestamp": f"{c.date}T{c.time}",
+                    "actor": case.selected_advocate or "Senior Advocate",
+                    "status": c.status,
+                    "metadata": {
+                        "approved_by": case.selected_advocate or "Senior Advocate",
+                        "scheduled_date": str(c.date),
+                        "scheduled_time": c.time,
+                        "meeting_link": c.meeting_link or "Chambers / In-Person",
+                        "fee": c.fee or "Included",
+                        "summary": c.summary or "Discussion agenda & session confirmed."
+                    }
+                })
+    except Exception:
+        pass
+
+    # 8. eCourts Live Sync & Hearings
+    if case.next_hearing_date:
+        events.append({
+            "id": f"evt-hearing-{case.id}",
+            "case_id": case.id,
+            "type": "hearing_scheduled",
+            "category": "Hearing",
+            "title": "Hearing Scheduled (eCourts)",
+            "description": f"Next court appearance scheduled at {case.court_name or 'District Court'} for {case.next_hearing_date}.",
+            "date": case.next_hearing_date,
+            "time": "10:30 AM",
+            "timestamp": f"{case.next_hearing_date}T10:30:00",
+            "actor": case.court_name or "eCourts Portal",
+            "status": "Scheduled",
+            "metadata": {
+                "court_name": case.court_name,
+                "cnr_number": case.cnr_number,
+                "hearing_date": case.next_hearing_date,
+                "synced_with_ecourts": True
+            }
+        })
+
+    # Sort events chronologically by timestamp ascending (earliest to latest)
+    events.sort(key=lambda x: str(x.get("timestamp", "")))
+
+    # Ensure the first event is explicitly named "Case Started"
+    if events:
+        events[0]["title"] = "Case Started"
+
+    # Assign sequential 1-based event numbers: 1 = Case Started (bottom), N = Latest Activity (top)
+    for idx, evt in enumerate(events, start=1):
+        evt["event_number"] = idx
+
+    # Mark the latest event
+    if events:
+        events[-1]["is_latest"] = True
+
+    # Reverse events so N (latest) is at the top (index 0) and 1 (Case Started) is at the bottom
+    events.reverse()
+
+    return events
+
+

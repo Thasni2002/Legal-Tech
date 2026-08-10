@@ -2,7 +2,7 @@
 
 import { API_BASE_URL } from "@/utils/api";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowLeft,
@@ -46,6 +46,7 @@ import {
   Heading3,
   Maximize2,
   Minimize2,
+  X,
 } from "lucide-react";
 import { findStateAndDistrictByCourt } from "@/utils/districtCourts";
 import { usePermissions } from "@/utils/usePermissions";
@@ -299,12 +300,19 @@ export default function CaseDetailView({ id }) {
   const [docAssignModal, setDocAssignModal] = useState(null);
   const [viewingDocument, setViewingDocument] = useState(null);
 
+  // ── Timeline State ───────────────────────────────────────────────────
+  const [timelineEvents, setTimelineEvents] = useState([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [selectedTimelineEvent, setSelectedTimelineEvent] = useState(null);
+  // ─────────────────────────────────────────────────────────────────────
+
   // ── Confidential Vault state ────────────────────────────────────────────
   const isSeniorAdvocate = (loggedInUser?.role || "").toLowerCase().includes("senior");
   const [vaultUnlocked, setVaultUnlocked] = useState(false);
   const [showVaultModal, setShowVaultModal] = useState(false);
   const [showVaultReset, setShowVaultReset] = useState(false);
   // ─────────────────────────────────────────────────────────────────────
+
 
   const handleSaveOcrToCaseDocuments = async (extractedText, originalFilename, detectedDocType, digitizedHtml) => {
     if (!selectedCase || (!extractedText && !digitizedHtml)) return;
@@ -676,11 +684,38 @@ export default function CaseDetailView({ id }) {
     }
   };
 
+  const fetchTimelineEvents = async (caseId, silent = false) => {
+    if (!caseId) return;
+    if (!silent) setTimelineLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/case-management/${caseId}/timeline`, {
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTimelineEvents(data);
+      }
+    } catch (err) {
+      console.error("Error fetching case timeline:", err);
+    } finally {
+      if (!silent) setTimelineLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === "generate_doc" && selectedCase?.id) {
       fetchCaseDocHistory(selectedCase.id);
     }
+    if (activeTab === "timeline" && selectedCase?.id) {
+      fetchTimelineEvents(selectedCase.id);
+      const interval = setInterval(() => {
+        fetchTimelineEvents(selectedCase.id, true);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
   }, [activeTab, selectedCase?.id]);
+
+
 
   const handleGenerateCaseDocument = async (customPrompt = null, docTypeLabel = null) => {
     const promptToUse = customPrompt || docGenPrompt;
@@ -1562,8 +1597,9 @@ export default function CaseDetailView({ id }) {
               className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-black text-[#0F172A] shadow-xs focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] cursor-pointer"
             >
               {[
-                { key: "overview", label: "📋 Case Overview" },
-                { key: "documents", label: "📁 Case Documents" },
+                { key: "overview", label: "📋 Overview" },
+                { key: "documents", label: "📁 Documents" },
+                { key: "timeline", label: "⏳ Timeline" },
                 { key: "hearings", label: "⚖️ eCourts Hearings" },
                 { key: "orders", label: "📜 Orders & Judgments" },
                 { key: "notes", label: "📝 Advocate Notes" },
@@ -1580,8 +1616,9 @@ export default function CaseDetailView({ id }) {
           {/* Desktop/Tablet View: Horizontal Tab Bar (>= 640px) */}
           <div className="hidden sm:flex overflow-x-auto no-scrollbar gap-1 sm:gap-1.5 scroll-smooth">
             {[
-              { key: "overview", label: "Case Overview" },
-              { key: "documents", label: "Case Documents" },
+              { key: "overview", label: "Overview" },
+              { key: "documents", label: "Documents" },
+              { key: "timeline", label: "Timeline" },
               { key: "hearings", label: "eCourts Hearings" },
               { key: "orders", label: "Orders & Judgments" },
               { key: "notes", label: "Advocate Notes" },
@@ -2245,7 +2282,18 @@ export default function CaseDetailView({ id }) {
             </div>
           )}
 
-
+          {/* TAB: TIMELINE */}
+          {activeTab === "timeline" && (
+            <CaseTimelineView
+              selectedCase={selectedCase}
+              events={timelineEvents}
+              loading={timelineLoading}
+              selectedEvent={selectedTimelineEvent}
+              onSelectEvent={setSelectedTimelineEvent}
+              onRefresh={() => fetchTimelineEvents(selectedCase.id)}
+              onViewDocument={setViewingDocument}
+            />
+          )}
 
           {/* TAB: ECOURTS HEARINGS & TIMELINE */}
           {activeTab === "hearings" && (
@@ -3670,6 +3718,467 @@ export function htmlToMarkdown(html) {
 
   return md.trim();
 }
+
+
+// ─── Compact Futuristic Case Timeline Component ───────────────────────────
+export function CaseTimelineView({
+  selectedCase,
+  events,
+  loading,
+  selectedEvent,
+  onSelectEvent,
+  onRefresh,
+  onViewDocument,
+}) {
+  const timelineRef = useRef(null);
+  const detailsPanelRef = useRef(null);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [selectedNodeTop, setSelectedNodeTop] = useState(0);
+
+  useEffect(() => {
+    if (selectedEvent && detailsPanelRef.current) {
+      detailsPanelRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [selectedEvent?.id]);
+
+  const handleNodeClick = (evt, e) => {
+    if (selectedEvent?.id === evt.id) {
+      onSelectEvent(null);
+      setSelectedNodeTop(0);
+    } else {
+      onSelectEvent(evt);
+      if (e && e.currentTarget && timelineRef.current) {
+        const nodeRect = e.currentTarget.getBoundingClientRect();
+        const containerRect = timelineRef.current.getBoundingClientRect();
+        const relativeTop = Math.max(0, Math.round(nodeRect.top - containerRect.top));
+        setSelectedNodeTop(relativeTop);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!timelineRef.current) return;
+      const rect = timelineRef.current.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+      const totalHeight = rect.height;
+      const currentPos = windowHeight - rect.top;
+      const percentage = Math.min(100, Math.max(0, (currentPos / (totalHeight + windowHeight * 0.4)) * 100));
+      setScrollProgress(percentage);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="py-20 flex flex-col items-center justify-center gap-3 bg-white border border-slate-200 rounded-3xl">
+        <div className="w-9 h-9 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+          Loading case timeline...
+        </p>
+      </div>
+    );
+  }
+
+  if (!events || events.length === 0) {
+    return (
+      <div className="py-16 text-center space-y-3 bg-white border border-slate-200 rounded-3xl p-8 max-w-md mx-auto shadow-xs">
+        <Clock size={36} className="text-slate-300 mx-auto" />
+        <h4 className="text-sm font-bold text-slate-700">No Case Activities Recorded</h4>
+        <p className="text-xs text-slate-500 max-w-xs mx-auto">
+          Case activities will automatically appear here chronologically as events occur.
+        </p>
+      </div>
+    );
+  }
+
+  const getCategoryBadge = (category) => {
+    switch (category) {
+      case "Case":
+        return { bg: "bg-blue-50 text-blue-700 border-blue-200", icon: <Scale size={10} />, label: "Case" };
+      case "Document":
+        return { bg: "bg-purple-50 text-purple-700 border-purple-200", icon: <FileText size={10} />, label: "Document" };
+      case "Discussion":
+        return { bg: "bg-amber-50 text-amber-800 border-amber-200", icon: <Phone size={10} />, label: "Discussion" };
+      case "Approval":
+        return { bg: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: <UserCheck size={10} />, label: "Approval" };
+      case "Hearing":
+        return { bg: "bg-rose-50 text-rose-700 border-rose-200", icon: <Gavel size={10} />, label: "Hearing" };
+      case "Note":
+        return { bg: "bg-indigo-50 text-indigo-700 border-indigo-200", icon: <BookOpen size={10} />, label: "Note" };
+      case "Status Update":
+        return { bg: "bg-slate-900 text-white border-slate-800", icon: <RefreshCw size={10} />, label: "Status" };
+      default:
+        return { bg: "bg-slate-100 text-slate-700 border-slate-200", icon: <Clock size={10} />, label: "Activity" };
+    }
+  };
+
+  const isDetailOpen = selectedEvent !== null;
+
+  return (
+    <div className="space-y-5 transition-all duration-500 ease-in-out">
+      {/* Sleek Top Bar Header */}
+      <div className="bg-slate-900 text-white p-4 sm:p-4.5 rounded-2xl border border-slate-800 shadow-md flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Sparkles size={16} className="text-cyan-400 shrink-0 animate-pulse" />
+            <h3 className="font-extrabold text-xs sm:text-sm text-white tracking-wide">
+              Case Journey &amp; Activity History
+            </h3>
+            <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/40 text-blue-300 text-[10px] font-mono font-bold uppercase tracking-wider">
+              {events.length} Events
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Auto-Sync Active
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-300 mt-0.5">
+            Latest activity at top · Scroll down to <strong>Number 1 — Case Started</strong>
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {isDetailOpen && (
+            <button
+              onClick={() => onSelectEvent(null)}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-cyan-500/30 shrink-0"
+            >
+              <X size={13} /> Center View
+            </button>
+          )}
+          <button
+            onClick={onRefresh}
+            className="px-3 py-1.5 bg-blue-600/40 hover:bg-blue-600/60 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-blue-400/30 shrink-0"
+          >
+            <RefreshCw size={12} /> Refresh
+          </button>
+        </div>
+      </div>
+
+      {/* Interactive Layout Wrapper: Centered by default (max-w-md), moves smoothly to left when event selected */}
+      <div ref={timelineRef} className="w-full relative min-h-[450px]">
+        <div className="flex flex-col lg:flex-row items-start justify-center gap-6 w-full transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]">
+          {/* TIMELINE STREAM COLUMN: Centered by default, slides left when detail panel opens */}
+          <div
+            className={`space-y-3 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] shrink-0 ${
+              isDetailOpen
+                ? "w-full lg:w-5/12"
+                : "w-full max-w-md mx-auto"
+            }`}
+          >
+            <div className="bg-white/90 backdrop-blur-xl border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-3.5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                <span className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles size={13} className="text-[#2563EB]" /> Case Timeline Stream
+                </span>
+                <span className="text-[10px] font-bold text-slate-400">
+                  {isDetailOpen ? "Click event to toggle panel" : "Click event to view details"}
+                </span>
+              </div>
+
+              {/* Vertical Connecting Stream with Dark Number Line Accent */}
+              <div className="relative pl-7 space-y-3">
+                {/* Dark Thin Track Line */}
+                <div className="absolute left-[13px] top-3.5 bottom-3.5 w-0.5 bg-slate-800/90 rounded-full" />
+
+                {/* Dynamic Scroll Laser Progress Line Overlay */}
+                <div
+                  className="absolute left-[13px] top-3.5 w-0.5 bg-gradient-to-b from-amber-400 via-cyan-400 to-blue-600 shadow-[0_0_10px_rgba(6,182,212,0.8)] transition-all duration-150 ease-out rounded-full z-0"
+                  style={{ height: `${scrollProgress}%` }}
+                />
+
+                {/* Traveling Pulse Particle Tip */}
+                <div
+                  className="absolute left-[10px] w-2.5 h-2.5 bg-cyan-400 rounded-full shadow-[0_0_15px_rgba(6,182,212,1)] ring-2 ring-cyan-200 animate-pulse transition-all duration-150 ease-out z-10 -translate-y-1/2"
+                  style={{ top: `${scrollProgress}%` }}
+                />
+
+                {events.map((evt, idx) => {
+                  const isSelected = selectedEvent?.id === evt.id;
+                  const isLatest = evt.is_latest || idx === 0;
+                  const badge = getCategoryBadge(evt.category);
+                  const eventNum = evt.event_number || events.length - idx;
+                  const nodeThreshold = (idx / Math.max(1, events.length - 1)) * 100;
+                  const isPassed = scrollProgress >= nodeThreshold - 10;
+
+                  return (
+                    <div
+                      key={evt.id || idx}
+                      onClick={(e) => handleNodeClick(evt, e)}
+                      className="relative group cursor-pointer transition-all duration-300 transform hover:-translate-y-0.5"
+                    >
+                      {/* Small Dark Number Circle Node */}
+                      <div
+                        className={`absolute -left-[34px] top-1 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-mono font-bold transition-all duration-300 ${
+                          isSelected
+                            ? "bg-[#0F172A] text-cyan-400 ring-4 ring-cyan-500/30 border border-cyan-400 shadow-md scale-110 z-20"
+                            : isLatest
+                            ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white ring-2 ring-amber-300 shadow-sm animate-pulse z-20"
+                            : isPassed
+                            ? "bg-slate-900 border border-cyan-500/70 text-cyan-300 shadow-2xs z-10"
+                            : "bg-slate-900 border border-slate-700 text-slate-300 group-hover:border-cyan-400 group-hover:text-cyan-300"
+                        }`}
+                      >
+                        {eventNum}
+                      </div>
+
+                      {/* Compact Light Card Item */}
+                      <div
+                        className={`p-2.5 sm:p-3 rounded-xl border transition-all duration-300 ${
+                          isSelected
+                            ? "bg-blue-50/90 border-[#2563EB] shadow-md ring-2 ring-blue-500/20"
+                            : isLatest
+                            ? "bg-amber-50/40 border-amber-200 shadow-2xs hover:border-amber-300"
+                            : "bg-white hover:bg-slate-50 border-slate-200/80 shadow-2xs"
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-1 mb-0.5">
+                          <span className="text-xs font-black text-slate-900 tracking-tight">
+                            {eventNum} — {evt.title}
+                          </span>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[9px] font-bold uppercase tracking-wider ${badge.bg}`}>
+                            {badge.icon} {badge.label}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 mt-1 text-[10px] font-medium text-slate-500">
+                          <span>📅 {evt.date} · {evt.time}</span>
+                          {isLatest && (
+                            <span className="text-amber-800 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wider text-[8px]">
+                              ★ Latest
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT SLIDING LIGHT DETAILS PANEL */}
+          {isDetailOpen && (
+            <div
+              ref={detailsPanelRef}
+              style={{ marginTop: `${selectedNodeTop}px` }}
+              className="w-full lg:w-7/12 space-y-4 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] animate-in slide-in-from-right-16 fade-in"
+            >
+            <div className="bg-white/95 backdrop-blur-2xl border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4 text-[#0F172A]">
+              {/* Header / Title block */}
+              <div className="border-b border-slate-100 pb-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 font-extrabold text-[11px] uppercase tracking-wider">
+                    Event #{selectedEvent.event_number} Details — {selectedEvent.category}
+                  </span>
+                  <button
+                    onClick={() => onSelectEvent(null)}
+                    className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition cursor-pointer"
+                    title="Close details panel"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                  <h3 className="text-sm sm:text-base font-black text-[#0F172A] leading-snug">
+                    {selectedEvent.event_number} — {selectedEvent.title}
+                  </h3>
+                  <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-md">
+                    📅 {selectedEvent.date} at {selectedEvent.time}
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-slate-500 font-medium">
+                  Performed By: <strong className="text-slate-800 font-bold">{selectedEvent.actor || "System"}</strong> · Status: <span className="font-extrabold text-emerald-700">{selectedEvent.status || "Active"}</span>
+                </p>
+              </div>
+
+              {/* Description */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-1">
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Activity Overview</p>
+                <p className="text-xs font-semibold text-slate-800 leading-relaxed">
+                  {selectedEvent.description}
+                </p>
+              </div>
+
+              {/* Specific Event Metadata Renderers */}
+              {selectedEvent.type === "case_created" && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-blue-50/70 border border-blue-200 rounded-xl p-3.5 text-xs">
+                  <div>
+                    <p className="text-[9px] font-bold text-blue-700 uppercase tracking-wider">Case Start Date &amp; Time</p>
+                    <p className="font-extrabold text-blue-900 mt-0.5">📅 {selectedEvent.date} at {selectedEvent.time}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-blue-700 uppercase tracking-wider">Case Number</p>
+                    <p className="font-extrabold text-slate-900 mt-0.5">#{selectedEvent.metadata?.case_no || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-blue-700 uppercase tracking-wider">CNR Number</p>
+                    <p className="font-extrabold text-slate-900 mt-0.5">{selectedEvent.metadata?.cnr_number || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-blue-700 uppercase tracking-wider">Client Name</p>
+                    <p className="font-extrabold text-slate-900 mt-0.5">{selectedEvent.metadata?.client_name || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-blue-700 uppercase tracking-wider">Assigned Lead Advocate</p>
+                    <p className="font-extrabold text-slate-900 mt-0.5">{selectedEvent.metadata?.advocate_assigned || "Unassigned"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-blue-700 uppercase tracking-wider">Court &amp; Forum</p>
+                    <p className="font-extrabold text-slate-900 mt-0.5">{selectedEvent.metadata?.court_name || "Court"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-blue-700 uppercase tracking-wider">Case Type</p>
+                    <p className="font-extrabold text-slate-900 mt-0.5">{selectedEvent.metadata?.case_type || "Civil"}</p>
+                  </div>
+                  <div className="sm:col-span-2 pt-2 border-t border-blue-200">
+                    <p className="text-[9px] font-bold text-blue-700 uppercase tracking-wider">Initial Case Details</p>
+                    <p className="font-semibold text-slate-800 mt-0.5 leading-relaxed">{selectedEvent.metadata?.initial_description}</p>
+                  </div>
+                </div>
+              )}
+
+              {selectedEvent.type === "advocate_assigned" && (
+                <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3.5 space-y-2 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-[9px] font-bold text-emerald-800 uppercase tracking-wider">Lead Assigned Advocate</p>
+                      <p className="font-extrabold text-slate-900 mt-0.5">{selectedEvent.metadata?.lead_advocate}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-emerald-800 uppercase tracking-wider">Secondary Advocate</p>
+                      <p className="font-extrabold text-slate-900 mt-0.5">{selectedEvent.metadata?.secondary_advocate}</p>
+                    </div>
+                  </div>
+                  <p className="text-slate-700 font-semibold pt-2 border-t border-emerald-200">
+                    Assignment Notes: {selectedEvent.metadata?.assignment_notes}
+                  </p>
+                </div>
+              )}
+
+              {selectedEvent.type === "document_uploaded" && (
+                <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-3.5 space-y-3 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-[9px] font-bold text-purple-700 uppercase tracking-wider">Document File Name</p>
+                      <p className="font-extrabold text-slate-900 mt-0.5 truncate">{selectedEvent.metadata?.file_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-purple-700 uppercase tracking-wider">Document Type</p>
+                      <p className="font-extrabold text-slate-900 mt-0.5">{selectedEvent.metadata?.document_type}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-purple-700 uppercase tracking-wider">Uploaded By</p>
+                      <p className="font-extrabold text-slate-900 mt-0.5">{selectedEvent.metadata?.uploaded_by}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-purple-700 uppercase tracking-wider">Security Protection</p>
+                      <p className="font-extrabold text-slate-900 mt-0.5">{selectedEvent.metadata?.has_password ? "Protected with PIN" : "Standard File"}</p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => onViewDocument && onViewDocument({ file: selectedEvent.metadata?.file_name, url: selectedEvent.metadata?.url, documentType: selectedEvent.metadata?.document_type })}
+                    className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition cursor-pointer shadow-xs active:scale-95 text-xs"
+                  >
+                    <FileText size={13} /> Open &amp; View Document
+                  </button>
+                </div>
+              )}
+
+              {(selectedEvent.type === "discussion_request_sent" || selectedEvent.type === "discussion_approved") && (
+                <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-3.5 space-y-3 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-[9px] font-bold text-amber-800 uppercase tracking-wider">Requested By</p>
+                      <p className="font-extrabold text-slate-900 mt-0.5">{selectedEvent.metadata?.requested_by || selectedEvent.actor}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-amber-800 uppercase tracking-wider">Recipient / Lead</p>
+                      <p className="font-extrabold text-slate-900 mt-0.5">{selectedEvent.metadata?.recipient || selectedEvent.metadata?.approved_by || "Advocate"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-amber-800 uppercase tracking-wider">Discussion Type</p>
+                      <p className="font-extrabold text-slate-900 mt-0.5">{selectedEvent.metadata?.consultation_type || "Video / Meeting"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-amber-800 uppercase tracking-wider">Scheduled Date &amp; Time</p>
+                      <p className="font-extrabold text-slate-900 mt-0.5">{selectedEvent.metadata?.scheduled_date || selectedEvent.metadata?.requested_date} at {selectedEvent.metadata?.scheduled_time || selectedEvent.metadata?.requested_time}</p>
+                    </div>
+                  </div>
+
+                  {selectedEvent.metadata?.meeting_link && (
+                    <div className="p-2.5 bg-white border border-amber-200 rounded-lg flex items-center justify-between gap-2 shadow-xs">
+                      <span className="text-[11px] font-bold text-amber-900 truncate">Meeting Link / Venue: {selectedEvent.metadata.meeting_link}</span>
+                      {selectedEvent.metadata.meeting_link.startsWith("http") && (
+                        <a href={selectedEvent.metadata.meeting_link} target="_blank" rel="noopener noreferrer" className="px-2.5 py-1 bg-amber-600 text-white font-bold rounded-md text-[10px] shrink-0">
+                          Join Meeting
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {selectedEvent.type === "case_note_added" && (
+                <div className="bg-indigo-50/70 border border-indigo-200 rounded-xl p-3.5 space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-indigo-900 uppercase text-[9px] tracking-wider">Category: {selectedEvent.metadata?.category}</span>
+                    <span className="text-slate-500 font-semibold text-[11px]">Author: {selectedEvent.metadata?.author}</span>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-indigo-100 text-[#0F172A] font-medium leading-relaxed shadow-xs text-xs">
+                    {selectedEvent.metadata?.text}
+                  </div>
+                </div>
+              )}
+
+              {selectedEvent.type === "ai_document_generated" && (
+                <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3.5 space-y-3 text-xs">
+                  <div>
+                    <p className="text-[9px] font-bold text-emerald-800 uppercase tracking-wider">AI Generation Prompt</p>
+                    <p className="font-semibold text-slate-900 mt-0.5 italic">"{selectedEvent.metadata?.prompt}"</p>
+                  </div>
+                  {selectedEvent.metadata?.content && (
+                    <div className="bg-white p-3 rounded-xl border border-emerald-100 text-slate-800 max-h-48 overflow-y-auto font-mono text-[11px] whitespace-pre-wrap shadow-xs">
+                      {selectedEvent.metadata.content}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {selectedEvent.type === "hearing_scheduled" && (
+                <div className="bg-rose-50/70 border border-rose-200 rounded-xl p-3.5 space-y-2 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-[9px] font-bold text-rose-800 uppercase tracking-wider">Court Name</p>
+                      <p className="font-extrabold text-slate-900 mt-0.5">{selectedEvent.metadata?.court_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-rose-800 uppercase tracking-wider">Hearing Date</p>
+                      <p className="font-extrabold text-rose-700 mt-0.5">{selectedEvent.metadata?.hearing_date}</p>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-rose-800 font-semibold flex items-center gap-1 pt-1">
+                    ⚡ Synchronized with official eCourts Judicial Portal
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+  );
+}
+
+
+
 
 
 
