@@ -8,7 +8,7 @@ export function usePermissions() {
   const [rolePermissions, setRolePermissions] = useState({});
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadPermissions = () => {
     const loggedIn = getLoggedInUser();
     setUser(loggedIn);
 
@@ -45,6 +45,17 @@ export function usePermissions() {
     } else {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    loadPermissions();
+    const handleUpdate = () => loadPermissions();
+    window.addEventListener("permissions_updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("permissions_updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
   }, []);
 
   const hasPermission = (moduleKey, action) => {

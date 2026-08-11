@@ -171,13 +171,8 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, onModuleCountChan
       return !!rolePermissions[moduleKey].view;
     }
 
-    // Default fallback for Clerk and Senior Advocate roles so new modules are visible by default
-    const userRoleStr = (user?.role || "").toLowerCase().replace(/\s+/g, "");
-    if (userRoleStr.includes("clerk") || userRoleStr.includes("senior")) {
-      return true;
-    }
-
-    return false; // fallback — hide item if no permission rule is found
+    // Default fallback: allow access if no explicit restriction rule is matched
+    return true;
   };
 
   // Define 2-Tier Modules with sub-items
