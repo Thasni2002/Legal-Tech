@@ -35,7 +35,7 @@ class UserOut(BaseModel):
     email: str
     role: str
     tempPassword: Optional[str] = Field(None, serialization_alias="tempPassword")
-    customPermissions: Dict[str, PermissionSchema] = Field(default_factory=dict, serialization_alias="customPermissions")
+    customPermissions: Dict[str, Dict[str, bool]] = Field(default_factory=dict, serialization_alias="customPermissions")
     documentAccess: List[Dict[str, Any]] = Field(default_factory=list, serialization_alias="documentAccess")
 
     class Config:
@@ -60,5 +60,5 @@ class UserUpdate(BaseModel):
     role: Optional[str] = None
     password: Optional[str] = None
     confirmPassword: Optional[str] = None    
-    customPermissions: Optional[Dict[str, PermissionSchema]] = None
+    customPermissions: Optional[Dict[str, Dict[str, bool]]] = None
     documentAccess: Optional[List[Dict[str, Any]]] = None

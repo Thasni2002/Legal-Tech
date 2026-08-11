@@ -595,15 +595,13 @@ def update_user(
         db_user.password = hash_password(data.password)
         
     if data.customPermissions is not None:
-        db_user.custom_permissions = {
-            mod: {
-                "view": act.view,
-                "add": act.add,
-                "edit": act.edit,
-                "delete": act.delete
-            }
-            for mod, act in data.customPermissions.items()
-        }
+        cleaned_custom = {}
+        for mod, act_dict in data.customPermissions.items():
+            if isinstance(act_dict, dict):
+                act_map = {k: bool(v) for k, v in act_dict.items() if v is not None}
+                if act_map:
+                    cleaned_custom[mod] = act_map
+        db_user.custom_permissions = cleaned_custom
 
     if data.documentAccess is not None:
         db_user.document_access = data.documentAccess

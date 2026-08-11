@@ -206,7 +206,7 @@ export default function ClerkDashboard() {
             🏛️ Clerk Workspace
           </div>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-[#0F172A]">
-            Welcome back, <span className="capitalize text-[#2563EB]">{[user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() || user?.username || "Clerk"}</span>
+            Welcome back, <span className="capitalize text-[#2563EB]">{([user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() || user?.username || "Clerk").replace(/\s+Advocate$/i, "")}</span>
           </h1>
           <p className="text-[#64748B] text-xs sm:text-sm font-medium">
             Manage daily court visits, physical file formatting, tasks, and leave applications.

@@ -677,7 +677,7 @@ export default function UsersView() {
       showToast("Username and email are required", "error");
       return;
     }
-    if (editPassword && editPassword !== confirmPassword) {
+    if ((editPassword || confirmPassword) && editPassword !== confirmPassword) {
       showToast("Passwords do not match", "error");
       return;
     }
@@ -694,20 +694,20 @@ export default function UsersView() {
         currentRolePerms = findRolePermissions(rolePermissions, activeUser.role);
       }
 
-      // Compute diff: Only save what differs from the global role defaults
+      // Compute diff: Only save specific action overrides that differ from global role defaults
       const diffPerms = {};
       for (const mod in editCustomPerms) {
         const modPerms = editCustomPerms[mod];
         const baseModPerms = currentRolePerms[mod] || { view: false, add: false, edit: false, delete: false };
 
-        let hasDiff = false;
+        const modDiff = {};
         for (const act of ["view", "add", "edit", "delete"]) {
-          if (modPerms[act] !== baseModPerms[act]) {
-            hasDiff = true;
+          if (!!modPerms[act] !== !!baseModPerms[act]) {
+            modDiff[act] = !!modPerms[act];
           }
         }
-        if (hasDiff) {
-          diffPerms[mod] = { ...modPerms };
+        if (Object.keys(modDiff).length > 0) {
+          diffPerms[mod] = modDiff;
         }
       }
 
@@ -1590,6 +1590,7 @@ export default function UsersView() {
                         value={editPassword}
                         onChange={(e) => setEditPassword(e.target.value)}
                         placeholder="Leave blank to keep current password"
+                        autoComplete="new-password"
                         className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3.5 sm:px-4 py-2.5 sm:py-3.5 pr-12 text-[#0F172A] placeholder:text-[#94A3B8] focus:bg-white focus:ring-4 focus:ring-blue-50 focus:border-[#2563EB] outline-none transition-all text-xs sm:text-sm font-medium"
                       />
                       <button
@@ -1614,6 +1615,7 @@ export default function UsersView() {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="Re-enter new password"
+                        autoComplete="new-password"
                         className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3.5 sm:px-4 py-2.5 sm:py-3.5 pr-12 text-[#0F172A] placeholder:text-[#94A3B8] focus:bg-white focus:ring-4 focus:ring-blue-50 focus:border-[#2563EB] outline-none transition-all text-xs sm:text-sm font-medium"
                       />
                       <button

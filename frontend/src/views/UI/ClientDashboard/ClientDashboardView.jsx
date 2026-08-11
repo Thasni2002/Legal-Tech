@@ -63,7 +63,7 @@ export default function ClientDashboard() {
   useEffect(() => {
     const user = getLoggedInUser();
     const username = user?.username || user?.name || "";
-    const userFullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim();
+    const userFullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim().replace(/\s+(Advocate|Clerk)$/i, "");
     const displayName = userFullName || user?.name || user?.username || "";
 
     const safeFetch = async (url) => {
