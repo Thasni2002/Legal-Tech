@@ -2,11 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, H
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.database import SessionLocal
-from .schemas import ConsultationCreate, ConsultationStart, ConsultationReschedule, ConsultationUpdateStatus, ConsultationOut, ConsultationStats
+from .schemas import (
+    ConsultationCreate, ConsultationStart, ConsultationReschedule, ConsultationUpdateStatus, 
+    ConsultationOut, ConsultationStats, MeetingNoteCreate, MeetingNoteUpdate, MeetingNoteOut
+)
 from . import service
 from app.utils.google_calendar import generate_google_meet_link
 
 router = APIRouter(prefix="/consultations", tags=["Consultations"])
+
 
 def get_db():
     db = SessionLocal()
@@ -124,3 +128,70 @@ def delete_consultation(consultation_id: int, db: Session = Depends(get_db)):
     if not success:
         raise HTTPException(status_code=404, detail="Consultation not found")
     return
+
+# --- MEETING NOTES ENDPOINTS ---
+
+@router.post("/notes", response_model=MeetingNoteOut)
+def create_meeting_note(
+    data: MeetingNoteCreate,
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db)
+):
+    from app.advocate.tasks.routes import get_current_user
+    current_user = None
+    if authorization:
+        try:
+            current_user = get_current_user(authorization=authorization, db=db)
+        except Exception:
+            pass
+    return service.create_meeting_note(db, data, current_user=current_user)
+
+@router.get("/notes", response_model=List[MeetingNoteOut])
+def get_meeting_notes(
+    consultation_id: Optional[int] = Query(None),
+    case_id: Optional[int] = Query(None),
+    client_id: Optional[int] = Query(None),
+    advocate_id: Optional[int] = Query(None),
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db)
+):
+    from app.advocate.tasks.routes import get_current_user
+    is_client = False
+    if authorization:
+        try:
+            curr = get_current_user(authorization=authorization, db=db)
+            if curr and (getattr(curr, "role", "") or "").lower() == "client":
+                is_client = True
+        except Exception:
+            pass
+
+    return service.get_meeting_notes(
+        db,
+        consultation_id=consultation_id,
+        case_id=case_id,
+        client_id=client_id,
+        advocate_id=advocate_id,
+        is_client=is_client
+    )
+
+@router.get("/notes/{note_id}", response_model=MeetingNoteOut)
+def get_meeting_note(note_id: int, db: Session = Depends(get_db)):
+    note = service.get_meeting_note_by_id(db, note_id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Meeting note not found")
+    return note
+
+@router.put("/notes/{note_id}", response_model=MeetingNoteOut)
+def update_meeting_note(note_id: int, data: MeetingNoteUpdate, db: Session = Depends(get_db)):
+    note = service.update_meeting_note(db, note_id, data)
+    if not note:
+        raise HTTPException(status_code=404, detail="Meeting note not found")
+    return note
+
+@router.delete("/notes/{note_id}", status_code=204)
+def delete_meeting_note(note_id: int, db: Session = Depends(get_db)):
+    success = service.delete_meeting_note(db, note_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Meeting note not found")
+    return
+

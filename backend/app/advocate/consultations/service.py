@@ -4,8 +4,8 @@ from typing import Optional
 from fastapi import BackgroundTasks
 
 from app.utils.email import send_email, send_email_sync
-from .models import Consultation
-from .schemas import ConsultationCreate, ConsultationReschedule, ConsultationStart
+from .models import Consultation, MeetingNote
+from .schemas import ConsultationCreate, ConsultationReschedule, ConsultationStart, MeetingNoteCreate, MeetingNoteUpdate
 from app.authapp.models import User
 from app.advocate.case_management.models import Case
 
@@ -628,3 +628,112 @@ def get_consultation_stats(db: Session, client_id: Optional[int] = None):
         "video_calls": video,
         "chat_consultations": chat
     }
+
+# Meeting Notes CRUD
+def create_meeting_note(db: Session, data: MeetingNoteCreate, current_user=None):
+    adv_id = getattr(current_user, "id", None) if current_user else data.advocate_id
+    
+    # Auto-resolve client_name or case details if consultation_id or case_id is provided
+    client_name = data.client_name
+    case_title = data.case_title
+    case_no = data.case_no
+
+    if data.consultation_id:
+        consult = db.query(Consultation).filter(Consultation.id == data.consultation_id).first()
+        if consult:
+            if not client_name:
+                client_name = consult.client_name
+            if not data.case_id and consult.case_id:
+                data.case_id = consult.case_id
+
+    if data.case_id:
+        case_obj = db.query(Case).filter(Case.id == data.case_id).first()
+        if case_obj:
+            if not case_title:
+                case_title = case_obj.case_title
+            if not case_no:
+                case_no = case_obj.case_no
+            if not client_name:
+                client_name = case_obj.client_name
+
+    note = MeetingNote(
+        consultation_id=data.consultation_id,
+        case_id=data.case_id,
+        advocate_id=adv_id or data.advocate_id,
+        client_id=data.client_id,
+        client_name=client_name or "Client",
+        case_title=case_title,
+        case_no=case_no,
+        title=data.title or "Consultation Meeting Note",
+        meeting_date=data.meeting_date,
+        meeting_time=data.meeting_time,
+        meeting_type=data.meeting_type or "Video Call",
+        summary=data.summary,
+        key_topics=data.key_topics,
+        action_items=data.action_items or [],
+        legal_advice=data.legal_advice,
+        internal_notes=data.internal_notes,
+        is_confidential=data.is_confidential or False
+    )
+
+    # If consultation exists, update summary in consultation table as well
+    if data.consultation_id and data.summary:
+        consult = db.query(Consultation).filter(Consultation.id == data.consultation_id).first()
+        if consult:
+            consult.summary = data.summary
+            consult.status = "Completed"
+
+    db.add(note)
+    db.commit()
+    db.refresh(note)
+    return note
+
+def get_meeting_notes(
+    db: Session,
+    consultation_id: Optional[int] = None,
+    case_id: Optional[int] = None,
+    client_id: Optional[int] = None,
+    advocate_id: Optional[int] = None,
+    is_client: bool = False
+):
+    query = db.query(MeetingNote)
+
+    if consultation_id:
+        query = query.filter(MeetingNote.consultation_id == consultation_id)
+    if case_id:
+        query = query.filter(MeetingNote.case_id == case_id)
+    if client_id:
+        query = query.filter(MeetingNote.client_id == client_id)
+    if advocate_id:
+        query = query.filter(MeetingNote.advocate_id == advocate_id)
+
+    # If accessed by a client user, exclude confidential internal notes
+    if is_client:
+        query = query.filter(MeetingNote.is_confidential == False)
+
+    return query.order_by(MeetingNote.meeting_date.desc(), MeetingNote.id.desc()).all()
+
+def get_meeting_note_by_id(db: Session, note_id: int):
+    return db.query(MeetingNote).filter(MeetingNote.id == note_id).first()
+
+def update_meeting_note(db: Session, note_id: int, data: MeetingNoteUpdate):
+    note = get_meeting_note_by_id(db, note_id)
+    if not note:
+        return None
+
+    update_dict = data.dict(exclude_unset=True)
+    for field, value in update_dict.items():
+        setattr(note, field, value)
+
+    db.commit()
+    db.refresh(note)
+    return note
+
+def delete_meeting_note(db: Session, note_id: int) -> bool:
+    note = get_meeting_note_by_id(db, note_id)
+    if not note:
+        return False
+    db.delete(note)
+    db.commit()
+    return True
+

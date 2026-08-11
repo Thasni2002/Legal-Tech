@@ -475,11 +475,10 @@ export default function AssignedCasesView() {
                             return (
                               <button
                                 onClick={() => setViewBriefModal(saved[0])}
-                                className="py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition font-extrabold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs shrink-0"
+                                className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition font-extrabold text-xs flex items-center justify-center cursor-pointer shadow-xs shrink-0"
                                 title="View Saved AI Summary"
                               >
-                                <Eye size={13} />
-                                <span>View Summary</span>
+                                <Eye size={15} />
                               </button>
                             );
                           }
@@ -488,11 +487,10 @@ export default function AssignedCasesView() {
                       })()}
                       <button
                         onClick={() => setSelectedCase(item)}
-                        className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-xl transition font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="p-2 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-xl transition font-bold text-xs flex items-center justify-center cursor-pointer shrink-0"
                         title="See Case Details"
                       >
-                        <Eye size={14} />
-                        View Case Details
+                        <FileText size={15} />
                       </button>
 
                       {perms.delete && (
@@ -501,7 +499,7 @@ export default function AssignedCasesView() {
                           className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition text-xs font-bold flex items-center justify-center cursor-pointer shrink-0"
                           title="Delete Case"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={15} />
                         </button>
                       )}
                     </div>
@@ -557,7 +555,7 @@ export default function AssignedCasesView() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 pt-1">
+                    <div className="flex items-center justify-end gap-2 pt-1">
                       {(() => {
                         try {
                           const targetId = item.caseId || item.case_id || item.id;
@@ -566,10 +564,10 @@ export default function AssignedCasesView() {
                             return (
                               <button
                                 onClick={() => setViewBriefModal(saved[0])}
-                                className="py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs shrink-0"
+                                className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center justify-center cursor-pointer shadow-xs shrink-0"
+                                title="View Summary"
                               >
-                                <Eye size={13} />
-                                <span>Summary</span>
+                                <Eye size={14} />
                               </button>
                             );
                           }
@@ -578,15 +576,16 @@ export default function AssignedCasesView() {
                       })()}
                       <button
                         onClick={() => setSelectedCase(item)}
-                        className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="p-2 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-xl font-bold text-xs flex items-center justify-center cursor-pointer shrink-0"
+                        title="View Details"
                       >
-                        <Eye size={14} />
-                        View Details
+                        <FileText size={14} />
                       </button>
                       {perms.delete && (
                         <button
                           onClick={() => setDeleteConfirm(item.id)}
                           className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold flex items-center justify-center cursor-pointer shrink-0"
+                          title="Delete Case"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -602,16 +601,16 @@ export default function AssignedCasesView() {
             </div>
 
             {/* Desktop Table View (>= 768px) */}
-            <div className="hidden md:block w-full overflow-x-auto rounded-2xl border border-[#E2E8F0] min-w-0">
-              <table className="w-full min-w-[980px] table-fixed divide-y divide-[#E2E8F0] text-left">
+            <div className="hidden md:block w-full rounded-2xl border border-[#E2E8F0] overflow-hidden">
+              <table className="w-full text-xs sm:text-sm text-left border-collapse">
                 <thead className="bg-[#F8FAFC]">
-                  <tr>
-                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[24%]">Client ID</th>
-                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[14%]">Client</th>
-                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[15%]">Court</th>
-                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[13%]">Next Hearing</th>
-                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[10%] text-center">Status</th>
-                    <th className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[24%] text-center">Actions</th>
+                  <tr className="border-b border-[#E2E8F0]">
+                    <th className="px-2.5 sm:px-3.5 py-3 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[32%]">Client ID</th>
+                    <th className="px-2.5 sm:px-3.5 py-3 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[18%]">Client</th>
+                    <th className="px-2.5 sm:px-3.5 py-3 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[18%]">Court</th>
+                    <th className="px-2.5 sm:px-3.5 py-3 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[14%]">Next Hearing</th>
+                    <th className="px-2 py-3 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[10%] text-center">Status</th>
+                    <th className="px-2 py-3 text-xs font-bold text-[#64748B] uppercase tracking-wider w-[8%] text-center">Actions</th>
                   </tr>
                 </thead>
 
@@ -619,7 +618,7 @@ export default function AssignedCasesView() {
                   {paginatedCases.length > 0 ? (
                     paginatedCases.map((item, index) => (
                       <tr key={index} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="px-3 sm:px-4 py-3.5">
+                        <td className="px-2.5 sm:px-3.5 py-3">
                           <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-mono font-extrabold border border-blue-200 block w-fit mb-1">
                             {item.caseIdCode}
                           </span>
@@ -627,25 +626,25 @@ export default function AssignedCasesView() {
                             {item.title || "Assigned Case"}
                           </span>
                         </td>
-                        <td className="px-3 sm:px-4 py-3.5 text-xs text-[#475569] font-medium break-words leading-snug">
+                        <td className="px-2.5 sm:px-3.5 py-3 text-xs text-[#475569] font-medium break-words leading-snug">
                           {isJuniorAdvocate && isSensitiveCase(item) ? "Confidential" : item.client}
                         </td>
-                        <td className="px-3 sm:px-4 py-3.5 text-xs text-[#475569] font-medium break-words leading-snug">
+                        <td className="px-2.5 sm:px-3.5 py-3 text-xs text-[#475569] font-medium break-words leading-snug">
                           {item.court}
                         </td>
-                        <td className="px-3 sm:px-4 py-3.5 text-xs font-bold text-[#2563EB] whitespace-nowrap">
+                        <td className="px-2.5 sm:px-3.5 py-3 text-xs font-bold text-[#2563EB] whitespace-nowrap">
                           {item.hearing}
                         </td>
-                        <td className="px-2 py-3.5 text-center">
+                        <td className="px-2 py-3 text-center whitespace-nowrap">
                           <span
                             title={item.status}
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider inline-block max-w-full ${getStatusBadgeClass(item.status)}`}
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider inline-block ${getStatusBadgeClass(item.status)}`}
                           >
-                            <span className="truncate">{item.status === "Won" ? "🏆 Won" : item.status === "Lost" ? "❌ Lost" : item.status}</span>
+                            <span>{item.status === "Won" ? "🏆 Won" : item.status === "Lost" ? "❌ Lost" : item.status}</span>
                           </span>
                         </td>
 
-                        <td className="px-3 sm:px-4 py-3.5 text-center whitespace-nowrap overflow-hidden">
+                        <td className="px-2 py-3 text-center whitespace-nowrap">
                           <div className="flex gap-1.5 items-center justify-center flex-nowrap shrink-0">
                             {(() => {
                               try {
@@ -655,11 +654,10 @@ export default function AssignedCasesView() {
                                   return (
                                     <button
                                       onClick={() => setViewBriefModal(saved[0])}
-                                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors cursor-pointer shadow-xs shrink-0"
+                                      className="flex items-center justify-center p-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors cursor-pointer shadow-xs shrink-0"
                                       title="View Saved Brief Summary"
                                     >
-                                      <Eye size={13} />
-                                      <span>Summary</span>
+                                      <Eye size={15} />
                                     </button>
                                   );
                                 }
@@ -669,21 +667,19 @@ export default function AssignedCasesView() {
 
                             <button
                               onClick={() => setSelectedCase(item)}
-                              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-[#2563EB] bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer shrink-0"
+                              className="flex items-center justify-center p-2 text-xs font-semibold text-[#2563EB] bg-blue-50 hover:bg-blue-100 border border-blue-200/80 rounded-lg transition-colors cursor-pointer shrink-0"
                               title="See Case Details"
                             >
-                              <Eye size={13} />
-                              <span>View</span>
+                              <FileText size={15} />
                             </button>
 
                             {perms.delete && (
                               <button
                                 onClick={() => setDeleteConfirm(item.id)}
-                                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors cursor-pointer shrink-0"
+                                className="flex items-center justify-center p-2 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200/80 rounded-lg transition-colors cursor-pointer shrink-0"
                                 title="Delete Case"
                               >
-                                <Trash2 size={13} />
-                                <span>Delete</span>
+                                <Trash2 size={15} />
                               </button>
                             )}
                           </div>

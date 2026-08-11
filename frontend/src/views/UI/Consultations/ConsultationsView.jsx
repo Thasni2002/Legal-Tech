@@ -10,6 +10,7 @@ import Link from "next/link";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { createPortal } from "react-dom";
+import MeetingNotesTab from "./MeetingNotesTab";
 import {
   BookOpen,
   BarChart3,
@@ -31,10 +32,15 @@ import {
   User,
   ArrowLeft,
   CalendarDays,
+  FileText
 } from "lucide-react";
 
 export default function ConsultationsView() {
+    const [mainTab, setMainTab] = useState("schedule"); // "schedule" | "notes"
+    const [preselectedForNotes, setPreselectedForNotes] = useState(null);
+
     const [showAppointments, setShowAppointments] = useState(false);
+
     const [showDeclineModal, setShowDeclineModal] = useState(false);
     const [selectedAppointment, setSelectedAppointment] = useState(null);
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -64,6 +70,7 @@ export default function ConsultationsView() {
     const [scheduledPage, setScheduledPage] = useState(0);
     const [alertModal, setAlertModal] = useState({ show: false, title: "", message: "", type: "success" });
     const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+    const [casesList, setCasesList] = useState([]);
 
     const showToast = (message, type = "success") => {
         const title = type === "success" ? "Success" : type === "error" ? "Error" : "Notice";
@@ -156,6 +163,19 @@ export default function ConsultationsView() {
             const loggedIn = getLoggedInUser();
             setUser(loggedIn);
             await fetchConsultations(loggedIn);
+
+            // Fetch cases for case column display
+            try {
+                const token = localStorage.getItem("token");
+                const headers = token ? { Authorization: `Bearer ${token}` } : {};
+                const cRes = await fetch(`${API_BASE_URL}/case-management/`, { headers });
+                if (cRes.ok) {
+                    const cData = await cRes.json();
+                    const list = Array.isArray(cData) ? cData : cData.cases || cData.items || [];
+                    setCasesList(list);
+                }
+            } catch (_) {}
+
             const dismissed = JSON.parse(localStorage.getItem("dismissed_consultation_notifications") || "[]");
             setDismissedNotifications(dismissed);
 
@@ -558,18 +578,62 @@ export default function ConsultationsView() {
 
             {/* ──── HEADER ──── */}
             <div className="mb-6 md:mb-8">
-                <div className="flex items-center gap-3 flex-wrap mb-2">
-                    <div className="w-10 h-10 rounded-xl bg-[#2563EB] flex items-center justify-center shadow-xs">
-                        <BookOpen size={20} className="text-white" />
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <div className="w-10 h-10 rounded-xl bg-[#2563EB] flex items-center justify-center shadow-xs">
+                            <BookOpen size={20} className="text-white" />
+                        </div>
+                        <div>
+                            <h1 className="text-[#0F172A] font-extrabold text-2xl sm:text-3xl lg:text-4xl leading-tight">
+                                Case Discussion
+                            </h1>
+                            <p className="text-sm sm:text-base text-[#64748B] font-medium">
+                                Schedule client meetings and record comprehensive consultation notes
+                            </p>
+                        </div>
                     </div>
-                    <h1 className="text-[#0F172A] font-extrabold text-2xl sm:text-3xl lg:text-4xl leading-tight">
-                        Case Discussion
-                    </h1>
+
+                    {/* MAIN TABS SWITCHER */}
+                    <div className="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200">
+                        <button
+                            onClick={() => setMainTab("schedule")}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                                mainTab === "schedule"
+                                    ? "bg-white text-blue-600 shadow-sm"
+                                    : "text-slate-600 hover:text-slate-900"
+                            }`}
+                        >
+                            <CalendarCheck size={16} />
+                            <span>Schedule & Meetings</span>
+                        </button>
+                        <button
+                            onClick={() => setMainTab("notes")}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                                mainTab === "notes"
+                                    ? "bg-indigo-600 text-white shadow-sm"
+                                    : "text-slate-600 hover:text-slate-900"
+                            }`}
+                        >
+                            <FileText size={16} />
+                            <span>Meeting Notes</span>
+                        </button>
+                    </div>
                 </div>
-                <p className="text-sm sm:text-base lg:text-lg text-[#64748B] ml-0 sm:ml-[52px]">
-                    Schedule and manage client meetings
-                </p>
             </div>
+
+            {/* TAB CONTENT: MEETING NOTES */}
+            {mainTab === "notes" && (
+                <MeetingNotesTab
+                    user={user}
+                    preselectedConsultation={preselectedForNotes}
+                    onClosePreselected={() => setPreselectedForNotes(null)}
+                />
+            )}
+
+            {/* TAB CONTENT: SCHEDULE & MEETINGS */}
+            {mainTab === "schedule" && (
+                <>
+
 
             {/* ──── STATS ──── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
@@ -1114,16 +1178,36 @@ export default function ConsultationsView() {
                                                 </span>
                                             </td>
                                             <td className="p-4 whitespace-nowrap">
-                                                <button
-                                                    onClick={() => {
-                                                        setDeleteId(item.id);
-                                                        setShowDeleteModal(true);
-                                                    }}
-                                                    className="w-9 h-9 rounded-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
-                                                    title="Delete Scheduled Meeting"
-                                                >
-                                                    <Trash2 size={15} />
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => {
+                                                            const linkedCase = item.case_id
+                                                                ? casesList.find(c => String(c.id) === String(item.case_id))
+                                                                : null;
+                                                            setPreselectedForNotes({
+                                                                ...item,
+                                                                case_title: linkedCase ? linkedCase.case_title : (item.issue || ""),
+                                                                case_no: linkedCase ? linkedCase.case_no : "",
+                                                            });
+                                                            setMainTab("notes");
+                                                        }}
+                                                        className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+                                                        title="Record Meeting Notes for this consultation"
+                                                    >
+                                                        <FileText size={14} />
+                                                        <span>Record Note</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setDeleteId(item.id);
+                                                            setShowDeleteModal(true);
+                                                        }}
+                                                        className="w-9 h-9 rounded-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                                                        title="Delete Scheduled Meeting"
+                                                    >
+                                                        <Trash2 size={15} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -1180,6 +1264,9 @@ export default function ConsultationsView() {
                     );
                 })()}
             </div>
+            </>
+            )}
+
 
             {mounted && showScheduleSuccess && typeof document !== "undefined"
                 ? createPortal(
