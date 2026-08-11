@@ -88,22 +88,4 @@ class Document(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     advocate = relationship("User", foreign_keys=[advocate_id])
-
-
-class ClientMeetingNote(Base):
-    __tablename__ = "client_meeting_notes"
-
-    id = Column(Integer, primary_key=True, index=True)
-    client_id = Column(String(100), index=True, nullable=False)
-    case_no = Column(String(50), nullable=True)
-    subject = Column(String(255), nullable=False)
-    description = Column(String(4000), nullable=False)
-    meeting_date = Column(DateTime, default=datetime.utcnow)
-    meeting_mode = Column(String(50), default="In-Person")
-    advocate_name = Column(String(150), nullable=True)
-    proof_document_path = Column(String(500), nullable=True)
-    proof_document_name = Column(String(255), nullable=True)
-    action_items = Column(String(1000), nullable=True)
-    action_status = Column(String(50), default="Pending")
-    tags = Column(String(255), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+

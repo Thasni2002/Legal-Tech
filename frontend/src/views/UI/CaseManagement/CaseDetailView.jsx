@@ -1075,7 +1075,7 @@ export default function CaseDetailView({ id }) {
       const cnr = cnrNo || selectedCase?.cnr_number || `KLER0100${String(id).padStart(6, "0")}2026`;
       const res = await fetch(`${API_BASE_URL}/api/ecourts/lookup`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ cnrNumber: cnr }),
       });
       if (res.ok) {
