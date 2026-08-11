@@ -61,6 +61,195 @@ export default function CourtFeeCalView() {
   const [advocateFee, setAdvocateFee] = useState("");
   const [advocateFeeRemarks, setAdvocateFeeRemarks] = useState("");
 
+  // Court Fee Calculator inputs (19 Indian States & UTs)
+  const [selectedState, setSelectedState] = useState("Kerala");
+  const [suitValuation, setSuitValuation] = useState("");
+
+  const supportedStatesList = [
+    "Andhra Pradesh", "Assam", "Bihar", "Chandigarh", "Delhi",
+    "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
+    "Kerala", "Maharashtra", "Punjab", "Rajasthan", "Tamil Nadu",
+    "Telangana", "Uttar Pradesh", "Uttarakhand", "West Bengal"
+  ];
+
+  // Instant Court Fee calculation for all 19 states & UTs
+  const calculateCourtFeeForState = (st, valNum) => {
+    const val = Math.max(0, Number(valNum || 0));
+    if (val <= 0) return 0;
+
+    let fee = 0;
+    if (st === "Haryana") {
+      if (val <= 15000) fee = val * 0.025;
+      else if (val <= 27000) fee = 375 + (val - 15000) * 0.035;
+      else if (val <= 39000) fee = 795 + (val - 27000) * 0.045;
+      else if (val <= 51000) fee = 1335 + (val - 39000) * 0.055;
+      else if (val <= 63000) fee = 1995 + (val - 51000) * 0.065;
+      else if (val <= 75000) fee = 2775 + (val - 63000) * 0.075;
+      else if (val <= 500000) fee = 3675 + (val - 75000) * 0.065;
+      else if (val <= 1000000) fee = 31300 + (val - 500000) * 0.055;
+      else if (val <= 2000000) fee = 58800 + (val - 1000000) * 0.045;
+      else if (val <= 3000000) fee = 103800 + (val - 2000000) * 0.035;
+      else if (val <= 4500000) fee = 138000 + (val - 3000000) * 0.025;
+      else if (val <= 6000000) fee = 176300 + (val - 4500000) * 0.015;
+      else fee = 198800 + (val - 6000000) * 0.005;
+    } else if (st === "Tamil Nadu") {
+      if (val <= 5) fee = 0.5;
+      else if (val <= 100) fee = 0.5 + 0.5 * Math.ceil((val - 5) / 5);
+      else if (val <= 500) fee = 10 + Math.ceil((val - 100) / 10);
+      else if (val <= 1000) fee = 50 + 1.5 * Math.ceil((val - 500) / 10);
+      else if (val <= 5000) fee = 125 + 12.2 * Math.ceil((val - 1000) / 100);
+      else if (val <= 10000) fee = 613 + 24.4 * Math.ceil((val - 5000) / 250);
+      else if (val <= 20000) fee = 1101 + 36.5 * Math.ceil((val - 10000) / 500);
+      else if (val <= 30000) fee = 1831 + 48.8 * Math.ceil((val - 20000) / 1000);
+      else if (val <= 50000) fee = 2319 + 48.8 * Math.ceil((val - 30000) / 2000);
+      else fee = 2563 + 48.8 * Math.ceil((val - 50000) / 5000);
+    } else if (st === "Andhra Pradesh" || st === "Telangana") {
+      if (val <= 100) fee = 0.6 * Math.ceil(val / 5);
+      else if (val <= 500) fee = 8 + 0.8 * Math.ceil((val - 100) / 10);
+      else if (val <= 1000) fee = 40 + 1.1 * Math.ceil((val - 500) / 10);
+      else if (val <= 10000) fee = 111 + 7 * Math.ceil((val - 1000) / 100);
+      else if (val <= 20000) fee = 174 + 30 * Math.ceil((val - 10000) / 500);
+      else if (val <= 30000) fee = 774 + 40 * Math.ceil((val - 20000) / 1000);
+      else if (val <= 50000) fee = 1174 + 60 * Math.ceil((val - 30000) / 2000);
+      else if (val <= 100000) fee = 1774 + 80 * Math.ceil((val - 50000) / 4000);
+      else fee = 2774 + 100 * Math.ceil((val - 100000) / 10000);
+    } else if (st === "Assam") {
+      if (val <= 100) fee = 0.55 * Math.ceil(val / 5);
+      else if (val <= 150) fee = 11 + 1.95 * Math.ceil((val - 100) / 10);
+      else if (val <= 1000) fee = 20.75 + 1.45 * Math.ceil((val - 150) / 10);
+      else if (val <= 7500) fee = 144 + 8.25 * Math.ceil((val - 1000) / 100);
+      else if (val <= 10000) fee = 680.25 + 16.5 * Math.ceil((val - 7500) / 250);
+      else if (val <= 20000) fee = 845.25 + 24.75 * Math.ceil((val - 10000) / 500);
+      else if (val <= 50000) fee = 1340.25 + 33 * Math.ceil((val - 20000) / 1000);
+      else fee = 2330.25 + 41.25 * Math.ceil((val - 50000) / 5000);
+      fee = Math.min(fee, 11000);
+    } else if (st === "Bihar" || st === "Jharkhand") {
+      if (val < 6) fee = 0;
+      else if (val <= 100) fee = Math.ceil(val / 5);
+      else if (val <= 1000) fee = 20 + 2 * Math.ceil((val - 100) / 10);
+      else if (val <= 5000) fee = 200 + 16 * Math.ceil((val - 1000) / 100);
+      else if (val <= 10000) fee = 840 + 32 * Math.ceil((val - 5000) / 250);
+      else if (val <= 20000) fee = 1480 + 48 * Math.ceil((val - 10000) / 500);
+      else if (val <= 30000) fee = 2440 + 64 * Math.ceil((val - 20000) / 1000);
+      else if (val <= 50000) fee = 3080 + 64 * Math.ceil((val - 30000) / 2000);
+      else fee = 3720 + 80 * Math.ceil((val - 50000) / 5000);
+      fee = Math.min(fee, 50000);
+    } else if (st === "Delhi" || st === "Chandigarh" || st === "Himachal Pradesh") {
+      if (val <= 100) fee = Math.ceil(val / 5);
+      else if (val <= 500) fee = 20 + Math.ceil((val - 100) / 10);
+      else if (val <= 1000) fee = 60 + 2 * Math.ceil((val - 500) / 10);
+      else if (val <= 5000) fee = 160 + 15 * Math.ceil((val - 1000) / 100);
+      else if (val <= 10000) fee = 760 + 25 * Math.ceil((val - 5000) / 250);
+      else if (val <= 20000) fee = 1260 + 40 * Math.ceil((val - 10000) / 500);
+      else if (val <= 30000) fee = 2060 + 50 * Math.ceil((val - 20000) / 1000);
+      else if (val <= 50000) fee = 2560 + 50 * Math.ceil((val - 30000) / 2000);
+      else fee = 3060 + 50 * Math.ceil((val - 50000) / 5000);
+    } else if (st === "Gujarat") {
+      if (val <= 10000) fee = 100 * Math.ceil(val / 1000);
+      else if (val <= 15000) fee = 1250;
+      else if (val <= 20000) fee = 1500;
+      else if (val <= 21000) fee = 1525;
+      else if (val <= 30000) fee = 1525 + 75 * Math.ceil((val - 21000) / 1000);
+      else if (val <= 34000) fee = 2200 + 175 * Math.ceil((val - 30000) / 2000);
+      else if (val <= 50000) fee = 2500 + 150 * Math.ceil((val - 34000) / 2000);
+      else if (val <= 75000) fee = 3700 + 300 * Math.ceil((val - 50000) / 5000);
+      else if (val <= 100000) fee = 5200 + 150 * Math.ceil((val - 75000) / 5000);
+      else if (val <= 1000000) fee = 5950 + 200 * Math.ceil((val - 100000) / 10000);
+      else if (val <= 2000000) fee = 23950 + 1200 * Math.ceil((val - 1000000) / 100000);
+      else fee = 35950 + 500 * Math.ceil((val - 2000000) / 100000);
+      fee = Math.min(fee, 75000);
+    } else if (st === "Karnataka") {
+      if (val <= 15000) fee = val * 0.025;
+      else if (val <= 75000) fee = 375 + (val - 15000) * 0.075;
+      else if (val <= 250000) fee = 4875 + (val - 75000) * 0.07;
+      else if (val <= 500000) fee = 17125 + (val - 250000) * 0.065;
+      else if (val <= 750000) fee = 33375 + (val - 500000) * 0.06;
+      else if (val <= 1000000) fee = 48375 + (val - 750000) * 0.055;
+      else if (val <= 1500000) fee = 62125 + (val - 1000000) * 0.05;
+      else if (val <= 2000000) fee = 87125 + (val - 1500000) * 0.045;
+      else if (val <= 2500000) fee = 109625 + (val - 2000000) * 0.04;
+      else if (val <= 3000000) fee = 129625 + (val - 2500000) * 0.035;
+      else if (val <= 4000000) fee = 147125 + (val - 3000000) * 0.03;
+      else if (val <= 5000000) fee = 177125 + (val - 4000000) * 0.025;
+      else if (val <= 6000000) fee = 202125 + (val - 5000000) * 0.02;
+      else if (val <= 7000000) fee = 222125 + (val - 6000000) * 0.015;
+      else if (val <= 8000000) fee = 237125 + (val - 7000000) * 0.01;
+      else fee = 247125 + (val - 8000000) / 200;
+    } else if (st === "Kerala") {
+      if (val <= 100) fee = 4;
+      else if (val <= 15000) fee = 4 + 4 * Math.ceil((val - 100) / 100);
+      else if (val <= 50000) fee = 600 + 8 * Math.ceil((val - 15000) / 100);
+      else if (val <= 1000000) fee = 3400 + 10 * Math.ceil((val - 50000) / 100);
+      else if (val <= 10000000) fee = 98400 + 8 * Math.ceil((val - 1000000) / 100);
+      else fee = 818400 + Math.ceil((val - 10000000) / 100);
+    } else if (st === "Maharashtra") {
+      if (val <= 1000) fee = 200;
+      else if (val <= 5000) fee = 200 + 12 * Math.ceil((val - 1000) / 100);
+      else if (val <= 10000) fee = 680 + 15 * Math.ceil((val - 5000) / 100);
+      else if (val <= 20000) fee = 1430 + 75 * Math.ceil((val - 10000) / 500);
+      else if (val <= 30000) fee = 2930 + 100 * Math.ceil((val - 20000) / 1000);
+      else if (val <= 50000) fee = 3930 + 100 * Math.ceil((val - 30000) / 2000);
+      else if (val <= 100000) fee = 4930 + 150 * Math.ceil((val - 50000) / 5000);
+      else if (val <= 1100000) fee = 6430 + 200 * Math.ceil((val - 100000) / 10000);
+      else if (val <= 23900000) fee = 26430 + 1200 * Math.ceil((val - 1100000) / 100000);
+      else fee = 300000;
+    } else if (st === "Punjab") {
+      if (val <= 10000) fee = val * 0.025;
+      else if (val <= 20000) fee = 250 + (val - 10000) * 0.035;
+      else if (val <= 30000) fee = 600 + (val - 20000) * 0.045;
+      else if (val <= 40000) fee = 1050 + (val - 30000) * 0.055;
+      else if (val <= 50000) fee = 1600 + (val - 40000) * 0.065;
+      else if (val <= 60000) fee = 2250 + (val - 50000) * 0.075;
+      else if (val <= 75000) fee = 3000 + (val - 60000) * 0.065;
+      else if (val <= 100000) fee = 3975 + (val - 75000) * 0.055;
+      else if (val <= 200000) fee = 5350 + (val - 100000) * 0.035;
+      else if (val <= 300000) fee = 8850 + (val - 200000) * 0.0225;
+      else fee = 11100 + (val - 300000) * 0.0225;
+    } else if (st === "Rajasthan") {
+      if (val <= 15000) fee = val * 0.025;
+      else if (val <= 75000) fee = 375 + (val - 15000) * 0.075;
+      else if (val <= 250000) fee = 4875 + (val - 75000) * 0.07;
+      else if (val <= 500000) fee = 17125 + (val - 250000) * 0.065;
+      else if (val <= 750000) fee = 33375 + (val - 500000) * 0.06;
+      else if (val <= 1000000) fee = 48375 + (val - 750000) * 0.055;
+      else if (val <= 1500000) fee = 62125 + (val - 1000000) * 0.05;
+      else if (val <= 2000000) fee = 87125 + (val - 1500000) * 0.045;
+      else if (val <= 2500000) fee = 109625 + (val - 2000000) * 0.04;
+      else if (val <= 3000000) fee = 129625 + (val - 2500000) * 0.035;
+      else if (val <= 4000000) fee = 147125 + (val - 3000000) * 0.03;
+      else if (val <= 10000000) fee = 177125 + (val - 4000000) * 0.025;
+      else if (val <= 15000000) fee = 327125 + (val - 10000000) * 0.02;
+      else if (val <= 20000000) fee = 427125 + (val - 15000000) * 0.015;
+      else if (val <= 30000000) fee = 502125 + (val - 20000000) * 0.01;
+      else fee = 602125 + (val - 30000000) / 200;
+    } else if (st === "Uttar Pradesh" || st === "Uttarakhand") {
+      if (val <= 100) fee = 0.5 * Math.ceil(val / 5);
+      else if (val <= 300) fee = 10 + 1.25 * Math.ceil((val - 100) / 10);
+      else if (val <= 500) fee = 35 + 1.5 * Math.ceil((val - 300) / 10);
+      else if (val <= 1000) fee = 65 + 2.25 * Math.ceil((val - 500) / 10);
+      else if (val <= 5000) fee = 177.5 + 12 * Math.ceil((val - 1000) / 100);
+      else if (val <= 10000) fee = 657.5 + 20 * Math.ceil((val - 5000) / 200);
+      else fee = 1157.5 + 37.5 * Math.ceil((val - 10000) / 500);
+    } else if (st === "West Bengal") {
+      if (val <= 1000) fee = 10 * Math.ceil(val / 100);
+      else if (val <= 7500) fee = 100 + 8 * Math.ceil((val - 1000) / 250);
+      else if (val <= 10000) fee = 620 + 16 * Math.ceil((val - 7500) / 500);
+      else if (val <= 20000) fee = 780 + 30 * Math.ceil((val - 10000) / 10);
+      else if (val <= 50000) fee = 1380 + 50 * Math.ceil((val - 20000) / 1000);
+      else if (val <= 100000) fee = 2880 + 350 * Math.ceil((val - 50000) / 5000);
+      else if (val <= 200000) fee = 6380 + 370 * Math.ceil((val - 100000) / 5000);
+      else if (val <= 300000) fee = 13780 + 210 * Math.ceil((val - 200000) / 5000);
+      else fee = 17980 + 100 * Math.ceil((val - 300000) / 10000);
+      fee = Math.min(fee, 50000);
+    } else {
+      fee = val * 0.025;
+    }
+
+    return Math.round(fee * 100) / 100;
+  };
+
+  const calculatedCourtFee = calculateCourtFeeForState(selectedState, suitValuation);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredClients, setFilteredClients] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -138,11 +327,15 @@ export default function CourtFeeCalView() {
     }
   }, [paramClientName, paramCaseNo, paramMobile, paramEmail, paramCaseType]);
 
+  const [isSendingPayment, setIsSendingPayment] = useState(false);
+
   const handleSendPayment = async () => {
     if (!clientName) {
       alert("Please select a client first.");
       return;
     }
+
+    setIsSendingPayment(true);
 
     try {
       const gst = Number(advocateFee || 0) * 0.18;
@@ -157,9 +350,9 @@ export default function CourtFeeCalView() {
         mobile_number: mobileNumber,
         email: email,
 
-        court_fee_case_type: "N/A",
-        court_fee_amount: 0,
-        court_fee_jurisdiction: "N/A",
+        court_fee_case_type: `${selectedState} (Ad-Valorem)`,
+        court_fee_amount: Number(calculatedCourtFee || 0),
+        court_fee_jurisdiction: selectedState,
 
         stamp_duty_doc_type: "N/A",
         stamp_duty_amount: 0,
@@ -191,49 +384,64 @@ export default function CourtFeeCalView() {
       if (res.ok) {
         const savedInvoice = await res.json();
 
-        let backendPdfPath = null;
-        try {
-          const doc = generateInvoicePDF(savedInvoice);
-          const pdfBlob = doc.output("blob");
-
-          const formData = new FormData();
-          formData.append("file", pdfBlob, `invoice_${savedInvoice.id}.pdf`);
-
-          const uploadRes = await fetch(`${API_BASE_URL}/finance/upload-invoice/${savedInvoice.id}`, {
-            method: "POST",
-            body: formData,
-          });
-
-          if (uploadRes.ok) {
-            const uploadData = await uploadRes.json();
-            backendPdfPath = uploadData.file_path;
-          }
-        } catch (pdfErr) {
-          console.error("Error generating/uploading invoice PDF:", pdfErr);
-        }
-
-        await fetch("http://127.0.0.1:8000/finance/send-payment-email", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            email,
-            client_name: clientName,
-            amount: grandTotal,
-            payment_method: paymentMethod,
-            gpay_number: gpayNumber,
-            upi_id: upiId,
-            payment_link: `http://localhost:3000/client-payments/${savedInvoice.id}`,
-            invoice_pdf_path: backendPdfPath || `invoices/invoice_${savedInvoice.id}.pdf`
-          })
-        });
-
+        // 🚀 SHOW SUCCESS MODAL INSTANTLY FOR SPEED
         setShowSuccessModal(true);
+        setIsSendingPayment(false);
         fetchInvoicesAndStats();
+
+        // Perform PDF generation, upload, and email sending asynchronously in background
+        (async () => {
+          let backendPdfPath = null;
+          try {
+            const doc = generateInvoicePDF(savedInvoice);
+            const pdfBlob = doc.output("blob");
+
+            const formData = new FormData();
+            formData.append("file", pdfBlob, `invoice_${savedInvoice.id}.pdf`);
+
+            const uploadRes = await fetch(`${API_BASE_URL}/finance/upload-invoice/${savedInvoice.id}`, {
+              method: "POST",
+              body: formData,
+            });
+
+            if (uploadRes.ok) {
+              const uploadData = await uploadRes.json();
+              backendPdfPath = uploadData.file_path;
+            }
+          } catch (pdfErr) {
+            console.error("Error generating/uploading invoice PDF:", pdfErr);
+          }
+
+          if (email) {
+            try {
+              await fetch(`${API_BASE_URL}/finance/send-payment-email`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                  email,
+                  client_name: clientName,
+                  amount: grandTotal,
+                  payment_method: paymentMethod,
+                  gpay_number: gpayNumber,
+                  upi_id: upiId,
+                  payment_link: `${window.location.origin}/client-payments/${savedInvoice.id}`,
+                  invoice_pdf_path: backendPdfPath || `invoices/invoice_${savedInvoice.id}.pdf`
+                })
+              });
+            } catch (emailErr) {
+              console.error("Error sending payment email:", emailErr);
+            }
+          }
+        })();
+      } else {
+        setIsSendingPayment(false);
+        alert("Failed to create payment request.");
       }
     } catch (error) {
       console.error(error);
+      setIsSendingPayment(false);
     }
   };
   const handleClientSearch = (value) => {
@@ -620,6 +828,82 @@ export default function CourtFeeCalView() {
           {/* Calculator Grid */}
           <div className="grid grid-cols-1 gap-6">
 
+            {/* Court Fee Calculator Card */}
+            <div className="bg-gradient-to-br from-blue-50/70 to-indigo-50/40 border border-blue-200/80 rounded-3xl p-6 sm:p-7 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none text-blue-600">
+                <Scale size={72} />
+              </div>
+
+              <div className="flex items-center justify-between mb-5 relative z-10">
+                <h3 className="font-extrabold text-blue-950 text-lg sm:text-xl flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm">
+                    <Scale size={18} />
+                  </div>
+                  Court Fee Calculator <span className="text-xs font-bold text-blue-600 bg-blue-100 border border-blue-200 px-2.5 py-0.5 rounded-full">Ad-Valorem</span>
+                </h3>
+              </div>
+
+              <p className="text-xs text-blue-800/80 font-medium mb-5 relative z-10 leading-relaxed">
+                Calculate precise ad-valorem court fees based on subject matter monetary valuation across 19 Indian States &amp; UTs.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10 mb-5">
+                <div>
+                  <label className="block text-xs font-bold text-blue-900 uppercase tracking-wider mb-2">
+                    State / Union Territory
+                  </label>
+                  <select
+                    value={selectedState}
+                    onChange={(e) => setSelectedState(e.target.value)}
+                    className="w-full border border-blue-200 rounded-xl p-3 text-sm bg-white text-blue-950 font-bold focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none shadow-sm transition-all"
+                  >
+                    {supportedStatesList.map((st) => (
+                      <option key={st} value={st}>
+                        {st}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-blue-900 uppercase tracking-wider mb-2">
+                    Monetary Valuation (₹)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 10000"
+                    value={suitValuation}
+                    onChange={(e) => setSuitValuation(e.target.value)}
+                    className="w-full border border-blue-200 rounded-xl p-3 text-sm bg-white text-blue-950 font-bold focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none shadow-sm transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Instant Calculation Result Banner */}
+              <div className="bg-white border border-blue-200/90 rounded-2xl p-4 sm:p-5 shadow-sm relative z-10">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3 mb-3">
+                  <div className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+                    Calculated Court Fee ({selectedState})
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black text-blue-600 font-mono tracking-tight">
+                    ₹{calculatedCourtFee.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                </div>
+
+                <p className="text-xs font-bold text-slate-700 leading-relaxed">
+                  {suitValuation > 0
+                    ? `Ad-Valorem Court Fees for valuation of ₹${Number(suitValuation).toLocaleString('en-IN')}/- for the State of ${selectedState} is ₹${calculatedCourtFee.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/-`
+                    : `Enter suit valuation above to compute court fees for ${selectedState}.`}
+                </p>
+
+                <div className="mt-3 flex items-center gap-1.5 text-[11px] font-bold text-slate-500 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+                  <Lock size={12} className="text-slate-400 shrink-0" />
+                  <span>Internal advocate calculation — court fee is NOT displayed on client invoice.</span>
+                </div>
+              </div>
+            </div>
+
             {/* Advocate Fee */}
             <div className="bg-gradient-to-br from-amber-50/50 to-transparent border border-amber-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:opacity-40 transition-opacity pointer-events-none text-amber-600">
@@ -669,7 +953,7 @@ export default function CourtFeeCalView() {
         <div className="lg:col-span-1">
           <div className="bg-white border border-[#E2E8F0] rounded-3xl p-6 sm:p-8 shadow-md text-[#0F172A] sticky top-6">
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#F1F5F9]">
-              <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0F172A]">Invoice</h3>
+              <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0F172A]">Invoice Summary</h3>
               <Receipt size={26} className="text-[#2563EB]" />
             </div>
 
@@ -686,25 +970,36 @@ export default function CourtFeeCalView() {
               </div>
             </div>
 
+            {/* Fees Breakdown */}
             <div className="space-y-3 text-xs border-t border-[#E2E8F0] pt-5 mb-6">
               <div className="flex justify-between items-center text-[#475569] font-medium">
                 <span>Advocate Fee</span>
                 <span className="font-extrabold text-[#0F172A]">₹{advocateFee || 0}</span>
               </div>
 
+              {calculatedCourtFee > 0 && (
+                <div className="flex justify-between items-center text-blue-700 bg-blue-50/80 px-2.5 py-1.5 rounded-lg border border-blue-100">
+                  <span className="font-semibold flex items-center gap-1">
+                    <Scale size={13} /> Court Fee ({selectedState}) <span className="text-[10px] text-blue-600">(Internal Ref)</span>
+                  </span>
+                  <span className="font-bold font-mono">₹{calculatedCourtFee.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+              )}
+
               <div className="flex justify-between items-center pt-3 border-t border-dashed border-[#E2E8F0]">
-                <span className="text-[#64748B] font-medium">Subtotal</span>
+                <span className="text-[#64748B] font-medium">Advocate Subtotal</span>
                 <span className="font-extrabold text-[#0F172A]">₹{total}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-[#64748B] font-medium">GST (18%)</span>
+                <span className="text-[#64748B] font-medium">GST (18% on Adv Fee)</span>
                 <span className="font-extrabold text-[#0F172A]">₹{(Number(advocateFee || 0) * 0.18).toFixed(2)}</span>
               </div>
             </div>
 
-            <div className="bg-[#F8FAFC] border border-blue-100 rounded-2xl -mx-2 px-6 py-5 mb-6 text-center relative overflow-hidden">
+            {/* Billed Grand Total Box */}
+            <div className="bg-[#F8FAFC] border border-blue-100 rounded-2xl -mx-2 px-6 py-5 mb-4 text-center relative overflow-hidden">
               <div className="absolute top-0 right-0 p-4 opacity-5"><Landmark size={80} /></div>
-              <p className="text-[11px] text-[#64748B] uppercase tracking-wider font-extrabold mb-1 relative z-10">Grand Total</p>
+              <p className="text-[11px] text-[#64748B] uppercase tracking-wider font-extrabold mb-1 relative z-10">Client Grand Total</p>
               <p className="text-3xl sm:text-4xl font-black text-[#2563EB] tracking-tight relative z-10">
                 ₹{(Number(total) + Number(advocateFee || 0) * 0.18).toFixed(2)}
               </p>
@@ -714,13 +1009,28 @@ export default function CourtFeeCalView() {
               </div>
             </div>
 
+            <div className="mb-6 p-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-semibold text-slate-600 flex items-start gap-2">
+              <Lock size={14} className="text-slate-400 shrink-0 mt-0.5" />
+              <span>Only Advocate Fee + GST will be billed &amp; shown to the client. Internal court fees are excluded from the client invoice.</span>
+            </div>
+
             {hasPermission("Finance Management", "add") && (
               <button
                 onClick={handleSendPayment}
-                className="w-full flex items-center justify-center gap-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-extrabold py-3.5 rounded-xl transition-all shadow-md active:scale-[0.98] cursor-pointer text-sm"
+                disabled={isSendingPayment}
+                className="w-full flex items-center justify-center gap-2 bg-[#2563EB] hover:bg-[#1D4ED8] disabled:bg-blue-400 text-white font-extrabold py-3.5 rounded-xl transition-all shadow-md active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed text-sm"
               >
-                <span>Send Payment Request</span>
-                <Send size={16} />
+                {isSendingPayment ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Sending Request...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Send Payment Request</span>
+                    <Send size={16} />
+                  </>
+                )}
               </button>
             )}
 

@@ -130,58 +130,19 @@ export function generateProfessionalInvoicePDF(inv) {
 
   y += 9;
 
-  // Build clean line items — excluding zero or N/A items
+  // Build clean line items — showing ONLY Advocate Professional Fee for client invoice
   const items = [];
 
-  // Advocate / Legal Fee
   const advocateFee = Number(inv.advocate_fee_amount || 0);
   const subtotalAmt = Number(inv.subtotal || 0);
-  if (advocateFee > 0) {
-    items.push({
-      desc: "Legal Counsel & Professional Services Fee",
-      amount: advocateFee,
-    });
-  } else if (subtotalAmt > 0) {
-    items.push({
-      desc: "Legal Counsel & Professional Services Fee",
-      amount: subtotalAmt,
-    });
-  }
+  const billableFee = advocateFee > 0 ? advocateFee : (subtotalAmt > 0 ? subtotalAmt : Number(inv.grand_total || 0));
 
-  // Court Fee (only if > 0)
-  const courtFee = Number(inv.court_fee_amount || 0);
-  if (courtFee > 0) {
-    items.push({
-      desc: `Court Fee Charges${inv.court_fee_case_type ? ` (${inv.court_fee_case_type})` : ""}`,
-      amount: courtFee,
-    });
-  }
-
-  // Stamp Duty (only if > 0)
-  const stampDuty = Number(inv.stamp_duty_amount || 0);
-  if (stampDuty > 0) {
-    items.push({
-      desc: `Stamp Duty Charges${inv.stamp_duty_doc_type ? ` (${inv.stamp_duty_doc_type})` : ""}`,
-      amount: stampDuty,
-    });
-  }
-
-  // Paper Filing (only if > 0)
-  const filingCost = Number(inv.filing_cost_amount || 0);
-  if (filingCost > 0) {
-    items.push({
-      desc: `Paper Documentation & Filing Charges (${inv.filing_cost_pages || 0} pages)`,
-      amount: filingCost,
-    });
-  }
-
-  // Fallback if array ended up empty
-  if (items.length === 0) {
-    items.push({
-      desc: "Professional Legal Counsel & Consultation Fee",
-      amount: subtotalAmt || 0,
-    });
-  }
+  items.push({
+    desc: inv.advocate_fee_case_type && inv.advocate_fee_case_type !== "N/A"
+      ? `Legal Counsel & Representation Fee (${inv.advocate_fee_case_type})`
+      : "Legal Counsel & Professional Services Fee",
+    amount: billableFee,
+  });
 
   // Render Table Rows
   items.forEach((item, index) => {
