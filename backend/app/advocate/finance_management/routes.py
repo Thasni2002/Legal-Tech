@@ -58,6 +58,25 @@ class PaymentEmailSchema(BaseModel):
 
 
 # -----------------------------
+# Multi-State Court Fee Calculator APIs
+# -----------------------------
+from .state_court_fees import calculate_state_court_fee, SUPPORTED_STATES
+
+
+@router.get("/court-fee-states")
+def get_supported_court_fee_states():
+    return {"states": SUPPORTED_STATES}
+
+
+@router.get("/calculate-court-fee")
+def calculate_court_fee_api(
+    state: str = Query("Kerala"),
+    valuation: float = Query(0.0)
+):
+    return calculate_state_court_fee(state=state, valuation=valuation)
+
+
+# -----------------------------
 # Invoice APIs
 # -----------------------------
 @router.get("/invoices", response_model=List[InvoiceOut])
