@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 
@@ -25,20 +26,33 @@ def lookup_cnr_service(cnr_number: str, db: Optional[Session] = None) -> eCourts
     
     clean_cnr = cnr_number.strip().upper()
 
+    case_id_match = None
+    if clean_cnr.startswith("KLER0100") and clean_cnr.endswith("2026") and len(clean_cnr) == 18:
+        try:
+            case_id_match = int(clean_cnr[8:14])
+        except ValueError:
+            pass
+
     # 1. Query REAL Advocate Database Case Management records first
     if db:
-        local_case = db.query(Case).filter(
-            (Case.cnr_number == clean_cnr) | 
-            (Case.case_no.ilike(f"%{clean_cnr}%")) |
-            (Case.id == int(clean_cnr) if clean_cnr.isdigit() else False)
-        ).first()
+        filters = [
+            Case.cnr_number == clean_cnr,
+            Case.case_no.ilike(f"%{clean_cnr}%"),
+        ]
+        if clean_cnr.isdigit():
+            filters.append(Case.id == int(clean_cnr))
+        if case_id_match is not None:
+            filters.append(Case.id == case_id_match)
+
+        local_case = db.query(Case).filter(or_(*filters)).first()
+
         
         if local_case:
             timeline = [
                 TimelineEvent(
                     id="1",
                     eventStage="Filing & Registration",
-                    eventDate=local_case.filing_date or (local_case.created_at.strftime("%d-%m-%Y") if local_case.created_at else ""),
+                    eventDate=getattr(local_case, "filing_date", None) or (local_case.created_at.strftime("%d-%m-%Y") if local_case.created_at else ""),
                     title="Case Registered in System",
                     description=f"Case '{local_case.case_no or local_case.case_title}' registered under {local_case.court_name or 'Court'}",
                     benchName=getattr(local_case, "presiding_judge", None) or "Presiding Officer",
