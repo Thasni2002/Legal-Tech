@@ -401,7 +401,7 @@ def create_assigned_case(
 # Get all assigned cases
 def get_assigned_cases(db: Session):
     results = (
-        db.query(AssignedCase, Advocate.profile_image, Case.case_id, Case.case_no)
+        db.query(AssignedCase, Advocate.profile_image, Case.case_id, Case.case_no, Case.status.label("parent_case_status"))
         .outerjoin(
             Advocate,
             AssignedCase.advocate_name == Advocate.advocate_name
@@ -418,7 +418,7 @@ def get_assigned_cases(db: Session):
 
     assigned_cases = []
 
-    for case, profile_image, case_id_code, case_no in results:
+    for case, profile_image, case_id_code, case_no, parent_status in results:
         case.assigned_documents = json.loads(
             case.assigned_documents or "[]"
         )
@@ -431,6 +431,12 @@ def get_assigned_cases(db: Session):
         case.case_id_code = case_id_code or (f"CASE-#{case.case_id}" if case.case_id else None)
         if not case.case_number and case_no:
             case.case_number = case_no
+
+        # If parent Case status is set and completed/closed/won/lost/disposed/decided, dynamically sync status
+        if parent_status and parent_status.strip():
+            p_status_lower = parent_status.strip().lower()
+            if p_status_lower in ['closed', 'completed', 'won', 'lost', 'disposed', 'decided', 'dismissed', 'allowed']:
+                case.status = parent_status.strip()
 
         assigned_cases.append(case)
 

@@ -16,6 +16,8 @@ import {
   ChevronRight,
   Clock,
   Gavel,
+  Eye,
+  FileText,
 } from "lucide-react";
 
 const ROLE_BADGE = {
@@ -228,31 +230,33 @@ export default function JunAdvDashView() {
     <div className="w-full max-w-full min-w-0 mx-auto px-3.5 sm:px-6 lg:px-8 py-3.5 sm:py-6 space-y-4 sm:space-y-6 animate-in fade-in duration-300 overflow-x-hidden">
 
       {/* Page Header */}
-      <div className="bg-white rounded-2xl shadow-xs border border-[#E2E8F0] p-4 sm:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full min-w-0">
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight truncate">
+      <div className="bg-white rounded-2xl shadow-xs border border-[#E2E8F0] p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 w-full min-w-0">
+        <div className="min-w-0 space-y-1">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tight leading-tight break-words">
             {greeting}, {userName ? <span className="capitalize">{userName}</span> : ""}
           </h1>
-          <p className="text-[#64748B] mt-0.5 sm:mt-1 text-xs sm:text-base font-medium truncate">
+          <p className="text-[#64748B] text-xs sm:text-sm font-medium">
             Junior Advocate
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center lg:items-center gap-2.5 sm:gap-3 w-full lg:w-auto">
-          <div className="text-left sm:text-right bg-[#F8FAFC] px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-2xl border border-[#E2E8F0] w-full sm:w-auto">
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto shrink-0">
+          <div className="text-left sm:text-right bg-[#F8FAFC] px-4 py-2.5 rounded-2xl border border-[#E2E8F0] shrink-0">
             <p className="text-[#64748B] font-bold text-[10px] sm:text-xs uppercase tracking-wider">Today&apos;s Date</p>
-            <p className="text-[#0F172A] font-extrabold text-xs sm:text-base mt-0.5">{currentDate}</p>
+            <p className="text-[#0F172A] font-extrabold text-xs sm:text-sm mt-0.5">{currentDate}</p>
           </div>
-          <div className="flex flex-col sm:flex-row lg:flex-col gap-2 w-full sm:w-auto">
+
+          <div className="flex flex-row items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
             <button
               onClick={() => router.push("/junior-calendar")}
-              className="w-full flex items-center justify-center gap-2 text-xs font-extrabold text-white bg-[#2563EB] hover:bg-[#1D4ED8] px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 text-xs font-extrabold text-white bg-[#2563EB] hover:bg-[#1D4ED8] px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-xs active:scale-[0.98] whitespace-nowrap"
             >
               <Calendar size={15} />
               <span>View Calendar</span>
             </button>
             <button
               onClick={() => router.push("/junior-leave?apply=true")}
-              className="w-full flex items-center justify-center gap-2 text-xs font-extrabold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-4 py-2 rounded-xl transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 text-xs font-extrabold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-xs active:scale-[0.98] whitespace-nowrap"
             >
               <CalendarCheck size={14} />
               <span>Apply Leave</span>
@@ -337,15 +341,15 @@ export default function JunAdvDashView() {
           </div>
 
           {/* Desktop Table (>= 768px) */}
-          <div className="hidden md:block w-full overflow-hidden rounded-2xl border border-[#E2E8F0] min-w-0">
-            <table className="w-full table-fixed divide-y divide-[#E2E8F0] text-xs sm:text-sm">
+          <div className="hidden md:block w-full rounded-2xl border border-[#E2E8F0] overflow-hidden">
+            <table className="w-full text-xs sm:text-sm text-left border-collapse">
               <thead className="bg-[#F8FAFC]">
-                <tr>
-                  <th className="p-3.5 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[45%]">Case</th>
-                  <th className="p-3.5 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[35%]">
+                <tr className="border-b border-[#E2E8F0]">
+                  <th className="p-2.5 sm:p-3 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[45%]">Case</th>
+                  <th className="p-2.5 sm:p-3 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[35%]">
                     {selectedCard === "upcomingHearings" ? "Hearing Date" : "Client Name"}
                   </th>
-                  <th className="p-3.5 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[20%]">Status</th>
+                  <th className="p-2.5 sm:p-3 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[20%]">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8F0] bg-white">
@@ -358,12 +362,12 @@ export default function JunAdvDashView() {
                 ) : (
                   selectedList.map((item, index) => (
                     <tr key={index} className="hover:bg-[#F8FAFC] transition-colors">
-                      <td className="p-3.5 text-xs sm:text-sm font-bold text-[#0F172A] leading-snug">{item.title}</td>
-                      <td className="p-3.5 text-xs sm:text-sm text-[#475569] font-medium leading-snug">
+                      <td className="p-2.5 sm:p-3 text-xs sm:text-sm font-bold text-[#0F172A] leading-snug break-words">{item.title}</td>
+                      <td className="p-2.5 sm:p-3 text-xs sm:text-sm text-[#475569] font-medium leading-snug break-words">
                         {selectedCard === "upcomingHearings" ? item.hearing : item.clientName}
                       </td>
-                      <td className="p-3.5">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                      <td className="p-2.5 sm:p-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold uppercase tracking-wider border ${
                           item.status === "Active" || item.status === "Hearing"
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                             : "bg-amber-50 text-amber-700 border-amber-200"
@@ -466,42 +470,42 @@ export default function JunAdvDashView() {
               </div>
 
               {/* Desktop Table (>= 768px) */}
-              <div className="hidden md:block w-full overflow-hidden rounded-2xl border border-[#E2E8F0] min-w-0">
-                <table className="w-full table-fixed divide-y divide-[#E2E8F0] text-xs sm:text-sm">
+              <div className="hidden md:block w-full rounded-2xl border border-[#E2E8F0] overflow-hidden">
+                <table className="w-full text-xs sm:text-sm text-left border-collapse">
                   <thead className="bg-[#F8FAFC]">
-                    <tr>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[26%]">Case</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[16%]">Client Name</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[17%]">Hearing Date</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[18%]">Court / Forum</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[13%]">Status</th>
-                      <th className="p-3.5 sm:p-4 text-center text-xs font-bold text-[#475569] uppercase tracking-wider w-[10%]">Action</th>
+                    <tr className="border-b border-[#E2E8F0]">
+                      <th className="p-2.5 sm:p-3 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[28%]">Case</th>
+                      <th className="p-2.5 sm:p-3 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[16%]">Client Name</th>
+                      <th className="p-2.5 sm:p-3 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[17%]">Hearing Date</th>
+                      <th className="p-2.5 sm:p-3 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[17%]">Court / Forum</th>
+                      <th className="p-2.5 sm:p-3 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[12%]">Status</th>
+                      <th className="p-2.5 sm:p-3 text-right text-xs font-bold text-[#475569] uppercase tracking-wider w-[10%]">Action</th>
                     </tr>
                   </thead>
 
                   <tbody className="divide-y divide-[#E2E8F0] bg-white">
                     {paginatedUpcomingList.map((item, index) => (
                       <tr key={item.id || index} className="hover:bg-[#F8FAFC] transition-colors">
-                        <td className="p-3.5 sm:p-4 text-xs sm:text-sm font-bold text-[#0F172A] leading-snug break-words">
+                        <td className="p-2.5 sm:p-3 text-xs sm:text-sm font-bold text-[#0F172A] leading-snug break-words">
                           {item.title}
                           {item.caseNumber && <span className="block text-[11px] font-normal text-slate-400 mt-0.5">{item.caseNumber}</span>}
                         </td>
-                        <td className="p-3.5 sm:p-4 text-xs sm:text-sm text-[#475569] font-medium leading-snug break-words">
+                        <td className="p-2.5 sm:p-3 text-xs sm:text-sm text-[#475569] font-medium leading-snug break-words">
                           {item.clientName}
                         </td>
-                        <td className="p-3.5 sm:p-4 text-xs sm:text-sm font-bold text-blue-700 whitespace-nowrap">
-                          <span className="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg">
+                        <td className="p-2.5 sm:p-3 text-xs sm:text-sm font-bold text-blue-700 whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg text-[11px]">
                             <Calendar size={12} className="text-blue-600 shrink-0" />
                             {item.hearing}
                           </span>
                         </td>
-                        <td className="p-3.5 sm:p-4 text-xs sm:text-sm text-[#475569] font-medium leading-snug break-words">
+                        <td className="p-2.5 sm:p-3 text-xs sm:text-sm text-[#475569] font-medium leading-snug break-words">
                           {item.court}
                         </td>
-                        <td className="p-3.5 sm:p-4 min-w-0">
+                        <td className="p-2.5 sm:p-3 whitespace-nowrap">
                           <span
                             title={item.status}
-                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider border max-w-full ${
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider border ${
                               item.status === "Active" || item.status === "Hearing"
                                 ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                 : item.status?.toLowerCase().includes("verified") || item.status?.toLowerCase().includes("document")
@@ -509,15 +513,16 @@ export default function JunAdvDashView() {
                                 : "bg-amber-50 text-amber-700 border-amber-200"
                             }`}
                           >
-                            <span className="truncate">{item.status}</span>
+                            <span>{item.status}</span>
                           </span>
                         </td>
-                        <td className="p-3.5 sm:p-4 text-center whitespace-nowrap">
+                        <td className="p-2.5 sm:p-3 text-right whitespace-nowrap">
                           <button
                             onClick={() => router.push("/assigned-cases")}
-                            className="text-xs font-bold text-[#2563EB] hover:text-[#1d4ed8] bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1 rounded-xl transition cursor-pointer"
+                            className="p-2 text-xs font-bold text-[#2563EB] hover:text-[#1d4ed8] bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition cursor-pointer inline-flex items-center justify-center"
+                            title="View Case Details"
                           >
-                            View Case
+                            <FileText size={15} />
                           </button>
                         </td>
                       </tr>
@@ -628,14 +633,14 @@ export default function JunAdvDashView() {
               </div>
 
               {/* Desktop Table (>= 768px) */}
-              <div className="hidden md:block w-full overflow-hidden rounded-2xl border border-[#E2E8F0] min-w-0">
-                <table className="w-full table-fixed divide-y divide-[#E2E8F0] text-xs sm:text-sm">
+              <div className="hidden md:block w-full rounded-2xl border border-[#E2E8F0] overflow-hidden">
+                <table className="w-full text-xs sm:text-sm text-left border-collapse">
                   <thead className="bg-[#F8FAFC]">
-                    <tr>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[30%]">Case</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[20%]">Client Name</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[22%]">My Role</th>
-                      <th className="p-3.5 sm:p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[28%]">Status</th>
+                    <tr className="border-b border-[#E2E8F0]">
+                      <th className="p-2.5 sm:p-3 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[36%]">Case</th>
+                      <th className="p-2.5 sm:p-3 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[22%]">Client Name</th>
+                      <th className="p-2.5 sm:p-3 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[22%]">My Role</th>
+                      <th className="p-2.5 sm:p-3 text-left text-xs font-bold text-[#475569] uppercase tracking-wider w-[20%]">Status</th>
                     </tr>
                   </thead>
 
@@ -647,27 +652,27 @@ export default function JunAdvDashView() {
 
                       return (
                         <tr key={item.id || index} className="hover:bg-[#F8FAFC] transition-colors">
-                          <td className="p-3.5 sm:p-4 text-xs sm:text-sm font-bold text-[#0F172A] leading-snug break-words">
+                          <td className="p-2.5 sm:p-3 text-xs sm:text-sm font-bold text-[#0F172A] leading-snug break-words">
                             {item.title}
                           </td>
-                          <td className="p-3.5 sm:p-4 text-xs sm:text-sm text-[#475569] font-medium leading-snug break-words">
+                          <td className="p-2.5 sm:p-3 text-xs sm:text-sm text-[#475569] font-medium leading-snug break-words">
                             {item.clientName}
                           </td>
-                          <td className="p-3.5 sm:p-4 whitespace-nowrap">
+                          <td className="p-2.5 sm:p-3 whitespace-nowrap">
                             {isStandby ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
                                 🛡️ Standby / Backup
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
                                 👤 Primary Counsel
                               </span>
                             )}
                           </td>
-                          <td className="p-3.5 sm:p-4 min-w-0">
+                          <td className="p-2.5 sm:p-3 whitespace-nowrap">
                             <span
                               title={item.status}
-                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider border max-w-full ${
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider border ${
                                 item.status === "Active" || item.status === "Hearing"
                                   ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                   : item.status?.toLowerCase().includes("verified") || item.status?.toLowerCase().includes("document")
@@ -675,7 +680,7 @@ export default function JunAdvDashView() {
                                   : "bg-amber-50 text-amber-700 border-amber-200"
                               }`}
                             >
-                              <span className="truncate">{item.status}</span>
+                              <span>{item.status}</span>
                             </span>
                           </td>
                         </tr>

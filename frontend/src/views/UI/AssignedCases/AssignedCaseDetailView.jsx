@@ -28,10 +28,19 @@ import {
   Send,
   AlertCircle,
   MapPin,
+  Sparkles,
+  RefreshCw,
+  Printer,
+  Download,
+  Copy,
+  Check,
+  Save,
+  ChevronDown,
 } from "lucide-react";
 import { findStateAndDistrictByCourt } from "@/utils/districtCourts";
 import { getHearingAlertInfo } from "@/views/UI/CaseManagement/CaseDetailView";
-import { getLoggedInUser } from "@/utils/auth";
+import CaseTimelineView from "@/components/case/CaseTimelineView";
+import { getLoggedInUser, getAuthHeaders } from "@/utils/auth";
 import { isSensitiveCase } from "@/utils/caseSensitivity";
 import DocumentViewerModal from "@/components/common/DocumentViewerModal";
 
@@ -94,10 +103,12 @@ function InfoRow({ icon, label, value }) {
 const TABS = [
   { key: "overview", label: "Case Overview" },
   { key: "documents", label: "Case Documents" },
+  { key: "timeline", label: "Timeline" },
   { key: "hearings", label: "eCourts Hearings" },
   { key: "orders", label: "Orders & Judgments" },
   { key: "notes", label: "Advocate Notes" },
   { key: "billing", label: "Billing" },
+  { key: "generate_doc", label: "✨ Generate Document" },
 ];
 
 // ─── Main Component ─────────────────────────────────────────────────────────────
@@ -155,6 +166,88 @@ export default function AssignedCaseDetailView({
   // Billing state
   const [caseInvoices, setCaseInvoices] = useState([]);
   const [feeLoading, setFeeLoading] = useState(false);
+
+  // Timeline state
+  const [timelineEvents, setTimelineEvents] = useState([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [selectedTimelineEvent, setSelectedTimelineEvent] = useState(null);
+
+  // AI Document Generator state
+  const [docGenPrompt, setDocGenPrompt] = useState("");
+  const [docGenLoading, setDocGenLoading] = useState(false);
+  const [docGenError, setDocGenError] = useState(null);
+  const [generatedDocContent, setGeneratedDocContent] = useState("");
+  const [docGenEditedContent, setDocGenEditedContent] = useState("");
+  const [docGenTitle, setDocGenTitle] = useState("Legal Document");
+  const [docGenEditMode, setDocGenEditMode] = useState(false);
+  const [saveCaseDocLoading, setSaveCaseDocLoading] = useState(false);
+  const [saveCaseDocSuccess, setSaveCaseDocSuccess] = useState(false);
+  const [printFormatMenuOpen, setPrintFormatMenuOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const fetchTimelineEvents = async (targetCaseId, silent = false) => {
+    if (!targetCaseId) return;
+    if (!silent) setTimelineLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/case-management/${targetCaseId}/timeline`, {
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTimelineEvents(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error("Error fetching timeline events:", err);
+    } finally {
+      if (!silent) setTimelineLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const targetCaseId = selectedCase?.case_id || selectedCase?.caseId || selectedCase?.id;
+    if (activeTab === "timeline" && targetCaseId) {
+      fetchTimelineEvents(targetCaseId);
+      const interval = setInterval(() => {
+        fetchTimelineEvents(targetCaseId, true);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [activeTab, selectedCase?.id, selectedCase?.case_id, selectedCase?.caseId]);
+
+  const handleGenerateCaseDocument = async (customPrompt = null, docTypeLabel = null) => {
+    const promptToUse = customPrompt || docGenPrompt;
+    const targetCaseId = selectedCase?.case_id || selectedCase?.caseId || selectedCase?.id;
+    if (!targetCaseId || !promptToUse || !promptToUse.trim()) {
+      setDocGenError("Please enter prompt instructions or click a template.");
+      return;
+    }
+    if (docTypeLabel) setDocGenTitle(docTypeLabel);
+    setDocGenLoading(true);
+    setDocGenError(null);
+    setSaveCaseDocSuccess(false);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/case-management/${targetCaseId}/generate-document`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: promptToUse })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || "Failed to generate legal document.");
+      }
+
+      const data = await res.json();
+      setGeneratedDocContent(data.document || "");
+      setDocGenEditedContent(data.document || "");
+      setDocGenEditMode(false);
+    } catch (err) {
+      setDocGenError(err.message);
+    } finally {
+      setDocGenLoading(false);
+    }
+  };
 
   const loggedInUser = getLoggedInUser();
   const isJuniorAdvocate =
@@ -457,7 +550,10 @@ export default function AssignedCaseDetailView({
 
   if (!selectedCase) return null;
 
-  const hearingAlert = getHearingAlertInfo(selectedCase.hearing || selectedCase.next_hearing_date || selectedCase.nextHearingDate);
+  const hearingAlert = getHearingAlertInfo(
+    selectedCase.hearing || selectedCase.next_hearing_date || selectedCase.nextHearingDate,
+    selectedCase.status
+  );
 
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
@@ -481,7 +577,9 @@ export default function AssignedCaseDetailView({
               <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
             </span>
             <div className="flex flex-col leading-tight">
-              <span className="text-[9px] text-red-100 font-extrabold tracking-widest uppercase">NEXT HEARING ALERT</span>
+              <span className="text-[9px] text-red-100 font-extrabold tracking-widest uppercase">
+                {hearingAlert.type === "past" ? "HEARING DATE PASSED" : "NEXT HEARING ALERT"}
+              </span>
               <span className="text-xs sm:text-sm font-black tracking-wide text-white flex items-center gap-2">
                 {hearingAlert.dateFormatted}
                 {hearingAlert.daysText && (
@@ -576,7 +674,7 @@ export default function AssignedCaseDetailView({
           <div className="block lg:hidden w-full min-w-0">
             <div className="flex items-center justify-between gap-2 mb-1.5">
               <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">
-                Active Section ({TABS.findIndex(t => t.key === activeTab) + 1}/6):
+                Active Section ({TABS.findIndex(t => t.key === activeTab) + 1}/{TABS.length}):
               </label>
               <span className="text-[11px] font-extrabold text-[#2563EB] bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100 truncate">
                 {TABS.find(t => t.key === activeTab)?.label}
@@ -589,10 +687,12 @@ export default function AssignedCaseDetailView({
             >
               <option value="overview"> Case Overview</option>
               <option value="documents"> Case Documents ({visibleDocs.length})</option>
+              <option value="timeline"> ⏳ Timeline ({timelineEvents.length})</option>
               <option value="hearings"> eCourts Hearings</option>
               <option value="orders"> Orders &amp; Judgments</option>
-              <option value="notes">Advocate Notes ({caseNotes.length})</option>
+              <option value="notes"> Advocate Notes ({caseNotes.length})</option>
               <option value="billing"> Fee &amp; Billing</option>
+              <option value="generate_doc"> ✨ Generate Document</option>
             </select>
           </div>
 
@@ -985,6 +1085,19 @@ export default function AssignedCaseDetailView({
             </div>
           )}
 
+          {/* ══ TIMELINE ══════════════════════════════════════════════════════ */}
+          {activeTab === "timeline" && (
+            <CaseTimelineView
+              selectedCase={selectedCase}
+              events={timelineEvents}
+              loading={timelineLoading}
+              selectedEvent={selectedTimelineEvent}
+              onSelectEvent={setSelectedTimelineEvent}
+              onRefresh={() => fetchTimelineEvents(selectedCase?.case_id || selectedCase?.caseId || selectedCase?.id)}
+              onViewDocument={handleViewDocument}
+            />
+          )}
+
           {/* ══ ECOURTS HEARINGS ════════════════════════════════════════════════ */}
           {activeTab === "hearings" && (
             <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-200 w-full max-w-full min-w-0">
@@ -1360,6 +1473,152 @@ export default function AssignedCaseDetailView({
             </div>
           )}
 
+          {/* ══ GENERATE DOCUMENT FOR THIS CASE ════════════════════════════════ */}
+          {activeTab === "generate_doc" && selectedCase && (
+            <div className="space-y-6">
+              {/* Header Context Banner */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50/50 to-slate-50 border border-blue-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shrink-0">
+                    <Sparkles size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-[#0F172A] text-base">
+                      AI Legal Document Generator
+                    </h3>
+                    <p className="text-xs text-[#64748B] mt-0.5">
+                      Generating document specifically for <span className="font-bold text-[#0F172A]">{caseDisplayTitle}</span> (Case #{selectedCase.caseNo || selectedCase.case_no})
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600 bg-white/80 backdrop-blur-sm p-2 rounded-xl border border-slate-200">
+                  <span className="px-2 py-1 bg-slate-100 rounded-md">CNR: {selectedCase.cnr_number || selectedCase.cnrNumber || "N/A"}</span>
+                  <span className="px-2 py-1 bg-slate-100 rounded-md">Court: {selectedCase.court || selectedCase.court_name || "N/A"}</span>
+                </div>
+              </div>
+
+              {/* Document Generation Input Box & Presets */}
+              <div className="bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0] p-4 sm:p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-[#0F172A] uppercase tracking-wider mb-2">
+                    Select Template / Document Type Quick Presets:
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { label: "📜 Bail Application", prompt: `Draft an urgent Bail Application for case #${selectedCase.caseNo || selectedCase.case_no} (${caseDisplayTitle}) pending before ${selectedCase.court || selectedCase.court_name}.` },
+                      { label: "⚖️ Written Statement", prompt: `Draft a Written Statement / Reply for case #${selectedCase.caseNo || selectedCase.case_no} (${caseDisplayTitle}).` },
+                      { label: "📢 Legal Notice", prompt: `Draft a Legal Notice for case #${selectedCase.caseNo || selectedCase.case_no} (${caseDisplayTitle}).` },
+                      { label: "📄 Affidavit", prompt: `Draft a sworn Affidavit for case #${selectedCase.caseNo || selectedCase.case_no} (${caseDisplayTitle}) before ${selectedCase.court || selectedCase.court_name}.` },
+                      { label: "🏛️ Writ Petition", prompt: `Draft a Writ Petition for case #${selectedCase.caseNo || selectedCase.case_no} (${caseDisplayTitle}) under appropriate jurisdiction.` },
+                      { label: "📝 Case Summary & Arguments", prompt: `Generate a comprehensive Case Summary and Legal Arguments overview for case #${selectedCase.caseNo || selectedCase.case_no} (${caseDisplayTitle}).` }
+                    ].map((preset, pIdx) => (
+                      <button
+                        key={pIdx}
+                        onClick={() => {
+                          setDocGenPrompt(preset.prompt);
+                          handleGenerateCaseDocument(preset.prompt, preset.label.replace(/^[^a-zA-Z0-9]+/, "").trim());
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-white border border-[#E2E8F0] hover:border-blue-300 hover:bg-blue-50/50 text-xs font-bold text-[#0F172A] transition cursor-pointer shadow-2xs"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#0F172A] uppercase tracking-wider mb-1.5">
+                    Custom Prompt Instructions for Case #{selectedCase.caseNo || selectedCase.case_no}:
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={docGenPrompt}
+                    onChange={(e) => setDocGenPrompt(e.target.value)}
+                    placeholder={`Enter specific instructions to generate document for ${caseDisplayTitle}...`}
+                    className="w-full rounded-xl border border-[#E2E8F0] bg-white p-3 text-xs font-medium text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  />
+                </div>
+
+                {docGenError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs font-bold text-red-700">
+                    {docGenError}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-[#64748B]">
+                    AI models will automatically inject case facts, CNR, court name &amp; details.
+                  </span>
+                  <button
+                    onClick={() => handleGenerateCaseDocument()}
+                    disabled={docGenLoading}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-50 text-white font-bold text-xs transition cursor-pointer shadow-sm"
+                  >
+                    {docGenLoading ? (
+                      <>
+                        <RefreshCw size={14} className="animate-spin" />
+                        Generating Document...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={14} />
+                        Generate Document
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Generated Document Display Section */}
+              {(generatedDocContent || docGenLoading) && (
+                <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden">
+                  <div className="bg-[#F8FAFC] border-b border-[#E2E8F0] px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText size={16} className="text-[#2563EB] shrink-0" />
+                      <h4 className="font-extrabold text-[#0F172A] text-sm truncate">
+                        {docGenTitle || "Generated Legal Document"} — Case #{selectedCase.caseNo || selectedCase.case_no}
+                      </h4>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => {
+                          const element = document.createElement("a");
+                          const file = new Blob([generatedDocContent], { type: "text/plain" });
+                          element.href = URL.createObjectURL(file);
+                          element.download = `${(docGenTitle || "Doc").replace(/[^a-zA-Z0-9]/g, "_")}_Case_${selectedCase.caseNo || selectedCase.case_no}.txt`;
+                          document.body.appendChild(element);
+                          element.click();
+                          document.body.removeChild(element);
+                        }}
+                        disabled={!generatedDocContent}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs transition cursor-pointer disabled:opacity-50"
+                      >
+                        <Download size={13} /> TXT
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(generatedDocContent);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }}
+                        disabled={!generatedDocContent}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs transition cursor-pointer disabled:opacity-50"
+                      >
+                        {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                        {copied ? "Copied!" : "Copy"}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-4 sm:p-6 bg-slate-50/30 font-mono text-xs text-[#0F172A] leading-relaxed whitespace-pre-wrap max-h-[500px] overflow-y-auto">
+                    {generatedDocContent}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1599,89 +1858,6 @@ export default function AssignedCaseDetailView({
 
                     <h4 className="font-extrabold text-emerald-900 text-sm mb-2">Important Acts & Sections</h4>
                     <p className="mb-4 text-slate-700 font-sans">{(viewBriefModal.importantActs || []).join(", ")}</p>
-
-                    <h4 className="font-extrabold text-purple-900 text-sm mb-2">Senior Advocate Recommendation</h4>
-                    <p className="text-slate-700 font-sans">{viewBriefModal.advocateRecommendation}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 bg-white border-t border-slate-200 flex items-center justify-between shrink-0">
-              <button
-                onClick={() => {
-                  const file = new Blob([viewBriefModal.fileContent], { type: "text/plain;charset=utf-8" });
-                  const element = document.createElement("a");
-                  element.href = URL.createObjectURL(file);
-                  element.download = viewBriefModal.fileName;
-                  document.body.appendChild(element);
-                  element.click();
-                  document.body.removeChild(element);
-                }}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-sm"
-              >
-                📥 Download File Again
-              </button>
-              <button
-                onClick={() => setViewBriefModal(null)}
-                className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer"
-              >
-                Close Reader
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-          {/* ── SAVED BRIEF READER MODAL PORTAL ──────────────── */}
-      {viewBriefModal && typeof window !== "undefined" && createPortal(
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewBriefModal(null)} />
-
-          <div className="relative bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 z-10">
-            {/* Modal Header */}
-            <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="p-2 rounded-xl bg-blue-600/30 text-blue-400 border border-blue-500/30 shrink-0">
-                  <FileText size={20} />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest block">
-                    Win Likelihood: {viewBriefModal.winProbability || 75}%
-                  </span>
-                  <h3 className="text-base sm:text-lg font-black text-white truncate max-w-md">📜 {viewBriefModal.fileName}</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Downloaded: {viewBriefModal.downloadedAt}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setViewBriefModal(null)}
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition cursor-pointer shrink-0"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 overflow-y-auto flex-1 space-y-6 bg-slate-50/50">
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-xs font-mono whitespace-pre-wrap leading-relaxed text-slate-800">
-                {viewBriefModal.fileContent || (
-                  <div>
-                    <h4 className="font-extrabold text-slate-900 text-sm mb-2">Winning Strategy Formula</h4>
-                    <p className="mb-4 text-slate-700 font-sans">{viewBriefModal.winningFormula}</p>
-
-                    <h4 className="font-extrabold text-amber-900 text-sm mb-2">Key Loopholes</h4>
-                    <ul className="list-disc pl-5 mb-4 text-amber-800 font-sans">
-                      {(viewBriefModal.keyLoopholes || []).map((l, i) => <li key={i}>{l}</li>)}
-                    </ul>
-
-                    <h4 className="font-extrabold text-blue-900 text-sm mb-2">Main Statutory Arguments</h4>
-                    <ul className="list-disc pl-5 mb-4 text-blue-800 font-sans">
-                      {(viewBriefModal.mainArguments || []).map((a, i) => <li key={i}>{a}</li>)}
-                    </ul>
-
-                    <h4 className="font-extrabold text-emerald-900 text-sm mb-2">Important Acts & Sections</h4>
-                    <p className="mb-4 text-slate-700 font-sans font-medium">{(viewBriefModal.importantActs || []).join(", ")}</p>
 
                     <h4 className="font-extrabold text-purple-900 text-sm mb-2">Senior Advocate Recommendation</h4>
                     <p className="text-slate-700 font-sans">{viewBriefModal.advocateRecommendation}</p>

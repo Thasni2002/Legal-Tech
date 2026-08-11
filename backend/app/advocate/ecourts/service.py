@@ -232,6 +232,17 @@ def sync_case_with_ecourts_service(db: Session, case_id: int) -> SyncCaseRespons
             updated_fields["status"] = details.status
             case.status = details.status
 
+            try:
+                from app.advocate.lawfirm_management.models import AssignedCase
+                assigned_records = db.query(AssignedCase).filter(
+                    (AssignedCase.case_id == case.id) |
+                    (AssignedCase.case_number == case.case_no)
+                ).all()
+                for ac in assigned_records:
+                    ac.status = details.status
+            except Exception as sync_ac_err:
+                print(f"Warning: Failed to sync eCourts status to assigned_cases: {sync_ac_err}")
+
         case.updated_at = datetime.utcnow()
         db.commit()
         db.refresh(case)

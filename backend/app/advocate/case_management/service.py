@@ -148,6 +148,17 @@ def get_all_cases(db: Session, current_user=None):
 def get_case(db: Session, case_id: int, current_user=None):
     case = db.query(Case).filter(Case.id == case_id).first()
 
+    if not case:
+        try:
+            from app.advocate.lawfirm_management.models import AssignedCase
+            ac_rec = db.query(AssignedCase).filter(AssignedCase.id == case_id).first()
+            if ac_rec and ac_rec.case_id:
+                case = db.query(Case).filter(Case.id == ac_rec.case_id).first()
+            elif ac_rec and ac_rec.case_number:
+                case = db.query(Case).filter(Case.case_no == ac_rec.case_number).first()
+        except Exception:
+            pass
+
     # SECURITY Layer 2: Return 404 (not 403) for confidential cases owned by others
     # This prevents leaking that the case exists.
     if case and case.is_confidential:
@@ -831,10 +842,12 @@ def get_case_timeline(db: Session, case_id: int, current_user=None):
     except Exception:
         pass
 
-    # 7. Consultations / Discussions (Client & Advocate)
+    # 7. Consultations / Discussions & Meeting Notes (Client & Advocate)
     try:
-        from app.advocate.consultations.models import Consultation
+        from app.advocate.consultations.models import Consultation, MeetingNote
+        from sqlalchemy import or_
         consults = db.query(Consultation).filter(
+            (Consultation.case_id == case.id) |
             (func.lower(Consultation.client_name) == func.lower(case.client_name)) |
             (Consultation.issue.ilike(f"%{case.case_no}%"))
         ).all()
@@ -884,8 +897,53 @@ def get_case_timeline(db: Session, case_id: int, current_user=None):
                         "summary": c.summary or "Discussion agenda & session confirmed."
                     }
                 })
-    except Exception:
-        pass
+
+        # Fetch Meeting Notes linked to case or client
+        is_client = (current_user and getattr(current_user, 'role', '').lower() == 'client')
+        m_notes_query = db.query(MeetingNote).filter(
+            or_(
+                MeetingNote.case_id == case.id,
+                func.lower(MeetingNote.client_name) == func.lower(case.client_name)
+            )
+        )
+        if is_client:
+            m_notes_query = m_notes_query.filter(MeetingNote.is_confidential == False)
+        
+        notes_list = m_notes_query.all()
+        for note in notes_list:
+            n_date_str = str(note.meeting_date)
+            n_time_str = note.meeting_time or "10:00 AM"
+            events.append({
+                "id": f"evt-meeting-note-{note.id}",
+                "case_id": case.id,
+                "type": "consultation_meeting",
+                "category": "Meeting Notes",
+                "title": (note.title or "Meeting Notes").replace("Consultation Note", "Meeting Notes"),
+                "description": note.summary or f"Recorded meeting note for discussion with {note.client_name or case.client_name}.",
+                "date": n_date_str,
+                "time": n_time_str,
+                "timestamp": f"{n_date_str}T{n_time_str}",
+                "actor": case.selected_advocate or "Advocate",
+                "status": "Notes Recorded",
+                "metadata": {
+                    "note_id": note.id,
+                    "consultation_id": note.consultation_id,
+                    "client_name": note.client_name or case.client_name,
+                    "case_title": note.case_title or case.case_title,
+                    "case_no": note.case_no or case.case_no,
+                    "meeting_type": note.meeting_type or "Video Call",
+                    "summary": note.summary,
+                    "key_topics": note.key_topics,
+                    "action_items": note.action_items or [],
+                    "legal_advice": note.legal_advice,
+                    "internal_notes": note.internal_notes if not is_client else None,
+                    "has_meeting_notes": True
+                }
+            })
+
+    except Exception as e:
+        print("Error fetching consultation meeting notes for timeline:", e)
+
 
     # 8. eCourts Live Sync & Hearings
     if case.next_hearing_date:
