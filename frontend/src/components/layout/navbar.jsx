@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getLoggedInUser } from "@/utils/auth";
 import { API_BASE_URL } from "@/utils/api";
-import { Bell, ChevronDown, LoaderCircle, CheckCheck, X, MessageCircle } from "lucide-react";
+import { Bell, ChevronDown, LoaderCircle, CheckCheck, X } from "lucide-react";
+import DoubleMessageIcon from "@/components/common/DoubleMessageIcon";
 import MessagingHub from "@/components/messaging/MessagingHub";
 
 export default function Navbar() {
@@ -246,7 +247,10 @@ export default function Navbar() {
     <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] px-4 md:px-6 pl-14 md:pl-6 py-3 flex justify-between items-center font-sans shadow-xs">
       {/* Left Side: Legal Tech Futuristic Brand Header */}
       <div className="flex items-center gap-3">
-        <span className="font-legaltech text-base md:text-lg font-black tracking-wider bg-gradient-to-r from-blue-700 via-indigo-600 to-slate-900 bg-clip-text text-transparent uppercase">
+        <span 
+          className="font-grift text-base md:text-lg font-black tracking-wider bg-gradient-to-r from-blue-700 via-indigo-600 to-slate-900 bg-clip-text text-transparent uppercase"
+          style={{ fontFamily: "'Grift', 'Space Grotesk', sans-serif" }}
+        >
           LEGAL TECH
         </span>
         <span className="hidden sm:inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 tracking-wider font-sans uppercase">
@@ -272,7 +276,7 @@ export default function Navbar() {
             }`}
             title="Client Messaging Hub"
           >
-            <MessageCircle size={20} />
+            <DoubleMessageIcon size={26} />
             {msgUnreadCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-black h-4 min-w-[16px] px-1 rounded-full flex items-center justify-center animate-pulse border-2 border-white">
                 {msgUnreadCount > 9 ? "9+" : msgUnreadCount}

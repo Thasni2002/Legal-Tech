@@ -1,6 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Orbitron:wght@400..900&family=Rajdhani:wght@400;500;600;700&family=Space+Grotesk:wght@400..700&display=swap');
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'Grift';
+  src: local('Grift'), local('Grift Bold'), local('Grift-Bold'), local('Grift Regular'), local('Grift-Regular');
+  font-weight: 100 900;
+  font-style: normal;
+}
+
 :root {
   /* Primary */
   --color-primary: #0F172A;
@@ -45,7 +52,8 @@
   /* Font */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-poppins: 'Poppins', sans-serif;
-  --font-legaltech: 'Orbitron', 'Space Grotesk', 'Rajdhani', sans-serif;
+  --font-grift: 'Grift', 'Space Grotesk', 'Orbitron', sans-serif;
+  --font-legaltech: 'Grift', 'Space Grotesk', 'Orbitron', sans-serif;
 }
 
 @theme inline {
@@ -53,6 +61,7 @@
   --color-foreground: var(--color-text-primary);
   --font-sans: var(--font-sans);
   --font-poppins: var(--font-poppins);
+  --font-grift: var(--font-grift);
   --font-legaltech: var(--font-legaltech);
 }
 
@@ -70,8 +79,13 @@ body {
   font-family: var(--font-poppins);
 }
 
+.font-grift {
+  font-family: 'Grift', var(--font-grift);
+  letter-spacing: 0.05em;
+}
+
 .font-legaltech {
-  font-family: var(--font-legaltech);
+  font-family: 'Grift', var(--font-legaltech);
   letter-spacing: 0.05em;
 }
 

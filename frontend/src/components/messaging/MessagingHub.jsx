@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, MessageCircle, Maximize2, Minimize2, RefreshCw } from "lucide-react";
+import { X, Maximize2, Minimize2, RefreshCw } from "lucide-react";
+import DoubleMessageIcon from "@/components/common/DoubleMessageIcon";
 import { useMessaging } from "@/utils/useMessaging";
 import { getLoggedInUser } from "@/utils/auth";
 import ConversationList from "./ConversationList";
@@ -72,7 +73,7 @@ export default function MessagingHub({ onClose }) {
         <div className="bg-slate-900 text-white px-4 py-2.5 flex justify-between items-center border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-lg bg-blue-600 flex items-center justify-center text-white">
-              <MessageCircle size={14} />
+              <DoubleMessageIcon size={16} />
             </div>
             <span className="font-extrabold text-sm tracking-tight text-white">
               Client Messaging Hub
