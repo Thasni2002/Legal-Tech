@@ -47,7 +47,7 @@ import { createPortal } from "react-dom";
 import { API_BASE_URL } from "@/utils/api";
 import DocumentViewerModal from "@/components/common/DocumentViewerModal";
 import ClientEdit from "./ClientEdit";
-import { CaseTimelineView } from "@/views/UI/CaseManagement/CaseDetailView";
+import CaseTimelineView from "@/components/case/CaseTimelineView";
 
 // Helper to accurately convert backend UTC timestamps into local IST 12-hour AM/PM time
 const formatExactDateTime = (dateVal) => {
