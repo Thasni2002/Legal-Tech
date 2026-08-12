@@ -2,7 +2,7 @@
 
 import { API_BASE_URL } from "@/utils/api";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getLoggedInUser } from "@/utils/auth";
 import {
@@ -40,6 +40,9 @@ export default function AdvDashboardView() {
     const [casesPage, setCasesPage] = useState(0);
     const [hearingsPage, setHearingsPage] = useState(0);
     const [discussionsPage, setDiscussionsPage] = useState(0);
+    const [isSyncingAll, setIsSyncingAll] = useState(false);
+    const [syncAllResult, setSyncAllResult] = useState(null);
+    const hasSyncedOnLoad = useRef(false); // ensure silent sync runs only once per mount
 
     const hour = new Date().getHours();
     let greeting = "";
@@ -174,10 +177,21 @@ export default function AdvDashboardView() {
                 if (!dateStr) return "";
                 const parts = dateStr.split("-");
                 if (parts.length !== 3) return dateStr;
-                const dNum = parseInt(parts[2], 10);
-                const mNum = parseInt(parts[1], 10) - 1;
                 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                return `${dNum} ${months[mNum]}`;
+                // Detect format: YYYY-MM-DD (ISO) vs DD-MM-YYYY (Indian)
+                if (parts[0].length === 4) {
+                    // ISO: YYYY-MM-DD
+                    const year = parts[0];
+                    const mNum = parseInt(parts[1], 10) - 1;
+                    const dNum = parseInt(parts[2], 10);
+                    return `${dNum} ${months[mNum] || ""} ${year}`;
+                } else {
+                    // Indian: DD-MM-YYYY
+                    const dNum = parseInt(parts[0], 10);
+                    const mNum = parseInt(parts[1], 10) - 1;
+                    const year = parts[2];
+                    return `${dNum} ${months[mNum] || ""} ${year}`;
+                }
             };
 
             const hearingsList = [...extractedHearings]
@@ -247,10 +261,52 @@ export default function AdvDashboardView() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    const handleSyncAll = async () => {
+        setIsSyncingAll(true);
+        setSyncAllResult(null);
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/ecourts/sync-all`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+            });
+            if (res.ok) {
+                const result = await res.json();
+                setSyncAllResult(result);
+                // Refresh dashboard data so new hearing dates show
+                fetchDashboardData(true);
+            } else {
+                setSyncAllResult({ success: false, message: "Sync failed. Please try again." });
+            }
+        } catch (err) {
+            setSyncAllResult({ success: false, message: "Network error during sync." });
+        } finally {
+            setIsSyncingAll(false);
+        }
+    };
+
     useEffect(() => {
         const loggedIn = getLoggedInUser();
         setUser(loggedIn);
-        fetchDashboardData();
+
+        // 1. Load DB data immediately so the table shows instantly
+        fetchDashboardData().then(() => {
+            // 2. Silent background sync with eCourts (runs once per mount)
+            if (!hasSyncedOnLoad.current) {
+                hasSyncedOnLoad.current = true;
+                fetch(`${API_BASE_URL}/api/ecourts/sync-all`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                })
+                    .then(res => res.ok ? res.json() : null)
+                    .then(result => {
+                        if (result?.updated > 0) {
+                            // Cases were updated — refresh to show real eCourts dates
+                            fetchDashboardData(true);
+                        }
+                    })
+                    .catch(() => { /* silent — don't show error for background sync */ });
+            }
+        });
 
         // Auto-refresh every 30 seconds
         const interval = setInterval(() => {
@@ -583,93 +639,106 @@ export default function AdvDashboardView() {
                 </div>
             )}
 
-            {/* Case Overview */}
+            {/* Upcoming Hearings */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-                <div className="col-span-12 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
-                    <div className="flex justify-between items-center mb-6 sm:mb-8">
+                <div className="col-span-1 lg:col-span-12 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-4 sm:p-6 md:p-8 lg:p-10 flex flex-col justify-between overflow-hidden">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 sm:mb-8">
                         <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F172A]">
-                            Case Overview
+                            Upcoming Hearings
                         </h2>
-                        <button className="text-xs font-bold text-[#2563EB] uppercase tracking-wider hover:text-[#1d4ed8] transition-colors cursor-pointer">
-                            View All
+                        <button
+                            type="button"
+                            onClick={handleSyncAll}
+                            disabled={isSyncingAll}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl shadow-sm transition-colors cursor-pointer shrink-0"
+                        >
+                            <RefreshCw size={13} className={isSyncingAll ? "animate-spin" : ""} />
+                            {isSyncingAll ? "Syncing with eCourts..." : "🔄 Sync All Cases"}
                         </button>
                     </div>
 
+                    {/* Sync result banner */}
+                    {syncAllResult && (
+                        <div className={`mb-4 px-4 py-3 rounded-xl text-xs font-semibold border ${syncAllResult.success ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"}`}>
+                            {syncAllResult.success
+                                ? `✅ ${syncAllResult.message} (${syncAllResult.updated || 0} cases updated)`
+                                : `❌ ${syncAllResult.message}`}
+                            {syncAllResult.success && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSyncAllResult(null)}
+                                    className="ml-3 underline opacity-60 hover:opacity-100 cursor-pointer"
+                                >
+                                    Dismiss
+                                </button>
+                            )}
+                        </div>
+                    )}
+
                     {/* Mobile Card List */}
                     <div className="block sm:hidden space-y-3">
-                        {data && data.cases.length > 0 ? (
-                            data.cases.slice(casesPage * 5, (casesPage + 1) * 5).map((c, index) => (
+                        {data && data.hearings.length > 0 ? (
+                            data.hearings.slice(hearingsPage * 5, (hearingsPage + 1) * 5).map((h, index) => (
                                 <div
-                                    key={`case-overview-card-${index}`}
+                                    key={`hearing-card-${index}`}
                                     className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2.5"
                                 >
                                     <div className="flex items-center justify-between gap-2">
-                                        <span className="text-xs font-extrabold text-[#0F172A] tracking-tight">{c.case_id}</span>
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${c.status === "Hearing"
-                                            ? "bg-blue-50 text-blue-700 border-blue-200"
-                                            : c.status === "Active"
-                                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                                : "bg-amber-50 text-amber-700 border-amber-200"
-                                            }`}>
-                                            {c.status}
-                                        </span>
+                                        <div className="bg-[#F1F5F9] px-2.5 py-1 rounded-lg text-xs font-bold text-[#0F172A] border border-[#E2E8F0]">
+                                            {h.date}
+                                        </div>
+                                        <span className="text-xs text-[#475569] font-semibold">{h.court}</span>
                                     </div>
-                                    <div className="space-y-1">
-                                        <p className="text-sm font-bold text-[#1E293B]">{c.client_name}</p>
-                                        <p className="text-xs text-[#475569] font-medium">{c.type}</p>
-                                        <p className="text-xs text-[#64748B] flex items-center gap-1">
-                                            🏛️ <span>{c.court}</span>
-                                        </p>
-                                    </div>
+                                    <p className="text-sm font-bold text-[#0F172A]">{h.case_title}</p>
+                                    {h.advocate_name && (
+                                        <p className="text-xs text-[#64748B]">👤 {h.advocate_name}</p>
+                                    )}
                                 </div>
                             ))
                         ) : (
                             <div className="p-6 text-center text-sm font-medium text-[#64748B] bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">
-                                No cases found.
+                                No upcoming hearings found.
                             </div>
                         )}
                     </div>
 
                     {/* Desktop Table View */}
-                    <div className="hidden sm:block w-full rounded-2xl border border-[#E2E8F0] overflow-hidden">
-                        <table className="w-full table-auto divide-y divide-[#E2E8F0]">
+                    <div className="hidden sm:flex flex-col flex-1 w-full rounded-2xl border border-[#E2E8F0] overflow-hidden min-h-[340px]">
+                        <table className="w-full h-full table-auto divide-y divide-[#E2E8F0]">
                             <thead className="bg-[#F8FAFC]">
                                 <tr>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client ID</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Client</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Type</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Court</th>
-                                    <th className="p-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
+                                    <th className="p-4 sm:px-5 sm:py-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
+                                    <th className="p-4 sm:px-5 sm:py-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case</th>
+                                    <th className="p-4 sm:px-5 sm:py-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Court</th>
+                                    <th className="p-4 sm:px-5 sm:py-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Advocate</th>
                                 </tr>
                             </thead>
-
-                            <tbody className="divide-y divide-[#E2E8F0] bg-white">
-                                {data && data.cases.length > 0 ? (
-                                    data.cases.slice(casesPage * 5, (casesPage + 1) * 5).map((c, index) => (
+                            <tbody className="divide-y divide-[#E2E8F0] bg-white h-full">
+                                {data && data.hearings.length > 0 ? (
+                                    data.hearings.slice(hearingsPage * 5, (hearingsPage + 1) * 5).map((h, index) => (
                                         <tr
-                                            key={`case-overview-${index}`}
+                                            key={index}
                                             className="hover:bg-[#F8FAFC] transition-colors duration-150"
                                         >
-                                            <td className="p-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">{c.client_id || c.case_id}</td>
-                                            <td className="p-4 text-sm text-[#475569] break-words">{c.client_name}</td>
-                                            <td className="p-4 text-sm text-[#475569] break-words">{c.type}</td>
-                                            <td className="p-4 text-sm text-[#475569] break-words">{c.court}</td>
-                                            <td className="p-4 whitespace-nowrap">
-                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${c.status === "Hearing"
-                                                    ? "bg-blue-50 text-blue-700 border-blue-200"
-                                                    : c.status === "Active"
-                                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                                        : "bg-amber-50 text-amber-700 border-amber-200"
-                                                    }`}>
-                                                    {c.status}
-                                                </span>
+                                            <td className="p-4 sm:px-5 sm:py-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">
+                                                <div className="bg-[#F1F5F9] px-3 py-1.5 rounded-lg inline-block text-center border border-[#E2E8F0]">
+                                                    {h.date}
+                                                </div>
+                                            </td>
+                                            <td className="p-4 sm:px-5 sm:py-4 text-sm text-[#475569] font-medium break-words">
+                                                {h.case_title}
+                                            </td>
+                                            <td className="p-4 sm:px-5 sm:py-4 text-sm text-[#475569] break-words">
+                                                {h.court}</td>
+                                            <td className="p-4 sm:px-5 sm:py-4 text-sm text-[#475569] break-words">
+                                                {h.advocate_name}
                                             </td>
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="5" className="p-8 text-center text-sm font-medium text-[#64748B]">
-                                            No cases found.
+                                        <td colSpan="4" className="py-20 px-6 text-center text-sm font-medium text-[#64748B]">
+                                            No upcoming hearings found.
                                         </td>
                                     </tr>
                                 )}
@@ -678,11 +747,11 @@ export default function AdvDashboardView() {
                     </div>
 
                     {/* Pagination Controls */}
-                    {data && data.cases.length > 5 && (() => {
-                        const total = data.cases.length;
+                    {data && data.hearings.length > 5 && (() => {
+                        const total = data.hearings.length;
                         const totalPages = Math.ceil(total / 5);
-                        const startIdx = casesPage * 5 + 1;
-                        const endIdx = Math.min((casesPage + 1) * 5, total);
+                        const startIdx = hearingsPage * 5 + 1;
+                        const endIdx = Math.min((hearingsPage + 1) * 5, total);
 
                         return (
                             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-slate-100 px-2">
@@ -692,8 +761,8 @@ export default function AdvDashboardView() {
                                 <div className="flex items-center gap-1.5">
                                     <button
                                         type="button"
-                                        onClick={() => setCasesPage(p => Math.max(0, p - 1))}
-                                        disabled={casesPage === 0}
+                                        onClick={() => setHearingsPage(p => Math.max(0, p - 1))}
+                                        disabled={hearingsPage === 0}
                                         className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:hover:bg-transparent transition cursor-pointer"
                                     >
                                         &lt; Prev
@@ -702,9 +771,9 @@ export default function AdvDashboardView() {
                                         <button
                                             type="button"
                                             key={i}
-                                            onClick={() => setCasesPage(i)}
+                                            onClick={() => setHearingsPage(i)}
                                             className={`w-8 h-8 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer ${
-                                                casesPage === i
+                                                hearingsPage === i
                                                     ? "bg-[#2563EB] text-white shadow-xs"
                                                     : "text-slate-600 hover:bg-slate-100 border border-transparent"
                                             }`}
@@ -714,8 +783,8 @@ export default function AdvDashboardView() {
                                     ))}
                                     <button
                                         type="button"
-                                        onClick={() => setCasesPage(p => Math.min(totalPages - 1, p + 1))}
-                                        disabled={casesPage + 1 >= totalPages}
+                                        onClick={() => setHearingsPage(p => Math.min(totalPages - 1, p + 1))}
+                                        disabled={hearingsPage + 1 >= totalPages}
                                         className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:hover:bg-transparent transition cursor-pointer"
                                     >
                                         Next &gt;
@@ -727,13 +796,16 @@ export default function AdvDashboardView() {
                 </div>
             </div>
 
-            {/* Upcoming Hearings */}
+            {/* Case Overview */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-                <div className="col-span-1 lg:col-span-12 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-4 sm:p-6 md:p-8 lg:p-10 flex flex-col justify-between overflow-hidden">
+                <div className="col-span-12 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
                     <div className="flex justify-between items-center mb-6 sm:mb-8">
                         <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F172A]">
-                            Upcoming Hearings
+                            Case Overview
                         </h2>
+                        <button className="text-xs font-bold text-[#2563EB] uppercase tracking-wider hover:text-[#1d4ed8] transition-colors cursor-pointer">
+                            View All
+                        </button>
                     </div>
 
                     {/* Mobile Card List */}

@@ -572,7 +572,9 @@ export default function ECourtsView() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                      {caseDetails.orders.map((ord) => (
+                      {[...caseDetails.orders]
+                        .sort((a, b) => (b.orderDate || "").localeCompare(a.orderDate || ""))
+                        .map((ord) => (
                         <tr key={ord.id} className="hover:bg-slate-50/80 transition-colors">
                           <td className="py-3 px-4 font-mono font-bold text-slate-900">{ord.orderDate}</td>
                           <td className="py-3 px-4">
@@ -587,10 +589,10 @@ export default function ECourtsView() {
                               href={ord.fileUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold inline-flex items-center gap-1.5 transition-colors"
+                              className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold inline-flex items-center gap-1.5 transition-colors"
                             >
                               <Download className="w-3 h-3" />
-                              PDF ({ord.fileSize})
+                              PDF
                             </a>
                           </td>
                         </tr>

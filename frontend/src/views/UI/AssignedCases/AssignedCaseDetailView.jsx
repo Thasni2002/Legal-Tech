@@ -1222,7 +1222,9 @@ export default function AssignedCaseDetailView({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-                      {ecourtsData.orders.map((ord) => (
+                      {[...ecourtsData.orders]
+                        .sort((a, b) => (b.orderDate || "").localeCompare(a.orderDate || ""))
+                        .map((ord) => (
                         <tr key={ord.id} className="hover:bg-slate-50">
                           <td className="py-3 px-4 font-mono font-bold text-slate-900">{ord.orderDate}</td>
                           <td className="py-3 px-4">
@@ -1232,8 +1234,8 @@ export default function AssignedCaseDetailView({
                           <td className="py-3 px-4">{ord.summary}</td>
                           <td className="py-3 px-4 text-right">
                             {ord.fileUrl ? (
-                              <a href={ord.fileUrl} target="_blank" rel="noreferrer" className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1 transition cursor-pointer">
-                                PDF ({ord.fileSize})
+                              <a href={ord.fileUrl} target="_blank" rel="noreferrer" className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1 transition cursor-pointer">
+                                PDF
                               </a>
                             ) : (
                               <span className="text-slate-400 font-semibold">N/A</span>

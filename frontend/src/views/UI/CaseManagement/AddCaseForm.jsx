@@ -860,9 +860,24 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
         }
       });
 
+      // Track emails already added (from clientList) to prevent duplicates
+      const seenEmails = new Set();
+      Object.values(clientMap).forEach((c) => {
+        if (c.emailId) seenEmails.add(c.emailId.toLowerCase().trim());
+      });
+
+      // Build from cases — deduplicate by email so same person doesn't appear multiple times
       casesArray.forEach((c) => {
         const cid = c.client_id || `CLT-2026-${String(c.id).padStart(3, "0")}`;
-        if (!clientMap[cid] && c.client_name) {
+        const email = (c.email_id || "").toLowerCase().trim();
+
+        // Skip if already in map by client_id
+        if (clientMap[cid]) return;
+
+        // Skip if same email already added (same person, different case)
+        if (email && seenEmails.has(email)) return;
+
+        if (c.client_name) {
           clientMap[cid] = {
             clientId: cid,
             clientName: c.client_name || "",
@@ -873,6 +888,8 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
             clientAddress: c.client_address || "",
             clientDistrict: c.client_district || "",
           };
+          // Mark this email as seen
+          if (email) seenEmails.add(email);
         }
       });
 
@@ -1804,7 +1821,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                         name="altContactNumber"
                         value={formData.altContactNumber || ""}
                         readOnly
-                        className={`${baseInputClass} bg-gray-50`}
+                        className={`${baseInputClass} ${getBorderClass("altContactNumber")} bg-gray-50`}
                         placeholder="—"
                       />
                     </div>

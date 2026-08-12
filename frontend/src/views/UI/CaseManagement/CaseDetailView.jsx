@@ -1483,7 +1483,7 @@ export default function CaseDetailView({ id }) {
   }
 
   const hearingAlert = getHearingAlertInfo(
-    selectedCase?.next_hearing_date || selectedCase?.nextHearingDate,
+    ecourtsData?.nextHearingDate || selectedCase?.next_hearing_date || selectedCase?.nextHearingDate,
     selectedCase?.status
   );
 
@@ -2419,7 +2419,9 @@ export default function CaseDetailView({ id }) {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-                      {ecourtsData.orders.map((ord, idx) => (
+                      {[...ecourtsData.orders]
+                        .sort((a, b) => (b.orderDate || "").localeCompare(a.orderDate || ""))
+                        .map((ord, idx) => (
                         <tr key={ord.id || idx} className="hover:bg-slate-50/80 transition">
                           <td className="py-3.5 px-4 font-mono font-bold text-slate-900">{ord.orderDate || "N/A"}</td>
                           <td className="py-3.5 px-4">
@@ -2433,9 +2435,9 @@ export default function CaseDetailView({ id }) {
                             <button
                               type="button"
                               onClick={() => handleDownloadOrderPDF(ord)}
-                              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer shadow-xs"
                             >
-                              <Download size={12} /> PDF ({ord.fileSize || "1.2 MB"})
+                              <Download size={12} /> PDF
                             </button>
                           </td>
                         </tr>

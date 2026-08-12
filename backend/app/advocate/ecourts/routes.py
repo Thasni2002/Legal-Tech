@@ -20,6 +20,7 @@ from .service import (
     lookup_cnr_service,
     search_cases_service,
     sync_case_with_ecourts_service,
+    sync_all_cases_service,
     get_cause_list_service,
     get_ecourts_metrics_service,
 )
@@ -47,6 +48,14 @@ def lookup_cnr(data: CNRLookupRequest, db: Session = Depends(get_db)):
 @router.post("/search", response_model=List[eCourtsCaseDetails])
 def search_cases(data: CaseSearchRequest, db: Session = Depends(get_db)):
     return search_cases_service(data, db)
+
+
+@router.post("/sync-all")
+def sync_all_cases(
+    db: Session = Depends(get_db)
+):
+    """Sync all active cases with CNR numbers against eCourts API in one shot."""
+    return sync_all_cases_service(db)
 
 
 @router.post("/sync/{case_id}", response_model=SyncCaseResponse)
