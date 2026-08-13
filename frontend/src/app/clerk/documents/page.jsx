@@ -1258,7 +1258,7 @@ function ClerkDocumentsContent() {
                   className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition shadow-xs cursor-pointer w-full sm:w-auto"
                 >
                   <Plus size={15} />
-                  + Add Document
+                  Add Document
                 </button>
               </div>
 
@@ -1491,7 +1491,7 @@ function ClerkDocumentsContent() {
                   }}
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-xs cursor-pointer"
                   >
-                    <Plus size={14} /> + Add Document
+                    <Plus size={14} /> Add Document
                   </button>
                 </div>
               )}

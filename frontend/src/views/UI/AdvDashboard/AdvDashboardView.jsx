@@ -975,7 +975,7 @@ export default function AdvDashboardView() {
                                     <p className="text-sm font-bold text-[#0F172A]">{d.client_name}</p>
                                     <div>
                                         {d.type.toLowerCase().includes("video") ? (
-                                            d.meeting_link ? (
+                                            d.meeting_link && (d.status === "Approved" || d.status === "Scheduled" || d.status === "Completed") ? (
                                                 <a
                                                     href={d.meeting_link.startsWith("http") ? d.meeting_link : `https://${d.meeting_link}`}
                                                     target="_blank"
@@ -1037,7 +1037,7 @@ export default function AdvDashboardView() {
                                             </td>
                                             <td className="p-4 text-sm whitespace-nowrap">
                                                 {d.type.toLowerCase().includes("video") ? (
-                                                    d.meeting_link ? (
+                                                    d.meeting_link && (d.status === "Approved" || d.status === "Scheduled" || d.status === "Completed") ? (
                                                         <a
                                                             href={d.meeting_link.startsWith("http") ? d.meeting_link : `https://${d.meeting_link}`}
                                                             target="_blank"

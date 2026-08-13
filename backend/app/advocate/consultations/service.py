@@ -172,9 +172,13 @@ def create_consultation(db: Session, data: ConsultationCreate, background_tasks:
             client_id = client.id
 
     meet_link = data.meeting_link
-    if not meet_link and ("video" in (data.type or "").lower()):
-        from app.utils.google_calendar import generate_google_meet_link
-        meet_link = generate_google_meet_link(data.client_name, str(data.date), str(data.time))
+    target_status = data.status or "Pending Advocate"
+    if not meet_link and (target_status in ["Approved", "Scheduled"]) and ("video" in (data.type or "").lower()):
+        try:
+            from app.utils.google_calendar import generate_google_meet_link
+            meet_link = generate_google_meet_link(data.client_name, str(data.date), str(data.time))
+        except Exception as err:
+            print(f"[GOOGLE MEET GEN ERROR]: {err}")
 
     new_consultation = Consultation(
         client_id=client_id,
@@ -279,6 +283,12 @@ def process_public_action(db: Session, consultation_id: int, data: any, backgrou
     if data.action == "approve":
         consultation.status = "Approved"
         consultation.reschedule_reason = "Approved via email quick action"
+        if not consultation.meeting_link and ("video" in (consultation.type or "").lower()):
+            try:
+                from app.utils.google_calendar import generate_google_meet_link
+                consultation.meeting_link = generate_google_meet_link(consultation.client_name, str(consultation.date), str(consultation.time))
+            except Exception as err:
+                print(f"[GOOGLE MEET GEN ERROR]: {err}")
     elif data.action == "reschedule":
         if data.date:
             consultation.date = data.date
@@ -434,13 +444,23 @@ def update_consultation_status(db: Session, consultation_id: int, status: str, b
     consultation = get_consultation_by_id(db, consultation_id)
     if not consultation:
         return None
-    if status == "Approved":
+    if status in ["Approved", "Scheduled"]:
         if consultation.status == "Pending Client":
             consultation.reschedule_reason = "Approved by client"
         elif consultation.status == "Pending":
             consultation.reschedule_reason = "Approved by advocate"
         elif consultation.status == "Pending Advocate":
             consultation.reschedule_reason = "Approved client reschedule"
+
+        # Generate Google Meet link upon admin/advocate approval for video consultations
+        if not consultation.meeting_link and ("video" in (consultation.type or "").lower()):
+            try:
+                from app.utils.google_calendar import generate_google_meet_link
+                consultation.meeting_link = generate_google_meet_link(
+                    consultation.client_name, str(consultation.date), str(consultation.time)
+                )
+            except Exception as err:
+                print(f"[GOOGLE MEET GEN ERROR]: {err}")
     consultation.status = status
     consultation.updated_at = datetime.utcnow()
     db.commit()

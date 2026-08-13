@@ -1088,7 +1088,7 @@ export default function ConsultationsView() {
                                         </span>
 
                                         <div className="flex items-center gap-2">
-                                            {item.meeting_link && (
+                                            {item.meeting_link && (item.status === "Approved" || item.status === "Scheduled" || item.status === "Completed") && (
                                                 <a
                                                     href={item.meeting_link.startsWith("http") ? item.meeting_link : `https://${item.meeting_link}`}
                                                     target="_blank"
@@ -1148,7 +1148,7 @@ export default function ConsultationsView() {
                                                 </span>
                                             </td>
                                             <td className="p-4 whitespace-nowrap text-sm">
-                                                {item.meeting_link ? (
+                                                {item.meeting_link && (item.status === "Approved" || item.status === "Scheduled" || item.status === "Completed") ? (
                                                     <a
                                                         href={item.meeting_link.startsWith("http") ? item.meeting_link : `https://${item.meeting_link}`}
                                                         target="_blank"
