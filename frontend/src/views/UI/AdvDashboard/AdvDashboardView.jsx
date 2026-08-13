@@ -803,7 +803,10 @@ export default function AdvDashboardView() {
                         <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F172A]">
                             Case Overview
                         </h2>
-                        <button className="text-xs font-bold text-[#2563EB] uppercase tracking-wider hover:text-[#1d4ed8] transition-colors cursor-pointer">
+                        <button 
+                            onClick={() => router.push("/case-management")}
+                            className="text-xs font-bold text-[#2563EB] uppercase tracking-wider hover:text-[#1d4ed8] transition-colors cursor-pointer"
+                        >
                             View All
                         </button>
                     </div>
