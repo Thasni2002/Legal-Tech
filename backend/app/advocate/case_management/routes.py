@@ -204,11 +204,12 @@ def generate_document(
     return generate_legal_document(db, case_id, request.prompt)
 
 
-from fastapi import UploadFile, File, Response
+from fastapi import UploadFile, File, Response, Request
 from .models import UploadedFile
 
 @router.post("/upload")
 async def upload_case_document(
+    request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
@@ -223,7 +224,8 @@ async def upload_case_document(
         db.commit()
         db.refresh(db_file)
         
-        file_url = f"http://localhost:8000/case-management/documents/{db_file.id}"
+        base_url = str(request.base_url).rstrip('/')
+        file_url = f"{base_url}/case-management/documents/{db_file.id}"
         return {
             "success": True,
             "url": file_url,
