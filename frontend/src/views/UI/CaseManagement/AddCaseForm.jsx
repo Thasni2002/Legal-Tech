@@ -619,8 +619,8 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
       // 3. Case ID preservation (keep sequential system caseId format case-YYYY-XXX)
       const fetchedCaseNo = data.caseNo || "";
 
-      // 4. Clean Client details & Facts (No auto email generation per user request)
-      const fetchedClientName = data.petitioner || formData.clientName || "";
+      // 4. Clean Client details & Facts (Do not auto-fetch clientName per user request)
+      const fetchedPetitionerName = data.petitioner || "";
 
       const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
       let autoPassword = "temp_";
@@ -631,7 +631,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
       const cleanFacts = data.facts
         ? data.facts
         : (data.caseStage
-            ? `Case Stage: ${data.caseStage}\nPetitioner: ${fetchedClientName || "N/A"}\nRespondent: ${data.respondent || "N/A"}\nPresiding Judge: ${data.presidingJudge || "N/A"}`
+            ? `Case Stage: ${data.caseStage}\nPetitioner: ${fetchedPetitionerName || "N/A"}\nRespondent: ${data.respondent || "N/A"}\nPresiding Judge: ${data.presidingJudge || "N/A"}`
             : (formData.facts || "Case details auto-imported from eCourts."));
 
       const courtInfo = findStateAndDistrictByCourt(finalCourtName || districtFetched || "");
@@ -646,7 +646,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
         caseType: `${category}: ${subtype}`,
         caseNo: fetchedCaseNo || prev.caseNo,
         nextHearingDate: data.nextHearingDate || prev.nextHearingDate,
-        clientName: clientMode === "existing" ? prev.clientName : (fetchedClientName || prev.clientName),
+        clientName: prev.clientName,
         clientRole: prev.clientRole || "Petitioner",
         emailId: prev.emailId || "",
         tempPassword: prev.tempPassword || autoPassword,

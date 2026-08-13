@@ -125,8 +125,16 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
           }
         }
         return "";
-      case "phoneNumber": if (value && !/^\d{10}$/.test(value)) return "Phone Number must be 10 digits"; return "";
-      case "emailAddress": if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Invalid email address"; return "";
+      case "phoneNumber":
+        if (!value.trim()) return "Phone Number is required";
+        if (!/^\d{10}$/.test(value.trim())) return "Phone Number must be 10 digits";
+        return "";
+      case "emailAddress":
+        if (!value.trim()) return "Email Address is required";
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) return "Invalid email address";
+        return "";
+      case "practiceState": if (!isClient && !isClerk && !value.trim()) return "Practice State is required"; return "";
+      case "practiceDistrict": if (!isClient && !isClerk && !value.trim()) return "Practice District is required"; return "";
       case "practiceCourt": if (!isClient && !isClerk && !value.trim()) return "Practice Court is required"; return "";
       case "city": return "";      
       case "state": return "";
@@ -138,12 +146,16 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
   }
 
   function validateAll() {
-    const fields = ["advocateName", ...(isClient || isClerk ? [] : ["barCouncilId", "practiceCourt"]), "phoneNumber", "emailAddress", "yearsOfExperience"];
+    const profFields = isClient || isClerk ? [] : ["barCouncilId", "practiceState", "practiceDistrict", "practiceCourt"];
+    const fields = ["advocateName", ...profFields, "phoneNumber", "emailAddress", "yearsOfExperience"];
     const newErrors = {};
     const newTouched = {};
     let valid = true;
     fields.forEach((field) => {
-      const err = validateField(field, formData[field] || "");
+      let val = formData[field] || "";
+      if (field === "practiceState") val = practiceState || "";
+      if (field === "practiceDistrict") val = practiceDistrict || "";
+      const err = validateField(field, val);
       newErrors[field] = err;
       newTouched[field] = true;
       if (err) valid = false;
@@ -212,7 +224,15 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!validateAll()) return;
+    if (!validateAll()) {
+      setTimeout(() => {
+        const firstErrEl = document.querySelector(".text-red-500");
+        if (firstErrEl) {
+          firstErrEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 50);
+      return;
+    }
     if (onSubmit) onSubmit(formData);
   };
 
@@ -220,6 +240,7 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
   return (
     <div className="w-full space-y-8 max-w-6xl mx-auto">
       <form id="profile-form" className="space-y-8" onSubmit={handleSubmit}>
+
         {/* Profile Photo Card */}
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-10 flex flex-col items-center">
           {/* Header Action Row inside Card */}
@@ -322,8 +343,17 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
                     setPracticeState(st);
                     setPracticeDistrict("");
                     setFormData(prev => ({ ...prev, practiceCourt: "" }));
+                    const err = validateField("practiceState", st);
+                    setErrors(prev => ({
+                      ...prev,
+                      practiceState: err,
+                      practiceDistrict: "Practice District is required",
+                      practiceCourt: "Practice Court is required"
+                    }));
+                    setTouched(prev => ({ ...prev, practiceState: true }));
                   }}
                 />
+                {touched.practiceState && errors.practiceState && <p className="text-red-500 text-sm mt-1">{errors.practiceState}</p>}
               </div>
 
               <div>
@@ -337,8 +367,16 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
                     const dist = e.target.value;
                     setPracticeDistrict(dist);
                     setFormData(prev => ({ ...prev, practiceCourt: "" }));
+                    const err = validateField("practiceDistrict", dist);
+                    setErrors(prev => ({
+                      ...prev,
+                      practiceDistrict: err,
+                      practiceCourt: "Practice Court is required"
+                    }));
+                    setTouched(prev => ({ ...prev, practiceDistrict: true }));
                   }}
                 />
+                {touched.practiceDistrict && errors.practiceDistrict && <p className="text-red-500 text-sm mt-1">{errors.practiceDistrict}</p>}
               </div>
 
               <div>
@@ -427,19 +465,19 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
         )}
 
         {/* Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 pt-4 pb-8">
-          <button
-            type="submit"
-            className="px-8 py-3.5 rounded-full bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] w-full sm:w-auto"
-          >
-            Save Profile
-          </button>
+        <div className="flex flex-col sm:flex-row justify-end gap-4 pt-4 pb-8">
           <button
             type="button"
             onClick={onCancel}
-            className="px-8 py-3.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[#475569] text-xs font-bold uppercase tracking-wider transition-colors w-full sm:w-auto"
+            className="px-8 py-3.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[#475569] text-xs font-bold uppercase tracking-wider transition-colors w-full sm:w-auto cursor-pointer"
           >
             Cancel
+          </button>
+          <button
+            type="submit"
+            className="px-8 py-3.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] w-full sm:w-auto cursor-pointer"
+          >
+            Save Profile
           </button>
         </div>
       </form>
