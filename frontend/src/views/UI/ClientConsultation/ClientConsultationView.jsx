@@ -1015,7 +1015,7 @@ export default function ClientConsultationView() {
                     </div>
                     <div className="text-[11px] text-slate-600 flex items-center justify-between pt-1 border-t border-slate-200/60">
                       <span className="font-bold text-slate-800 bg-slate-200/60 px-2 py-0.5 rounded-md">{item.type}</span>
-                      {item.meeting_link ? (
+                      {item.meeting_link && (item.status === "Approved" || item.status === "Scheduled" || item.status === "Completed") ? (
                         <a
                           href={item.meeting_link.startsWith("http") ? item.meeting_link : `https://${item.meeting_link}`}
                           target="_blank"
@@ -1060,7 +1060,7 @@ export default function ClientConsultationView() {
                           </span>
                         </td>
                         <td className="p-2.5 sm:p-3 md:p-4 min-w-0">
-                          {item.meeting_link ? (
+                          {item.meeting_link && (item.status === "Approved" || item.status === "Scheduled" || item.status === "Completed") ? (
                             <a
                               href={item.meeting_link.startsWith("http") ? item.meeting_link : `https://${item.meeting_link}`}
                               target="_blank"
