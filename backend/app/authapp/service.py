@@ -32,5 +32,11 @@ def create_token(data: dict) -> str:
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def get_user_by_email(db: Session, email: str) -> User:
-    return db.query(User).filter(User.email == email).first()
+from sqlalchemy import func
+
+def get_user_by_email(db: Session, email_or_username: str) -> User:
+    clean_identifier = (email_or_username or "").strip().lower()
+    return db.query(User).filter(
+        (func.lower(User.email) == clean_identifier) | 
+        (func.lower(User.username) == clean_identifier)
+    ).first()

@@ -1,7 +1,7 @@
 import os
 import random
 import urllib.parse
-from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request, BackgroundTasks
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -48,12 +48,33 @@ class ForgotResetRequest(BaseModel):
     new_password: str
 
 
+def send_otp_email_task(email: str, username: str, otp: str):
+    """Sync task runner to send SMTP emails in a FastAPI background thread."""
+    try:
+        from app.utils.email import send_email_sync
+        from app.utils.email_templates import build_otp_email
+        body = build_otp_email(
+            username=username,
+            otp=otp,
+            expire_minutes=OTP_EXPIRE_MINUTES
+        )
+        send_email_sync(
+            to_email=email,
+            subject="Legal-Tech: Your Verification Code",
+            body=body,
+        )
+        print(f"[OTP] Background email successfully sent to {email}")
+    except Exception as e:
+        print(f"[OTP] Background email FAILED for {email}: {type(e).__name__}: {e}")
+
+
 @router.post("/forgot-password/send-otp", tags=["Password Reset"])
 async def forgot_password_send_otp(
     data: ForgotSendOtpRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
-    """Step 1 – validate email exists, generate OTP, email it."""
+    """Step 1 – validate email exists, generate OTP, email it via background tasks."""
     user = service.get_user_by_email(db, data.email)
     if not user:
         raise HTTPException(status_code=404, detail="No account found with that email address.")
@@ -64,24 +85,21 @@ async def forgot_password_send_otp(
         "expires_at": datetime.utcnow() + timedelta(minutes=OTP_EXPIRE_MINUTES),
     }
 
-    try:
-        from app.utils.email import send_email
-        from app.utils.email_templates import build_otp_email
-        body = build_otp_email(
-            username=user.username,
-            otp=otp,
-            expire_minutes=OTP_EXPIRE_MINUTES
-        )
-        await send_email(
-            to_email=data.email,
-            subject="Your Password Reset OTP Code",
-            body=body,
-        )
-    except Exception as e:
-        # If email is misconfigured in dev, still respond but log the OTP
-        print(f"[DEV] OTP for {data.email}: {otp} (email failed: {e})")
+    # Always print OTP to console for easy debugging
+    print(f"\n{'='*50}")
+    print(f"[OTP] Email: {data.email}")
+    print(f"[OTP] Code:  {otp}")
+    print(f"[OTP] Valid for {OTP_EXPIRE_MINUTES} minutes")
+    print(f"{'='*50}\n")
 
-    return {"message": "OTP sent to your email address.", "email": data.email}
+    username_display = user.username or user.first_name or "Advocate"
+    background_tasks.add_task(send_otp_email_task, data.email, username_display, otp)
+
+    return {
+        "message": "OTP sent to your email address.",
+        "email": data.email,
+        "email_sent": True
+    }
 
 
 @router.post("/forgot-password/verify-otp", tags=["Password Reset"])
@@ -122,6 +140,38 @@ def forgot_password_reset(
     db.commit()
     _otp_store.pop(data.email, None)         # consume OTP
     return {"message": "Password reset successfully."}
+
+
+@router.post("/forgot-password/login-with-otp", tags=["Password Reset"])
+def forgot_password_login_with_otp(
+    data: ForgotVerifyOtpRequest,
+    db: Session = Depends(get_db)
+):
+    """Verify OTP and return a login token — allows direct login after OTP verification."""
+    entry = _otp_store.get(data.email)
+    if not entry:
+        raise HTTPException(status_code=400, detail="No OTP requested for this email. Please request a new one.")
+    if datetime.utcnow() > entry["expires_at"]:
+        _otp_store.pop(data.email, None)
+        raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
+    if entry["otp"] != data.otp:
+        raise HTTPException(status_code=400, detail="Incorrect OTP. Please try again.")
+
+    user = service.get_user_by_email(db, data.email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    _otp_store.pop(data.email, None)   # consume OTP after successful verification
+
+    token = service.create_token({
+        "id": user.id,
+        "email": user.email,
+        "role": user.role,
+        "username": user.username,
+        "firstName": user.first_name or "",
+        "lastName": user.last_name or ""
+    })
+    return {"access_token": token, "token_type": "bearer"}
 
 @router.post("/login", response_model=TokenSchema)
 def login(user: LoginSchema, db: Session = Depends(get_db)):

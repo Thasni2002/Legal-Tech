@@ -8,7 +8,7 @@ import {
   FileText, Calendar, ShieldCheck, ArrowRight, Bot, Zap,
   Briefcase, Users, X, ChevronRight, TrendingUp, Clock,
   ExternalLink, Cpu, CheckCircle2, Activity, Gavel, BookOpen,
-  Landmark, Award, Scroll, BarChart2, Hash
+  Landmark, Award, Scroll, BarChart2, Hash, ClipboardList
 } from "lucide-react";
 
 /* ─────────────────────────────────────────────────────────────
@@ -130,6 +130,15 @@ export default function Login() {
   const [heroVisible, setHeroVisible]   = useState(false);
   const [scalesAngle, setScalesAngle]   = useState(0);  // for scales sway tick
 
+  // Forgot password state
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1); // 1 = email, 2 = otp
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotOtp, setForgotOtp] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState("");
+  const [forgotSuccess, setForgotSuccess] = useState("");
+
   // Mouse Parallax Offset
   const [mouseOffset, setMouseOffset] = useState({ x: 0, y: 0 });
   useEffect(() => {
@@ -170,12 +179,12 @@ export default function Login() {
     const timer = setInterval(() => {
       currentStep++;
       const progress = currentStep / steps;
-      setCountCases(Math.floor(progress * 50));
-      setCountAccuracy(Number((progress * 99.4).toFixed(1)));
+      setCountCases(Math.floor(progress * 500));
+      setCountAccuracy(Number((progress * 100).toFixed(0)));
 
       if (currentStep >= steps) {
-        setCountCases(50);
-        setCountAccuracy(99.4);
+        setCountCases(500);
+        setCountAccuracy(100);
         clearInterval(timer);
       }
     }, stepTime);
@@ -284,10 +293,10 @@ export default function Login() {
   const [typingSpeed, setTypingSpeed] = useState(100);
 
   const phrases = [
-    "Supercharged.",
-    "e-Courts Cause-List Synced.",
-    "Smart SC Precedent Matched.",
-    "Bank-Grade Encrypted.",
+    "Case Management Streamlined.",
+    "Law Firm Operations Simplified.",
+    "Consultations & Notes Tracked.",
+    "Granular Permission Controls.",
   ];
 
   useEffect(() => {
@@ -347,37 +356,75 @@ export default function Login() {
     finally { setLoading(false); }
   };
 
+  const handleForgotSendOtp = async (e) => {
+    e.preventDefault();
+    if (forgotLoading) return; // Prevent duplicate requests
+    setForgotError("");
+    setForgotSuccess("");
+    if (!forgotEmail) { setForgotError("Email is required."); return; }
+    setForgotLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/forgot-password/send-otp`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: forgotEmail }) });
+      const data = await res.json();
+      if (res.ok) { setForgotStep(2); setForgotSuccess("OTP sent! Check your email inbox."); }
+      else setForgotError(data.detail || "Failed to send OTP. Please check the email address.");
+    } catch { setForgotError("Connection error. Please retry."); }
+    finally { setForgotLoading(false); }
+  };
+
+  const handleForgotVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (forgotLoading) return; // Prevent duplicate requests
+    setForgotError("");
+    setForgotSuccess("");
+    if (!forgotOtp || forgotOtp.length < 6) { setForgotError("Please enter the 6-digit OTP."); return; }
+    setForgotLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/forgot-password/login-with-otp`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: forgotEmail, otp: forgotOtp }) });
+      const data = await res.json();
+      if (res.ok) {
+        // OTP correct → save token and go to dashboard
+        localStorage.setItem("token", data.access_token);
+        setForgotSuccess("OTP verified! Logging you in...");
+        setTimeout(() => router.push("/"), 800);
+      } else {
+        setForgotError(data.detail || "Incorrect OTP. Please try again.");
+      }
+    } catch { setForgotError("Connection error. Please retry."); }
+    finally { setForgotLoading(false); }
+  };
+
   /* ── Content ─────────────────────────────────────────── */
   const aiFeatures = [
-    { id: "analyzer", icon: <Bot className="w-4 h-4" />, tag: "Research",
-      title: "AI Case & Precedent Analyzer",
-      description: "Matches SC & HC precedents with citation numbers from your petitions automatically.",
-      prompt: "Constitutional precedents under Article 21 for bail petition.",
-      output: { summary: "3 SC precedents identified:", bullets: ["Hussainara Khatoon v. State of Bihar (1980) — Speedy trial.", "Abdul Rehman Antulay v. R.S. Nayak (1992) — Delay guidelines.", "Satender Kumar Antil v. CBI (2022) — Statutory bail."] } },
-    { id: "drafter", icon: <FileText className="w-4 h-4" />, tag: "Drafting",
-      title: "Smart Petition & Notice Drafter",
-      description: "Generates bail applications, Sec 138 NI Act notices, and writs in court-specific formats.",
-      prompt: "Draft Sec 138 NI Act notice — dishonoured cheque ₹15,00,000.",
-      output: { summary: "Court-compliant notice generated:", bullets: ["Parties: M/s Apex Tech vs M/s Horizon.", "Demand: ₹15,00,000 within 15-day statutory window.", "Default: Prosecution u/s 138/141 NI Act & 420 IPC."] } },
-    { id: "hearings", icon: <Calendar className="w-4 h-4" />, tag: "Live Sync",
-      title: "Cause List & Hearing Monitor",
-      description: "Real-time e-Courts API integration auto-scrapes daily cause lists and sends alerts.",
-      prompt: "Tomorrow's HC Bench 4 cause list.",
-      output: { summary: "Hearing alerts dispatched:", bullets: ["Item #14: Sharma vs State — HC Bench 4 — 10:30 AM.", "Item #28: Apex vs Union — Courtroom 12 — Post-lunch.", "Client WhatsApp notifications queued."] } },
-    { id: "summarizer", icon: <Zap className="w-4 h-4" />, tag: "Research",
-      title: "Judgment Summarizer",
-      description: "Converts lengthy judgments into concise executive briefs with ratio decidendi.",
-      prompt: "Summarize 2026 SC judgment on arbitration enforcement.",
-      output: { summary: "Executive brief generated:", bullets: ["Ratio: Unstamped agreements valid pre-impounding.", "Reasoning: Sec 11(6A) prioritises minimal intervention.", "Impact: Interim relief expedited by ~45 days avg."] } },
+    { id: "case_mgmt", icon: <Briefcase className="w-4 h-4" />, tag: "Case Binder",
+      title: "Case Management & Tracking",
+      description: "Complete lifecycle tracking of legal cases, filing details, hearing schedules, bench assignments, and case stages.",
+      prompt: "View Case #LC-2026-089 — Commercial Dispute",
+      output: { summary: "Active Case Summary & Status:", bullets: ["Case Title: Apex Tech vs. Horizon Infra (HC Bench 3).", "Assigned Advocate: Senior Advocate Rahul Sharma.", "Hearing Schedule: Next hearing on 18 Aug 2026 at 10:30 AM."] } },
+    { id: "lawfirm_mgmt", icon: <Users className="w-4 h-4" />, tag: "Organization",
+      title: "Law Firm & Role Management",
+      description: "Manage Senior Advocates, Junior Advocates, Clerks, and Clients with dedicated role clearances and team rosters.",
+      prompt: "Law Firm Team & Roster Overview",
+      output: { summary: "Firm Organization & Access Control:", bullets: ["Roles Provisioned: Senior Advocate, Junior Advocate, Clerk, Client.", "Custom Permissions: Granular view/add/edit/delete clearances per module.", "User Management: Temp password provisioning and active account controls."] } },
+    { id: "consultations", icon: <BookOpen className="w-4 h-4" />, tag: "Discussions",
+      title: "Case Discussions & Consultations",
+      description: "Schedule client meetings, log detailed consultation session notes, track action items, and manage follow-ups.",
+      prompt: "Schedule Client Consultation — Advisory Session",
+      output: { summary: "Consultation Record & Action Notes:", bullets: ["Client: Priya Nair · Mode: Video Conference / Office Meeting.", "Meeting Notes: Legal strategy finalized, evidence documents attached.", "Task Delegation: Follow-up drafting assigned to Junior Advocate."] } },
+    { id: "finance_billing", icon: <BarChart2 className="w-4 h-4" />, tag: "Finance",
+      title: "Finance, Billing & Invoicing",
+      description: "Comprehensive financial tracking, automated GST-compliant invoice generation, fee status, and payment histories.",
+      prompt: "Generate Client Invoice — Retainer Fee",
+      output: { summary: "Invoice & Financial History Summary:", bullets: ["Invoice #INV-2026-102: ₹45,000 for Consultation & Case Filing.", "Payment Status: Paid via Client Payment Portal.", "Ledger: Invoice history & retainer balance automatically updated."] } },
   ];
 
   const coreFeatures = [
-    { icon: <Scale className="w-5 h-5" />,     title: "e-Courts Sync",     desc: "Live cause list & case status via national e-Courts API." },
-    { icon: <Briefcase className="w-5 h-5" />, title: "Case Management",    desc: "Digital case binders — FIRs, evidence, vakalatnamas." },
-    { icon: <Bot className="w-5 h-5" />,        title: "Legal AI Engine",   desc: "AI trained on Indian jurisprudence & SC precedent digests." },
-    { icon: <Users className="w-5 h-5" />,      title: "Team Delegation",   desc: "Role-based access for advocates, clerks & client portals." },
-    { icon: <TrendingUp className="w-5 h-5" />, title: "Billing & Retainers", desc: "GST-compliant invoices & Razorpay integration." },
-    { icon: <ShieldCheck className="w-5 h-5" />, title: "Bank-Grade Security", desc: "ISO 27001 · 256-bit encryption · Zero-trust." },
+    { icon: <Briefcase className="w-5 h-5" />, title: "Case Management",    desc: "Digital case binders — filing info, hearing schedules, and stage tracking." },
+    { icon: <Users className="w-5 h-5" />,     title: "Law Firm Portal",    desc: "Role-based portals for Senior Advocates, Junior Advocates, Clerks, and Clients." },
+    { icon: <BookOpen className="w-5 h-5" />,  title: "Case Discussions",   desc: "Schedule client consultations, log detailed session notes, and set action items." },
+    { icon: <BarChart2 className="w-5 h-5" />, title: "Finance & Invoicing", desc: "Create client invoices, track retainer balances, and record payment histories." },
+    { icon: <ClipboardList className="w-5 h-5" />, title: "Clerk Workflows",  desc: "Track court visits, physical file formatting, and document intake." },
+    { icon: <ShieldCheck className="w-5 h-5" />, title: "Permission Controls", desc: "Granular view/add/edit/delete security clearances per user role." },
   ];
 
   /* ── Shared input focus handlers ─────────────────────── */
@@ -421,13 +468,13 @@ export default function Login() {
 
   /* ── Floating legal document tiles data ───────────── */
   const floatingDocs = [
-    { label: "Bail Petition",      sub: "CrPC § 437",      icon: <Scroll size={13} />,      delay: "0s",   dur: "14s", x: "8%",  r: "-4deg",  opS: "0", opE: "0.72" },
-    { label: "SC Precedent",       sub: "Art. 21 Digest",  icon: <BookOpen size={13} />,    delay: "3s",   dur: "17s", x: "18%", r: "5deg",   opS: "0", opE: "0.65" },
-    { label: "HC Cause List",      sub: "Bench 4 · Live",  icon: <Landmark size={13} />,    delay: "6s",   dur: "13s", x: "76%", r: "-6deg",  opS: "0", opE: "0.68" },
-    { label: "NI Act Notice",      sub: "§ 138 Draft",     icon: <FileText size={13} />,    delay: "1.5s", dur: "16s", x: "86%", r: "3deg",   opS: "0", opE: "0.70" },
-    { label: "Vakalatnama",        sub: "Signed & Sealed", icon: <Award size={13} />,       delay: "9s",   dur: "18s", x: "44%", r: "-2deg",  opS: "0", opE: "0.55" },
-    { label: "Fee Invoice",        sub: "GST Compliant",   icon: <BarChart2 size={13} />,   delay: "4s",   dur: "15s", x: "60%", r: "7deg",   opS: "0", opE: "0.60" },
-    { label: "Case Diary",         sub: "#CRL-2026-4471",  icon: <Hash size={13} />,        delay: "11s",  dur: "12s", x: "30%", r: "-5deg",  opS: "0", opE: "0.58" },
+    { label: "Case Binder",      sub: "#LC-2026-089",    icon: <Briefcase size={13} />,   delay: "0s",   dur: "14s", x: "8%",  r: "-4deg",  opS: "0", opE: "0.72" },
+    { label: "Law Firm Portal",  sub: "Advocate Roster", icon: <Users size={13} />,       delay: "3s",   dur: "17s", x: "18%", r: "5deg",   opS: "0", opE: "0.65" },
+    { label: "Fee Invoice",      sub: "#INV-2026-102",   icon: <BarChart2 size={13} />,   delay: "6s",   dur: "13s", x: "76%", r: "-6deg",  opS: "0", opE: "0.68" },
+    { label: "Consultation",     sub: "Meeting Notes",   icon: <BookOpen size={13} />,    delay: "1.5s", dur: "16s", x: "86%", r: "3deg",   opS: "0", opE: "0.70" },
+    { label: "Clerk Tasks",      sub: "Court Visits",    icon: <ClipboardList size={13} />, delay: "9s", dur: "18s", x: "44%", r: "-2deg",  opS: "0", opE: "0.55" },
+    { label: "Doc Storage",      sub: "Legal Repository",icon: <FileText size={13} />,    delay: "4s",   dur: "15s", x: "60%", r: "7deg",   opS: "0", opE: "0.60" },
+    { label: "Leave Requests",   sub: "Schedule Sync",   icon: <Calendar size={13} />,    delay: "11s",  dur: "12s", x: "30%", r: "-5deg",  opS: "0", opE: "0.58" },
   ];
 
   return (
@@ -556,9 +603,9 @@ export default function Login() {
           <nav className="hidden md:flex items-center gap-1 px-2 py-1.5 rounded-full"
             style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
             {[
-              { label: "Overview",    icon: <Cpu className="w-3.5 h-3.5" />,      action: () => setOverviewOpen(true), href: null },
-              { label: "Features",    icon: <Sparkles className="w-3.5 h-3.5" />, action: null, href: "#features" },
-              { label: "AI Features", icon: <Bot className="w-3.5 h-3.5" />,      action: null, href: "#ai-features" },
+              { label: "Overview",       icon: <Cpu className="w-3.5 h-3.5" />,       action: () => setOverviewOpen(true), href: null },
+              { label: "Core Features",  icon: <Briefcase className="w-3.5 h-3.5" />, action: null, href: "#features" },
+              { label: "Main Features",  icon: <Sparkles className="w-3.5 h-3.5" />,  action: null, href: "#ai-features" },
             ].map((item) => {
               const cls = "flex items-center gap-1.5 text-[12px] font-medium px-3.5 py-1.5 rounded-full transition-all duration-200 cursor-pointer";
               const s   = { color: C.muted, ...fontBody };
@@ -583,7 +630,7 @@ export default function Login() {
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-medium shadow-xs"
             style={{ backgroundColor: "#f0faf5", border: "1px solid #bbf0d8", color: "#2d7a54", ...fontBody }}>
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-            <span className="hidden sm:inline font-bold tracking-tight">SYSTEM ONLINE // e-COURTS SYNC</span>
+            <span className="hidden sm:inline font-bold tracking-tight">SYSTEM ONLINE // LEGAL-TECH PORTAL</span>
           </div>
 
         </div>
@@ -606,10 +653,10 @@ export default function Login() {
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-medium tracking-wide shadow-xs transition-transform hover:scale-[1.02]"
                 style={{ backgroundColor: C.goldL, border: `1px solid #e8d49a`, color: C.gold, ...fontBody }}>
                 <Scale className="w-3.5 h-3.5" />
-                <span>STATUS: ACTIVE // INDIA&apos;S ADVOCATE WORKSPACE</span>
+                <span>STATUS: ACTIVE // LAW FIRM WORKSPACE PORTAL</span>
               </div>
 
-              {/* Headline — Cormorant Garamond */}
+              {/* Headline */}
               <div className="space-y-3">
                 <h1 className="tracking-tight leading-[1.08]"
                   style={{ ...fontHeading, fontSize: "clamp(40px, 5vw, 62px)", fontWeight: 600, color: C.ink }}>
@@ -620,16 +667,16 @@ export default function Login() {
                 </h1>
                 <p className="text-sm leading-relaxed max-w-md"
                   style={{ color: C.muted, fontWeight: 400, ...fontBody }}>
-                  Cause-list sync, AI petition drafting, and client management — engineered specifically for Indian advocates.
+                  Case management, consultations, law firm operations, and client invoicing — unified in one portal.
                 </p>
               </div>
 
               {/* Stats — clean interactive cards */}
               <div className="flex flex-wrap items-center gap-8">
                 {[
-                  { value: `${countCases}k+`,  label: "Cases tracked",  color: C.ink },
-                  { value: `${countAccuracy}%`, label: "Draft accuracy", color: C.blue },
-                  { value: "Live",  label: "e-Courts API",   color: "#2d7a54" },
+                  { value: `${countCases}+`,  label: "Cases tracked",  color: C.ink },
+                  { value: `${countAccuracy}%`, label: "Security rating", color: C.blue },
+                  { value: "Active",  label: "Multi-Role Portal", color: "#2d7a54" },
                 ].map((s, i, arr) => (
                   <div key={i} className="flex items-center gap-8 group cursor-default">
                     <div className="transition-all duration-300 transform group-hover:-translate-y-1">
@@ -648,7 +695,6 @@ export default function Login() {
               {/* Workspace Canvas with Corner Brackets */}
               <div className="relative group p-0.5 rounded-2xl transition-all duration-300 hover:shadow-2xl">
 
-
                 <div className="rounded-2xl overflow-hidden"
                   style={{ backgroundColor: C.white, border: `1px solid ${C.border}`, boxShadow: "0 12px 40px rgba(28,20,9,0.10)" }}>
 
@@ -660,42 +706,42 @@ export default function Login() {
                       <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#ffb74d" }} />
                       <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#66bb6a" }} />
                       <span className="ml-3 text-[10px] font-medium uppercase tracking-widest flex items-center gap-1.5" style={{ color: C.faint, ...fontBody }}>
-                        <Activity size={12} className="text-blue-600 animate-spin" /> Advocate Workspace Engine
+                        <Activity size={12} className="text-blue-600 animate-spin" /> Legal-Tech Platform Engine
                       </span>
                     </div>
                     <span className="flex items-center gap-1.5 text-[10px] font-bold" style={{ color: "#2d7a54", ...fontBody }}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />Live API
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />SYSTEM ONLINE
                     </span>
                   </div>
 
                   {/* Inner cards */}
                   <div className="grid sm:grid-cols-2 gap-3 p-4">
-                    {/* Cause list */}
+                    {/* Case Card */}
                     <div className="p-4 rounded-xl space-y-2 transition-all duration-300 hover:scale-[1.02] cursor-pointer"
                       style={{ backgroundColor: C.ivory, border: `1px solid ${C.border}` }}>
                       <div className="flex justify-between items-center">
                         <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: C.gold, ...fontBody }}>
-                          <Clock className="w-3 h-3" /> Cause List
+                          <Briefcase className="w-3 h-3" /> Case Management
                         </span>
                         <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
                           style={{ backgroundColor: "#f0faf5", color: "#2d7a54", border: "1px solid #bbf0d8", ...fontBody }}>LISTED</span>
                       </div>
-                      <p className="text-sm font-semibold" style={{ color: C.ink, ...fontBody }}>Sharma vs. State of Delhi</p>
-                      <p className="text-[10px]" style={{ color: C.muted, ...fontBody }}>HC Bench 4 · Item #14 · 10:30 AM</p>
+                      <p className="text-sm font-semibold" style={{ color: C.ink, ...fontBody }}>Apex Tech vs. Horizon Infra</p>
+                      <p className="text-[10px]" style={{ color: C.muted, ...fontBody }}>High Court · Bench 3 · Hearing #14</p>
                     </div>
 
-                    {/* AI card */}
+                    {/* Finance & Consultation Card */}
                     <div className="p-4 rounded-xl space-y-2 transition-all duration-300 hover:scale-[1.02] cursor-pointer"
                       style={{ backgroundColor: C.blueL, border: `1px solid #bfdbfe` }}>
                       <div className="flex justify-between items-center">
                         <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: C.blue, ...fontBody }}>
-                          <Bot className="w-3 h-3" /> AI Match
+                          <BookOpen className="w-3 h-3" /> Consultations & Finance
                         </span>
                         <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
-                          style={{ backgroundColor: "#dbeafe", color: C.blue, ...fontBody }}>98.2%</span>
+                          style={{ backgroundColor: "#dbeafe", color: C.blue, ...fontBody }}>ACTIVE</span>
                       </div>
-                      <p className="text-sm font-semibold leading-tight" style={{ color: C.ink, ...fontBody }}>Article 21 — speedy trial precedent</p>
-                      <p className="text-[10px]" style={{ color: C.muted, ...fontBody }}>Satender Kumar Antil v. CBI (2022)</p>
+                      <p className="text-sm font-semibold leading-tight" style={{ color: C.ink, ...fontBody }}>Client Advisory Session</p>
+                      <p className="text-[10px]" style={{ color: C.muted, ...fontBody }}>Invoice #INV-2026-089 · Paid</p>
                     </div>
                   </div>
 
@@ -704,7 +750,7 @@ export default function Login() {
                     style={{ borderTop: `1px solid ${C.border}`, backgroundColor: C.surface }}>
                     <span className="flex items-center gap-1.5 text-[11px]" style={{ color: C.muted, ...fontBody }}>
                       <Sparkles className="w-3 h-3" style={{ color: C.gold }} />
-                      AI ready to draft petitions
+                      Multi-role law firm operations workspace
                     </span>
                     <button onClick={() => setAiOpen(true)}
                       className="flex items-center gap-0.5 text-[11px] font-semibold cursor-pointer hover:underline"
@@ -751,7 +797,7 @@ export default function Login() {
                       <em style={{ color: C.blue, fontStyle: "italic" }}>Counsel.</em>
                     </h2>
                     <p className="text-[13px] mt-2 leading-relaxed" style={{ color: C.muted, ...fontBody }}>
-                      Access your workspace, AI tools, and live court data.
+                      Access your case workspace, consultations, and firm management portal.
                     </p>
                   </div>
 
@@ -793,8 +839,14 @@ export default function Login() {
 
                     {/* Password */}
                     <div className="space-y-1.5">
-                      <label className="block text-[11px] font-semibold uppercase tracking-widest"
-                        style={{ color: C.muted, ...fontBody }}>Password</label>
+                      <div className="flex justify-between items-center">
+                        <label className="block text-[11px] font-semibold uppercase tracking-widest"
+                          style={{ color: C.muted, ...fontBody }}>Password</label>
+                        <button type="button" onClick={() => { setForgotPasswordOpen(true); setForgotStep(1); setForgotError(""); setForgotSuccess(""); setForgotEmail(formData.email); }}
+                          className="text-[11px] font-medium hover:underline cursor-pointer" style={{ color: C.blue, ...fontBody }}>
+                          Forgot Password?
+                        </button>
+                      </div>
                       <div className="relative">
                         <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: C.faint }} />
                         <input type={showPass ? "text" : "password"} name="password"
@@ -891,13 +943,13 @@ export default function Login() {
           <div className="text-center max-w-xl mx-auto mb-14 space-y-3">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-medium"
               style={{ backgroundColor: C.blueL, border: `1px solid #bfdbfe`, color: C.blue, ...fontBody }}>
-              <Bot className="w-3.5 h-3.5" /> AI Features
+              <Briefcase className="w-3.5 h-3.5" /> Project Features
             </div>
             <h2 className="tracking-tight" style={{ ...fontHeading, fontSize: 36, fontWeight: 600, color: C.ink }}>
-              AI Built for Indian Legal Practice
+              Built for Modern Legal Practice
             </h2>
             <p className="text-sm leading-relaxed" style={{ color: C.muted, ...fontBody }}>
-              From precedent research to petition drafting — powered by Indian jurisprudence.
+              Integrated case binders, client consultations, law firm management, and invoice tracking.
             </p>
           </div>
 
@@ -971,9 +1023,9 @@ export default function Login() {
                   style={{ backgroundColor: C.blueL, border: `1px solid #bfdbfe` }}>
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-semibold flex items-center gap-1.5" style={{ color: "#2d7a54", ...fontBody }}>
-                      <CheckCircle2 className="w-3.5 h-3.5" /> AI Response
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Module Summary
                     </span>
-                    <span className="text-[10px] font-mono" style={{ color: C.faint }}>0.42s</span>
+                    <span className="text-[10px] font-mono" style={{ color: C.faint }}>Active</span>
                   </div>
                   <p className="text-[13px] font-semibold" style={{ color: C.ink, ...fontBody }}>
                     {aiFeatures[aiTab].output.summary}
@@ -1074,6 +1126,137 @@ export default function Login() {
       </footer>
 
       {/* ════════════════════════════════════════════════
+          FORGOT PASSWORD MODAL
+      ════════════════════════════════════════════════ */}
+      <Modal open={forgotPasswordOpen} onClose={() => { if (!forgotLoading) { setForgotPasswordOpen(false); setForgotStep(1); setForgotError(""); setForgotSuccess(""); setForgotEmail(""); setForgotOtp(""); } }}>
+        <div className="p-7 sm:p-8">
+          {/* Header */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: C.blueL, border: `1px solid #bfdbfe` }}>
+              <Lock className="w-5 h-5" style={{ color: C.blue }} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-xl" style={{ ...fontHeading, color: C.ink }}>
+                {forgotStep === 1 ? "Reset Password" : "Enter OTP"}
+              </h3>
+              <p className="text-[11px]" style={{ color: C.muted, ...fontBody }}>
+                {forgotStep === 1 ? "Receive a one-time passcode via email." : "Check your inbox for the 6-digit code."}
+              </p>
+            </div>
+          </div>
+
+          {/* Step indicator */}
+          <div className="flex items-center gap-2 mb-5">
+            {[1, 2].map((s) => (
+              <div key={s} className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all"
+                  style={{
+                    backgroundColor: forgotStep >= s ? C.blue : C.surface,
+                    color: forgotStep >= s ? "white" : C.faint,
+                    border: `1.5px solid ${forgotStep >= s ? C.blue : C.border}`
+                  }}>{s}</div>
+                {s < 2 && <div className="w-10 h-0.5 rounded" style={{ backgroundColor: forgotStep > s ? C.blue : C.border }} />}
+              </div>
+            ))}
+            <span className="ml-2 text-[11px]" style={{ color: C.muted, ...fontBody }}>
+              {forgotStep === 1 ? "Email" : "OTP Verification"}
+            </span>
+          </div>
+
+          {/* Messages */}
+          {(forgotError || forgotSuccess) && (
+            <div className={`mb-4 flex items-start gap-2.5 text-[12px] px-4 py-3 rounded-xl`}
+              style={{ 
+                backgroundColor: forgotError ? "#fef2f2" : "#f0faf5", 
+                border: forgotError ? `1px solid #fecaca` : "1px solid #bbf0d8", 
+                color: forgotError ? "#dc2626" : "#2d7a54", 
+                ...fontBody 
+              }}>
+              {forgotError ? <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" /> : <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />}
+              <span>{forgotError || forgotSuccess}</span>
+            </div>
+          )}
+
+          {/* Step 1: Email */}
+          {forgotStep === 1 && (
+            <form onSubmit={handleForgotSendOtp} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold uppercase tracking-widest" style={{ color: C.muted, ...fontBody }}>Email Address</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: C.faint }} />
+                  <input type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required
+                    placeholder="advocate@lawfirm.com"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl text-[13px] outline-none"
+                    style={{ backgroundColor: C.surface, border: `1.5px solid ${C.border}`, color: C.ink, ...fontBody }} />
+                </div>
+              </div>
+              <button type="submit"
+                className="w-full py-3 rounded-xl font-semibold text-[13px] text-white flex items-center justify-center gap-2 cursor-pointer transition-all hover:opacity-90"
+                style={{ 
+                  backgroundColor: C.blue, 
+                  opacity: forgotLoading ? 0.6 : 1,
+                  pointerEvents: forgotLoading ? "none" : "auto",
+                  ...fontBody 
+                }}>
+                {forgotLoading ? (
+                  <><svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg> Sending OTP...</>
+                ) : "Send OTP to Email"}
+              </button>
+            </form>
+          )}
+
+          {/* Step 2: OTP */}
+          {forgotStep === 2 && (
+            <form onSubmit={handleForgotVerifyOtp} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold uppercase tracking-widest" style={{ color: C.muted, ...fontBody }}>6-Digit OTP Code</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={forgotOtp}
+                  onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="_ _ _ _ _ _"
+                  maxLength={6}
+                  required
+                  autoFocus
+                  className="w-full px-4 py-4 rounded-xl text-[24px] outline-none text-center font-bold tracking-[0.6em]"
+                  style={{ backgroundColor: C.surface, border: `1.5px solid ${C.border}`, color: C.ink, letterSpacing: "0.5em" }}
+                />
+                <p className="text-[11px] text-center" style={{ color: C.faint, ...fontBody }}>Enter the code sent to <strong>{forgotEmail}</strong></p>
+                <p className="text-[11px] text-center mt-1 flex items-center justify-center gap-1" style={{ color: "#d97706", ...fontBody }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  Also check your <strong>Spam / Junk</strong> folder if not in inbox
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => { setForgotStep(1); setForgotError(""); setForgotSuccess(""); setForgotOtp(""); }}
+                  className="flex-1 py-3 rounded-xl font-medium text-[13px] cursor-pointer transition-all hover:opacity-80"
+                  style={{ backgroundColor: C.surface, border: `1.5px solid ${C.border}`, color: C.muted, ...fontBody }}>
+                  ← Back
+                </button>
+                <button type="submit" disabled={forgotOtp.length < 6}
+                  className="flex-1 py-3 rounded-xl font-semibold text-[13px] text-white flex items-center justify-center gap-2 cursor-pointer transition-all hover:opacity-90"
+                  style={{ 
+                    backgroundColor: C.blue, 
+                    opacity: (forgotLoading || forgotOtp.length < 6) ? 0.6 : 1,
+                    pointerEvents: forgotLoading ? "none" : "auto",
+                    ...fontBody 
+                  }}>
+                  {forgotLoading ? (
+                    <><svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg> Verifying...</>
+                  ) : "Verify OTP"}
+                </button>
+              </div>
+              <button type="button" onClick={() => { setForgotError(""); setForgotSuccess(""); handleForgotSendOtp({ preventDefault: () => {} }); }}
+                className="w-full text-[11px] text-center hover:underline cursor-pointer pt-1"
+                style={{ color: C.blue, ...fontBody }}>Didn't receive the email? Resend OTP</button>
+            </form>
+          )}
+        </div>
+      </Modal>
+
+      {/* ════════════════════════════════════════════════
           OVERVIEW MODAL
       ════════════════════════════════════════════════ */}
       <Modal open={overviewOpen} onClose={() => setOverviewOpen(false)}>
@@ -1095,7 +1278,7 @@ export default function Login() {
                 <ShieldCheck className="w-4 h-4" /> Platform Mission
               </h4>
               <p className="leading-relaxed" style={{ color: C.muted, ...fontBody }}>
-                Legal-Tech unifies case files, e-Courts cause-list syncing, AI-assisted research, and client billing into a high-security workspace for Indian advocates.
+                Legal-Tech unifies digital case binders, client consultations, law firm management, clerk court visits, and invoice tracking into a high-security workspace for law practice.
               </p>
             </div>
 
@@ -1116,10 +1299,10 @@ export default function Login() {
             <div className="space-y-2">
               <h4 className="font-semibold text-sm" style={{ color: C.ink, ...fontBody }}>Key Modules</h4>
               {[
-                ["e-Courts National Portal Integration",                     "AUTOMATED"],
-                ["AI Precedent Vector Search (SC & High Courts)",            "SEMANTIC"],
-                ["Multi-Role Permissions (Advocate, Junior, Clerk, Client)", "ROLE-BASED"],
-                ["Razorpay Legal Retainer & Fee Gateway",                    "SECURE"],
+                ["Case Management & Filing Records",                        "ACTIVE"],
+                ["Law Firm Hierarchy (Advocate, Junior, Clerk, Client)",    "ROLE-BASED"],
+                ["Case Discussions & Consultation Notes",                   "LOGGED"],
+                ["Invoice Generation & Payment Histories",                  "SECURE"],
               ].map(([label, tag], i) => (
                 <div key={i} className="flex items-center justify-between p-3 rounded-xl"
                   style={{ backgroundColor: C.ivory, border: `1px solid ${C.border}` }}>
@@ -1147,11 +1330,11 @@ export default function Login() {
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center"
               style={{ backgroundColor: C.blueL, border: `1px solid #bfdbfe` }}>
-              <Bot className="w-5 h-5" style={{ color: C.blue }} />
+              <Briefcase className="w-5 h-5" style={{ color: C.blue }} />
             </div>
             <div>
-              <h3 className="font-semibold text-xl" style={{ ...fontHeading, color: C.ink }}>AI Features</h3>
-              <p className="text-[11px]" style={{ color: C.muted, ...fontBody }}>How AI Powers Legal-Tech</p>
+              <h3 className="font-semibold text-xl" style={{ ...fontHeading, color: C.ink }}>Project Features</h3>
+              <p className="text-[11px]" style={{ color: C.muted, ...fontBody }}>Core Modules Powering Legal-Tech</p>
             </div>
           </div>
 
