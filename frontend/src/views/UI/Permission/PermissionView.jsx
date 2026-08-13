@@ -3,7 +3,8 @@
 import { API_BASE_URL } from "@/utils/api";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Shield, ShieldAlert, Save, HelpCircle, Check, CheckSquare } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Shield, ShieldAlert, Save, HelpCircle, Check, CheckSquare, AlertTriangle, X } from "lucide-react";
 
 const DEFAULT_ROLES = [
   { id: "senioradvocate", name: "Senior Advocate", description: "Full system access" },
@@ -276,6 +277,11 @@ export default function PermissionView() {
   const [selectedRole, setSelectedRole] = useState("");
   const [permissions, setPermissions] = useState({});
   const [notification, setNotification] = useState(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Load roles and permissions on mount
   useEffect(() => {
@@ -377,22 +383,51 @@ export default function PermissionView() {
 
   return (
     <div className="w-full space-y-4 sm:space-y-6 md:space-y-8">
-      {/* Toast Notification */}
-      {notification && (
+      {/* Centered Modal Notification (Portal to document.body to cover full page including navbar & sidebar) */}
+      {mounted && notification && typeof document !== "undefined" && createPortal(
         <div
-          className={`fixed bottom-4 sm:bottom-5 right-4 sm:right-5 left-4 sm:left-auto z-50 flex items-center gap-3 px-4 sm:px-5 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl shadow-2xl transition-all duration-300 border animate-bounce max-w-sm ${
-            notification.type === "error"
-              ? "bg-red-50 border-red-200 text-red-800"
-              : "bg-emerald-50 border-emerald-200 text-emerald-800"
-          }`}
+          className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={() => setNotification(null)}
         >
-          {notification.type === "error" ? (
-            <AlertTriangle size={20} className="text-red-500 flex-shrink-0" />
-          ) : (
-            <CheckSquare size={20} className="text-emerald-600 flex-shrink-0" />
-          )}
-          <span className="font-semibold text-xs sm:text-sm leading-snug">{notification.message}</span>
-        </div>
+          <div
+            className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm sm:max-w-md w-full shadow-2xl border border-slate-100 flex flex-col items-center text-center space-y-4 animate-in zoom-in-95 duration-200 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setNotification(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors"
+              aria-label="Close"
+            >
+              <X size={20} />
+            </button>
+
+            <div
+              className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center ${
+                notification.type === "error"
+                  ? "bg-red-100 text-red-600"
+                  : "bg-emerald-100 text-emerald-600"
+              }`}
+            >
+              {notification.type === "error" ? (
+                <AlertTriangle size={32} />
+              ) : (
+                <CheckSquare size={32} />
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-xl font-bold text-slate-900">
+                {notification.type === "error" ? "Error" : "Permissions Saved!"}
+              </h3>
+              <p className="text-sm font-medium text-slate-600 leading-relaxed px-2">
+                {notification.message}
+              </p>
+            </div>
+
+
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* Page Header */}
