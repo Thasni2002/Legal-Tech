@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.advocate.case_management.models import Case
@@ -214,6 +214,7 @@ def get_recent_activity(
 # ─────────────────────────────────────────────────────────────
 @router.get("/recent-documents")
 def get_recent_documents(
+    request: Request,
     limit: int = Query(default=10, le=50),
     db: Session = Depends(get_db)
 ):
@@ -270,7 +271,8 @@ def get_recent_documents(
                     if not file_url:
                         import urllib.parse
                         safe_name = urllib.parse.quote(fname)
-                        file_url = f"http://localhost:8000/uploads/case_documents/{safe_name}"
+                        base_url = str(request.base_url).rstrip('/')
+                        file_url = f"{base_url}/uploads/case_documents/{safe_name}"
 
                     ref_dt = case.updated_at or case.created_at
                     documents.append({
