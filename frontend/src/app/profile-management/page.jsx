@@ -197,7 +197,7 @@ const Page = () => {
       setIsSubmitted(true);
     } catch (error) {
       console.error("Error saving profile:", error);
-      alert("Error saving profile.");
+      alert(`Error saving profile: ${error.message || "Something went wrong"}`);
     }
   };
 

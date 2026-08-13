@@ -169,6 +169,14 @@ export default function LawfirmAdd({ onCancel, initialData }) {
         if (!formData.id && !value.trim()) return "Temporary password is required";
         return "";
 
+      case "practiceState":
+        if (formData.role !== "Clerk" && !value.trim()) return "Practice State is required";
+        return "";
+
+      case "practiceDistrict":
+        if (formData.role !== "Clerk" && !value.trim()) return "Practice District is required";
+        return "";
+
       case "practiceCourt":
         if (formData.role === "Clerk") return "";
         if (!value.trim()) return "Practice Court is required";
@@ -245,7 +253,7 @@ export default function LawfirmAdd({ onCancel, initialData }) {
     ];
 
     if (formData.role !== "Clerk") {
-      fields.push("barCouncilId", "practiceCourt");
+      fields.push("barCouncilId", "practiceState", "practiceDistrict", "practiceCourt");
     }
 
     if (!formData.id) {
@@ -257,7 +265,10 @@ export default function LawfirmAdd({ onCancel, initialData }) {
     let valid = true;
 
     fields.forEach((field) => {
-      const err = validateField(field, formData[field] || "");
+      let val = formData[field] || "";
+      if (field === "practiceState") val = practiceState || "";
+      if (field === "practiceDistrict") val = practiceDistrict || "";
+      const err = validateField(field, val);
       newErrors[field] = err;
       newTouched[field] = true;
 
@@ -274,7 +285,15 @@ export default function LawfirmAdd({ onCancel, initialData }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
-    if (!validateAll()) return;
+    if (!validateAll()) {
+      setTimeout(() => {
+        const firstErrEl = document.querySelector(".text-red-500");
+        if (firstErrEl) {
+          firstErrEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 50);
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -601,8 +620,19 @@ export default function LawfirmAdd({ onCancel, initialData }) {
                     setPracticeState(st);
                     setPracticeDistrict("");
                     setFormData(prev => ({ ...prev, practiceCourt: "" }));
+                    const err = validateField("practiceState", st);
+                    setErrors(prev => ({
+                      ...prev,
+                      practiceState: err,
+                      practiceDistrict: "Practice District is required",
+                      practiceCourt: "Practice Court is required"
+                    }));
+                    setTouched(prev => ({ ...prev, practiceState: true }));
                   }}
                 />
+                {touched.practiceState && errors.practiceState && (
+                  <p className="text-red-500 text-sm mt-1">{errors.practiceState}</p>
+                )}
               </div>
 
               {/* Practice District */}
@@ -617,8 +647,18 @@ export default function LawfirmAdd({ onCancel, initialData }) {
                     const dist = e.target.value;
                     setPracticeDistrict(dist);
                     setFormData(prev => ({ ...prev, practiceCourt: "" }));
+                    const err = validateField("practiceDistrict", dist);
+                    setErrors(prev => ({
+                      ...prev,
+                      practiceDistrict: err,
+                      practiceCourt: "Practice Court is required"
+                    }));
+                    setTouched(prev => ({ ...prev, practiceDistrict: true }));
                   }}
                 />
+                {touched.practiceDistrict && errors.practiceDistrict && (
+                  <p className="text-red-500 text-sm mt-1">{errors.practiceDistrict}</p>
+                )}
               </div>
 
               {/* Practice Court */}
@@ -733,21 +773,21 @@ export default function LawfirmAdd({ onCancel, initialData }) {
 
 
         {/* Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 pt-4 pb-12">
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className={`px-8 py-3.5 rounded-full bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] w-full sm:w-auto ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
-          >
-            {isSubmitting ? "Saving..." : (formData.id ? "Update Profile" : "Save Profile")}
-          </button>
-
+        <div className="flex flex-col sm:flex-row justify-end gap-4 pt-4 pb-12">
           <button
             type="button"
             onClick={onCancel}
-            className="px-8 py-3.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[#475569] text-xs font-bold uppercase tracking-wider transition-colors w-full sm:w-auto"
+            className="px-8 py-3.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[#475569] text-xs font-bold uppercase tracking-wider transition-colors w-full sm:w-auto cursor-pointer"
           >
             Cancel
+          </button>
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={`px-8 py-3.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] w-full sm:w-auto cursor-pointer ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
+          >
+            {isSubmitting ? "Saving..." : (formData.id ? "Update Profile" : "Save Profile")}
           </button>
         </div>
       </form>
