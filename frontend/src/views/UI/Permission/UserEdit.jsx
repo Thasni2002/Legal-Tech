@@ -131,38 +131,40 @@ export default function UserEdit() {
       <div className="bg-white rounded-3xl border shadow-sm p-8">
         <h2 className="text-xl font-bold mb-4">Direct Permissions</h2>
 
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th>Module</th>
-              {ACTIONS.map((act) => (
-                <th key={act}>{act}</th>
-              ))}
-            </tr>
-          </thead>
-
-          <tbody>
-            {ALL_MODULES.map((module) => (
-              <tr key={module} className="border-t">
-                <td className="p-4">{module}</td>
-
-                {ACTIONS.map((action) => (
-                  <td key={action} className="text-center">
-                    <input
-                      type="checkbox"
-                      checked={
-                        user.customPermissions?.[module]?.[action] || false
-                      }
-                      onChange={() =>
-                        handlePermissionToggle(module, action)
-                      }
-                    />
-                  </td>
+        <div className="overflow-auto max-h-[70vh] rounded-2xl border border-slate-200">
+          <table className="w-full">
+            <thead className="sticky top-0 z-20 bg-slate-50 shadow-xs">
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="sticky top-0 bg-slate-50 z-20 py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-left">Module Name</th>
+                {ACTIONS.map((act) => (
+                  <th key={act} className="sticky top-0 bg-slate-50 z-20 py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-center">{act}</th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {ALL_MODULES.map((module) => (
+                <tr key={module} className="border-t">
+                  <td className="p-4">{module}</td>
+
+                  {ACTIONS.map((action) => (
+                    <td key={action} className="text-center">
+                      <input
+                        type="checkbox"
+                        checked={
+                          user.customPermissions?.[module]?.[action] || false
+                        }
+                        onChange={() =>
+                          handlePermissionToggle(module, action)
+                        }
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         <div className="flex gap-4 mt-6">
           <button

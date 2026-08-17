@@ -22,9 +22,16 @@ import {
 } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
 import { API_BASE_URL } from "@/utils/api";
+import { usePermissions } from "@/utils/usePermissions";
 
 export default function ClerkCourtVisit() {
   const router = useRouter();
+  const { hasPermission } = usePermissions();
+  const perms = {
+    add: hasPermission("Court Visit", "add"),
+    edit: hasPermission("Court Visit", "edit"),
+    delete: hasPermission("Court Visit", "delete"),
+  };
   const [user, setUser] = useState(null);
   const [visits, setVisits] = useState([]);
   const [cases, setCases] = useState([]);
@@ -544,10 +551,23 @@ export default function ClerkCourtVisit() {
                   }`}>
                     {item.visit_status}
                   </span>
-                  {item.dbVisitId && (
-                    <button onClick={() => handleDelete(item.dbVisitId)} className="text-slate-400 hover:text-red-600 p-1 cursor-pointer" title="Delete Log">
-                      <Trash2 size={16} />
-                    </button>
+                  {perms.delete ? (
+                    item.dbVisitId ? (
+                      <button 
+                        onClick={() => handleDelete(item.dbVisitId)} 
+                        className="p-1.5 text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200/60 rounded-lg transition-all cursor-pointer shadow-2xs" 
+                        title="Delete Court Visit Log"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    ) : null
+                  ) : (
+                    <span 
+                      className="p-1.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold shrink-0" 
+                      title="🔒 Delete Locked by Permission"
+                    >
+                      🔒
+                    </span>
                   )}
                 </div>
 
@@ -589,32 +609,50 @@ export default function ClerkCourtVisit() {
 
                 <div className="flex gap-2">
                   {item.visit_status === 'Pending' && (
-                    <button
-                      onClick={() => handleCheckIn(item)}
-                      className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 transition-all hover:scale-[1.02] cursor-pointer"
-                    >
-                      <Play size={14} /> Check In Now
-                    </button>
+                    perms.edit ? (
+                      <button
+                        onClick={() => handleCheckIn(item)}
+                        className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 transition-all hover:scale-[1.02] cursor-pointer"
+                      >
+                        <Play size={14} /> Check In Now
+                      </button>
+                    ) : (
+                      <div className="w-full py-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5">
+                        🔒 Check In Locked
+                      </div>
+                    )
                   )}
                   {item.visit_status === 'In Court' && (
-                    <button
-                      onClick={() => handleCheckOut(item)}
-                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.02] cursor-pointer"
-                    >
-                      <Square size={14} /> Check Out & Complete
-                    </button>
+                    perms.edit ? (
+                      <button
+                        onClick={() => handleCheckOut(item)}
+                        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.02] cursor-pointer"
+                      >
+                        <Square size={14} /> Check Out & Complete
+                      </button>
+                    ) : (
+                      <div className="w-full py-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5">
+                        🔒 Check Out Locked
+                      </div>
+                    )
                   )}
                   {item.visit_status === 'Completed' && (
                     <div className="w-full space-y-2">
                       <div className="w-full text-center py-2 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-xs border border-emerald-200">
                         ✓ Visit Completed
                       </div>
-                      <button
-                        onClick={() => openScheduleModal(item)}
-                        className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-blue-600/20"
-                      >
-                        <Calendar size={14} /> Schedule Next Visit
-                      </button>
+                      {perms.edit ? (
+                        <button
+                          onClick={() => openScheduleModal(item)}
+                          className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-blue-600/20"
+                        >
+                          <Calendar size={14} /> Schedule Next Visit
+                        </button>
+                      ) : (
+                        <div className="w-full text-center py-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-bold text-xs">
+                          🔒 Schedule Locked
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -677,43 +715,70 @@ export default function ClerkCourtVisit() {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         {item.visit_status === 'Pending' && (
-                          <button
-                            onClick={() => handleCheckIn(item)}
-                            className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                          >
-                            <Play size={13} /> Check In
-                          </button>
+                          perms.edit ? (
+                            <button
+                              onClick={() => handleCheckIn(item)}
+                              className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                            >
+                              <Play size={13} /> Check In
+                            </button>
+                          ) : (
+                            <span className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-bold text-xs">
+                              🔒 Check In Locked
+                            </span>
+                          )
                         )}
                         {item.visit_status === 'In Court' && (
-                          <button
-                            onClick={() => handleCheckOut(item)}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                          >
-                            <Square size={13} /> Check Out
-                          </button>
+                          perms.edit ? (
+                            <button
+                              onClick={() => handleCheckOut(item)}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                            >
+                              <Square size={13} /> Check Out
+                            </button>
+                          ) : (
+                            <span className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-bold text-xs">
+                              🔒 Check Out Locked
+                            </span>
+                          )
                         )}
                         {item.visit_status === 'Completed' && (
                           <div className="flex items-center gap-1.5">
                             <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-xs border border-emerald-200">
                               ✓ Done
                             </span>
-                            <button
-                              onClick={() => openScheduleModal(item)}
-                              className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl font-bold text-xs border border-blue-200 transition cursor-pointer flex items-center gap-1"
-                              title="Schedule Next Hearing Visit"
-                            >
-                              <Calendar size={13} /> Next Visit
-                            </button>
+                            {perms.edit ? (
+                              <button
+                                onClick={() => openScheduleModal(item)}
+                                className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl font-bold text-xs border border-blue-200 transition cursor-pointer flex items-center gap-1"
+                                title="Schedule Next Hearing Visit"
+                              >
+                                <Calendar size={13} /> Next Visit
+                              </button>
+                            ) : (
+                              <span className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-bold text-xs">
+                                🔒 Schedule Locked
+                              </span>
+                            )}
                           </div>
                         )}
-                        {item.dbVisitId && (
-                          <button
-                            onClick={() => handleDelete(item.dbVisitId)}
-                            className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
-                            title="Delete Log"
+                        {perms.delete ? (
+                          item.dbVisitId ? (
+                            <button
+                              onClick={() => handleDelete(item.dbVisitId)}
+                              className="p-1.5 text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200/60 rounded-lg transition-all cursor-pointer shadow-2xs"
+                              title="Delete Log"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          ) : null
+                        ) : (
+                          <span
+                            className="p-1.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold shrink-0"
+                            title="🔒 Delete Locked by Permission"
                           >
-                            <Trash2 size={16} />
-                          </button>
+                            🔒
+                          </span>
                         )}
                       </div>
                     </td>

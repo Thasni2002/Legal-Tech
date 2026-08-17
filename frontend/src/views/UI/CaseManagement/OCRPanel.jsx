@@ -21,6 +21,7 @@ import {
   Check,
   Tag,
   Camera,
+  Lock,
 } from "lucide-react";
 
 /**
@@ -35,6 +36,7 @@ export default function OCRPanel({
   showEditLayout = true,
   showPrint = true,
   showSaveToDocuments = true,
+  canAdd = true,
 }) {
   // Main Top Tab Navigation: "scan" | "digitized" | "raw"
   const [mainTab, setMainTab] = useState("scan");
@@ -262,41 +264,50 @@ export default function OCRPanel({
       <div className="flex items-center gap-1 bg-[#F8FAFC] border border-[#E2E8F0] p-1.5 rounded-2xl shadow-2xs">
         <button
           type="button"
-          onClick={() => handleMainTabClick("scan")}
-          className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-            mainTab === "scan"
-              ? "bg-[#2563EB] text-white shadow-sm"
-              : "text-[#64748B] hover:text-[#0F172A] hover:bg-white/60"
+          disabled={!canAdd}
+          onClick={() => canAdd && handleMainTabClick("scan")}
+          className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+            !canAdd
+              ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-70"
+              : mainTab === "scan"
+              ? "bg-[#2563EB] text-white shadow-sm cursor-pointer"
+              : "text-[#64748B] hover:text-[#0F172A] hover:bg-white/60 cursor-pointer"
           }`}
         >
           <Camera size={15} />
-          <span>📷 Scan Document</span>
+          <span>{canAdd ? "📷 Scan Document" : "🔒 Camera Scan Locked"}</span>
         </button>
 
         <button
           type="button"
-          onClick={() => handleMainTabClick("digitized")}
-          className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-            mainTab === "digitized"
-              ? "bg-[#2563EB] text-white shadow-sm"
-              : "text-[#64748B] hover:text-[#0F172A] hover:bg-white/60"
+          disabled={!canAdd}
+          onClick={() => canAdd && handleMainTabClick("digitized")}
+          className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+            !canAdd
+              ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-70"
+              : mainTab === "digitized"
+              ? "bg-[#2563EB] text-white shadow-sm cursor-pointer"
+              : "text-[#64748B] hover:text-[#0F172A] hover:bg-white/60 cursor-pointer"
           }`}
         >
           <Sparkles size={15} />
-          <span>✨ Digitized Document (Exact Format)</span>
+          <span>{canAdd ? "✨ Digitized Document (Exact Format)" : "🔒 Digitized Document Locked"}</span>
         </button>
 
         <button
           type="button"
-          onClick={() => handleMainTabClick("raw")}
-          className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-            mainTab === "raw"
-              ? "bg-[#2563EB] text-white shadow-sm"
-              : "text-[#64748B] hover:text-[#0F172A] hover:bg-white/60"
+          disabled={!canAdd}
+          onClick={() => canAdd && handleMainTabClick("raw")}
+          className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+            !canAdd
+              ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-70"
+              : mainTab === "raw"
+              ? "bg-[#2563EB] text-white shadow-sm cursor-pointer"
+              : "text-[#64748B] hover:text-[#0F172A] hover:bg-white/60 cursor-pointer"
           }`}
         >
           <Code size={15} />
-          <span>&lt;&gt; Extracted Raw Text</span>
+          <span>{canAdd ? "<> Extracted Raw Text" : "🔒 Raw Text Locked"}</span>
         </button>
       </div>
 
@@ -307,6 +318,7 @@ export default function OCRPanel({
           onContinueToOCR={handleContinueFromScanner}
           onSaveToDocuments={onSaveToDocuments}
           onScanUpdate={handleScanUpdate}
+          canAdd={canAdd}
         />
       )}
 
@@ -318,31 +330,50 @@ export default function OCRPanel({
             <div
               onDragOver={(e) => {
                 e.preventDefault();
-                setDragging(true);
+                if (canAdd) setDragging(true);
               }}
               onDragLeave={() => setDragging(false)}
-              onDrop={handleDrop}
-              onClick={() => inputRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
-                dragging
-                  ? "border-[#2563EB] bg-blue-50"
-                  : "border-[#E2E8F0] bg-[#F8FAFC] hover:border-[#2563EB] hover:bg-blue-50/30"
+              onDrop={(e) => {
+                if (canAdd) handleDrop(e);
+              }}
+              onClick={() => canAdd && inputRef.current?.click()}
+              className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+                !canAdd
+                  ? "border-amber-300 bg-amber-50/50 cursor-not-allowed"
+                  : dragging
+                  ? "border-[#2563EB] bg-blue-50 cursor-pointer"
+                  : "border-[#E2E8F0] bg-[#F8FAFC] hover:border-[#2563EB] hover:bg-blue-50/30 cursor-pointer"
               }`}
             >
               <input
                 ref={inputRef}
+                disabled={!canAdd}
                 type="file"
                 accept=".jpg,.jpeg,.png,.tiff,.tif,.bmp,.webp,.pdf"
-                onChange={handleInputChange}
+                onChange={(e) => canAdd && handleInputChange(e)}
                 className="hidden"
               />
-              <Upload size={30} className="text-[#94A3B8] mx-auto mb-2" />
-              <p className="text-sm font-bold text-[#475569]">
-                {dragging ? "Drop to upload" : "Click or drag & drop document file"}
-              </p>
-              <p className="text-xs text-[#94A3B8] mt-1">
-                Supports JPG, PNG, TIFF, BMP, WEBP, PDF (Vakalatnama, ID Cards, Petitions, Notices, Contracts)
-              </p>
+              {!canAdd ? (
+                <>
+                  <Lock size={30} className="text-amber-600 mx-auto mb-2" />
+                  <p className="text-sm font-bold text-amber-900">
+                    🔒 Document Upload Locked
+                  </p>
+                  <p className="text-xs text-amber-700 mt-1 font-semibold">
+                    Document uploading is locked by permission settings.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Upload size={30} className="text-[#94A3B8] mx-auto mb-2" />
+                  <p className="text-sm font-bold text-[#475569]">
+                    {dragging ? "Drop to upload" : "Click or drag & drop document file"}
+                  </p>
+                  <p className="text-xs text-[#94A3B8] mt-1">
+                    Supports JPG, PNG, TIFF, BMP, WEBP, PDF (Vakalatnama, ID Cards, Petitions, Notices, Contracts)
+                  </p>
+                </>
+              )}
             </div>
           )}
 
@@ -493,28 +524,34 @@ export default function OCRPanel({
             )}
 
             {showSaveToDocuments && onSaveToDocuments && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (result?.extracted_text || editedHtml) {
-                    onSaveToDocuments(
-                      result.extracted_text,
-                      result.original_filename,
-                      selectedDocType || result.document_type || "OCR Extracted Text",
-                      editedHtml || result.digitized_html || ""
-                    );
-                    setSavedToDocs(true);
-                    setTimeout(() => setSavedToDocs(false), 2500);
-                  }
-                }}
-                className="px-3 py-1.5 text-xs font-bold bg-emerald-50 border border-emerald-300 text-emerald-700 hover:bg-emerald-100 rounded-lg flex items-center gap-1 transition-all cursor-pointer"
-              >
-                {savedToDocs ? (
-                  <><CheckCircle size={13} className="text-emerald-600" /> Saved to Case Docs!</>
-                ) : (
-                  <><Save size={13} className="text-emerald-600" /> Save to Documents</>
-                )}
-              </button>
+              !canAdd ? (
+                <div className="px-3 py-1.5 text-xs font-bold bg-amber-50 border border-amber-200 text-amber-800 rounded-lg flex items-center gap-1 shadow-2xs">
+                  🔒 Save to Documents Locked
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (result?.extracted_text || editedHtml) {
+                      onSaveToDocuments(
+                        result.extracted_text,
+                        result.original_filename,
+                        selectedDocType || result.document_type || "OCR Extracted Text",
+                        editedHtml || result.digitized_html || ""
+                      );
+                      setSavedToDocs(true);
+                      setTimeout(() => setSavedToDocs(false), 2500);
+                    }
+                  }}
+                  className="px-3 py-1.5 text-xs font-bold bg-emerald-50 border border-emerald-300 text-emerald-700 hover:bg-emerald-100 rounded-lg flex items-center gap-1 transition-all cursor-pointer"
+                >
+                  {savedToDocs ? (
+                    <><CheckCircle size={13} className="text-emerald-600" /> Saved to Case Docs!</>
+                  ) : (
+                    <><Save size={13} className="text-emerald-600" /> Save to Documents</>
+                  )}
+                </button>
+              )
             )}
 
             {mainTab === "raw" && (

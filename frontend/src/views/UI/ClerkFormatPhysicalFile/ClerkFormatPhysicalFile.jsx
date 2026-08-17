@@ -6,11 +6,18 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Printer, Plus, Search, Folder, PrinterCheck, Camera, Edit2, Trash2, Save, X, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
 import { API_BASE_URL } from "@/utils/api";
+import { usePermissions } from "@/utils/usePermissions";
 import { getTodayDateString } from "@/utils/dateUtils";
 import CustomDatePicker from "@/components/ui/CustomDatePicker";
 
 export default function ClerkFormatPhysicalFile() {
   const router = useRouter();
+  const { hasPermission } = usePermissions();
+  const perms = {
+    add: hasPermission("Format Physical File", "add"),
+    edit: hasPermission("Format Physical File", "edit"),
+    delete: hasPermission("Format Physical File", "delete"),
+  };
   const [user, setUser] = useState(null);
   const [mounted, setMounted] = useState(false);
   const [files, setFiles] = useState([]);
@@ -413,10 +420,15 @@ export default function ClerkFormatPhysicalFile() {
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Physical File No. *</label>
               <input
                 type="text"
+                disabled={editingFileId ? !perms.edit : !perms.add}
                 value={formData.fileNumber}
                 onChange={(e) => setFormData({ ...formData, fileNumber: e.target.value })}
-                placeholder="e.g. PF-2026-003"
-                className={`w-full rounded-xl border px-4 py-3 text-sm font-medium outline-none transition ${
+                placeholder={
+                  (editingFileId ? !perms.edit : !perms.add)
+                    ? "🔒 Physical File logging locked by permission"
+                    : "e.g. PF-2026-003"
+                }
+                className={`w-full rounded-xl border px-4 py-3 text-sm font-medium outline-none transition disabled:opacity-60 disabled:cursor-not-allowed ${
                   isDuplicateFileNumber
                     ? "border-red-500 bg-red-50/40 text-red-900 focus:ring-2 focus:ring-red-500/20"
                     : "border-[#E2E8F0] text-[#0F172A] focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
@@ -434,10 +446,11 @@ export default function ClerkFormatPhysicalFile() {
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Case Title *</label>
               <input
                 type="text"
+                disabled={editingFileId ? !perms.edit : !perms.add}
                 value={formData.caseTitle}
                 onChange={(e) => setFormData({ ...formData, caseTitle: e.target.value })}
                 placeholder="e.g. Mary Joseph v. BSNL"
-                className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0F172A] font-medium outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition"
+                className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0F172A] font-medium outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -445,9 +458,10 @@ export default function ClerkFormatPhysicalFile() {
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Cabinet</label>
                 <select
+                  disabled={editingFileId ? !perms.edit : !perms.add}
                   value={formData.cabinet}
                   onChange={(e) => setFormData({ ...formData, cabinet: e.target.value })}
-                  className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] font-semibold outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition"
+                  className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] font-semibold outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"].map((letter) => (
                     <option key={letter} value={`Cabinet ${letter}`}>
@@ -460,9 +474,10 @@ export default function ClerkFormatPhysicalFile() {
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Shelf Rack</label>
                 <select
+                  disabled={editingFileId ? !perms.edit : !perms.add}
                   value={formData.shelf}
                   onChange={(e) => setFormData({ ...formData, shelf: e.target.value })}
-                  className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] font-semibold outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition"
+                  className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] font-semibold outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                     <option key={num} value={`Shelf ${num}`}>
@@ -475,29 +490,38 @@ export default function ClerkFormatPhysicalFile() {
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Date Logged</label>
-              <CustomDatePicker
-                selected={formData.dateFiled}
-                onChange={(dateStr) => setFormData({ ...formData, dateFiled: dateStr })}
-                minDate={new Date()}
-              />
+              <div className={(editingFileId ? !perms.edit : !perms.add) ? "opacity-60 pointer-events-none" : ""}>
+                <CustomDatePicker
+                  disabled={editingFileId ? !perms.edit : !perms.add}
+                  selected={formData.dateFiled}
+                  onChange={(dateStr) => setFormData({ ...formData, dateFiled: dateStr })}
+                  minDate={new Date()}
+                />
+              </div>
             </div>
           </div>
 
           <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={isDuplicateFileNumber || !formData.fileNumber.trim() || !formData.caseTitle.trim()}
-              className={`w-full font-bold text-xs uppercase tracking-wider py-4 rounded-xl transition duration-200 shadow-md flex items-center justify-center gap-2 ${
-                isDuplicateFileNumber || !formData.fileNumber.trim() || !formData.caseTitle.trim()
-                  ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none border border-slate-300/60"
-                  : editingFileId
-                  ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20 cursor-pointer"
-                  : "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 active:scale-[0.99] cursor-pointer"
-              }`}
-            >
-              {editingFileId ? <Save size={16} /> : <Plus size={16} />}
-              {editingFileId ? "Update Record" : "Register File Record"}
-            </button>
+            {(editingFileId ? !perms.edit : !perms.add) ? (
+              <div className="w-full bg-amber-50 border border-amber-200 text-amber-800 font-bold text-xs uppercase tracking-wider py-4 rounded-xl flex items-center justify-center gap-2 shadow-xs">
+                🔒 {editingFileId ? "Edit Record Locked" : "Add File Record Locked"}
+              </div>
+            ) : (
+              <button
+                type="submit"
+                disabled={isDuplicateFileNumber || !formData.fileNumber.trim() || !formData.caseTitle.trim()}
+                className={`w-full font-bold text-xs uppercase tracking-wider py-4 rounded-xl transition duration-200 shadow-md flex items-center justify-center gap-2 ${
+                  isDuplicateFileNumber || !formData.fileNumber.trim() || !formData.caseTitle.trim()
+                    ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none border border-slate-300/60"
+                    : editingFileId
+                    ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20 cursor-pointer"
+                    : "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 active:scale-[0.99] cursor-pointer"
+                }`}
+              >
+                {editingFileId ? <Save size={16} /> : <Plus size={16} />}
+                {editingFileId ? "Update Record" : "Register File Record"}
+              </button>
+            )}
           </div>
         </form>
 
@@ -552,20 +576,40 @@ export default function ClerkFormatPhysicalFile() {
                         >
                           <PrinterCheck size={16} />
                         </button>
-                        <button
-                          onClick={() => handleEdit(file)}
-                          className="bg-amber-50 hover:bg-amber-100 text-amber-700 p-2 rounded-lg border border-amber-200 transition cursor-pointer"
-                          title="Edit File Record"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirmFile(file)}
-                          className="bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-lg border border-red-200 transition cursor-pointer"
-                          title="Delete File Record"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        {perms.edit ? (
+                          <button
+                            onClick={() => handleEdit(file)}
+                            className="bg-amber-50 hover:bg-amber-100 text-amber-700 p-2 rounded-lg border border-amber-200 transition cursor-pointer"
+                            title="Edit File Record"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            className="bg-amber-50 text-amber-800 p-2 rounded-lg border border-amber-200 cursor-not-allowed text-xs font-bold shrink-0 opacity-75"
+                            title="🔒 Edit File Record Locked by Permission"
+                          >
+                            🔒
+                          </button>
+                        )}
+                        {perms.delete ? (
+                          <button
+                            onClick={() => setDeleteConfirmFile(file)}
+                            className="bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-lg border border-red-200 transition cursor-pointer"
+                            title="Delete File Record"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            className="bg-amber-50 text-amber-800 p-2 rounded-lg border border-amber-200 cursor-not-allowed text-xs font-bold shrink-0 opacity-75"
+                            title="🔒 Delete File Record Locked by Permission"
+                          >
+                            🔒
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -604,20 +648,40 @@ export default function ClerkFormatPhysicalFile() {
                   >
                     <PrinterCheck size={14} /> Sticker Label
                   </button>
-                  <button
-                    onClick={() => handleEdit(file)}
-                    className="bg-amber-50 hover:bg-amber-100 text-amber-700 px-3 py-2 rounded-xl text-xs font-bold border border-amber-200 transition cursor-pointer"
-                    title="Edit File"
-                  >
-                    <Edit2 size={14} />
-                  </button>
-                  <button
-                    onClick={() => setDeleteConfirmFile(file)}
-                    className="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-xl text-xs font-bold border border-red-200 transition cursor-pointer"
-                    title="Delete File"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  {perms.edit ? (
+                    <button
+                      onClick={() => handleEdit(file)}
+                      className="bg-amber-50 hover:bg-amber-100 text-amber-700 px-3 py-2 rounded-xl text-xs font-bold border border-amber-200 transition cursor-pointer"
+                      title="Edit File"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="bg-amber-50 text-amber-800 px-3 py-2 rounded-xl text-xs font-bold border border-amber-200 cursor-not-allowed opacity-75"
+                      title="🔒 Edit File Locked"
+                    >
+                      🔒
+                    </button>
+                  )}
+                  {perms.delete ? (
+                    <button
+                      onClick={() => setDeleteConfirmFile(file)}
+                      className="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-xl text-xs font-bold border border-red-200 transition cursor-pointer"
+                      title="Delete File"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="bg-amber-50 text-amber-800 px-3 py-2 rounded-xl text-xs font-bold border border-amber-200 cursor-not-allowed opacity-75"
+                      title="🔒 Delete File Locked"
+                    >
+                      🔒
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

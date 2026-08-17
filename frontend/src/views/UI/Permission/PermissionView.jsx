@@ -106,10 +106,10 @@ const ALL_GROUPS = [
     modules: [
       { key: "Clerk Dashboard", label: "Dashboard (Clerk)" },
       { key: "Clerk Assigned Tasks", label: "Assigned Tasks (Clerk)" },
+      { key: "Clerk Cases", label: "Cases (Clerk)" },
       { key: "Court Visit", label: "Court Visit" },
       { key: "Format Physical File", label: "Format Physical File" },
       { key: "Clerk Documents", label: "Documents (Clerk)" },
-      { key: "Clerk Cases", label: "Cases (Clerk)" },
       { key: "Clerk Leave", label: "Clerk Leave" },
     ]
   }
@@ -386,26 +386,26 @@ export default function PermissionView() {
       {/* Centered Modal Notification (Portal to document.body to cover full page including navbar & sidebar) */}
       {mounted && notification && typeof document !== "undefined" && createPortal(
         <div
-          className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
+          className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200"
           onClick={() => setNotification(null)}
         >
           <div
-            className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm sm:max-w-md w-full shadow-2xl border border-slate-100 flex flex-col items-center text-center space-y-4 animate-in zoom-in-95 duration-200 relative"
+            className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm sm:max-w-md w-full shadow-2xl border border-slate-100 flex flex-col items-center text-center space-y-5 animate-in zoom-in-95 duration-200 relative"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setNotification(null)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors"
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
               aria-label="Close"
             >
               <X size={20} />
             </button>
 
             <div
-              className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center ${
+              className={`w-16 h-16 rounded-full flex items-center justify-center border shadow-xs ${
                 notification.type === "error"
-                  ? "bg-red-100 text-red-600"
-                  : "bg-emerald-100 text-emerald-600"
+                  ? "bg-red-50 text-red-600 border-red-200"
+                  : "bg-emerald-50 text-emerald-600 border-emerald-200"
               }`}
             >
               {notification.type === "error" ? (
@@ -416,15 +416,24 @@ export default function PermissionView() {
             </div>
 
             <div className="space-y-1.5">
-              <h3 className="text-xl font-bold text-slate-900">
+              <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
                 {notification.type === "error" ? "Error" : "Permissions Saved!"}
               </h3>
-              <p className="text-sm font-medium text-slate-600 leading-relaxed px-2">
+              <p className="text-xs sm:text-sm font-medium text-slate-600 leading-relaxed px-2 capitalize">
                 {notification.message}
               </p>
             </div>
 
-
+            <button
+              onClick={() => setNotification(null)}
+              className={`w-full py-3 px-6 rounded-xl text-xs sm:text-sm font-extrabold transition-all shadow-md active:scale-95 cursor-pointer ${
+                notification.type === "error"
+                  ? "bg-red-600 hover:bg-red-700 text-white shadow-red-200"
+                  : "bg-[#2563EB] hover:bg-blue-700 text-white shadow-blue-200"
+              }`}
+            >
+              Done
+            </button>
           </div>
         </div>,
         document.body
@@ -584,17 +593,17 @@ export default function PermissionView() {
           </div>
 
           {/* ─── Desktop & Tablet View: Table Matrix (>= 640px) ─── */}
-          <div className="hidden sm:block overflow-x-auto rounded-2xl border border-[#E2E8F0] bg-white">
+          <div className="hidden sm:block overflow-auto max-h-[70vh] rounded-2xl border border-[#E2E8F0] bg-white shadow-sm">
             <table className="w-full border-collapse text-left min-w-[650px]">
-              <thead>
+              <thead className="sticky top-0 z-20 bg-[#F8FAFC] shadow-xs">
                 <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-                  <th className="py-3.5 px-4 lg:px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest">Module Name</th>
+                  <th className="sticky top-0 bg-[#F8FAFC] z-20 py-3.5 px-4 lg:px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest">Module Name</th>
                   {ACTIONS.map((action) => (
-                    <th key={action} className="py-3.5 px-4 lg:px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest text-center w-24 lg:w-28">
+                    <th key={action} className="sticky top-0 bg-[#F8FAFC] z-20 py-3.5 px-4 lg:px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest text-center w-24 lg:w-28">
                       {action}
                     </th>
                   ))}
-                  <th className="py-3.5 px-4 lg:px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest text-center w-28">All</th>
+                  <th className="sticky top-0 bg-[#F8FAFC] z-20 py-3.5 px-4 lg:px-6 text-xs font-bold text-[#64748B] uppercase tracking-widest text-center w-28">All</th>
                 </tr>
               </thead>
               <tbody>
@@ -604,7 +613,7 @@ export default function PermissionView() {
                     <tr>
                       <td
                         colSpan={6}
-                        className="py-3 px-4 lg:px-6 font-bold text-[11px] uppercase tracking-[0.2em] text-[#64748B] bg-gradient-to-r from-[#F8FAFC] to-white border-y border-[#E2E8F0] border-l-4 border-l-[#2563EB]"
+                        className="sticky top-[41px] z-10 py-3 px-4 lg:px-6 font-bold text-[11px] uppercase tracking-[0.2em] text-[#64748B] bg-[#F8FAFC] border-y border-[#E2E8F0] border-l-4 border-l-[#2563EB] shadow-xs"
                       >
                         {category}
                       </td>

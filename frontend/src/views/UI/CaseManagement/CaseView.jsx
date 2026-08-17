@@ -139,7 +139,11 @@ export default function CaseView() {
   const { hasPermission } = usePermissions();
   const user = getLoggedInUser();
   const isClerk = (user?.role || "").toLowerCase().includes("clerk");
-  const canAddCase = isClerk || hasPermission("Case Management", "add");
+  const caseModuleKey = isClerk ? "Clerk Cases" : "Case Management";
+
+  const canAddCase = hasPermission(caseModuleKey, "add");
+  const canEditCase = hasPermission(caseModuleKey, "edit");
+  const canDeleteCase = hasPermission(caseModuleKey, "delete");
 
   const [cases, setCases] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -312,7 +316,7 @@ export default function CaseView() {
           <button
             key={card.title}
             onClick={() => router.push(card.path)}
-            className={`bg-gradient-to-br ${card.color} text-white rounded-2xl p-4 sm:p-5 lg:p-6 text-left hover:scale-[1.02] hover:shadow-lg transition-all duration-200 group`}
+            className={`bg-gradient-to-br ${card.color} text-white rounded-2xl p-4 sm:p-5 lg:p-6 text-left hover:scale-[1.02] hover:shadow-lg transition-all duration-200 group cursor-pointer`}
           >
             <h3 className="font-bold text-sm mb-1">{card.title}</h3>
             <p className="text-white/75 text-xs">{card.desc}</p>
@@ -376,14 +380,18 @@ export default function CaseView() {
                 className="rounded-xl border border-[#E2E8F0] pl-9 pr-4 py-2.5 text-sm w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition"
               />
             </div>
-            {canAddCase && (
+            {canAddCase ? (
               <button
                 onClick={() => router.push(isClerk ? "/case-management/case-add?redirect=/clerk/cases" : "/case-management/case-add")}
-                className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-sm transition"
+                className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-sm transition cursor-pointer"
               >
                 <Plus size={16} />
                 Add Case
               </button>
+            ) : (
+              <div className="w-full sm:w-auto bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shrink-0">
+                🔒 Add Case Locked
+              </div>
             )}
           </div>
         </div>
@@ -498,13 +506,38 @@ export default function CaseView() {
                           </button>
                         );
                       })()}
-                      {hasPermission("Case Management", "delete") && (
+                      {canEditCase ? (
+                        <button
+                          onClick={() => router.push(isClerk ? `/case-management/edit/${item.id}?redirect=/clerk/cases` : `/case-management/edit/${item.id}`)}
+                          className="p-2 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-xl transition cursor-pointer"
+                          title="Edit Case Details"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          className="p-2 bg-amber-50/50 text-amber-800 border border-amber-200/60 rounded-xl cursor-not-allowed text-xs font-bold"
+                          title="🔒 Edit Case Locked by Permission"
+                        >
+                          🔒 Edit
+                        </button>
+                      )}
+                      {canDeleteCase ? (
                         <button
                           onClick={() => setDeleteConfirm(item.id)}
                           className="p-2 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl transition cursor-pointer"
                           title="Delete Case"
                         >
                           <Trash2 size={14} />
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          className="p-2 bg-red-50/50 text-rose-800 border border-rose-200/60 rounded-xl cursor-not-allowed text-xs font-bold"
+                          title="🔒 Delete Case Locked by Permission"
+                        >
+                          🔒 Delete
                         </button>
                       )}
                     </div>
@@ -628,13 +661,38 @@ export default function CaseView() {
                                   </button>
                                 );
                               })()}
-                              {hasPermission("Case Management", "delete") && (
+                              {canEditCase ? (
+                                <button
+                                  onClick={() => router.push(isClerk ? `/case-management/edit/${item.id}?redirect=/clerk/cases` : `/case-management/edit/${item.id}`)}
+                                  title="Edit Case Details"
+                                  className="p-2 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition cursor-pointer"
+                                >
+                                  <Pencil size={15} />
+                                </button>
+                              ) : (
+                                <button
+                                  disabled
+                                  className="p-1.5 px-2 bg-amber-50/50 text-amber-800 border border-amber-200/60 rounded-lg cursor-not-allowed text-xs font-bold shrink-0"
+                                  title="🔒 Edit Case Locked by Permission"
+                                >
+                                  🔒 Edit
+                                </button>
+                              )}
+                              {canDeleteCase ? (
                                 <button
                                   onClick={() => setDeleteConfirm(item.id)}
                                   title="Delete Case"
                                   className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition cursor-pointer"
                                 >
                                   <Trash2 size={15} />
+                                </button>
+                              ) : (
+                                <button
+                                  disabled
+                                  className="p-1.5 px-2 bg-red-50/50 text-rose-800 border border-rose-200/60 rounded-lg cursor-not-allowed text-xs font-bold shrink-0"
+                                  title="🔒 Delete Case Locked by Permission"
+                                >
+                                  🔒 Delete
                                 </button>
                               )}
                             </div>
