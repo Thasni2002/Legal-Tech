@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Calendar,
   AlertCircle,
@@ -69,7 +70,7 @@ function formatDueDate(dateStr) {
   }
 }
 
-function TaskCard({ task, onOpen, colKey, perms, onPinToggle }) {
+function TaskCard({ task, onOpen, colKey, perms, onPinToggle, onDragLocked }) {
   const dragRef = useRef(null);
   const [hovered, setHovered] = useState(false);
   const due = formatDueDate(task.due_date);
@@ -78,6 +79,7 @@ function TaskCard({ task, onOpen, colKey, perms, onPinToggle }) {
   const handleDragStart = (e) => {
     if (!perms || !perms.edit) {
       e.preventDefault();
+      onDragLocked && onDragLocked();
       return;
     }
     e.dataTransfer.setData("taskId", String(task.id));
@@ -91,7 +93,7 @@ function TaskCard({ task, onOpen, colKey, perms, onPinToggle }) {
   return (
     <div
       ref={dragRef}
-      draggable={!!perms?.edit}
+      draggable={true}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={() => onOpen(task)}
@@ -185,6 +187,12 @@ function TaskCard({ task, onOpen, colKey, perms, onPinToggle }) {
 
 export default function KanbanBoard({ tasks = [], onOpenTask, onStatusChange, currentUserId, isSenior, perms, onPinToggle }) {
   const [mobileColFilter, setMobileColFilter] = useState("all");
+  const [showDragLockedModal, setShowDragLockedModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const tasksByCol = {};
   COLUMNS.forEach((c) => { tasksByCol[c.key] = []; });
@@ -207,7 +215,10 @@ export default function KanbanBoard({ tasks = [], onOpenTask, onStatusChange, cu
 
   const handleDrop = (e, targetColKey) => {
     e.preventDefault();
-    if (!perms || !perms.edit) return;
+    if (!perms || !perms.edit) {
+      setShowDragLockedModal(true);
+      return;
+    }
     const taskId = parseInt(e.dataTransfer.getData("taskId"), 10);
     const fromCol = e.dataTransfer.getData("fromCol");
     if (!taskId || fromCol === targetColKey) return;
@@ -219,7 +230,29 @@ export default function KanbanBoard({ tasks = [], onOpenTask, onStatusChange, cu
     : COLUMNS.filter((c) => c.key === mobileColFilter);
 
   return (
-    <div className="w-full max-w-full min-w-0 space-y-3">
+    <div className="w-full max-w-full min-w-0 space-y-3 relative">
+
+      {/* Drag Locked Error Modal (Portaled to document.body so it covers Navbar & Sidebar) */}
+      {showDragLockedModal && mounted && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl border border-slate-200 space-y-3">
+            <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto text-2xl">
+              🔒
+            </div>
+            <h3 className="text-base font-extrabold text-slate-900">Task Editing Locked</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              You do not have permission to edit or move tasks across status sections. Contact your administrator to enable edit permissions.
+            </p>
+            <button
+              onClick={() => setShowDragLockedModal(false)}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-md active:scale-95 cursor-pointer"
+            >
+              Understood
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Mobile Column View Switcher (< 640px) */}
       <div className="block sm:hidden w-full min-w-0 bg-white p-2 rounded-xl border border-slate-200">
@@ -276,12 +309,19 @@ export default function KanbanBoard({ tasks = [], onOpenTask, onStatusChange, cu
                   {col.label}
                 </span>
               </div>
-              <span
-                className="text-[11px] font-black px-2.5 py-0.5 rounded-full border shadow-2xs"
-                style={{ background: "#FFFFFF", color: col.color, borderColor: col.border }}
-              >
-                {tasksByCol[col.key].length}
-              </span>
+              <div className="flex items-center gap-1.5">
+                {(!perms || !perms.edit) && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1" title="🔒 Section edit permission locked">
+                    🔒 Locked
+                  </span>
+                )}
+                <span
+                  className="text-[11px] font-black px-2.5 py-0.5 rounded-full border shadow-2xs"
+                  style={{ background: "#FFFFFF", color: col.color, borderColor: col.border }}
+                >
+                  {tasksByCol[col.key].length}
+                </span>
+              </div>
             </div>
 
             {/* Column Cards Container */}
@@ -292,7 +332,7 @@ export default function KanbanBoard({ tasks = [], onOpenTask, onStatusChange, cu
                   style={{ borderColor: col.border }}
                 >
                   <Clock size={22} className="mx-auto text-slate-300" />
-                  <p>Drop tasks here</p>
+                  <p>{perms?.edit ? "Drop tasks here" : "🔒 Section Locked"}</p>
                 </div>
               ) : (
                 tasksByCol[col.key].map((task, idx) => (
@@ -306,6 +346,7 @@ export default function KanbanBoard({ tasks = [], onOpenTask, onStatusChange, cu
                     isSenior={isSenior}
                     perms={perms}
                     onPinToggle={onPinToggle}
+                    onDragLocked={() => setShowDragLockedModal(true)}
                   />
                 ))
               )}

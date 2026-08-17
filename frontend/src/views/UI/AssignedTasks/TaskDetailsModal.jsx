@@ -914,157 +914,165 @@ export default function TaskDetailsModal({ task: initialTask, onClose, onStatusC
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: "8px", alignItems: "flex-end" }}>
-                {/* File Attachment Button */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingFile || isRecording}
-                  title="Attach file from system (All Formats Supported)"
-                  style={{
-                    padding: "10px",
-                    borderRadius: "10px",
-                    border: "1.5px solid #E2E8F0",
-                    background: "#fff",
-                    color: "#64748B",
-                    cursor: (uploadingFile || isRecording) ? "not-allowed" : "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {uploadingFile ? <Loader2 size={18} className="animate-spin text-blue-600" /> : <Paperclip size={18} />}
-                </button>
-
-                {/* Voice Recorder Button */}
-                <button
-                  type="button"
-                  onClick={isRecording ? stopRecording : startRecording}
-                  disabled={uploadingFile}
-                  title={isRecording ? "Stop Recording" : "Record Voice Note"}
-                  style={{
-                    padding: "10px",
-                    borderRadius: "10px",
-                    border: `1.5px solid ${isRecording ? "#EF4444" : "#E2E8F0"}`,
-                    background: isRecording ? "#FEF2F2" : "#fff",
-                    color: isRecording ? "#DC2626" : "#2563EB",
-                    cursor: uploadingFile ? "not-allowed" : "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {isRecording ? <Square size={18} fill="#DC2626" /> : <Mic size={18} />}
-                </button>
-
-                {/* Text Input / Recording Indicator */}
-                {isRecording ? (
-                  <div style={{
-                    flex: 1,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "10px 14px",
-                    background: "#FEF2F2",
-                    border: "1.5px solid #FCA5A5",
-                    borderRadius: "10px",
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse inline-block" />
-                      <span style={{ fontSize: "13px", fontWeight: 700, color: "#991B1B" }}>
-                        Recording... ({formatDuration(recordingTime)})
-                      </span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <button
-                        type="button"
-                        onClick={cancelRecording}
-                        style={{
-                          padding: "4px 8px",
-                          borderRadius: "6px",
-                          border: "1px solid #FCA5A5",
-                          background: "#fff",
-                          color: "#991B1B",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                        }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={stopRecording}
-                        style={{
-                          padding: "4px 10px",
-                          borderRadius: "6px",
-                          border: "none",
-                          background: "#DC2626",
-                          color: "#fff",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}
-                      >
-                        Done
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <textarea
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSend();
-                      }
-                    }}
-                    rows={2}
-                    placeholder="Type a message, attach file, or record voice note..."
+              {/* Input Action Bar */}
+              {perms && !perms.edit ? (
+                <div className="p-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 w-full">
+                  <span>🔒</span>
+                  <span>Messaging Locked (View Only)</span>
+                </div>
+              ) : (
+                <div style={{ display: "flex", gap: "8px", alignItems: "flex-end" }}>
+                  {/* File Attachment Button */}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingFile || isRecording}
+                    title="Attach file from system (All Formats Supported)"
                     style={{
-                      flex: 1,
-                      padding: "10px 13px",
-                      border: "1.5px solid #E2E8F0",
+                      padding: "10px",
                       borderRadius: "10px",
-                      fontSize: "13px",
-                      color: "#0F172A",
+                      border: "1.5px solid #E2E8F0",
                       background: "#fff",
-                      outline: "none",
-                      resize: "none",
-                      lineHeight: 1.4,
-                      transition: "border-color 0.2s",
+                      color: "#64748B",
+                      cursor: (uploadingFile || isRecording) ? "not-allowed" : "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
-                    onFocus={(e) => (e.target.style.borderColor = "#2563EB")}
-                    onBlur={(e) => (e.target.style.borderColor = "#E2E8F0")}
-                  />
-                )}
-                <button
-                  onClick={handleSend}
-                  disabled={sending || (!newMessage.trim() && !attachedFile)}
-                  style={{
-                    padding: "10px 16px",
-                    borderRadius: "10px",
-                    border: "none",
-                    background: (sending || (!newMessage.trim() && !attachedFile)) ? "#CBD5E1" : "linear-gradient(135deg,#2563EB,#1d4ed8)",
-                    color: "#fff",
-                    cursor: (sending || (!newMessage.trim() && !attachedFile)) ? "not-allowed" : "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                    height: "56px",
-                    width: "48px",
-                    boxShadow: (sending || !newMessage.trim()) ? "none" : "0 4px 12px rgba(37,99,235,0.3)",
-                    transition: "all 0.2s",
-                  }}
-                >
-                  {sending ? <Loader2 size={17} style={{ animation: "spin 1s linear infinite" }} /> : <Send size={17} />}
-                </button>
-              </div>
+                  >
+                    {uploadingFile ? <Loader2 size={18} className="animate-spin text-blue-600" /> : <Paperclip size={18} />}
+                  </button>
+
+                  {/* Voice Recorder Button */}
+                  <button
+                    type="button"
+                    onClick={isRecording ? stopRecording : startRecording}
+                    disabled={uploadingFile}
+                    title={isRecording ? "Stop Recording" : "Record Voice Note"}
+                    style={{
+                      padding: "10px",
+                      borderRadius: "10px",
+                      border: `1.5px solid ${isRecording ? "#EF4444" : "#E2E8F0"}`,
+                      background: isRecording ? "#FEF2F2" : "#fff",
+                      color: isRecording ? "#DC2626" : "#2563EB",
+                      cursor: uploadingFile ? "not-allowed" : "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {isRecording ? <Square size={18} fill="#DC2626" /> : <Mic size={18} />}
+                  </button>
+
+                  {/* Text Input / Recording Indicator */}
+                  {isRecording ? (
+                    <div style={{
+                      flex: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "10px 14px",
+                      background: "#FEF2F2",
+                      border: "1.5px solid #FCA5A5",
+                      borderRadius: "10px",
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse inline-block" />
+                        <span style={{ fontSize: "13px", fontWeight: 700, color: "#991B1B" }}>
+                          Recording... ({formatDuration(recordingTime)})
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <button
+                          type="button"
+                          onClick={cancelRecording}
+                          style={{
+                            padding: "4px 8px",
+                            borderRadius: "6px",
+                            border: "1px solid #FCA5A5",
+                            background: "#fff",
+                            color: "#991B1B",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={stopRecording}
+                          style={{
+                            padding: "4px 10px",
+                            borderRadius: "6px",
+                            border: "none",
+                            background: "#DC2626",
+                            color: "#fff",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                          }}
+                        >
+                          Done
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <textarea
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSend();
+                        }
+                      }}
+                      rows={2}
+                      placeholder="Type a message, attach file, or record voice note..."
+                      style={{
+                        flex: 1,
+                        padding: "10px 13px",
+                        border: "1.5px solid #E2E8F0",
+                        borderRadius: "10px",
+                        fontSize: "13px",
+                        color: "#0F172A",
+                        background: "#fff",
+                        outline: "none",
+                        resize: "none",
+                        lineHeight: 1.4,
+                        transition: "border-color 0.2s",
+                      }}
+                      onFocus={(e) => (e.target.style.borderColor = "#2563EB")}
+                      onBlur={(e) => (e.target.style.borderColor = "#E2E8F0")}
+                    />
+                  )}
+                  <button
+                    onClick={handleSend}
+                    disabled={sending || (!newMessage.trim() && !attachedFile)}
+                    style={{
+                      padding: "10px 16px",
+                      borderRadius: "10px",
+                      border: "none",
+                      background: (sending || (!newMessage.trim() && !attachedFile)) ? "#CBD5E1" : "linear-gradient(135deg,#2563EB,#1d4ed8)",
+                      color: "#fff",
+                      cursor: (sending || (!newMessage.trim() && !attachedFile)) ? "not-allowed" : "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      height: "56px",
+                      width: "48px",
+                      boxShadow: (sending || !newMessage.trim()) ? "none" : "0 4px 12px rgba(37,99,235,0.3)",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    {sending ? <Loader2 size={17} style={{ animation: "spin 1s linear infinite" }} /> : <Send size={17} />}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -29,10 +29,19 @@ import {
 import { useRouter } from "next/navigation";
 import ReactMarkdown from 'react-markdown';
 import { jsPDF } from 'jspdf';
+import { usePermissions } from "@/utils/usePermissions";
+import { getLoggedInUser } from "@/utils/auth";
 
 export default function DocumentGenerationView() {
     const router = useRouter();
     const documentRef = useRef(null);
+
+    const { hasPermission } = usePermissions();
+    const user = getLoggedInUser();
+    const isClerk = (user?.role || "").toLowerCase().includes("clerk");
+    const caseModuleKey = isClerk ? "Clerk Cases" : "Case Management";
+    const canEditCase = hasPermission(caseModuleKey, "edit");
+    const canDeleteCase = hasPermission(caseModuleKey, "delete");
 
     // Form & Active document state
     const [cases, setCases] = useState([]);
@@ -501,7 +510,8 @@ export default function DocumentGenerationView() {
                                     Select Case
                                 </label>
                                 <select
-                                    className="w-full bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A] text-xs font-semibold rounded-2xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 block p-3.5 outline-none transition-all cursor-pointer"
+                                    disabled={!canEditCase}
+                                    className="w-full bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A] text-xs font-semibold rounded-2xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 block p-3.5 outline-none transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                                     value={selectedCase}
                                     onChange={(e) => setSelectedCase(e.target.value)}
                                 >
@@ -519,8 +529,9 @@ export default function DocumentGenerationView() {
                                     Prompt / Instructions
                                 </label>
                                 <textarea
-                                    className="w-full bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A] text-xs font-medium rounded-2xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 block p-3.5 outline-none transition-all flex-1 min-h-[140px] resize-none leading-relaxed placeholder:text-slate-400"
-                                    placeholder="e.g. Draft a bail petition for this case focusing on the client's medical condition..."
+                                    disabled={!canEditCase}
+                                    className="w-full bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A] text-xs font-medium rounded-2xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 block p-3.5 outline-none transition-all flex-1 min-h-[140px] resize-none leading-relaxed placeholder:text-slate-400 disabled:opacity-60 disabled:cursor-not-allowed"
+                                    placeholder={canEditCase ? "e.g. Draft a bail petition for this case focusing on the client's medical condition..." : "🔒 Document generation is locked by permission settings"}
                                     value={prompt}
                                     onChange={(e) => setPrompt(e.target.value)}
                                 />
@@ -537,8 +548,9 @@ export default function DocumentGenerationView() {
                                             <button
                                                 key={idx}
                                                 type="button"
+                                                disabled={!canEditCase}
                                                 onClick={() => setPrompt(example)}
-                                                className="text-xs bg-[#F8FAFC] hover:bg-indigo-50/80 text-slate-700 hover:text-indigo-700 font-semibold px-3 py-1.5 rounded-xl border border-[#E2E8F0] hover:border-indigo-200 transition-all cursor-pointer text-left flex items-center gap-1.5 shadow-2xs"
+                                                className="text-xs bg-[#F8FAFC] hover:bg-indigo-50/80 text-slate-700 hover:text-indigo-700 font-semibold px-3 py-1.5 rounded-xl border border-[#E2E8F0] hover:border-indigo-200 transition-all cursor-pointer text-left flex items-center gap-1.5 shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 <Sparkles size={12} className="text-indigo-500 flex-shrink-0" />
                                                 <span>{example}</span>
@@ -554,23 +566,29 @@ export default function DocumentGenerationView() {
                                 </div>
                             )}
 
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] hover:from-[#4338CA] hover:to-[#6D28D9] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 px-4 rounded-2xl shadow-md shadow-indigo-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2 text-sm"
-                            >
-                                {loading ? (
-                                    <>
-                                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
-                                        <span>Drafting Legal Document...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Send className="w-4 h-4" />
-                                        Generate Document
-                                    </>
-                                )}
-                            </button>
+                            {!canEditCase ? (
+                                <div className="w-full bg-amber-50 border border-amber-200 text-amber-800 font-bold py-3.5 px-4 rounded-2xl flex items-center justify-center gap-2 text-xs sm:text-sm mt-2 shadow-xs">
+                                    🔒 Generate Document Locked
+                                </div>
+                            ) : (
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="w-full bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] hover:from-[#4338CA] hover:to-[#6D28D9] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 px-4 rounded-2xl shadow-md shadow-indigo-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2 text-sm"
+                                >
+                                    {loading ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                                            <span>Drafting Legal Document...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Send className="w-4 h-4" />
+                                            Generate Document
+                                        </>
+                                    )}
+                                </button>
+                            )}
                         </form>
                     </div>
 
@@ -839,35 +857,45 @@ export default function DocumentGenerationView() {
                                         <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                                             <button
                                                 onClick={() => handleSelectHistoryItem(item)}
-                                                className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition font-bold text-xs flex items-center gap-1"
-                                                title="View & Edit"
+                                                className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-200/60 rounded-xl transition-all cursor-pointer shadow-2xs"
+                                                title="View & Edit Document"
                                             >
-                                                <Eye className="w-3.5 h-3.5" /> View
+                                                <Eye className="w-3.5 h-3.5" />
                                             </button>
 
                                             <button
                                                 onClick={() => handleDownloadPdf(item.content, item.case_title)}
-                                                className="p-1.5 bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition"
-                                                title="PDF"
+                                                className="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white border border-emerald-200/60 rounded-xl transition-all cursor-pointer shadow-2xs"
+                                                title="Download PDF"
                                             >
                                                 <Download className="w-3.5 h-3.5" />
                                             </button>
 
                                             <button
                                                 onClick={() => handleDownloadWord(item.content, item.case_title, item.case_no)}
-                                                className="p-1.5 bg-slate-100 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg transition"
-                                                title="Word"
+                                                className="p-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white border border-indigo-200/60 rounded-xl transition-all cursor-pointer shadow-2xs"
+                                                title="Download Word (.docx)"
                                             >
                                                 <FileType className="w-3.5 h-3.5" />
                                             </button>
 
-                                            <button
-                                                onClick={(e) => triggerDeleteHistoryItem(e, item.id)}
-                                                className="p-1.5 bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-600 rounded-lg transition"
-                                                title="Delete"
-                                            >
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </button>
+                                            {canDeleteCase ? (
+                                                <button
+                                                    onClick={(e) => triggerDeleteHistoryItem(e, item.id)}
+                                                    className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border border-rose-200/60 rounded-xl transition-all cursor-pointer shadow-2xs"
+                                                    title="Delete Document"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    disabled
+                                                    className="p-1.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl cursor-not-allowed text-xs font-bold shrink-0 opacity-75"
+                                                    title="🔒 Delete Document Locked by Permission"
+                                                >
+                                                    🔒
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -953,39 +981,48 @@ export default function DocumentGenerationView() {
                                                     {/* View / Edit button */}
                                                     <button
                                                         onClick={() => handleSelectHistoryItem(item)}
-                                                        className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl transition-all font-bold text-xs flex items-center gap-1 cursor-pointer"
+                                                        className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-200/60 rounded-xl transition-all cursor-pointer shadow-2xs"
                                                         title="View & Edit Document"
                                                     >
-                                                        <Eye className="w-3.5 h-3.5" />
-                                                        View / Edit
+                                                        <Eye className="w-4 h-4" />
                                                     </button>
 
                                                     {/* PDF Download */}
                                                     <button
                                                         onClick={() => handleDownloadPdf(item.content, item.case_title)}
-                                                        className="p-2 bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl transition-all cursor-pointer"
+                                                        className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white border border-emerald-200/60 rounded-xl transition-all cursor-pointer shadow-2xs"
                                                         title="Download PDF"
                                                     >
-                                                        <Download className="w-3.5 h-3.5" />
+                                                        <Download className="w-4 h-4" />
                                                     </button>
 
                                                     {/* Word Download */}
                                                     <button
                                                         onClick={() => handleDownloadWord(item.content, item.case_title, item.case_no)}
-                                                        className="p-2 bg-slate-100 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-all cursor-pointer"
+                                                        className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white border border-indigo-200/60 rounded-xl transition-all cursor-pointer shadow-2xs"
                                                         title="Download Word (.docx)"
                                                     >
-                                                        <FileType className="w-3.5 h-3.5" />
+                                                        <FileType className="w-4 h-4" />
                                                     </button>
 
                                                     {/* Delete */}
-                                                    <button
-                                                        onClick={(e) => triggerDeleteHistoryItem(e, item.id)}
-                                                        className="p-2 bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all cursor-pointer"
-                                                        title="Delete Document"
-                                                    >
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </button>
+                                                    {canDeleteCase ? (
+                                                        <button
+                                                            onClick={(e) => triggerDeleteHistoryItem(e, item.id)}
+                                                            className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border border-rose-200/60 rounded-xl transition-all cursor-pointer shadow-2xs"
+                                                            title="Delete Document"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            disabled
+                                                            className="p-2 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl cursor-not-allowed text-xs font-bold shrink-0 opacity-75"
+                                                            title="🔒 Delete Document Locked by Permission"
+                                                        >
+                                                            🔒
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>

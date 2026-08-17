@@ -50,7 +50,7 @@ export default function LeaveManagementView({
     viewMode === "senior"
       ? ["senioradvocate", "admin"].includes(roleNorm)
       : viewMode === "clerk"
-      ? ["clerk", "senioradvocate", "admin"].includes(roleNorm) && perms.edit
+      ? ["clerk", "senioradvocate", "admin"].includes(roleNorm)
       : false;
 
   const [balances, setBalances] = useState({
@@ -754,14 +754,24 @@ export default function LeaveManagementView({
             </div>
 
             {/* Apply Leave Button */}
-            {perms.add && viewMode !== "senior" && (viewMode !== "clerk" || clerkTab === "own") && (
-              <button
-                onClick={() => setIsApplying(true)}
-                className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer shrink-0"
-              >
-                <Plus size={16} />
-                <span>Apply Leave</span>
-              </button>
+            {viewMode !== "senior" && (viewMode !== "clerk" || clerkTab === "own") && (
+              perms.add ? (
+                <button
+                  onClick={() => setIsApplying(true)}
+                  className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer shrink-0"
+                >
+                  <Plus size={16} />
+                  <span>Apply Leave</span>
+                </button>
+              ) : (
+                <button
+                  disabled
+                  className="px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-2xs cursor-not-allowed opacity-80 shrink-0"
+                  title="🔒 Apply Leave Locked by Permission Settings"
+                >
+                  🔒 Apply Leave Locked
+                </button>
+              )
             )}
           </div>
 
@@ -829,31 +839,59 @@ export default function LeaveManagementView({
                         {req.approver_name ? `Approved by ${req.approver_name}` : "Pending review"}
                       </div>
                       <div className="flex items-center gap-1.5 ml-auto">
-                        {canApprove && req.status === "Pending" && perms.edit && !isOwnRequest && (
-                          <>
-                            <button
-                              onClick={() => { setSelectedLeave(req); setActionType("Approved"); setShowActionModal(true); }}
-                              className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[11px] font-bold shadow-2xs"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => { setSelectedLeave(req); setActionType("Rejected"); setShowActionModal(true); }}
-                              className="px-2.5 py-1 bg-rose-600 text-white rounded-lg text-[11px] font-bold shadow-2xs"
-                            >
-                              Reject
-                            </button>
-                          </>
+                        {canApprove && req.status === "Pending" && !isOwnRequest && (
+                          perms.edit ? (
+                            <>
+                              <button
+                                onClick={() => { setSelectedLeave(req); setActionType("Approved"); setShowActionModal(true); }}
+                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold shadow-2xs cursor-pointer"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => { setSelectedLeave(req); setActionType("Rejected"); setShowActionModal(true); }}
+                                className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[11px] font-bold shadow-2xs cursor-pointer"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                disabled
+                                className="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-[11px] font-bold cursor-not-allowed opacity-75 shadow-2xs"
+                                title="🔒 Approve Leave Locked"
+                              >
+                                🔒 Approve Locked
+                              </button>
+                              <button
+                                disabled
+                                className="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-[11px] font-bold cursor-not-allowed opacity-75 shadow-2xs"
+                                title="🔒 Reject Leave Locked"
+                              >
+                                🔒 Reject Locked
+                              </button>
+                            </>
+                          )
                         )}
                         {req.status === "Pending" && (isOwnRequest || viewMode === "junior") && (
-                          <button
-                            onClick={() => setDeleteLeaveId(req.id)}
-                            className="px-2.5 py-1 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px] transition cursor-pointer flex items-center gap-1 shadow-2xs"
-                            title="Delete Pending Leave Request"
-                          >
-                            <Trash2 size={12} />
-                            <span>Delete</span>
-                          </button>
+                          perms.delete ? (
+                            <button
+                              onClick={() => setDeleteLeaveId(req.id)}
+                              className="p-1.5 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 font-bold transition cursor-pointer flex items-center justify-center shadow-2xs"
+                              title="Delete Pending Leave Request"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          ) : (
+                            <button
+                              disabled
+                              className="p-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 font-bold text-xs shrink-0 cursor-not-allowed opacity-75 shadow-2xs"
+                              title="🔒 Delete Leave Request Locked"
+                            >
+                              🔒
+                            </button>
+                          )
                         )}
                       </div>
                     </div>
@@ -867,7 +905,7 @@ export default function LeaveManagementView({
               const hasPendingActions = paginatedLeaves.some((req) => {
                 const isOwnRequest = user?.id === req.user_id;
                 const isPending = req.status === "Pending";
-                const canApproveReq = canApprove && isPending && perms.edit && !isOwnRequest;
+                const canApproveReq = canApprove && isPending && !isOwnRequest;
                 const canDeleteReq = isPending && (isOwnRequest || viewMode === "junior");
                 return canApproveReq || canDeleteReq;
               });
@@ -941,31 +979,59 @@ export default function LeaveManagementView({
                             {hasPendingActions && (
                               <td className="py-3.5 px-4 text-right">
                                 <div className="flex items-center justify-end gap-1.5">
-                                  {canApprove && req.status === "Pending" && perms.edit && !isOwnRequest && (
-                                    <>
-                                      <button
-                                        onClick={() => { setSelectedLeave(req); setActionType("Approved"); setShowActionModal(true); }}
-                                        className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer"
-                                      >
-                                        Approve
-                                      </button>
-                                      <button
-                                        onClick={() => { setSelectedLeave(req); setActionType("Rejected"); setShowActionModal(true); }}
-                                        className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer"
-                                      >
-                                        Reject
-                                      </button>
-                                    </>
+                                  {canApprove && req.status === "Pending" && !isOwnRequest && (
+                                    perms.edit ? (
+                                      <>
+                                        <button
+                                          onClick={() => { setSelectedLeave(req); setActionType("Approved"); setShowActionModal(true); }}
+                                          className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-2xs"
+                                        >
+                                          Approve
+                                        </button>
+                                        <button
+                                          onClick={() => { setSelectedLeave(req); setActionType("Rejected"); setShowActionModal(true); }}
+                                          className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer shadow-2xs"
+                                        >
+                                          Reject
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <button
+                                          disabled
+                                          className="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold cursor-not-allowed opacity-75 shadow-2xs"
+                                          title="🔒 Approve Leave Locked"
+                                        >
+                                          🔒 Approve Locked
+                                        </button>
+                                        <button
+                                          disabled
+                                          className="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold cursor-not-allowed opacity-75 shadow-2xs"
+                                          title="🔒 Reject Leave Locked"
+                                        >
+                                          🔒 Reject Locked
+                                        </button>
+                                      </>
+                                    )
                                   )}
                                   {req.status === "Pending" && (isOwnRequest || viewMode === "junior") && (
-                                    <button
-                                      onClick={() => setDeleteLeaveId(req.id)}
-                                      className="px-2.5 py-1 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs transition cursor-pointer flex items-center gap-1 shadow-2xs"
-                                      title="Delete Pending Leave Request"
-                                    >
-                                      <Trash2 size={13} />
-                                      <span>Delete</span>
-                                    </button>
+                                    perms.delete ? (
+                                      <button
+                                        onClick={() => setDeleteLeaveId(req.id)}
+                                        className="p-1.5 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 font-bold transition cursor-pointer flex items-center justify-center shadow-2xs"
+                                        title="Delete Pending Leave Request"
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    ) : (
+                                      <button
+                                        disabled
+                                        className="p-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 font-bold text-xs shrink-0 cursor-not-allowed opacity-75 shadow-2xs"
+                                        title="🔒 Delete Leave Request Locked"
+                                      >
+                                        🔒
+                                      </button>
+                                    )
                                   )}
                                 </div>
                               </td>

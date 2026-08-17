@@ -7,7 +7,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   UserPlus, Key, Eye, EyeOff, RefreshCw, AlertTriangle,
-  ShieldCheck, Mail, Phone, User, Check, X, FileText, Settings, Shield, Plus, Copy, Pencil
+  ShieldCheck, Mail, Phone, User, Check, X, FileText, Settings, Shield, Plus, Copy, Pencil, Trash2
 } from "lucide-react";
 
 const DEFAULT_ROLES = [
@@ -109,10 +109,10 @@ const SENIOR_JUNIOR_MODULES = [
     modules: [
       { key: "Clerk Dashboard", label: "Dashboard (Clerk)" },
       { key: "Clerk Assigned Tasks", label: "Assigned Tasks (Clerk)" },
+      { key: "Clerk Cases", label: "Cases (Clerk)" },
       { key: "Court Visit", label: "Court Visit" },
       { key: "Format Physical File", label: "Format Physical File" },
       { key: "Clerk Documents", label: "Documents (Clerk)" },
-      { key: "Clerk Cases", label: "Cases (Clerk)" },
       { key: "Clerk Leave", label: "Clerk Leave" },
     ]
   }
@@ -159,6 +159,16 @@ export default function UsersView() {
   const [selectedRole, setSelectedRole] = useState("");
   const [users, setUsers] = useState([]);
   const [filterRole, setFilterRole] = useState("All");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
+  const isRoleMatch = (userRole, selectedFilter) => {
+    if (!selectedFilter || selectedFilter === "All") return true;
+    if (!userRole) return false;
+    const uNorm = userRole.toLowerCase().trim().replace(/\s+/g, "");
+    const fNorm = selectedFilter.toLowerCase().trim().replace(/\s+/g, "");
+    return uNorm === fNorm || uNorm.includes(fNorm) || fNorm.includes(uNorm);
+  };
   const [rolePermissions, setRolePermissions] = useState({}); // default permissions per role
 
   // Advocate auto-fill states
@@ -1057,7 +1067,7 @@ export default function UsersView() {
                 maxLength={10}
                 required
                 placeholder={!editingUser && (selectedAdvocateId || selectedClientId) ? "Auto-fetched phone number" : "Enter phone number"}
-                className={`w-full rounded-xl border px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-all ${
+                className={`w-full rounded-xl border border-slate-200 px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium outline-none transition-all ${
                   (!editingUser && (selectedAdvocateId || selectedClientId))
                     ? "bg-[#F1F5F9] text-[#475569] border-[#E2E8F0] cursor-not-allowed select-none font-bold"
                     : "bg-slate-50/50 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB]"
@@ -1094,7 +1104,7 @@ export default function UsersView() {
                 readOnly={Boolean(!editingUser && (selectedAdvocateId || selectedClientId))}
                 required
                 placeholder={!editingUser && (selectedAdvocateId || selectedClientId) ? "Auto-fetched username" : "Enter username"}
-                className={`w-full rounded-xl border px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-all ${
+                className={`w-full rounded-xl border border-slate-200 px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium outline-none transition-all ${
                   (!editingUser && (selectedAdvocateId || selectedClientId))
                     ? "bg-[#F1F5F9] text-[#475569] border-[#E2E8F0] cursor-not-allowed select-none font-bold"
                     : "bg-slate-50/50 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB]"
@@ -1124,7 +1134,7 @@ export default function UsersView() {
                 readOnly={Boolean(!editingUser && (selectedAdvocateId || selectedClientId))}
                 required
                 placeholder={!editingUser && (selectedAdvocateId || selectedClientId) ? "Auto-fetched email address" : "Enter email address"}
-                className={`w-full rounded-xl border px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-all ${
+                className={`w-full rounded-xl border border-slate-200 px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium outline-none transition-all ${
                   (!editingUser && (selectedAdvocateId || selectedClientId))
                     ? "bg-[#F1F5F9] text-[#475569] border-[#E2E8F0] cursor-not-allowed select-none font-bold"
                     : "bg-slate-50/50 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB]"
@@ -1202,7 +1212,7 @@ export default function UsersView() {
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
               {(() => {
-                const filteredUsers = filterRole === "All" ? users : users.filter(u => u.role === filterRole);
+                const filteredUsers = users.filter((u) => isRoleMatch(u.role, filterRole));
                 return `${filteredUsers.length} user${filteredUsers.length !== 1 ? "s" : ""} available`;
               })()}
             </p>
@@ -1212,11 +1222,14 @@ export default function UsersView() {
           <div className="w-full sm:w-auto">
             <select
               value={filterRole}
-              onChange={(e) => setFilterRole(e.target.value)}
+              onChange={(e) => {
+                setFilterRole(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full sm:w-auto rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 sm:px-4 py-2 sm:py-2.5 text-slate-800 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-[#2563EB] outline-none transition-all text-xs sm:text-sm font-bold cursor-pointer"
             >
               <option value="All">All Roles</option>
-              {roles.map(role => (
+              {roles.map((role) => (
                 <option key={role.id} value={role.name}>{role.name}</option>
               ))}
             </select>
@@ -1226,7 +1239,12 @@ export default function UsersView() {
         {/* ─── Mobile View: Native Card List (< 640px) ─── */}
         <div className="block sm:hidden p-4 space-y-3">
           {(() => {
-            const filteredUsers = filterRole === "All" ? users : users.filter(u => u.role === filterRole);
+            const filteredUsers = users.filter((u) => isRoleMatch(u.role, filterRole));
+            const paginatedUsers = filteredUsers.slice(
+              (currentPage - 1) * ITEMS_PER_PAGE,
+              currentPage * ITEMS_PER_PAGE
+            );
+
             if (filteredUsers.length === 0) {
               return (
                 <div className="py-8 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 p-4">
@@ -1234,7 +1252,7 @@ export default function UsersView() {
                 </div>
               );
             }
-            return filteredUsers.map((user, idx) => {
+            return paginatedUsers.map((user, idx) => {
               const avatarColors = [
                 "bg-indigo-600",
                 "bg-blue-600",
@@ -1285,25 +1303,27 @@ export default function UsersView() {
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200/60">
+                  <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-200/60">
                     <button
                       onClick={() => handleOpenDetails(user)}
-                      className="flex-1 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all text-center shadow-xs cursor-pointer active:scale-95"
+                      title="View User Details"
+                      className="w-9 h-9 rounded-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-600 transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-2xs"
                     >
-                      View
+                      <Eye size={16} className="text-blue-600" />
                     </button>
                     <button
                       onClick={() => handleStartEditUser(user)}
-                      className="py-2 px-3.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold transition-all text-center border border-blue-100 cursor-pointer active:scale-95 flex items-center justify-center gap-1"
+                      title="Edit User"
+                      className="w-9 h-9 rounded-full bg-amber-50/90 hover:bg-amber-100 border border-amber-200 text-amber-700 transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-2xs"
                     >
-                      <Pencil size={13} />
-                      Edit
+                      <Pencil size={16} className="text-amber-700" />
                     </button>
                     <button
                       onClick={() => handleDeleteUserClick(user.id, user.username, user.role)}
-                      className="py-2 px-3.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold transition-all text-center border border-red-100 cursor-pointer active:scale-95"
+                      title="Delete User"
+                      className="w-9 h-9 rounded-full bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-2xs"
                     >
-                      Delete
+                      <Trash2 size={16} className="text-red-600" />
                     </button>
                   </div>
                 </div>
@@ -1334,7 +1354,12 @@ export default function UsersView() {
 
             <tbody>
               {(() => {
-                const filteredUsers = filterRole === "All" ? users : users.filter(u => u.role === filterRole);
+                const filteredUsers = users.filter((u) => isRoleMatch(u.role, filterRole));
+                const paginatedUsers = filteredUsers.slice(
+                  (currentPage - 1) * ITEMS_PER_PAGE,
+                  currentPage * ITEMS_PER_PAGE
+                );
+
                 if (filteredUsers.length === 0) {
                   return (
                     <tr>
@@ -1344,7 +1369,7 @@ export default function UsersView() {
                     </tr>
                   );
                 }
-                return filteredUsers.map((user, idx) => {
+                return paginatedUsers.map((user, idx) => {
                   const avatarColors = [
                     "bg-indigo-600",
                     "bg-blue-600",
@@ -1410,25 +1435,27 @@ export default function UsersView() {
 
                       {/* Action */}
                       <td className="py-3.5 px-4 lg:px-6 text-center">
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-2.5">
                           <button
                             onClick={() => handleOpenDetails(user)}
-                            className="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                            title="View Details"
+                            className="w-9 h-9 rounded-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-600 transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-2xs"
                           >
-                            View
+                            <Eye size={16} className="text-blue-600" />
                           </button>
                           <button
                             onClick={() => handleStartEditUser(user)}
-                            className="px-3.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                            title="Edit User"
+                            className="w-9 h-9 rounded-full bg-amber-50/90 hover:bg-amber-100 border border-amber-200 text-amber-700 transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-2xs"
                           >
-                            <Pencil size={13} />
-                            Edit
+                            <Pencil size={16} className="text-amber-700" />
                           </button>
                           <button
                             onClick={() => handleDeleteUserClick(user.id, user.username, user.role)}
-                            className="px-3.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold transition-colors cursor-pointer"
+                            title="Delete User"
+                            className="w-9 h-9 rounded-full bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-2xs"
                           >
-                            Delete
+                            <Trash2 size={16} className="text-red-600" />
                           </button>
                         </div>
                       </td>
@@ -1440,6 +1467,59 @@ export default function UsersView() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Bar (10 items per page) */}
+        {(() => {
+          const filteredUsers = users.filter((u) => isRoleMatch(u.role, filterRole));
+          const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE) || 1;
+          if (filteredUsers.length === 0) return null;
+          const startIdx = (currentPage - 1) * ITEMS_PER_PAGE + 1;
+          const endIdx = Math.min(currentPage * ITEMS_PER_PAGE, filteredUsers.length);
+          return (
+            <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 font-medium bg-slate-50/50">
+              <div>
+                Showing <span className="font-bold text-slate-900">{startIdx}</span> to{" "}
+                <span className="font-bold text-slate-900">{endIdx}</span> of{" "}
+                <span className="font-bold text-slate-900">{filteredUsers.length}</span> users
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors font-bold text-xs shadow-2xs"
+                  >
+                    Previous
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
+                    <button
+                      key={pg}
+                      type="button"
+                      onClick={() => setCurrentPage(pg)}
+                      className={`w-8 h-8 rounded-xl font-bold text-xs transition-colors cursor-pointer ${
+                        currentPage === pg
+                          ? "bg-[#2563EB] text-white shadow-xs"
+                          : "border border-slate-200 bg-white hover:bg-slate-100 text-slate-700"
+                      }`}
+                    >
+                      {pg}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors font-bold text-xs shadow-2xs"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* ─── Edit Info & Direct Override Modal ─── */}

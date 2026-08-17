@@ -2,6 +2,7 @@
 
 import { API_BASE_URL } from "@/utils/api";
 import { getLoggedInUser } from "@/utils/auth";
+import { usePermissions } from "@/utils/usePermissions";
 import { useState, useRef, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Send, Bot, User, ArrowLeft, Loader2, X, Sparkles } from "lucide-react";
@@ -10,6 +11,12 @@ function AIAssistantContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialClientName = searchParams ? searchParams.get("clientName") : null;
+
+  const { hasPermission } = usePermissions();
+  const user = getLoggedInUser();
+  const isClerk = (user?.role || "").toLowerCase().includes("clerk");
+  const caseModuleKey = isClerk ? "Clerk Cases" : "Case Management";
+  const canEditCase = hasPermission(caseModuleKey, "edit");
 
   const [clientName, setClientName] = useState(initialClientName || "");
   const [messages, setMessages] = useState([
@@ -44,6 +51,7 @@ function AIAssistantContent() {
   }, [messages]);
 
   const handleSend = async () => {
+    if (!canEditCase) return;
     if (!input.trim()) return;
 
     const userMessage = { role: "user", text: input.trim() };
@@ -226,8 +234,13 @@ function AIAssistantContent() {
             {suggestions.map((prompt, i) => (
               <button
                 key={i}
-                onClick={() => setInput(prompt)}
-                className="text-xs font-semibold px-3 py-1.5 rounded-xl transition-all border cursor-pointer bg-[#F8FAFC] hover:bg-indigo-50 border-[#E2E8F0] hover:border-indigo-200 text-[#475569] hover:text-indigo-700 shadow-2xs flex items-center gap-1.5"
+                disabled={!canEditCase}
+                onClick={() => canEditCase && setInput(prompt)}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-xl transition-all border flex items-center gap-1.5 ${
+                  canEditCase
+                    ? "cursor-pointer bg-[#F8FAFC] hover:bg-indigo-50 border-[#E2E8F0] hover:border-indigo-200 text-[#475569] hover:text-indigo-700 shadow-2xs"
+                    : "cursor-not-allowed bg-slate-100 border-slate-200 text-slate-400 opacity-60"
+                }`}
               >
                 <Sparkles size={12} className="text-indigo-500 flex-shrink-0" />
                 <span>{prompt}</span>
@@ -238,25 +251,34 @@ function AIAssistantContent() {
           {/* Text Input Box */}
           <div className="flex items-center gap-2 bg-[#F8FAFC] p-2 rounded-2xl border border-[#E2E8F0] focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all shadow-xs">
             <textarea
+              disabled={!canEditCase}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
+              onKeyDown={(e) => canEditCase && handleKeyDown(e)}
               placeholder={
-                clientName
+                !canEditCase
+                  ? "🔒 AI Legal Assistant messaging is locked by permission settings"
+                  : clientName
                   ? `Ask about cases or billing for ${clientName}...`
                   : "Ask a question (e.g., 'What hearings do I have tomorrow?')..."
               }
-              className="flex-1 bg-transparent border-none focus:ring-0 resize-none max-h-28 min-h-[40px] py-2 px-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none"
+              className="flex-1 bg-transparent border-none focus:ring-0 resize-none max-h-28 min-h-[40px] py-2 px-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
               rows={1}
             />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || loading}
-              className="p-3 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#4F46E5] hover:from-[#6d28d9] hover:to-[#4338CA] disabled:opacity-40 text-white shadow-md shadow-indigo-500/20 transition-all cursor-pointer flex-shrink-0"
-              title="Send Message"
-            >
-              <Send size={16} />
-            </button>
+            {!canEditCase ? (
+              <div className="px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold flex items-center gap-1.5 shrink-0">
+                🔒 Send Locked
+              </div>
+            ) : (
+              <button
+                onClick={handleSend}
+                disabled={!input.trim() || loading}
+                className="p-3 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#4F46E5] hover:from-[#6d28d9] hover:to-[#4338CA] disabled:opacity-40 text-white shadow-md shadow-indigo-500/20 transition-all cursor-pointer flex-shrink-0"
+                title="Send Message"
+              >
+                <Send size={16} />
+              </button>
+            )}
           </div>
 
         </div>

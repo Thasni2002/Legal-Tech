@@ -24,16 +24,43 @@ import {
   ChevronDown,
   Scale,
   Briefcase,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Pencil,
+  Check,
+  X
 } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
 import { API_BASE_URL } from "@/utils/api";
+import useModulePermission from "@/utils/useModulePermission";
 
 export default function ClerkDashboard() {
   const router = useRouter();
+  const { perms: clerkDashboardPerms } = useModulePermission("Clerk Dashboard");
+  const { perms: caseMgmtPerms } = useModulePermission("Case Management");
   const [user, setUser] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [newTaskText, setNewTaskText] = useState("");
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [editingTaskText, setEditingTaskText] = useState("");
+
+  const handleSaveEditedTask = async (id) => {
+    if (!editingTaskText.trim()) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/clerk/dashboard/tasks/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: editingTaskText.trim() })
+      });
+      if (response.ok) {
+        const updatedTask = await response.json();
+        setTasks((prev) => prev.map((t) => (t.id === id ? updatedTask : t)));
+        setEditingTaskId(null);
+        setEditingTaskText("");
+      }
+    } catch (e) {
+      console.error("Failed to update task text:", e);
+    }
+  };
   const [courtVisits, setCourtVisits] = useState([]);
   const [physicalFiles, setPhysicalFiles] = useState([]);
   const [stats, setStats] = useState({
@@ -212,13 +239,19 @@ export default function ClerkDashboard() {
             Manage daily court visits, physical file formatting, tasks, and leave applications.
           </p>
         </div>
-        <button
-          onClick={() => router.push("/case-management/case-add?redirect=/clerk/documents")}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-extrabold transition shadow-md active:scale-95 cursor-pointer shrink-0"
-        >
-          <Plus size={16} />
-          Add Case
-        </button>
+        {(clerkDashboardPerms.add || caseMgmtPerms.add) ? (
+          <button
+            onClick={() => router.push("/case-management/case-add?redirect=/clerk/documents")}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-extrabold transition shadow-md active:scale-95 cursor-pointer shrink-0 w-fit"
+          >
+            <Plus size={16} />
+            Add Case
+          </button>
+        ) : (
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold shrink-0 w-fit self-start md:self-center">
+            🔒 Add Case Locked
+          </div>
+        )}
       </div>
 
       {/* Stats Summary Grid - Responsive 3-Card Grid across Desktop, Tablet & Mobile */}
@@ -287,28 +320,37 @@ export default function ClerkDashboard() {
                 <p className="text-xs text-slate-500 hidden sm:block">Track daily filing tasks, certified copies, and court room errands</p>
               </div>
             </div>
-            <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-full shrink-0">
-              {pendingTasksCount} Pending
-            </span>
+            <div className="flex items-center gap-2 shrink-0">
+              {!clerkDashboardPerms.add && (
+                <span className="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold rounded-full flex items-center gap-1">
+                  🔒 Add Locked
+                </span>
+              )}
+              <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-full">
+                {pendingTasksCount} Pending
+              </span>
+            </div>
           </div>
 
           {/* Form to add task */}
-          <form onSubmit={handleAddTask} className="flex flex-col sm:flex-row gap-2">
-            <input
-              type="text"
-              value={newTaskText}
-              onChange={(e) => setNewTaskText(e.target.value)}
-              placeholder="Add a new task (e.g. File bundle in Hall 3, Collect certified copy)..."
-              className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50/50"
-            />
-            <button
-              type="submit"
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-1 transition shadow-sm shrink-0"
-            >
-              <Plus size={16} />
-              <span>Add</span>
-            </button>
-          </form>
+          {clerkDashboardPerms.add && (
+            <form onSubmit={handleAddTask} className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={newTaskText}
+                onChange={(e) => setNewTaskText(e.target.value)}
+                placeholder="Add a new task (e.g. File bundle in Hall 3, Collect certified copy)..."
+                className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50/50"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-1 transition shadow-sm shrink-0 cursor-pointer"
+              >
+                <Plus size={16} />
+                <span>Add</span>
+              </button>
+            </form>
+          )}
 
           {/* Task list */}
           <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -319,41 +361,105 @@ export default function ClerkDashboard() {
                 <p className="text-xs text-slate-400 mt-1">Add your daily errands and filing tasks above to keep track.</p>
               </div>
             ) : (
-              tasks.map((task) => (
-                <div
-                  key={task.id}
-                  className={`flex items-center justify-between p-3.5 rounded-xl border transition ${
-                    task.completed ? "bg-slate-50 border-slate-200 opacity-75" : "bg-white border-slate-200 hover:border-slate-300"
-                  }`}
-                >
-                  <div className="flex items-center gap-3 flex-1 min-w-0 pr-2">
-                    <button
-                      onClick={() => toggleTask(task.id, task.completed)}
-                      className={`w-5 h-5 rounded-md border flex items-center justify-center transition shrink-0 ${
-                        task.completed
-                          ? "bg-emerald-600 border-emerald-600 text-white"
-                          : "border-slate-300 hover:border-blue-500 bg-white"
-                      }`}
-                    >
-                      {task.completed && <CheckSquare size={14} />}
-                    </button>
-                    <span
-                      className={`text-sm truncate font-medium ${
-                        task.completed ? "line-through text-slate-400" : "text-slate-800"
-                      }`}
-                    >
-                      {task.text || task.title}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => deleteTask(task.id)}
-                    className="p-1 text-slate-400 hover:text-red-600 transition rounded-lg hover:bg-red-50 shrink-0"
-                    title="Delete task"
+              tasks.map((task) => {
+                const isEditingThis = editingTaskId === task.id;
+                return (
+                  <div
+                    key={task.id}
+                    className={`flex items-center justify-between p-3.5 rounded-xl border transition ${
+                      task.completed ? "bg-slate-50 border-slate-200 opacity-75" : "bg-white border-slate-200 hover:border-slate-300"
+                    }`}
                   >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))
+                    <div className="flex items-center gap-3 flex-1 min-w-0 pr-2">
+                      <button
+                        disabled={!clerkDashboardPerms.edit}
+                        onClick={() => clerkDashboardPerms.edit && toggleTask(task.id, task.completed)}
+                        title={!clerkDashboardPerms.edit ? "🔒 Edit permission locked" : "Toggle task"}
+                        className={`w-5 h-5 rounded-md border flex items-center justify-center transition shrink-0 ${
+                          task.completed
+                            ? "bg-emerald-600 border-emerald-600 text-white"
+                            : "border-slate-300 hover:border-blue-500 bg-white"
+                        } ${!clerkDashboardPerms.edit ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+                      >
+                        {task.completed && <CheckSquare size={14} />}
+                      </button>
+
+                      {isEditingThis ? (
+                        <div className="flex items-center gap-2 flex-1">
+                          <input
+                            type="text"
+                            value={editingTaskText}
+                            onChange={(e) => setEditingTaskText(e.target.value)}
+                            className="flex-1 px-3 py-1 border border-blue-400 rounded-lg text-sm bg-white outline-none"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSaveEditedTask(task.id);
+                              if (e.key === "Escape") setEditingTaskId(null);
+                            }}
+                          />
+                          <button
+                            onClick={() => handleSaveEditedTask(task.id)}
+                            className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer"
+                            title="Save task"
+                          >
+                            <Check size={16} />
+                          </button>
+                          <button
+                            onClick={() => setEditingTaskId(null)}
+                            className="p-1 text-slate-400 hover:bg-slate-100 rounded-lg cursor-pointer"
+                            title="Cancel edit"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ) : (
+                        <span
+                          className={`text-sm truncate font-medium ${
+                            task.completed ? "line-through text-slate-400" : "text-slate-800"
+                          }`}
+                        >
+                          {task.text || task.title}
+                        </span>
+                      )}
+                    </div>
+
+                    {!isEditingThis && (
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {clerkDashboardPerms.edit ? (
+                          <button
+                            onClick={() => {
+                              setEditingTaskId(task.id);
+                              setEditingTaskText(task.text || task.title || "");
+                            }}
+                            className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-600 transition cursor-pointer flex items-center justify-center"
+                            title="Edit task text"
+                          >
+                            <Pencil size={15} className="text-amber-600" />
+                          </button>
+                        ) : (
+                          <span className="p-1 text-slate-400 text-xs cursor-not-allowed" title="🔒 Edit permission locked">
+                            🔒
+                          </span>
+                        )}
+
+                        {clerkDashboardPerms.delete ? (
+                          <button
+                            onClick={() => deleteTask(task.id)}
+                            className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 transition cursor-pointer flex items-center justify-center"
+                            title="Delete task"
+                          >
+                            <Trash2 size={15} className="text-red-600" />
+                          </button>
+                        ) : (
+                          <span className="p-1 text-slate-400 text-xs cursor-not-allowed" title="🔒 Delete permission locked">
+                            🔒
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         </div>

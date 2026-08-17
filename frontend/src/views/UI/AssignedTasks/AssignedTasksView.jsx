@@ -269,14 +269,20 @@ export default function AssignedTasksView({ isJuniorView = false }) {
               <span>Refresh</span>
             </button>
 
-            {!isJuniorView && perms.add && (
-              <button
-                onClick={() => { setEditingTask(null); setShowForm(true); }}
-                className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-extrabold transition flex items-center justify-center gap-2 shadow-md cursor-pointer flex-1 sm:flex-none"
-              >
-                <Plus size={16} />
-                <span>Assign New Task</span>
-              </button>
+            {!isJuniorView && (
+              perms.add ? (
+                <button
+                  onClick={() => { setEditingTask(null); setShowForm(true); }}
+                  className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-extrabold transition flex items-center justify-center gap-2 shadow-md cursor-pointer flex-1 sm:flex-none"
+                >
+                  <Plus size={16} />
+                  <span>Assign New Task</span>
+                </button>
+              ) : (
+                <div className="px-3.5 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold flex items-center gap-1.5 shrink-0">
+                  🔒 Assign Task Locked
+                </div>
+              )
             )}
           </div>
         </div>

@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/utils/api";
 import { getLoggedInUser } from "@/utils/auth";
+import { usePermissions } from "@/utils/usePermissions";
 import OCRPanel from "@/views/UI/CaseManagement/OCRPanel";
 import DocumentViewerModal from "@/components/common/DocumentViewerModal";
 import {
@@ -47,6 +48,14 @@ function ClerkDocumentsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryCaseId = searchParams ? (searchParams.get("id") || searchParams.get("caseId")) : null;
+
+  const { hasPermission } = usePermissions();
+  const perms = {
+    view: hasPermission("Clerk Documents", "view"),
+    add: hasPermission("Clerk Documents", "add"),
+    edit: hasPermission("Clerk Documents", "edit"),
+    delete: hasPermission("Clerk Documents", "delete"),
+  };
 
   const [cases, setCases] = useState([]);
   const [selectedCase, setSelectedCase] = useState(null);
@@ -1152,12 +1161,22 @@ function ClerkDocumentsContent() {
                         </div>
                         <p className="text-xs font-bold text-slate-900 truncate">{assignedAdvocate}</p>
                       </div>
-                      <button
-                        onClick={handleUnassignAdvocate}
-                        className="text-[11px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg transition cursor-pointer shrink-0"
-                      >
-                        Remove
-                      </button>
+                      {perms.delete ? (
+                        <button
+                          onClick={handleUnassignAdvocate}
+                          className="text-[11px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg transition cursor-pointer shrink-0"
+                        >
+                          Remove
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          className="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg shrink-0 cursor-not-allowed opacity-75"
+                          title="🔒 Remove Advocate Locked"
+                        >
+                          🔒 Remove Locked
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <select
@@ -1192,12 +1211,22 @@ function ClerkDocumentsContent() {
                         </div>
                         <p className="text-xs font-bold text-slate-900 truncate">{standbyAdvocate}</p>
                       </div>
-                      <button
-                        onClick={handleRemoveStandbyAdvocate}
-                        className="text-[11px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg transition cursor-pointer shrink-0"
-                      >
-                        Remove
-                      </button>
+                      {perms.delete ? (
+                        <button
+                          onClick={handleRemoveStandbyAdvocate}
+                          className="text-[11px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg transition cursor-pointer shrink-0"
+                        >
+                          Remove
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          className="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg shrink-0 cursor-not-allowed opacity-75"
+                          title="🔒 Remove Advocate Locked"
+                        >
+                          🔒 Remove Locked
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <select
@@ -1221,20 +1250,26 @@ function ClerkDocumentsContent() {
 
               {/* Save Advocate Assignment Action */}
               <div className="flex justify-end pt-2">
-                <button
-                  onClick={handleAssignDocument}
-                  disabled={!assignedAdvocate || assignLoading}
-                  className="flex items-center justify-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-2xs"
-                >
-                  <Send size={14} />
-                  {assignLoading ? "Saving..." : "Save Advocate Assignment"}
-                </button>
+                {perms.add ? (
+                  <button
+                    onClick={handleAssignDocument}
+                    disabled={!assignedAdvocate || assignLoading}
+                    className="flex items-center justify-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-2xs"
+                  >
+                    <Send size={14} />
+                    {assignLoading ? "Saving..." : "Save Advocate Assignment"}
+                  </button>
+                ) : (
+                  <div className="flex items-center justify-center gap-2 px-5 py-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold rounded-xl shadow-2xs">
+                    🔒 Save Assignment Locked
+                  </div>
+                )}
               </div>
             </div>
 
             {/* OCR Extract & Digitize Document Section */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-3.5 sm:p-5 overflow-hidden">
-              <OCRPanel caseId={selectedCase?.id} onSaveToDocuments={handleSaveOcrToCaseDocuments} />
+              <OCRPanel caseId={selectedCase?.id} onSaveToDocuments={handleSaveOcrToCaseDocuments} canAdd={perms.add} />
             </div>
 
             {/* Case Documents Table Container */}
@@ -1248,18 +1283,24 @@ function ClerkDocumentsContent() {
                     {selectedCase.documents?.length || 0}
                   </span>
                 </div>
-                <button
-                  onClick={() => {
-                    setNewDocName("");
-                    setNewDocFile(null);
-                    setNewDocPin("");
-                    setAddDocModalOpen(true);
-                  }}
-                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition shadow-xs cursor-pointer w-full sm:w-auto"
-                >
-                  <Plus size={15} />
-                  Add Document
-                </button>
+                {perms.add ? (
+                  <button
+                    onClick={() => {
+                      setNewDocName("");
+                      setNewDocFile(null);
+                      setNewDocPin("");
+                      setAddDocModalOpen(true);
+                    }}
+                    className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition shadow-xs cursor-pointer w-full sm:w-auto"
+                  >
+                    <Plus size={15} />
+                    Add Document
+                  </button>
+                ) : (
+                  <div className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-extrabold shadow-xs w-full sm:w-auto">
+                    🔒 Add Document Locked
+                  </div>
+                )}
               </div>
 
               {selectedCase.documents && selectedCase.documents.length > 0 ? (
@@ -1328,21 +1369,38 @@ function ClerkDocumentsContent() {
                           >
                             <Eye size={13} /> View
                           </button>
-                          <button
-                            onClick={() => handleDocumentAssignClick(idx)}
-                            disabled={caseAssignedAdvocates.length === 0}
-                            title={caseAssignedAdvocates.length === 0 ? "Assign a case advocate above first" : "Assign document"}
-                            className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white disabled:opacity-40"
-                          >
-                            <Send size={11} /> Assign
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteCaseDocument(idx)}
-                            className="p-1.5 rounded-lg text-rose-500 bg-rose-50 border border-rose-200"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {perms.add ? (
+                            <button
+                              onClick={() => handleDocumentAssignClick(idx)}
+                              disabled={caseAssignedAdvocates.length === 0}
+                              title={caseAssignedAdvocates.length === 0 ? "Assign a case advocate above first" : "Assign document"}
+                              className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white disabled:opacity-40"
+                            >
+                              <Send size={11} /> Assign
+                            </button>
+                          ) : (
+                            <span className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                              🔒 Assign Locked
+                            </span>
+                          )}
+
+                          {perms.delete ? (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCaseDocument(idx)}
+                              className="p-1.5 rounded-lg text-rose-500 bg-rose-50 border border-rose-200"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          ) : (
+                            <button
+                              disabled
+                              className="p-1.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold cursor-not-allowed opacity-75"
+                              title="🔒 Delete Document Locked"
+                            >
+                              🔒
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1445,7 +1503,7 @@ function ClerkDocumentsContent() {
                                   <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                     <CheckCircle size={12} /> Assigned
                                   </span>
-                                ) : (
+                                ) : perms.add ? (
                                   <button
                                     onClick={() => handleDocumentAssignClick(idx)}
                                     disabled={caseAssignedAdvocates.length === 0}
@@ -1454,15 +1512,29 @@ function ClerkDocumentsContent() {
                                   >
                                     <Send size={11} /> Assign
                                   </button>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                    🔒 Assign Locked
+                                  </span>
                                 )}
 
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteCaseDocument(idx)}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition cursor-pointer"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
+                                {perms.delete ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteCaseDocument(idx)}
+                                    className="p-1.5 rounded-lg text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200/60 transition cursor-pointer"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                ) : (
+                                  <button
+                                    disabled
+                                    className="p-1.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold cursor-not-allowed opacity-75"
+                                    title="🔒 Delete Document Locked"
+                                  >
+                                    🔒
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>

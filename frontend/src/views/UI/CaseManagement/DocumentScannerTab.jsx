@@ -31,7 +31,8 @@ import {
   SlidersHorizontal,
   Save,
   Tag,
-  Check
+  Check,
+  Lock,
 } from "lucide-react";
 
 /**
@@ -48,7 +49,7 @@ import {
  * - Save to Case Documents & Export scanned result as PNG, JPG, PDF
  * - "Continue to OCR" button to feed preprocessed image into existing OCR pipeline
  */
-export default function DocumentScannerTab({ onContinueToOCR, onSaveToDocuments, onScanUpdate, caseId = null }) {
+export default function DocumentScannerTab({ onContinueToOCR, onSaveToDocuments, onScanUpdate, caseId = null, canAdd = true }) {
   const [file, setFile] = useState(null);
   const [originalPreview, setOriginalPreview] = useState(null);
   const [scanning, setScanning] = useState(false);
@@ -415,40 +416,55 @@ export default function DocumentScannerTab({ onContinueToOCR, onSaveToDocuments,
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();
-              handleFileSelect(e.dataTransfer.files[0]);
+              if (canAdd) handleFileSelect(e.dataTransfer.files[0]);
             }}
-            onClick={() => inputRef.current?.click()}
-            className="border-2 border-dashed border-[#2563EB]/40 hover:border-[#2563EB] bg-[#F8FAFC] hover:bg-blue-50/50 rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 group shadow-xs"
+            onClick={() => canAdd && inputRef.current?.click()}
+            className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-200 shadow-xs ${
+              !canAdd
+                ? "border-amber-300 bg-amber-50/50 cursor-not-allowed"
+                : "border-[#2563EB]/40 hover:border-[#2563EB] bg-[#F8FAFC] hover:bg-blue-50/50 cursor-pointer group"
+            }`}
           >
             <input
               ref={inputRef}
+              disabled={!canAdd}
               type="file"
               accept=".jpg,.jpeg,.png,.webp,.bmp,.tiff,.pdf"
-              onChange={(e) => handleFileSelect(e.target.files[0])}
+              onChange={(e) => canAdd && handleFileSelect(e.target.files[0])}
               className="hidden"
             />
-            <div className="w-16 h-16 bg-blue-100/80 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-              <Camera size={32} className="text-[#2563EB]" />
+            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-transform ${
+              !canAdd ? "bg-amber-100/80 text-amber-700" : "bg-blue-100/80 text-[#2563EB] group-hover:scale-110"
+            }`}>
+              {!canAdd ? <Lock size={32} /> : <Camera size={32} />}
             </div>
-            <h3 className="text-base font-bold text-[#0F172A]">
-              Upload or Snap Document Image
+            <h3 className={`text-base font-bold ${!canAdd ? "text-amber-900" : "text-[#0F172A]"}`}>
+              {!canAdd ? "🔒 Document Upload & Camera Scan Locked" : "Upload or Snap Document Image"}
             </h3>
-            <p className="text-xs text-[#64748B] max-w-md mx-auto mt-1">
-              Drag & drop document photo (Aadhaar, PAN, Passport, Legal Form, Contract, Invoice, PDF) or click to browse.
+            <p className={`text-xs max-w-md mx-auto mt-1 ${!canAdd ? "text-amber-700 font-semibold" : "text-[#64748B]"}`}>
+              {!canAdd
+                ? "Document uploading and camera scanning are locked by permission settings."
+                : "Drag & drop document photo (Aadhaar, PAN, Passport, Legal Form, Contract, Invoice, PDF) or click to browse."}
             </p>
 
             <div className="flex items-center justify-center gap-3 mt-6">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  startCamera();
-                }}
-                className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-all cursor-pointer shadow-sm hover:shadow-md"
-              >
-                <Camera size={15} /> Use Camera
-              </button>
-              <span className="text-xs text-slate-400 font-semibold">or select JPG, PNG, PDF</span>
+              {!canAdd ? (
+                <div className="px-4 py-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold rounded-xl flex items-center gap-2 shadow-2xs">
+                  🔒 Camera Locked
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    startCamera();
+                  }}
+                  className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-all cursor-pointer shadow-sm hover:shadow-md"
+                >
+                  <Camera size={15} /> Use Camera
+                </button>
+              )}
+              {canAdd && <span className="text-xs text-slate-400 font-semibold">or select JPG, PNG, PDF</span>}
             </div>
           </div>
         </div>
