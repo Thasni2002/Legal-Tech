@@ -75,41 +75,50 @@ async def forgot_password_send_otp(
     db: Session = Depends(get_db)
 ):
     """Step 1 – validate email exists, generate OTP, email it via background tasks."""
-    user = service.get_user_by_email(db, data.email)
+    email_clean = data.email.strip().lower()
+    user = service.get_user_by_email(db, email_clean)
     if not user:
         raise HTTPException(status_code=404, detail="No account found with that email address.")
 
     otp = str(random.randint(100000, 999999))
-    _otp_store[data.email] = {
+    _otp_store[user.email.lower()] = {
         "otp": otp,
         "expires_at": datetime.utcnow() + timedelta(minutes=OTP_EXPIRE_MINUTES),
     }
 
     # Always print OTP to console for easy debugging
     print(f"\n{'='*50}")
-    print(f"[OTP] Email: {data.email}")
+    print(f"[OTP] Email: {user.email}")
     print(f"[OTP] Code:  {otp}")
     print(f"[OTP] Valid for {OTP_EXPIRE_MINUTES} minutes")
     print(f"{'='*50}\n")
 
     username_display = user.username or user.first_name or "Advocate"
-    background_tasks.add_task(send_otp_email_task, data.email, username_display, otp)
+    background_tasks.add_task(send_otp_email_task, user.email, username_display, otp)
 
     return {
         "message": "OTP sent to your email address.",
-        "email": data.email,
+        "email": user.email,
         "email_sent": True
     }
 
 
 @router.post("/forgot-password/verify-otp", tags=["Password Reset"])
-def forgot_password_verify_otp(data: ForgotVerifyOtpRequest):
+def forgot_password_verify_otp(
+    data: ForgotVerifyOtpRequest,
+    db: Session = Depends(get_db)
+):
     """Step 2 – verify OTP without resetting yet."""
-    entry = _otp_store.get(data.email)
+    email_clean = data.email.strip().lower()
+    user = service.get_user_by_email(db, email_clean)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    entry = _otp_store.get(user.email.lower())
     if not entry:
         raise HTTPException(status_code=400, detail="No OTP requested for this email. Please request a new one.")
     if datetime.utcnow() > entry["expires_at"]:
-        _otp_store.pop(data.email, None)
+        _otp_store.pop(user.email.lower(), None)
         raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
     if entry["otp"] != data.otp:
         raise HTTPException(status_code=400, detail="Incorrect OTP. Please try again.")
@@ -122,23 +131,24 @@ def forgot_password_reset(
     db: Session = Depends(get_db)
 ):
     """Step 3 – verify OTP again and set new password."""
-    entry = _otp_store.get(data.email)
+    email_clean = data.email.strip().lower()
+    user = service.get_user_by_email(db, email_clean)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    entry = _otp_store.get(user.email.lower())
     if not entry:
         raise HTTPException(status_code=400, detail="No OTP requested for this email.")
     if datetime.utcnow() > entry["expires_at"]:
-        _otp_store.pop(data.email, None)
+        _otp_store.pop(user.email.lower(), None)
         raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
     if entry["otp"] != data.otp:
         raise HTTPException(status_code=400, detail="Incorrect OTP.")
 
-    user = service.get_user_by_email(db, data.email)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-
     user.password = hash_password(data.new_password)
     user.temp_password = data.new_password   # keep temp_password in sync
     db.commit()
-    _otp_store.pop(data.email, None)         # consume OTP
+    _otp_store.pop(user.email.lower(), None)         # consume OTP
     return {"message": "Password reset successfully."}
 
 
@@ -148,20 +158,21 @@ def forgot_password_login_with_otp(
     db: Session = Depends(get_db)
 ):
     """Verify OTP and return a login token — allows direct login after OTP verification."""
-    entry = _otp_store.get(data.email)
+    email_clean = data.email.strip().lower()
+    user = service.get_user_by_email(db, email_clean)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    entry = _otp_store.get(user.email.lower())
     if not entry:
         raise HTTPException(status_code=400, detail="No OTP requested for this email. Please request a new one.")
     if datetime.utcnow() > entry["expires_at"]:
-        _otp_store.pop(data.email, None)
+        _otp_store.pop(user.email.lower(), None)
         raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
     if entry["otp"] != data.otp:
         raise HTTPException(status_code=400, detail="Incorrect OTP. Please try again.")
 
-    user = service.get_user_by_email(db, data.email)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-
-    _otp_store.pop(data.email, None)   # consume OTP after successful verification
+    _otp_store.pop(user.email.lower(), None)   # consume OTP after successful verification
 
     token = service.create_token({
         "id": user.id,
@@ -251,9 +262,10 @@ def get_notifications(
         full_name_lower = f"{fname_lower} {lname_lower}".strip()
 
         conditions = [
-            AppNotification.user_id == user.id,
-            func.lower(AppNotification.target_name) == adv_name_lower
+            AppNotification.user_id == user.id
         ]
+        if adv_name_lower:
+            conditions.append(func.lower(AppNotification.target_name) == adv_name_lower)
         if fname_lower and fname_lower != "adv.":
             conditions.append(func.lower(AppNotification.target_name).contains(fname_lower))
         if lname_lower:
@@ -283,9 +295,6 @@ def get_notifications(
             return datetime.strptime(clean, "%Y-%m-%d").date()
         except Exception:
             return None
-
-    # Load logged-in user profile details for name comparisons
-    user = db.query(User).filter(User.id == user_id).first() if user_id else None
 
     # Helper comparisons for Junior Advocates
     def is_junior_assigned(case_obj):
@@ -327,9 +336,11 @@ def get_notifications(
             return False
         case_email = (case_obj.email_id or "").lower()
         case_client = (case_obj.client_name or "").lower()
+        u_email = (user.email or "").lower()
+        u_username = (user.username or "").lower()
         return (
-            user.email.lower() == case_email or
-            user.username.lower() in case_client
+            (u_email and u_email == case_email) or
+            (u_username and u_username in case_client)
         )
 
     def is_client_consult(consult_obj):
@@ -337,8 +348,10 @@ def get_notifications(
             return False
         if consult_obj.client_id == user.id:
             return True
-        client_lower = consult_obj.client_name.lower()
-        return user.username.lower() in client_lower
+        client_name = consult_obj.client_name or ""
+        client_lower = client_name.lower()
+        u_username = (user.username or "").lower()
+        return u_username and u_username in client_lower
 
     # Flexible Role Matching (supports 'Junior Advocate', 'Junior', 'junior_advocate', etc.)
     user_role = (role or (user.role if user else "") or "").lower().replace(" ", "").replace("_", "")
@@ -851,8 +864,10 @@ def get_notifications(
             if user:
                 inv_email = (inv.email or "").lower()
                 inv_client = (inv.client_name or "").lower()
-                if user.email.lower() == inv_email or user.username.lower() in inv_client:
-                     is_owner = True
+                u_email = (user.email or "").lower()
+                u_username = (user.username or "").lower()
+                if (u_email and u_email == inv_email) or (u_username and u_username in inv_client):
+                    is_owner = True
             if is_owner:
                 notifications.append({
                     "id": f"client_new_invoice_{inv.id}",
@@ -874,8 +889,10 @@ def get_notifications(
             if user:
                 inv_email = (inv.email or "").lower()
                 inv_client = (inv.client_name or "").lower()
-                if user.email.lower() == inv_email or user.username.lower() in inv_client:
-                     is_owner = True
+                u_email = (user.email or "").lower()
+                u_username = (user.username or "").lower()
+                if (u_email and u_email == inv_email) or (u_username and u_username in inv_client):
+                    is_owner = True
             if is_owner:
                 notifications.append({
                     "id": f"client_payment_confirm_{inv.id}",
@@ -936,8 +953,10 @@ def get_notifications(
             if user:
                 inv_email = (inv.email or "").lower()
                 inv_client = (inv.client_name or "").lower()
-                if user.email.lower() == inv_email or user.username.lower() in inv_client:
-                     is_owner = True
+                u_email = (user.email or "").lower()
+                u_username = (user.username or "").lower()
+                if (u_email and u_email == inv_email) or (u_username and u_username in inv_client):
+                    is_owner = True
             if is_owner:
                 days_old = (now - inv.created_at).days
                 if days_old == 4:
