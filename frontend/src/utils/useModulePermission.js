@@ -104,9 +104,13 @@ export default function useModulePermission(moduleKey) {
     const handleUpdate = () => resolve();
     window.addEventListener("permissions_updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
+    window.addEventListener("focus", handleUpdate);
+    document.addEventListener("visibilitychange", handleUpdate);
     return () => {
       window.removeEventListener("permissions_updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("focus", handleUpdate);
+      document.removeEventListener("visibilitychange", handleUpdate);
     };
   }, [resolve]);
 

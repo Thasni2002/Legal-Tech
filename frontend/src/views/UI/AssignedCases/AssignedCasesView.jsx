@@ -493,13 +493,21 @@ export default function AssignedCasesView() {
                         <FileText size={15} />
                       </button>
 
-                      {perms.delete && (
+                      {perms.delete ? (
                         <button
                           onClick={() => setDeleteConfirm(item.id)}
                           className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition text-xs font-bold flex items-center justify-center cursor-pointer shrink-0"
                           title="Delete Case"
                         >
                           <Trash2 size={15} />
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          className="p-2 bg-amber-50 text-amber-800 rounded-xl text-xs font-bold flex items-center justify-center shrink-0 border border-amber-200 cursor-not-allowed opacity-75"
+                          title="🔒 Delete Case Locked by Permission Settings"
+                        >
+                          🔒
                         </button>
                       )}
                     </div>
@@ -581,13 +589,21 @@ export default function AssignedCasesView() {
                       >
                         <FileText size={14} />
                       </button>
-                      {perms.delete && (
+                      {perms.delete ? (
                         <button
                           onClick={() => setDeleteConfirm(item.id)}
                           className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold flex items-center justify-center cursor-pointer shrink-0"
                           title="Delete Case"
                         >
                           <Trash2 size={14} />
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          className="p-2 bg-amber-50 text-amber-800 rounded-xl text-xs font-bold flex items-center justify-center shrink-0 border border-amber-200 cursor-not-allowed opacity-75"
+                          title="🔒 Delete Case Locked by Permission Settings"
+                        >
+                          🔒
                         </button>
                       )}
                     </div>
@@ -673,13 +689,21 @@ export default function AssignedCasesView() {
                               <FileText size={15} />
                             </button>
 
-                            {perms.delete && (
+                            {perms.delete ? (
                               <button
                                 onClick={() => setDeleteConfirm(item.id)}
                                 className="flex items-center justify-center p-2 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200/80 rounded-lg transition-colors cursor-pointer shrink-0"
                                 title="Delete Case"
                               >
                                 <Trash2 size={15} />
+                              </button>
+                            ) : (
+                              <button
+                                disabled
+                                className="flex items-center justify-center p-2 text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg shrink-0 cursor-not-allowed opacity-75"
+                                title="🔒 Delete Case Locked by Permission Settings"
+                              >
+                                🔒
                               </button>
                             )}
                           </div>
