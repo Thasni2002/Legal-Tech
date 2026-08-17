@@ -95,7 +95,7 @@ DEFAULT_ROLE_PERMISSIONS = {
     },
     "junioradvocate": {
         "Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
-        "Junior Dashboard": {"view": True, "add": False, "edit": False, "delete": False},
+        "Junior Dashboard": {"view": True, "add": True, "edit": True, "delete": False},
         "Client Dashboard": {"view": False, "add": False, "edit": False, "delete": False},
         "Law Firm Management": {"view": True, "add": False, "edit": False, "delete": False},
         "Client Management": {"view": True, "add": True, "edit": True, "delete": False},
@@ -105,13 +105,13 @@ DEFAULT_ROLE_PERMISSIONS = {
         "Calendar": {"view": False, "add": False, "edit": False, "delete": False},
         "Junior Calendar": {"view": True, "add": True, "edit": True, "delete": False},
         "Profile": {"view": True, "add": False, "edit": True, "delete": False},
-        "Assigned Cases": {"view": True, "add": False, "edit": False, "delete": False},
+        "Assigned Cases": {"view": True, "add": True, "edit": True, "delete": False},
         "Assigned Tasks": {"view": False, "add": False, "edit": False, "delete": False},
-        "Junior Assigned Tasks": {"view": True, "add": False, "edit": True, "delete": False},
+        "Junior Assigned Tasks": {"view": True, "add": True, "edit": True, "delete": False},
         "Clerk Assigned Tasks": {"view": False, "add": False, "edit": False, "delete": False},
         "Consultation": {"view": True, "add": False, "edit": False, "delete": False},
         "Case Tracking": {"view": True, "add": False, "edit": False, "delete": False},
-        "Documents": {"view": True, "add": False, "edit": False, "delete": False},
+        "Documents": {"view": True, "add": True, "edit": True, "delete": False},
         "Payments": {"view": False, "add": False, "edit": False, "delete": False},
         "User Roles": {"view": False, "add": False, "edit": False, "delete": False},
         "Roles": {"view": False, "add": False, "edit": False, "delete": False},
@@ -428,6 +428,14 @@ def seed_roles_and_permissions(db: Session) -> None:
                     delete=actions["delete"]
                 )
                 db.add(db_perm)
+            else:
+                # Ensure default view permission is active if default matrix expects view=True
+                if actions.get("view") and not exists.view:
+                    exists.view = True
+                    if actions.get("add"):
+                        exists.add = True
+                    if actions.get("edit"):
+                        exists.edit = True
 
     # Clean up any obsolete permissions not in BASE_MODULES
     db.query(Permission).filter(~Permission.module.in_(BASE_MODULES)).delete(synchronize_session=False)
