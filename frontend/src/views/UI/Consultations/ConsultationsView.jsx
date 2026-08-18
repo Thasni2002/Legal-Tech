@@ -457,7 +457,9 @@ export default function ConsultationsView() {
                 setTimeout(() => setToast({ show: false, message: "", type: "success" }), 4000);
                 await fetchConsultations(user);
             } else {
-                setAlertModal({ show: true, title: "Failed to Add Free Slot", message: "Could not add free appointment slot." });
+                const errorData = await res.json().catch(() => ({}));
+                const errMsg = errorData.detail || "Could not add appointment slot. Time slot may already be booked.";
+                setAlertModal({ show: true, title: "Slot Already Booked!", message: errMsg });
             }
         } catch (err) {
             console.error("Error adding free appointment slot:", err);

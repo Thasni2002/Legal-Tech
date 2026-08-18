@@ -13,9 +13,17 @@ import {
   Sparkles,
   ShieldCheck,
   Scale,
+  History,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  Gavel,
+  BookOpen,
+  RefreshCw,
 } from "lucide-react";
 import useModulePermission from "@/utils/useModulePermission";
 import { getLoggedInUser } from "@/utils/auth";
+import DocumentViewerModal from "@/components/common/DocumentViewerModal";
 
 export default function ClientCaseTrackingView() {
   const { perms, loading, user } = useModulePermission("Case Tracking");
@@ -26,13 +34,64 @@ export default function ClientCaseTrackingView() {
   const [cases, setCases] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
 
+  const [ecourtsDataMap, setEcourtsDataMap] = useState({});
+  const [expandedHistoryMap, setExpandedHistoryMap] = useState({});
+  const [selectedDoc, setSelectedDoc] = useState(null);
+
+  const fetchECourtsHistory = async (item) => {
+    const key = item.cnrNumber || item.caseId || item.id;
+    if (!key) return;
+
+    setExpandedHistoryMap((prev) => ({ ...prev, [key]: !prev[key] }));
+
+    if (ecourtsDataMap[key]?.loaded || ecourtsDataMap[key]?.loading) return;
+
+    setEcourtsDataMap((prev) => ({
+      ...prev,
+      [key]: { timeline: [], orders: [], loading: true, loaded: false },
+    }));
+
+    try {
+      const cnrToQuery = item.cnrNumber || item.caseId;
+      const res = await fetch("http://127.0.0.1:8000/api/ecourts/lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cnrNumber: cnrToQuery }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEcourtsDataMap((prev) => ({
+          ...prev,
+          [key]: {
+            timeline: data.timeline || [],
+            orders: data.orders || [],
+            details: data,
+            loading: false,
+            loaded: true,
+          },
+        }));
+      } else {
+        setEcourtsDataMap((prev) => ({
+          ...prev,
+          [key]: { timeline: [], orders: [], loading: false, loaded: false },
+        }));
+      }
+    } catch (err) {
+      console.error("eCourts history lookup error:", err);
+      setEcourtsDataMap((prev) => ({
+        ...prev,
+        [key]: { timeline: [], orders: [], loading: false, loaded: false },
+      }));
+    }
+  };
+
   // Fetch cases dynamically
   useEffect(() => {
     const fetchCases = async () => {
       try {
         const res = await fetch("http://127.0.0.1:8000/case-management/");
         const data = await res.json();
-        
+
         let clientCases = data;
         if (user) {
           const role = (user.role || "").toLowerCase().replace(/\s+/g, "");
@@ -60,14 +119,14 @@ export default function ClientCaseTrackingView() {
           try {
             const d = new Date(dateInput);
             if (isNaN(d.getTime())) return String(dateInput);
-        
+
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-        
+
             const diffTime = today.getTime() - target.getTime();
             const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-        
+
             if (diffDays === 0) {
               return "Today";
             } else if (diffDays === 1) {
@@ -100,6 +159,8 @@ export default function ClientCaseTrackingView() {
           }
 
           return {
+            id: item.id,
+            cnrNumber: item.cnr_number || "",
             caseId: item.case_no || "N/A",
             title: item.case_title || "Untitled Case",
             status: item.status || "Active",
@@ -160,10 +221,10 @@ export default function ClientCaseTrackingView() {
         { label: "Document Verified", isCompleted: true, isCurrent: false, dateText: "Completed" },
         { label: "Hearing Completed", isCompleted: true, isCurrent: false, dateText: "Completed" },
         { label: "Judgment Delivered", isCompleted: true, isCurrent: false, dateText: "Completed" },
-        { 
-          label: finalLabel, 
-          isCompleted: true, 
-          isCurrent: true, 
+        {
+          label: finalLabel,
+          isCompleted: true,
+          isCurrent: true,
           dateText: formatDateLabel("Disposed", updatedAtDate)
         },
       ];
@@ -260,7 +321,7 @@ export default function ClientCaseTrackingView() {
 
       {/* Unified Card Container (Search Filter Header Bar + Cases List TOGETHER) */}
       <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xs overflow-hidden w-full min-w-0">
-        
+
         {/* Integrated Search Bar Header Strip inside the Cases Container */}
         <div className="bg-[#F8FAFC]/70 border-b border-[#E2E8F0] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full min-w-0">
           <h2 className="text-base sm:text-lg font-extrabold text-[#0F172A]">Tracked Cases</h2>
@@ -307,12 +368,12 @@ export default function ClientCaseTrackingView() {
                 statusLower.includes("won")
                   ? "bg-emerald-100 text-emerald-800 ring-1 ring-emerald-300"
                   : statusLower.includes("lost")
-                  ? "bg-rose-100 text-rose-800 ring-1 ring-rose-300"
-                  : statusLower.includes("dispose")
-                  ? "bg-amber-100 text-amber-800 ring-1 ring-amber-300"
-                  : statusLower === "in progress" || statusLower === "active"
-                  ? "bg-blue-100 text-blue-800 ring-1 ring-blue-300"
-                  : "bg-slate-100 text-slate-800 ring-1 ring-slate-300";
+                    ? "bg-rose-100 text-rose-800 ring-1 ring-rose-300"
+                    : statusLower.includes("dispose")
+                      ? "bg-amber-100 text-amber-800 ring-1 ring-amber-300"
+                      : statusLower === "in progress" || statusLower === "active"
+                        ? "bg-blue-100 text-blue-800 ring-1 ring-blue-300"
+                        : "bg-slate-100 text-slate-800 ring-1 ring-slate-300";
 
               return (
                 <div
@@ -391,24 +452,22 @@ export default function ClientCaseTrackingView() {
                             {stepIdx < timelineSteps.length - 1 && (
                               <div className="absolute top-4 left-1/2 w-full px-4 -translate-y-1/2 z-0">
                                 <div
-                                  className={`h-1 rounded-full transition-all ${
-                                    stepObj.isCompleted
+                                  className={`h-1 rounded-full transition-all ${stepObj.isCompleted
                                       ? "bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-xs shadow-emerald-500/50"
                                       : "bg-slate-800 border border-slate-700/50"
-                                  }`}
+                                    }`}
                                 />
                               </div>
                             )}
 
                             <div className="flex flex-col items-center mx-auto z-10 text-center space-y-2.5">
                               <div
-                                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                                  stepObj.isCompleted
+                                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${stepObj.isCompleted
                                     ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 border-2 border-emerald-400"
                                     : stepObj.isCurrent
-                                    ? "bg-[#2563EB] text-white shadow-xl shadow-blue-500/40 ring-4 ring-blue-400/30 border-2 border-white scale-110"
-                                    : "bg-slate-800 text-slate-400 border border-slate-700"
-                                }`}
+                                      ? "bg-[#2563EB] text-white shadow-xl shadow-blue-500/40 ring-4 ring-blue-400/30 border-2 border-white scale-110"
+                                      : "bg-slate-800 text-slate-400 border border-slate-700"
+                                  }`}
                               >
                                 {stepObj.isCompleted ? (
                                   <CheckCircle2 size={18} />
@@ -421,13 +480,12 @@ export default function ClientCaseTrackingView() {
 
                               <div className="flex flex-col items-center">
                                 <span
-                                  className={`text-xs font-bold max-w-[100px] leading-snug ${
-                                    stepObj.isCompleted
+                                  className={`text-xs font-bold max-w-[100px] leading-snug ${stepObj.isCompleted
                                       ? "text-emerald-400"
                                       : stepObj.isCurrent
-                                      ? "text-white font-extrabold"
-                                      : "text-slate-400 font-medium"
-                                  }`}
+                                        ? "text-white font-extrabold"
+                                        : "text-slate-400 font-medium"
+                                    }`}
                                 >
                                   {stepObj.label}
                                 </span>
@@ -458,13 +516,12 @@ export default function ClientCaseTrackingView() {
                         <div key={stepIdx} className="flex items-start gap-3">
                           <div className="flex flex-col items-center">
                             <div
-                              className={`w-7 h-7 rounded-full flex items-center justify-center ${
-                                stepObj.isCompleted
+                              className={`w-7 h-7 rounded-full flex items-center justify-center ${stepObj.isCompleted
                                   ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/30"
                                   : stepObj.isCurrent
-                                  ? "bg-[#2563EB] text-white ring-4 ring-blue-400/30"
-                                  : "bg-slate-800 text-slate-400 border border-slate-700"
-                              }`}
+                                    ? "bg-[#2563EB] text-white ring-4 ring-blue-400/30"
+                                    : "bg-slate-800 text-slate-400 border border-slate-700"
+                                }`}
                             >
                               {stepObj.isCompleted ? (
                                 <CheckCircle2 size={14} />
@@ -474,8 +531,7 @@ export default function ClientCaseTrackingView() {
                             </div>
                             {stepIdx < timelineSteps.length - 1 && (
                               <div
-                                className={`w-0.5 h-6 mt-1 ${
-                                  stepObj.isCompleted
+                                className={`w-0.5 h-6 mt-1 ${stepObj.isCompleted
                                     ? "bg-emerald-500"
                                     : "bg-slate-800"
                                   }`}
@@ -485,13 +541,12 @@ export default function ClientCaseTrackingView() {
                           <div className="pt-0.5 flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
                               <span
-                                className={`text-xs sm:text-sm font-bold ${
-                                  stepObj.isCompleted
+                                className={`text-xs sm:text-sm font-bold ${stepObj.isCompleted
                                     ? "text-emerald-400"
                                     : stepObj.isCurrent
-                                    ? "text-white font-extrabold"
-                                    : "text-slate-400"
-                                }`}
+                                      ? "text-white font-extrabold"
+                                      : "text-slate-400"
+                                  }`}
                               >
                                 {stepObj.label}
                               </span>
@@ -506,6 +561,158 @@ export default function ClientCaseTrackingView() {
                       ))}
                     </div>
                   </div>
+
+                  {/* eCourts History & Daily Orders Section */}
+                  {(() => {
+                    const itemKey = item.cnrNumber || item.caseId || item.id;
+                    const isExpandedHistory = Boolean(expandedHistoryMap[itemKey]);
+                    const historyData = ecourtsDataMap[itemKey] || {};
+                    const timelineEvents = historyData.timeline || [];
+                    const orderDocs = historyData.orders || [];
+
+                    return (
+                      <div className="border-t border-slate-100 pt-4 mt-4 space-y-4">
+                        <button
+                          onClick={() => fetchECourtsHistory(item)}
+                          className="w-full flex items-center justify-between p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 transition cursor-pointer shadow-2xs group"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <History size={16} className="text-[#2563EB]" />
+                            <span className="text-xs sm:text-sm font-extrabold text-[#0F172A]">
+                              eCourts Hearing History & Proceedings
+                            </span>
+                            {historyData.loaded && (
+                              <span className="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-0.5 rounded-full">
+                                {timelineEvents.length} Events &bull; {orderDocs.length} Orders
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 text-xs font-bold text-[#2563EB]">
+                            <span>{isExpandedHistory ? "Hide History" : "View eCourts History"}</span>
+                            {isExpandedHistory ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                          </div>
+                        </button>
+
+                        {isExpandedHistory && (
+                          <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-5 animate-fade-in">
+                            {historyData.loading ? (
+                              <div className="py-6 text-center text-slate-500 text-xs font-bold animate-pulse flex items-center justify-center gap-2">
+                                <RefreshCw size={15} className="animate-spin text-blue-600" />
+                                <span>Fetching official eCourts history & court orders...</span>
+                              </div>
+                            ) : (
+                              <>
+                                {/* Timeline Proceedings List */}
+                                <div className="space-y-3">
+                                  <h4 className="text-xs font-extrabold text-[#0F172A] uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2">
+                                    <Gavel size={14} className="text-[#2563EB]" />
+                                    <span>Hearing Proceedings Timeline ({timelineEvents.length})</span>
+                                  </h4>
+
+                                  {timelineEvents.length > 0 ? (
+                                    <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
+                                      {timelineEvents.map((evt, eIdx) => (
+                                        <div
+                                          key={evt.id || eIdx}
+                                          className="p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/70 space-y-1.5 hover:border-slate-300 transition"
+                                        >
+                                          <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <span className="text-xs font-extrabold text-[#0F172A] flex items-center gap-1.5">
+                                              <span className="w-2 h-2 rounded-full bg-blue-600 inline-block" />
+                                              {evt.title || evt.eventStage}
+                                            </span>
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-[10.5px] font-bold bg-white text-slate-700 px-2 py-0.5 rounded-md border border-slate-200">
+                                                📅 {evt.eventDate || "N/A"}
+                                              </span>
+                                              <span
+                                                className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                                                  evt.status === "Completed"
+                                                    ? "bg-emerald-100 text-emerald-800"
+                                                    : "bg-blue-100 text-blue-800"
+                                                }`}
+                                              >
+                                                {evt.status || "Completed"}
+                                              </span>
+                                            </div>
+                                          </div>
+                                          {evt.description && (
+                                            <p className="text-xs text-slate-600 leading-snug">{evt.description}</p>
+                                          )}
+                                          <div className="flex flex-wrap gap-3 text-[11px] text-slate-500 font-medium pt-1">
+                                            {evt.benchName && <span>🏛️ Bench: {evt.benchName}</span>}
+                                            {evt.courtHall && <span>📍 {evt.courtHall}</span>}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs text-slate-400 italic py-3 text-center">
+                                      No hearing proceedings recorded for this CNR number yet.
+                                    </p>
+                                  )}
+                                </div>
+
+                                {/* Court Orders Section */}
+                                <div className="space-y-3 pt-3 border-t border-slate-100">
+                                  <h4 className="text-xs font-extrabold text-[#0F172A] uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2">
+                                    <BookOpen size={14} className="text-[#2563EB]" />
+                                    <span>Daily Court Orders & Judgments ({orderDocs.length})</span>
+                                  </h4>
+
+                                  {orderDocs.length > 0 ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                      {orderDocs.map((ord, oIdx) => (
+                                        <div
+                                          key={ord.id || oIdx}
+                                          className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-2 flex flex-col justify-between"
+                                        >
+                                          <div className="space-y-1">
+                                            <div className="flex items-center justify-between gap-2">
+                                              <span className="text-xs font-extrabold text-[#2563EB]">
+                                                {ord.orderType}
+                                              </span>
+                                              <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                                                {ord.orderDate}
+                                              </span>
+                                            </div>
+                                            <p className="text-xs text-slate-700 font-medium line-clamp-2">
+                                              {ord.summary}
+                                            </p>
+                                            <span className="text-[10.5px] text-slate-400 block">
+                                              Presiding: {ord.judgeName || "Hon'ble Judge"}
+                                            </span>
+                                          </div>
+
+                                          <button
+                                            onClick={() =>
+                                              setSelectedDoc({
+                                                fileUrl: ord.fileUrl || "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+                                                title: `${ord.orderType} - ${ord.orderDate}`,
+                                                badge: "eCourts Order PDF",
+                                              })
+                                            }
+                                            className="w-full mt-2 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-[#2563EB] text-[#2563EB] hover:text-white text-xs font-bold rounded-lg border border-blue-200 transition cursor-pointer"
+                                          >
+                                            <Eye size={13} />
+                                            <span>View Order PDF</span>
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs text-slate-400 italic py-3 text-center">
+                                      No daily order documents published for this CNR yet.
+                                    </p>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })
@@ -513,6 +720,14 @@ export default function ClientCaseTrackingView() {
         </div>
       </div>
 
+      {selectedDoc && (
+        <DocumentViewerModal
+          fileUrl={selectedDoc.fileUrl}
+          title={selectedDoc.title}
+          badge={selectedDoc.badge}
+          onClose={() => setSelectedDoc(null)}
+        />
+      )}
     </div>
   );
 }

@@ -164,6 +164,20 @@ def get_consultation_by_id(db: Session, consultation_id: int):
     return db.query(Consultation).filter(Consultation.id == consultation_id).first()
 
 def create_consultation(db: Session, data: ConsultationCreate, background_tasks: Optional[BackgroundTasks] = None):
+    # Check if an active consultation already exists for the exact same date and time slot
+    existing = db.query(Consultation).filter(
+        Consultation.date == data.date,
+        Consultation.time == data.time,
+        Consultation.status.notin_(["Rejected", "Cancelled"])
+    ).first()
+
+    if existing:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=400,
+            detail=f"The selected slot ({data.date} at {data.time}) is already booked. Please choose another time or date slot."
+        )
+
     # Lookup client if client_id is not provided
     client_id = data.client_id
     if not client_id and data.client_name:
@@ -381,6 +395,22 @@ def reschedule_consultation(db: Session, consultation_id: int, data: Consultatio
     consultation = get_consultation_by_id(db, consultation_id)
     if not consultation:
         return None
+
+    # Check if target date/time slot is already booked by another active consultation
+    existing = db.query(Consultation).filter(
+        Consultation.id != consultation_id,
+        Consultation.date == data.date,
+        Consultation.time == data.time,
+        Consultation.status.notin_(["Rejected", "Cancelled"])
+    ).first()
+
+    if existing:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=400,
+            detail=f"The selected slot ({data.date} at {data.time}) is already booked. Please choose another time or date slot."
+        )
+
     consultation.date = data.date
     consultation.time = data.time
     consultation.reschedule_reason = data.reason
