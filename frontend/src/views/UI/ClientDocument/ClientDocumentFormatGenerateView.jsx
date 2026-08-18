@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/utils/api";
 import { getLoggedInUser } from "@/utils/auth";
+import useModulePermission from "@/utils/useModulePermission";
 import DocumentViewerModal from "@/components/common/DocumentViewerModal";
 import {
   FileText,
@@ -218,6 +219,7 @@ function getUploadedDocObj(docName, caseDocs = []) {
 
 export default function DocumentFormatGenerateView({ hideHeader = false }) {
   const router = useRouter();
+  const { perms } = useModulePermission("Documents");
 
   // Filter Mode: "all" | "missing" | "uploaded" | "common"
   const [filterMode, setFilterMode] = useState("all");
@@ -597,13 +599,23 @@ export default function DocumentFormatGenerateView({ hideHeader = false }) {
                         {!uploaded ? (
                           <div className="flex gap-2 mt-3 flex-wrap">
                             {!isAdmin && (
-                              <button
-                                onClick={() => setUploadModalDoc(doc)}
-                                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-all cursor-pointer shadow-2xs"
-                              >
-                                <Upload className="w-3.5 h-3.5" />
-                                Upload Document
-                              </button>
+                              perms?.add ? (
+                                <button
+                                  onClick={() => setUploadModalDoc(doc)}
+                                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-all cursor-pointer shadow-2xs"
+                                >
+                                  <Upload className="w-3.5 h-3.5" />
+                                  Upload Document
+                                </button>
+                              ) : (
+                                <button
+                                  disabled
+                                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 cursor-not-allowed opacity-75 shadow-2xs"
+                                  title="🔒 Upload Locked by Permission Settings"
+                                >
+                                  🔒 Upload Locked
+                                </button>
+                              )
                             )}
                           </div>
                         ) : (

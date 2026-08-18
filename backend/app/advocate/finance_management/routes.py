@@ -203,20 +203,41 @@ async def send_payment_email(data: PaymentEmailSchema):
     return {"message": "Email sent successfully"}
 
 
+# Helper to get Razorpay credentials dynamically
+def get_razorpay_credentials(db: Session, invoice_id: Optional[int] = None):
+    key_id = os.getenv("RAZORPAY_KEY_ID")
+    key_secret = os.getenv("RAZORPAY_KEY_SECRET")
+    
+    if invoice_id:
+        from app.advocate.finance_management.models import Invoice
+        from app.advocate.lawfirm_management.models import Advocate
+        invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+        if invoice and invoice.advocate_id:
+            advocate = db.query(Advocate).filter(Advocate.id == invoice.advocate_id).first()
+            if advocate and advocate.razorpay_key_id and advocate.razorpay_key_secret:
+                key_id = advocate.razorpay_key_id.strip()
+                key_secret = advocate.razorpay_key_secret.strip()
+                
+    if key_id and key_secret:
+        return key_id, key_secret, razorpay.Client(auth=(key_id, key_secret))
+    return key_id, key_secret, None
+
+
 # -----------------------------
 # Razorpay Create Order
 # -----------------------------
 @router.post("/payment/create-order")
-def create_order(data: CreateOrderSchema):
-    if not client:
+def create_order(data: CreateOrderSchema, db: Session = Depends(get_db)):
+    key_id, key_secret, rzp_client = get_razorpay_credentials(db, invoice_id=data.invoice_id)
+    if not rzp_client:
         raise HTTPException(
             status_code=400,
-            detail="Razorpay client is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in environment variables."
+            detail="Razorpay is not configured. Please add your live Razorpay Key ID and Key Secret in Profile Management settings or environment variables."
         )
 
     try:
         amount = int(data.amount * 100)
-        order = client.order.create({
+        order = rzp_client.order.create({
             "amount": amount,
             "currency": "INR",
             "payment_capture": 1
@@ -224,7 +245,8 @@ def create_order(data: CreateOrderSchema):
         return {
             "id": order["id"],
             "amount": order["amount"],
-            "currency": order["currency"]
+            "currency": order["currency"],
+            "key_id": key_id
         }
     except Exception as e:
         raise HTTPException(
@@ -241,29 +263,15 @@ def verify_payment(
     data: VerifyPaymentSchema,
     db: Session = Depends(get_db)
 ):
-    # Support mock payments (bypasses Razorpay signature check for mock payments)
-    if data.razorpay_signature == "mock_signature":
-        invoice = service.update_invoice_status(
-            db,
-            data.invoice_id,
-            "Paid"
-        )
-        if not invoice:
-            raise HTTPException(status_code=404, detail="Invoice not found")
-        return {
-            "success": True,
-            "message": "Mock payment verified successfully",
-            "invoice": invoice
-        }
-
-    if not client:
+    key_id, key_secret, rzp_client = get_razorpay_credentials(db, invoice_id=data.invoice_id)
+    if not rzp_client:
         raise HTTPException(
             status_code=400,
-            detail="Razorpay client is not configured on the backend."
+            detail="Razorpay is not configured on the backend."
         )
 
     try:
-        client.utility.verify_payment_signature({
+        rzp_client.utility.verify_payment_signature({
             "razorpay_order_id": data.razorpay_order_id,
             "razorpay_payment_id": data.razorpay_payment_id,
             "razorpay_signature": data.razorpay_signature

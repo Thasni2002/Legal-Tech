@@ -41,8 +41,12 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
     pincode: "",
     chambersAddress: "",
     profileImage: "",
+    razorpayKeyId: "",
+    razorpayKeySecret: "",
     ...cleanInitialData,
   });
+
+  const [showKeySecret, setShowKeySecret] = useState(false);
 
   const [practiceState, setPracticeState] = useState(() => {
     const pc = cleanInitialData.practiceCourt || "";
@@ -236,34 +240,41 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
     if (onSubmit) onSubmit(formData);
   };
 
+  const scrollToSection = (id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   /* ── Render ── */
   return (
     <div className="w-full space-y-8 max-w-6xl mx-auto">
       <form id="profile-form" className="space-y-8" onSubmit={handleSubmit}>
 
-        {/* Profile Photo Card */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-10 flex flex-col items-center">
-          {/* Header Action Row inside Card */}
-          <div className="w-full flex justify-between items-center mb-8 pb-6 border-b border-slate-100">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#E2E8F0] hover:bg-slate-50 text-[#64748B] hover:text-[#0F172A] text-sm font-semibold transition-all active:scale-[0.98] cursor-pointer"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="19" y1="12" x2="5" y2="12"></line>
-                <polyline points="12 19 5 12 12 5"></polyline>
-              </svg>
-              Back
-            </button>
-            <button
-              type="submit"
-              className="px-8 py-3.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] shrink-0 cursor-pointer"
-            >
-              Save Profile
-            </button>
-          </div>
+        {/* Top Header Action Row */}
+        <div className="flex items-center justify-between gap-4">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#E2E8F0] bg-white hover:bg-slate-50 text-[#64748B] hover:text-[#0F172A] text-sm font-semibold transition-all active:scale-[0.98] cursor-pointer shadow-sm"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Back
+          </button>
+          <button
+            type="submit"
+            className="px-8 py-3.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] shrink-0 cursor-pointer"
+          >
+            Save Profile
+          </button>
+        </div>
 
+        {/* Profile Photo Card */}
+        <div id="sec-photo" className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 flex flex-col items-center">
           <div className="relative group">
             <img
               src={formData.profileImage || (user ? `https://ui-avatars.com/api/?name=${user.firstName || user.username}&background=2563EB&color=fff&rounded=true&bold=true&size=150` : "https://ui-avatars.com/api/?name=?&background=E2E8F0&color=64748B&rounded=true&bold=true&size=150")}
@@ -277,12 +288,43 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
           </div>
           <h2 className="mt-6 text-2xl font-extrabold text-[#0F172A] tracking-tight">Profile Photo</h2>
           <p className="text-[#64748B] text-sm mt-1 font-medium">Upload a professional photo for your profile</p>
+
+          {/* Integrated Quick Navigation Bar inside Header Card */}
+          <div className="w-full mt-8 pt-6 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#94A3B8]">
+              Quick Navigation:
+            </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => scrollToSection("sec-personal")}
+                className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-[#475569] transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 border border-slate-200/60"
+              >
+                Personal Info
+              </button>
+              {!isClient && !isClerk && (
+                <button
+                  type="button"
+                  onClick={() => scrollToSection("sec-professional")}
+                  className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-[#475569] transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 border border-slate-200/60"
+                >
+                  Professional Info
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => scrollToSection("sec-address")}
+                className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-600 text-[#475569] transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 border border-slate-200/60"
+              >
+                Address
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Personal Information */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
-          <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
-            <span className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">👤</span>
+        <div id="sec-personal" className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 scroll-mt-28">
+          <h2 className="text-xl font-extrabold text-[#0F172A] mb-8">
             Personal Information
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -326,9 +368,8 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
 
         {/* Professional Information */}
         {!isClient && !isClerk && (
-          <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
-            <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
-              <span className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">⚖️</span>
+          <div id="sec-professional" className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 scroll-mt-28">
+            <h2 className="text-xl font-extrabold text-[#0F172A] mb-8">
               Professional Information
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -409,9 +450,8 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
         )}
 
         {/* Address Information */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
-          <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
-            <span className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">🏢</span>
+        <div id="sec-address" className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 scroll-mt-28">
+          <h2 className="text-xl font-extrabold text-[#0F172A] mb-8">
             Address Information
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -449,8 +489,7 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
         {/* About Section */}
         {isClient && (
           <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
-            <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
-              <span className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">📝</span>
+            <h2 className="text-xl font-extrabold text-[#0F172A] mb-8">
               About Me
             </h2>
             <textarea
@@ -481,36 +520,6 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
           </button>
         </div>
       </form>
-
-      {/* ── Reset Password Card (opens modal) ── */}
-      {user && (
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <h2 className="text-xl font-extrabold text-[#0F172A] flex items-center gap-3">
-                <span className="w-8 h-8 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center text-base">🔒</span>
-                Reset Password
-              </h2>
-              <p className="text-[#64748B] text-sm mt-1 ml-11">
-                Change your password securely using email OTP verification.
-              </p>
-            </div>
-            <button
-              type="button"
-              id="open-reset-modal-btn"
-              onClick={() => setShowResetModal(true)}
-              className="px-7 py-3 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-md hover:shadow-lg active:scale-[0.98]"
-            >
-              Reset Password
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Modal */}
-      {showResetModal && (
-        <ResetPasswordModal onClose={() => setShowResetModal(false)} />
-      )}
     </div>
   );
 }
