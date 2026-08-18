@@ -393,10 +393,9 @@ export default function UsersView() {
     loadPermissions();
   }, []);
 
-  // Show notification toast helper
+  // Show notification modal helper
   const showToast = (message, type = "success") => {
     setNotification({ message, type });
-    setTimeout(() => setNotification(null), 3000);
   };
 
   // Handle Provisioning or Updating User
@@ -704,7 +703,7 @@ export default function UsersView() {
         currentRolePerms = findRolePermissions(rolePermissions, activeUser.role);
       }
 
-      // Compute diff: Only save specific action overrides that differ from global role defaults
+      // Save custom permissions overrides for user
       const diffPerms = {};
       for (const mod in editCustomPerms) {
         const modPerms = editCustomPerms[mod];
@@ -716,8 +715,14 @@ export default function UsersView() {
             modDiff[act] = !!modPerms[act];
           }
         }
-        if (Object.keys(modDiff).length > 0) {
-          diffPerms[mod] = modDiff;
+        // Always store explicit overrides if present in editCustomPerms
+        if (Object.keys(modDiff).length > 0 || (modPerms && Object.keys(modPerms).length > 0)) {
+          diffPerms[mod] = {
+            view: !!modPerms.view,
+            add: !!modPerms.add,
+            edit: !!modPerms.edit,
+            delete: !!modPerms.delete,
+          };
         }
       }
 
@@ -780,21 +785,60 @@ export default function UsersView() {
 
   return (
     <div className="w-full space-y-6 md:space-y-8">
-      {/* Toast Notification */}
-      {notification && (
+      {/* Centered Modal Notification (Portal to document.body to cover full page including navbar & sidebar) */}
+      {mounted && notification && typeof document !== "undefined" && createPortal(
         <div
-          className={`fixed bottom-5 right-5 z-50 flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl transition-all duration-300 border animate-bounce ${notification.type === "error"
-            ? "bg-red-50 border-red-200 text-red-800"
-            : "bg-emerald-50 border-emerald-200 text-emerald-800"
-            }`}
+          className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={() => setNotification(null)}
         >
-          {notification.type === "error" ? (
-            <AlertTriangle size={20} className="text-red-500" />
-          ) : (
-            <ShieldCheck size={20} className="text-emerald-600" />
-          )}
-          <span className="font-semibold text-sm">{notification.message}</span>
-        </div>
+          <div
+            className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm sm:max-w-md w-full shadow-2xl border border-slate-100 flex flex-col items-center text-center space-y-5 animate-in zoom-in-95 duration-200 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setNotification(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+              aria-label="Close"
+            >
+              <X size={20} />
+            </button>
+
+            <div
+              className={`w-16 h-16 rounded-full flex items-center justify-center border shadow-xs ${
+                notification.type === "error"
+                  ? "bg-red-50 text-red-600 border-red-200"
+                  : "bg-emerald-50 text-emerald-600 border-emerald-200"
+              }`}
+            >
+              {notification.type === "error" ? (
+                <AlertTriangle size={32} />
+              ) : (
+                <ShieldCheck size={32} />
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                {notification.type === "error" ? "Error" : "Success!"}
+              </h3>
+              <p className="text-xs sm:text-sm font-medium text-slate-600 leading-relaxed px-2">
+                {notification.message}
+              </p>
+            </div>
+
+            <button
+              onClick={() => setNotification(null)}
+              className={`w-full py-3 px-6 rounded-xl text-xs sm:text-sm font-extrabold transition-all shadow-md active:scale-95 cursor-pointer ${
+                notification.type === "error"
+                  ? "bg-red-600 hover:bg-red-700 text-white shadow-red-200"
+                  : "bg-[#2563EB] hover:bg-blue-700 text-white shadow-blue-200"
+              }`}
+            >
+              Done
+            </button>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* Main card containing Creation / Edit panel */}

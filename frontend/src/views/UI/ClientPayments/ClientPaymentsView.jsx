@@ -155,7 +155,7 @@ export default function ClientPayments() {
       // 2. Open Razorpay Modal if Order created successfully & SDK present
       if (orderRes.ok && orderData.id && typeof window !== "undefined" && window.Razorpay) {
         const options = {
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_T5jpSf0s3KFwZa",
+          key: orderData.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
           amount: orderData.amount,
           currency: orderData.currency || "INR",
           name: "Legal Tech Enterprise",
@@ -206,38 +206,13 @@ export default function ClientPayments() {
         const rzp = new window.Razorpay(options);
         rzp.open();
         return;
-      }
-
-      // Fallback: Simulate payment if Razorpay order creation fails or client is unconfigured
-      const verifyRes = await fetch(
-        `${API_BASE_URL}/finance/payment/verify`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            razorpay_order_id: "mock_order_id",
-            razorpay_payment_id: "mock_payment_id",
-            razorpay_signature: "mock_signature",
-            invoice_id: invoice.id,
-          }),
-        }
-      );
-
-      const verifyData = await verifyRes.json();
-
-      if (verifyRes.ok && verifyData.success) {
-        setPaymentSuccess(true);
-        setShowPaymentModal(false);
-        fetchInvoices();
       } else {
-        alert(verifyData.detail || "Payment verification failed");
+        alert(orderData.detail || "Failed to initialize Razorpay Live Payment Gateway. Please verify API keys in Profile Settings.");
+        setIsProcessing(false);
       }
-
-      setIsProcessing(false);
     } catch (error) {
       console.error("Payment error:", error);
+      alert(error.message || "Payment process encountered an error.");
       setIsProcessing(false);
     }
   };
