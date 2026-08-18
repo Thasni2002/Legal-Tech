@@ -279,7 +279,7 @@ export default function ProfileView({ profile = {}, onEdit }) {
               {user && (
                 <button
                   onClick={() => scrollToSection("view-password")}
-                  className="px-4 py-2 rounded-full text-xs font-bold bg-slate-100 hover:bg-amber-50 hover:text-amber-600 text-[#475569] transition-all cursor-pointer flex items-center gap-2 active:scale-95 border border-slate-200/60"
+                  className="px-4 py-2 rounded-full text-xs font-bold bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-[#475569] transition-all cursor-pointer flex items-center gap-2 active:scale-95 border border-slate-200/60"
                 >
                   Reset Password
                 </button>

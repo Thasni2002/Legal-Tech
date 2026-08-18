@@ -28,6 +28,12 @@ const ROLE_BADGE = {
     "Advocate": "bg-slate-100 text-slate-600",
 };
 
+// ─── Closed / Concluded case status helper ───────────────
+const isClosedStatus = (status) => {
+    const s = (status || "").toLowerCase().trim();
+    return s.includes("disposed") || s.includes("closed") || s.includes("won") || s.includes("lost") || s.includes("judgment") || s.includes("settled") || s.includes("dismissed");
+};
+
 export default function AdvDashboardView() {
     const router = useRouter();
     const [data, setData] = useState(null);
@@ -122,10 +128,13 @@ export default function AdvDashboardView() {
             const total_advocates = advocatesList.length;
 
             // 2. Cases stats
-            const activeCasesList = cases.filter(c => c.status === "Active" || c.status === "Hearing");
+            const activeCasesList = cases.filter(c => !isClosedStatus(c.status));
             const active_cases = activeCasesList.length;
-            const pending_cases = cases.filter(c => c.status === "Pending").length;
-            const closed_cases = cases.filter(c => c.status === "Closed").length;
+            const closed_cases = cases.filter(c => isClosedStatus(c.status)).length;
+            const pending_cases = cases.filter(c => {
+                const s = (c.status || "").toLowerCase().trim();
+                return s.includes("pending") || s.includes("consult") || s.includes("review") || s.includes("prep");
+            }).length;
 
             // 3. Upcoming hearings count
             const today = new Date();
@@ -134,13 +143,26 @@ export default function AdvDashboardView() {
             const day = String(today.getDate()).padStart(2, '0');
             const todayStr = `${year}-${month}-${day}`;
 
+            const parseToIsoDate = (dateStr) => {
+                if (!dateStr) return null;
+                const clean = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr.split(' ')[0];
+                const parts = clean.split(/[-/]/);
+                if (parts.length !== 3) return null;
+                if (parts[0].length === 4) {
+                    return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                }
+                if (parts[2].length === 4) {
+                    return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                }
+                return null;
+            };
+
             const extractedHearings = [];
             cases.forEach(c => {
                 if (c.next_hearing_date) {
-                    const isIso = c.next_hearing_date.includes('T');
-                    const datePart = isIso ? c.next_hearing_date.split('T')[0] : c.next_hearing_date.split(' ')[0];
+                    const isoDate = parseToIsoDate(c.next_hearing_date);
 
-                    if (datePart >= todayStr) {
+                    if (isoDate && isoDate >= todayStr) {
                         // Find assigned advocate from lawfirm assignments
                         const match = Array.isArray(assignedCases) ? assignedCases.find(ac =>
                             (ac.case_number && ac.case_number === c.case_no) ||
@@ -150,7 +172,7 @@ export default function AdvDashboardView() {
                         const advocateName = match ? match.advocate_name : (c.selected_advocate || "");
 
                         extractedHearings.push({
-                            date: datePart,
+                            date: isoDate,
                             case_title: c.case_title,
                             court: c.court_name,
                             advocate_name: advocateName
@@ -161,11 +183,13 @@ export default function AdvDashboardView() {
 
             const upcoming_hearings_count = extractedHearings.length;
 
-            // 4. Case Overview list
-            const casesList = [...cases]
+            // 4. Case Overview list (Exclude disposed / closed cases)
+            const casesList = cases
+                .filter(c => !isClosedStatus(c.status))
                 .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
                 .map(c => ({
                     case_id: c.case_id,
+                    case_title: c.case_title,
                     client_name: c.client_name,
                     type: c.case_type,
                     court: c.court_name,
@@ -537,7 +561,7 @@ export default function AdvDashboardView() {
                                     <div key={`active-card-${i}`} className="p-4 space-y-2">
                                         <div className="flex items-center justify-between gap-2">
                                             <span className="text-xs font-mono font-bold text-[#64748B]">{c.case_id || c.case_no || "—"}</span>
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${c.status === "Active" ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"}`}>{c.status}</span>
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${String(c.status || "").toLowerCase().includes("pending") ? "bg-amber-100 text-amber-800" : String(c.status || "").toLowerCase().includes("active") ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"}`}>{c.status}</span>
                                         </div>
                                         <p className="text-sm font-semibold text-[#0F172A]">{c.client_name || "—"}</p>
                                         <div className="flex items-center justify-between text-xs text-[#475569]">
@@ -570,8 +594,7 @@ export default function AdvDashboardView() {
                                                 <td className="px-5 py-3 text-xs text-[#475569]">{c.case_type || "—"}</td>
                                                 <td className="px-5 py-3 text-xs text-[#475569]">{c.court_name || "—"}</td>
                                                 <td className="px-5 py-3">
-                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${c.status === "Active" ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
-                                                        }`}>{c.status}</span>
+                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${String(c.status || "").toLowerCase().includes("pending") ? "bg-amber-100 text-amber-800" : String(c.status || "").toLowerCase().includes("active") ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"}`}>{c.status}</span>
                                                 </td>
                                             </tr>
                                         )) : (
@@ -813,27 +836,30 @@ export default function AdvDashboardView() {
 
                     {/* Mobile Card List */}
                     <div className="block sm:hidden space-y-3">
-                        {data && data.hearings.length > 0 ? (
-                            data.hearings.slice(hearingsPage * 5, (hearingsPage + 1) * 5).map((h, index) => (
+                        {data && data.cases && data.cases.length > 0 ? (
+                            data.cases.slice(casesPage * 5, (casesPage + 1) * 5).map((c, index) => (
                                 <div
-                                    key={`hearing-card-${index}`}
+                                    key={`case-overview-card-${index}`}
                                     className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2.5"
                                 >
                                     <div className="flex items-center justify-between gap-2">
-                                        <div className="bg-[#F1F5F9] px-2.5 py-1 rounded-lg text-xs font-bold text-[#0F172A] border border-[#E2E8F0]">
-                                            {h.date}
-                                        </div>
-                                        <span className="text-xs text-[#475569] font-semibold">{h.court}</span>
+                                        <span className="text-xs font-bold bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full border border-blue-100">
+                                            {c.type || "General"}
+                                        </span>
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isClosedStatus(c.status) ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"}`}>
+                                            {c.status}
+                                        </span>
                                     </div>
-                                    <p className="text-sm font-bold text-[#0F172A]">{h.case_title}</p>
-                                    {h.advocate_name && (
-                                        <p className="text-xs text-[#64748B]">👤 {h.advocate_name}</p>
-                                    )}
+                                    <p className="text-sm font-bold text-[#0F172A]">{c.case_title || "Untitled Case"}</p>
+                                    <div className="flex items-center justify-between text-xs text-[#475569]">
+                                        <span>👤 {c.client_name || "—"}</span>
+                                        <span>🏛️ {c.court || "—"}</span>
+                                    </div>
                                 </div>
                             ))
                         ) : (
                             <div className="p-6 text-center text-sm font-medium text-[#64748B] bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0]">
-                                No upcoming hearings found.
+                                No cases found.
                             </div>
                         )}
                     </div>
@@ -843,38 +869,44 @@ export default function AdvDashboardView() {
                         <table className="w-full h-full table-auto divide-y divide-[#E2E8F0]">
                             <thead className="bg-[#F8FAFC]">
                                 <tr>
-                                    <th className="p-4 sm:px-5 sm:py-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Date</th>
                                     <th className="p-4 sm:px-5 sm:py-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case</th>
+                                    <th className="p-4 sm:px-5 sm:py-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Case Type</th>
                                     <th className="p-4 sm:px-5 sm:py-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Court</th>
-                                    <th className="p-4 sm:px-5 sm:py-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Advocate</th>
+                                    <th className="p-4 sm:px-5 sm:py-4 text-left text-xs font-bold text-[#475569] uppercase tracking-wider whitespace-nowrap">Status</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[#E2E8F0] bg-white h-full">
-                                {data && data.hearings.length > 0 ? (
-                                    data.hearings.slice(hearingsPage * 5, (hearingsPage + 1) * 5).map((h, index) => (
+                                {data && data.cases && data.cases.length > 0 ? (
+                                    data.cases.slice(casesPage * 5, (casesPage + 1) * 5).map((c, index) => (
                                         <tr
                                             key={index}
                                             className="hover:bg-[#F8FAFC] transition-colors duration-150"
                                         >
-                                            <td className="p-4 sm:px-5 sm:py-4 text-sm font-bold text-[#0F172A] whitespace-nowrap">
-                                                <div className="bg-[#F1F5F9] px-3 py-1.5 rounded-lg inline-block text-center border border-[#E2E8F0]">
-                                                    {h.date}
-                                                </div>
+                                            <td className="p-4 sm:px-5 sm:py-4 text-sm font-bold text-[#0F172A] break-words">
+                                                {c.case_title || "Untitled Case"}
+                                                {c.client_name && (
+                                                    <span className="block text-xs font-medium text-[#64748B] mt-0.5">Client: {c.client_name}</span>
+                                                )}
                                             </td>
-                                            <td className="p-4 sm:px-5 sm:py-4 text-sm text-[#475569] font-medium break-words">
-                                                {h.case_title}
+                                            <td className="p-4 sm:px-5 sm:py-4 text-sm text-[#475569] font-semibold break-words">
+                                                <span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg border border-blue-100 text-xs font-bold inline-block">
+                                                    {c.type || "General"}
+                                                </span>
                                             </td>
                                             <td className="p-4 sm:px-5 sm:py-4 text-sm text-[#475569] break-words">
-                                                {h.court}</td>
-                                            <td className="p-4 sm:px-5 sm:py-4 text-sm text-[#475569] break-words">
-                                                {h.advocate_name}
+                                                {c.court || "—"}
+                                            </td>
+                                            <td className="p-4 sm:px-5 sm:py-4 text-sm whitespace-nowrap">
+                                                <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider border ${isClosedStatus(c.status) ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"}`}>
+                                                    {c.status}
+                                                </span>
                                             </td>
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
                                         <td colSpan="4" className="py-20 px-6 text-center text-sm font-medium text-[#64748B]">
-                                            No upcoming hearings found.
+                                            No cases found.
                                         </td>
                                     </tr>
                                 )}
@@ -883,11 +915,11 @@ export default function AdvDashboardView() {
                     </div>
 
                     {/* Pagination Controls */}
-                    {data && data.hearings.length > 5 && (() => {
-                        const total = data.hearings.length;
+                    {data && data.cases && data.cases.length > 5 && (() => {
+                        const total = data.cases.length;
                         const totalPages = Math.ceil(total / 5);
-                        const startIdx = hearingsPage * 5 + 1;
-                        const endIdx = Math.min((hearingsPage + 1) * 5, total);
+                        const startIdx = casesPage * 5 + 1;
+                        const endIdx = Math.min((casesPage + 1) * 5, total);
 
                         return (
                             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-slate-100 px-2">
@@ -897,8 +929,8 @@ export default function AdvDashboardView() {
                                 <div className="flex items-center gap-1.5">
                                     <button
                                         type="button"
-                                        onClick={() => setHearingsPage(p => Math.max(0, p - 1))}
-                                        disabled={hearingsPage === 0}
+                                        onClick={() => setCasesPage(p => Math.max(0, p - 1))}
+                                        disabled={casesPage === 0}
                                         className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:hover:bg-transparent transition cursor-pointer"
                                     >
                                         &lt; Prev
@@ -907,9 +939,9 @@ export default function AdvDashboardView() {
                                         <button
                                             type="button"
                                             key={i}
-                                            onClick={() => setHearingsPage(i)}
+                                            onClick={() => setCasesPage(i)}
                                             className={`w-8 h-8 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer ${
-                                                hearingsPage === i
+                                                casesPage === i
                                                     ? "bg-[#2563EB] text-white shadow-xs"
                                                     : "text-slate-600 hover:bg-slate-100 border border-transparent"
                                             }`}
@@ -919,8 +951,8 @@ export default function AdvDashboardView() {
                                     ))}
                                     <button
                                         type="button"
-                                        onClick={() => setHearingsPage(p => Math.min(totalPages - 1, p + 1))}
-                                        disabled={hearingsPage + 1 >= totalPages}
+                                        onClick={() => setCasesPage(p => Math.min(totalPages - 1, p + 1))}
+                                        disabled={casesPage + 1 >= totalPages}
                                         className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:hover:bg-transparent transition cursor-pointer"
                                     >
                                         Next &gt;

@@ -25,7 +25,9 @@ const ACTIVE_CASE_STATUSES = new Set([
 
 const isActiveCase = (status) => {
   if (!status) return true;
-  return ACTIVE_CASE_STATUSES.has(status.toLowerCase().trim());
+  const s = status.toLowerCase().trim();
+  const isClosed = s.includes("disposed") || s.includes("closed") || s.includes("won") || s.includes("lost") || s.includes("judgment") || s.includes("settled") || s.includes("dismissed");
+  return !isClosed;
 };
 
 const resolveAdvocateFullName = (rawName, advocatesData = []) => {
