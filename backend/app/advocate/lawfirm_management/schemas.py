@@ -20,6 +20,8 @@ class AdvocateBase(BaseModel):
     profile_image: Optional[str] = Field(None, alias="profileImage")
     years_of_experience: Optional[int] = Field(None, alias="yearsOfExperience")
     temp_password: Optional[str] = Field(None, alias="tempPassword")
+    razorpay_key_id: Optional[str] = Field(None, alias="razorpayKeyId")
+    razorpay_key_secret: Optional[str] = Field(None, alias="razorpayKeySecret")
 
     
     class Config:

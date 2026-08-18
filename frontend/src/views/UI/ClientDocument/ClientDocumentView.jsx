@@ -704,7 +704,9 @@ export default function ClientDocuments() {
                 </div>
               </div>
             ) : (
-              <AccessDenied action="Uploading" />
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-bold flex items-center justify-center gap-2 shadow-2xs">
+                <span>🔒 Upload Document Locked by Permission Settings</span>
+              </div>
             )}
           </div>
 
@@ -787,13 +789,21 @@ export default function ClientDocuments() {
                                     <Eye size={16} />
                                   </button>
                                 )}
-                                {perms.edit && (
+                                {perms.edit ? (
                                   <button
                                     onClick={() => handleEditClick(doc)}
                                     className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-lg transition cursor-pointer border border-amber-200"
                                     title="Edit Document Details"
                                   >
                                     <Pencil size={16} />
+                                  </button>
+                                ) : (
+                                  <button
+                                    disabled
+                                    className="p-1.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-xs font-bold shrink-0 cursor-not-allowed opacity-75 shadow-2xs"
+                                    title="🔒 Edit Document Locked by Permission Settings"
+                                  >
+                                    🔒
                                   </button>
                                 )}
                                 {perms.delete ? (
@@ -805,9 +815,13 @@ export default function ClientDocuments() {
                                     <Trash size={16} />
                                   </button>
                                 ) : (
-                                  <span className="p-1.5 text-slate-300">
-                                    <Trash size={16} />
-                                  </span>
+                                  <button
+                                    disabled
+                                    className="p-1.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-xs font-bold shrink-0 cursor-not-allowed opacity-75 shadow-2xs"
+                                    title="🔒 Delete Document Locked by Permission Settings"
+                                  >
+                                    🔒
+                                  </button>
                                 )}
                               </div>
                             </td>
@@ -845,7 +859,7 @@ export default function ClientDocuments() {
                                 <Eye size={14} />
                               </button>
                             )}
-                            {perms.edit && (
+                            {perms.edit ? (
                               <button
                                 onClick={() => handleEditClick(doc)}
                                 className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-lg border border-amber-200 cursor-pointer transition-colors"
@@ -853,14 +867,30 @@ export default function ClientDocuments() {
                               >
                                 <Pencil size={14} />
                               </button>
+                            ) : (
+                              <button
+                                disabled
+                                className="p-1.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-xs font-bold shrink-0 cursor-not-allowed opacity-75 shadow-2xs"
+                                title="🔒 Edit Document Locked by Permission Settings"
+                              >
+                                🔒
+                              </button>
                             )}
-                            {perms.delete && (
+                            {perms.delete ? (
                               <button
                                 onClick={() => handleDelete(doc.id)}
                                 className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border border-rose-100 cursor-pointer transition-colors"
                                 title="Delete Document"
                               >
                                 <Trash size={14} />
+                              </button>
+                            ) : (
+                              <button
+                                disabled
+                                className="p-1.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-xs font-bold shrink-0 cursor-not-allowed opacity-75 shadow-2xs"
+                                title="🔒 Delete Document Locked by Permission Settings"
+                              >
+                                🔒
                               </button>
                             )}
                           </div>

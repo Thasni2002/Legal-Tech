@@ -29,6 +29,12 @@ const ROLE_BADGE = {
 
 const ITEMS_PER_PAGE = 6;
 
+// ─── Closed / Concluded case status helper ───────────────
+const isClosedStatus = (status) => {
+  const s = (status || "").toLowerCase().trim();
+  return s.includes("disposed") || s.includes("closed") || s.includes("won") || s.includes("lost") || s.includes("judgment") || s.includes("settled") || s.includes("dismissed");
+};
+
 export default function JunAdvDashView() {
   const router = useRouter();
 
@@ -132,7 +138,7 @@ export default function JunAdvDashView() {
         const todayStr = new Date().toISOString().split("T")[0];
         const assignedCasesCount = casesToShow.length;
         const activeCasesCount = casesToShow.filter(
-          (item) => item.status === "Active" || item.status === "Hearing"
+          (item) => !isClosedStatus(item.status)
         ).length;
         const hearingsCount = casesToShow.filter(
           (item) => item.due_date && item.due_date !== "No date" && item.due_date.split("T")[0] >= todayStr
@@ -196,11 +202,24 @@ export default function JunAdvDashView() {
   const todayStr = new Date().toISOString().split("T")[0];
   const assignedCasesList = cases;
   const activeCasesList = cases.filter(
-    (c) => c.status === "Active" || c.status === "Hearing"
+    (c) => !isClosedStatus(c.status)
   );
+  const parseToIsoDate = (dateStr) => {
+    if (!dateStr || dateStr === "No date") return null;
+    const clean = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr.split(' ')[0];
+    const parts = clean.split(/[-/]/);
+    if (parts.length !== 3) return null;
+    if (parts[0].length === 4) return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+    if (parts[2].length === 4) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    return null;
+  };
+
   const upcomingHearingsList = cases
-    .filter((c) => c.hearing && c.hearing !== "No date" && c.hearing >= todayStr)
-    .sort((a, b) => new Date(a.hearing) - new Date(b.hearing));
+    .filter((c) => {
+      const iso = parseToIsoDate(c.hearing);
+      return iso && iso >= todayStr;
+    })
+    .sort((a, b) => (parseToIsoDate(a.hearing) || "").localeCompare(parseToIsoDate(b.hearing) || ""));
 
   const getSelectedList = () => {
     if (selectedCard === "assignedCases") return assignedCasesList;

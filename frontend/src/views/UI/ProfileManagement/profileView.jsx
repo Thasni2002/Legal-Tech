@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
 import { API_BASE_URL } from "@/utils/api";
+import ResetPasswordModal from "./ResetPasswordModal";
+import ConfigureRazorpayModal from "./ConfigureRazorpayModal";
 
 export default function ProfileView({ profile = {}, onEdit }) {
   const router = useRouter();
@@ -12,6 +14,13 @@ export default function ProfileView({ profile = {}, onEdit }) {
   const [googleConnected, setGoogleConnected] = useState(false);
   const [googleEmail, setGoogleEmail] = useState("");
   const [googleStatusMessage, setGoogleStatusMessage] = useState(null);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [showRazorpayModal, setShowRazorpayModal] = useState(false);
+  const [currentProfile, setCurrentProfile] = useState(profile);
+
+  useEffect(() => {
+    setCurrentProfile(profile);
+  }, [profile]);
 
   const fetchGoogleStatus = async () => {
     const token = localStorage.getItem("token");
@@ -148,10 +157,17 @@ export default function ProfileView({ profile = {}, onEdit }) {
     ? "Clerk"
     : profile.practiceCourt || "Advocate";
 
+  const scrollToSection = (id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   return (
     <div className="w-full space-y-8 max-w-6xl mx-auto">
-        {/* Top Back Navigation Bar */}
-        <div className="flex items-center justify-between">
+        {/* Top Header Action Row */}
+        <div className="flex items-center justify-between gap-4">
           <button
             onClick={handleBack}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#E2E8F0] bg-white hover:bg-slate-50 text-[#64748B] hover:text-[#0F172A] text-sm font-semibold transition-all active:scale-[0.98] cursor-pointer shadow-sm"
@@ -159,11 +175,20 @@ export default function ProfileView({ profile = {}, onEdit }) {
             <ArrowLeft size={16} />
             Back
           </button>
+
+          {onEdit && (
+            <button
+              onClick={onEdit}
+              className="px-7 py-2.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-extrabold uppercase tracking-wider transition-all shadow-md hover:shadow-lg active:scale-[0.98] cursor-pointer shrink-0"
+            >
+              Edit Profile
+            </button>
+          )}
         </div>
 
         {/* Google Status Alert Banners */}
         {googleStatusMessage && (
-          <div className={`p-4 rounded-xl border flex items-center justify-between transition-all duration-300 ${
+          <div className={`p-4 rounded-2xl border flex items-center justify-between transition-all duration-300 ${
             googleStatusMessage.type === "success" 
               ? "bg-emerald-50 border-emerald-200 text-emerald-950" 
               : "bg-rose-50 border-rose-200 text-rose-950"
@@ -180,7 +205,8 @@ export default function ProfileView({ profile = {}, onEdit }) {
             </button>
           </div>
         )}
-        {/* Header */}
+
+        {/* Main Profile Header Card */}
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
           <div className="flex flex-col md:flex-row gap-8 items-center justify-between">
             <div className="flex flex-col md:flex-row gap-8 items-center flex-1">
@@ -194,19 +220,19 @@ export default function ProfileView({ profile = {}, onEdit }) {
               </div>
 
               {/* Profile Info */}
-              <div className="flex-1">
+              <div className="flex-1 text-center md:text-left">
                 <h1 className="text-[#0F172A] font-extrabold text-4xl tracking-tight">
                   {headerDisplayName}
                 </h1>
 
                 {/* Role badge */}
                 {user?.role && (
-                  <span className="inline-block mt-2 px-3 py-1 rounded-full bg-blue-50 text-[#2563EB] text-xs font-bold uppercase tracking-wider border border-blue-100">
+                  <span className="inline-block mt-2 px-3.5 py-1 rounded-full bg-blue-50 text-[#2563EB] text-xs font-bold uppercase tracking-wider border border-blue-100">
                     {user.role}
                   </span>
                 )}
 
-                <p className="text-[#64748B] mt-2 text-lg font-medium">
+                <p className="text-[#64748B] mt-2 text-base font-semibold">
                   {roleLabel}
                 </p>
 
@@ -217,26 +243,56 @@ export default function ProfileView({ profile = {}, onEdit }) {
                 )}
               </div>
             </div>
+          </div>
 
-            {onEdit && (
-              <div className="mt-6 md:mt-0">
+          {/* Integrated Quick Section Navigation Bar inside Header Card */}
+          <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#94A3B8]">
+              Quick Jump to Section:
+            </span>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <button
+                onClick={() => scrollToSection("view-personal")}
+                className="px-4 py-2 rounded-full text-xs font-bold bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-[#475569] transition-all cursor-pointer flex items-center gap-2 active:scale-95 border border-slate-200/60"
+              >
+                Details & Information
+              </button>
+
+              {!isClient && !isClerk && (
                 <button
-                  onClick={onEdit}
-                  className="px-8 py-3.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-[0.98] cursor-pointer shrink-0"
+                  onClick={() => scrollToSection("view-razorpay")}
+                  className="px-4 py-2 rounded-full text-xs font-bold bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-[#475569] transition-all cursor-pointer flex items-center gap-2 active:scale-95 border border-slate-200/60"
                 >
-                  Edit Profile
+                  Razorpay Gateway
                 </button>
-              </div>
-            )}
+              )}
+
+              {!isJuniorAdvocate && (
+                <button
+                  onClick={() => scrollToSection("view-google")}
+                  className="px-4 py-2 rounded-full text-xs font-bold bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-[#475569] transition-all cursor-pointer flex items-center gap-2 active:scale-95 border border-slate-200/60"
+                >
+                  Google Calendar
+                </button>
+              )}
+
+              {user && (
+                <button
+                  onClick={() => scrollToSection("view-password")}
+                  className="px-4 py-2 rounded-full text-xs font-bold bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-[#475569] transition-all cursor-pointer flex items-center gap-2 active:scale-95 border border-slate-200/60"
+                >
+                  Reset Password
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Details Grid (Balanced 2 Columns for all roles) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div id="view-personal" className="grid grid-cols-1 lg:grid-cols-2 gap-8 scroll-mt-28">
           {/* Personal Information */}
           <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
-            <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
-              <span className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">👤</span>
+            <h2 className="text-xl font-extrabold text-[#0F172A] mb-8">
               Personal Information
             </h2>
 
@@ -253,8 +309,7 @@ export default function ProfileView({ profile = {}, onEdit }) {
           {/* Professional Information (Advocates Only) */}
           {!isClient && !isClerk && (
             <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
-              <h2 className="text-xl font-extrabold text-[#0F172A] mb-8 flex items-center gap-3">
-                <span className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">⚖️</span>
+              <h2 className="text-xl font-extrabold text-[#0F172A] mb-8">
                 Professional Information
               </h2>
 
@@ -268,8 +323,7 @@ export default function ProfileView({ profile = {}, onEdit }) {
 
           {/* Address Information (Right column for Clerks/Clients, or Full row below for Advocates) */}
           <div className={`bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 ${!isClient && !isClerk ? "lg:col-span-2" : ""}`}>
-            <h2 className="text-xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-3">
-              <span className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">🏢</span>
+            <h2 className="text-xl font-extrabold text-[#0F172A] mb-6">
               {isClient ? "Residential Address" : isClerk ? "Office / Residential Address" : "Chambers Address"}
             </h2>
 
@@ -281,11 +335,44 @@ export default function ProfileView({ profile = {}, onEdit }) {
           </div>
         </div>
 
+        {/* Razorpay Integration Status Card (Advocates Only) */}
+        {!isClient && !isClerk && (
+          <div id="view-razorpay" className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 scroll-mt-28">
+            <h2 className="text-xl font-extrabold text-[#0F172A] mb-6">
+              Razorpay Payment Gateway
+            </h2>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 bg-[#F8FAFC] rounded-2xl p-6 border border-[#E2E8F0]">
+              <div>
+                <div className="flex items-center gap-3 mb-1">
+                  <p className="text-sm font-semibold text-[#0F172A]">
+                    {currentProfile.razorpayKeyId || currentProfile.razorpay_key_id 
+                      ? `Key ID: ${currentProfile.razorpayKeyId || currentProfile.razorpay_key_id}`
+                      : "System Gateway Active"
+                    }
+                  </p>
+                </div>
+                <p className="text-[#64748B] text-xs font-medium">
+                  {(currentProfile.razorpayKeyId || currentProfile.razorpay_key_id)
+                    ? "Your Razorpay merchant credentials are set for accepting payments." 
+                    : "Click Configure Keys to set your custom Razorpay Key ID and Secret."
+                  }
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRazorpayModal(true)}
+                className="px-6 py-3 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-md active:scale-95 whitespace-nowrap"
+              >
+                Configure Keys
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Google Calendar Connection Card */}
         {!isJuniorAdvocate && (
-          <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10">
-            <h2 className="text-xl font-extrabold text-[#0F172A] mb-6 flex items-center gap-3">
-              <span className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">📅</span>
+          <div id="view-google" className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 scroll-mt-28">
+            <h2 className="text-xl font-extrabold text-[#0F172A] mb-6">
               Google Calendar Integration
             </h2>
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6 bg-[#F8FAFC] rounded-2xl p-6 border border-[#E2E8F0]">
@@ -320,6 +407,44 @@ export default function ProfileView({ profile = {}, onEdit }) {
               )}
             </div>
           </div>
+        )}
+
+        {/* ── Reset Password Card (opens modal) ── */}
+        {user && (
+          <div id="view-password" className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-8 md:p-10 scroll-mt-28">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <h2 className="text-xl font-extrabold text-[#0F172A]">
+                  Reset Password
+                </h2>
+                <p className="text-[#64748B] text-sm mt-1">
+                  Change your password securely using email OTP verification.
+                </p>
+              </div>
+              <button
+                type="button"
+                id="open-reset-modal-btn"
+                onClick={() => setShowResetModal(true)}
+                className="px-7 py-3 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-md hover:shadow-lg active:scale-[0.98] cursor-pointer"
+              >
+                Reset Password
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Modal */}
+        {showResetModal && (
+          <ResetPasswordModal onClose={() => setShowResetModal(false)} />
+        )}
+
+        {/* Razorpay Live Credentials Modal */}
+        {showRazorpayModal && (
+          <ConfigureRazorpayModal
+            profile={currentProfile}
+            onClose={() => setShowRazorpayModal(false)}
+            onSuccess={(updated) => setCurrentProfile(updated)}
+          />
         )}
     </div>
   );

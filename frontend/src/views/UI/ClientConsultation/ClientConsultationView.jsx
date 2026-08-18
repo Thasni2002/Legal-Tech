@@ -169,33 +169,38 @@ export default function ClientConsultationView() {
 
   const resolveConsultationAddPermission = async (loggedInUser) => {
     if (!loggedInUser) return;
+
+    let roleDefaults = {};
+    try {
+      const resPerms = await fetch(`${API_BASE_URL}/permissions`);
+      if (resPerms.ok) {
+        const allPerms = await resPerms.json();
+        const roleNorm = (loggedInUser.role || "").toLowerCase().replace(/\s+/g, "");
+        const roleKey = Object.keys(allPerms).find(
+          (k) => k.toLowerCase().replace(/\s+/g, "") === roleNorm
+        ) || loggedInUser.role;
+        roleDefaults = (allPerms[roleKey] || {})["Consultation"] || {};
+      }
+    } catch (_) { }
+
+    let customOverrides = {};
     try {
       const resUser = await fetch(`${API_BASE_URL}/permissions/users/${loggedInUser.id}`);
       if (resUser.ok) {
         const userData = await resUser.json();
         const custom = userData.customPermissions || {};
-        if (custom["Consultation"] !== undefined) {
-          setCanAddConsultation(custom["Consultation"].add === true);
-          return;
-        }
+        customOverrides = custom["Consultation"] || {};
       }
     } catch (_) { }
 
-    try {
-      const resPerms = await fetch(`${API_BASE_URL}/permissions`);
-      if (resPerms.ok) {
-        const allPerms = await resPerms.json();
-        const roleKey = Object.keys(allPerms).find(k => k.toLowerCase() === loggedInUser.role.toLowerCase()) || loggedInUser.role;
-        const rolePerms = allPerms[roleKey] || {};
-        const consultPerm = rolePerms["Consultation"];
-        if (consultPerm !== undefined) {
-          setCanAddConsultation(consultPerm.add === true);
-          return;
-        }
-      }
-    } catch (_) { }
+    const canAdd =
+      customOverrides.add !== undefined
+        ? !!customOverrides.add
+        : roleDefaults.add !== undefined
+        ? !!roleDefaults.add
+        : true;
 
-    setCanAddConsultation(true);
+    setCanAddConsultation(canAdd);
   };
 
   useEffect(() => {
@@ -703,32 +708,53 @@ export default function ClientConsultationView() {
                       </div>
 
                       <div className="flex flex-col sm:flex-row gap-2.5">
-                        <button
-                          onClick={() => handleApproveAppointment(item.id)}
-                          className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-extrabold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer text-white shadow-sm"
-                          style={{ background: "linear-gradient(135deg, #059669, #10B981)" }}
-                        >
-                          <CheckCircle2 size={16} />
-                          <span>✓ Confirm Appointment</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setRescheduleId(item.id);
-                            setFormData({
-                              name: item.client_name || clientDisplayName || getClientDisplayName(user),
-                              date: "",
-                              time: "",
-                              type: item.type || "",
-                            });
-                            setMeetingLink("");
-                            setSelectedTimeDate(null);
-                            setShowModal(true);
-                          }}
-                          className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-blue-300 text-blue-700 hover:bg-blue-50 rounded-xl font-extrabold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer"
-                        >
-                          <Clock size={16} />
-                          <span>Request Different Time</span>
-                        </button>
+                        {canAddConsultation ? (
+                          <button
+                            onClick={() => handleApproveAppointment(item.id)}
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-extrabold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer text-white shadow-sm"
+                            style={{ background: "linear-gradient(135deg, #059669, #10B981)" }}
+                          >
+                            <CheckCircle2 size={16} />
+                            <span>✓ Confirm Appointment</span>
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-extrabold text-xs sm:text-sm cursor-not-allowed opacity-75 shadow-2xs"
+                            title="🔒 Confirm Appointment Locked by Permission Settings"
+                          >
+                            🔒 Confirm Appointment Locked
+                          </button>
+                        )}
+
+                        {canAddConsultation ? (
+                          <button
+                            onClick={() => {
+                              setRescheduleId(item.id);
+                              setFormData({
+                                name: item.client_name || clientDisplayName || getClientDisplayName(user),
+                                date: "",
+                                time: "",
+                                type: item.type || "",
+                              });
+                              setMeetingLink("");
+                              setSelectedTimeDate(null);
+                              setShowModal(true);
+                            }}
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-blue-300 text-blue-700 hover:bg-blue-50 rounded-xl font-extrabold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer"
+                          >
+                            <Clock size={16} />
+                            <span>Request Different Time</span>
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-extrabold text-xs sm:text-sm cursor-not-allowed opacity-75 shadow-2xs"
+                            title="🔒 Request Different Time Locked by Permission Settings"
+                          >
+                            🔒 Request Different Time Locked
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -803,32 +829,53 @@ export default function ClientConsultationView() {
                       </div>
 
                       <div className="flex flex-col sm:flex-row gap-2.5">
-                        <button
-                          onClick={() => handleApproveAppointment(item.id)}
-                          className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-extrabold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer text-white shadow-sm"
-                          style={{ background: "linear-gradient(135deg, #059669, #10B981)" }}
-                        >
-                          <CheckCircle2 size={16} />
-                          <span>✓ Accept Proposed Date</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setRescheduleId(item.id);
-                            setFormData({
-                              name: item.client_name || clientDisplayName || getClientDisplayName(user),
-                              date: "",
-                              time: "",
-                              type: item.type || "",
-                            });
-                            setMeetingLink("");
-                            setSelectedTimeDate(null);
-                            setShowModal(true);
-                          }}
-                          className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-orange-300 text-orange-700 hover:bg-orange-50 rounded-xl font-extrabold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer"
-                        >
-                          <Clock size={16} />
-                          <span>Request Different Time</span>
-                        </button>
+                        {canAddConsultation ? (
+                          <button
+                            onClick={() => handleApproveAppointment(item.id)}
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-extrabold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer text-white shadow-sm"
+                            style={{ background: "linear-gradient(135deg, #059669, #10B981)" }}
+                          >
+                            <CheckCircle2 size={16} />
+                            <span>✓ Accept Proposed Date</span>
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-extrabold text-xs sm:text-sm cursor-not-allowed opacity-75 shadow-2xs"
+                            title="🔒 Accept Proposed Date Locked by Permission Settings"
+                          >
+                            🔒 Accept Proposed Date Locked
+                          </button>
+                        )}
+
+                        {canAddConsultation ? (
+                          <button
+                            onClick={() => {
+                              setRescheduleId(item.id);
+                              setFormData({
+                                name: item.client_name || clientDisplayName || getClientDisplayName(user),
+                                date: "",
+                                time: "",
+                                type: item.type || "",
+                              });
+                              setMeetingLink("");
+                              setSelectedTimeDate(null);
+                              setShowModal(true);
+                            }}
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-orange-300 text-orange-700 hover:bg-orange-50 rounded-xl font-extrabold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer"
+                          >
+                            <Clock size={16} />
+                            <span>Request Different Time</span>
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-extrabold text-xs sm:text-sm cursor-not-allowed opacity-75 shadow-2xs"
+                            title="🔒 Request Different Time Locked by Permission Settings"
+                          >
+                            🔒 Request Different Time Locked
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

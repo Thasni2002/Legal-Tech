@@ -217,10 +217,22 @@ const Page = () => {
     );
   }
 
+  const handleEdit = (targetSection) => {
+    setIsSubmitted(false);
+    if (targetSection && typeof targetSection === "string") {
+      setTimeout(() => {
+        const el = document.getElementById(targetSection);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 100);
+    }
+  };
+
   return (
     <div>
       {isSubmitted ? (
-        <ProfileView profile={profile} onEdit={() => setIsSubmitted(false)} />
+        <ProfileView profile={profile} onEdit={handleEdit} />
       ) : (
         <ProfileManagement
           initialData={profile}

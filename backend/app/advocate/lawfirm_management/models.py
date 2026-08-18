@@ -26,6 +26,8 @@ class Advocate(Base):
     chambers_address = Column(String(500), nullable=True)
     profile_image = Column(LONGTEXT, nullable=True)
     temp_password = Column(String(255), nullable=True)
+    razorpay_key_id = Column(String(255), nullable=True)
+    razorpay_key_secret = Column(String(255), nullable=True)
 
      # Login password
     hashed_password = Column(String(255), nullable=False)
