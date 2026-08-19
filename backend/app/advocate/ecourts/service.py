@@ -26,6 +26,14 @@ def lookup_cnr_service(cnr_number: str, db: Optional[Session] = None) -> eCourts
     
     clean_cnr = cnr_number.strip().upper()
 
+    # 1. Query Live eCourts Provider FIRST (Live API / Portal / CNR Decoder)
+    provider = get_ecourts_provider()
+    live_details = None
+    try:
+        live_details = provider.lookup_by_cnr(clean_cnr)
+    except Exception as live_err:
+        print(f"[eCourts] Live lookup note: {live_err}")
+
     case_id_match = None
     if clean_cnr.startswith("KLER0100") and clean_cnr.endswith("2026") and len(clean_cnr) == 18:
         try:
@@ -33,7 +41,8 @@ def lookup_cnr_service(cnr_number: str, db: Optional[Session] = None) -> eCourts
         except ValueError:
             pass
 
-    # 1. Query REAL Advocate Database Case Management records first
+    # 2. Check if local database record exists to merge system notes & document workflows
+    local_case = None
     if db:
         filters = [
             Case.cnr_number == clean_cnr,
@@ -46,33 +55,12 @@ def lookup_cnr_service(cnr_number: str, db: Optional[Session] = None) -> eCourts
 
         local_case = db.query(Case).filter(or_(*filters)).first()
 
-        
+    # If we have live details, use live eCourts data as the primary authority
+    if live_details:
         if local_case:
-            # Query live eCourts provider to enrich local case with real live court data (Respondent, Advocates, Judge, Orders)
-            provider = get_ecourts_provider()
-            cnr_to_query = local_case.cnr_number or clean_cnr
-            live_details = None
-            if cnr_to_query and len(cnr_to_query.strip()) >= 10:
-                try:
-                    live_details = provider.lookup_by_cnr(cnr_to_query)
-                except Exception as live_err:
-                    print(f"[eCourts] Live lookup note during local case merge: {live_err}")
-
-            # Derive respondent from live eCourts data or parse from case_title ("A vs B")
-            derived_respondent = ""
-            if live_details and live_details.respondent and live_details.respondent.strip():
-                derived_respondent = live_details.respondent.strip()
-            elif local_case.case_title and (" vs" in local_case.case_title.lower() or " v." in local_case.case_title.lower()):
-                import re
-                parts = re.split(r'\s+(?:vs\.?|v\.?)\s+', local_case.case_title, flags=re.I)
-                if len(parts) > 1:
-                    derived_respondent = parts[1].strip()
-
-            timeline = []
-            # Use live eCourts timeline if available
-            if live_details and live_details.timeline:
-                timeline.extend(live_details.timeline)
-            else:
+            # Merge local system timeline events, case notes & document workflows into live_details
+            timeline = list(live_details.timeline) if live_details.timeline else []
+            if not timeline:
                 timeline.append(
                     TimelineEvent(
                         id="1",
@@ -86,7 +74,7 @@ def lookup_cnr_service(cnr_number: str, db: Optional[Session] = None) -> eCourts
                     )
                 )
 
-            # Fetch REAL Case Notes / Proceeding updates added to this case
+            # Fetch REAL Case Notes / Proceeding updates
             notes = db.query(CaseNote).filter(CaseNote.case_id == local_case.id).order_by(CaseNote.created_at.asc()).all()
             for idx, note in enumerate(notes, start=len(timeline) + 1):
                 timeline.append(TimelineEvent(
@@ -100,31 +88,9 @@ def lookup_cnr_service(cnr_number: str, db: Optional[Session] = None) -> eCourts
                     status="Completed"
                 ))
 
-            # Fetch REAL Case Document Workflows / Petitions / Filings for this case
+            # Fetch REAL Case Document Workflows / Petitions
             workflows = db.query(CaseDocumentWorkflow).filter(CaseDocumentWorkflow.case_id == local_case.id).order_by(CaseDocumentWorkflow.created_at.asc()).all()
-            orders = list(live_details.orders) if (live_details and live_details.orders) else []
-            
-            # If no explicit separate orders array from API, generate order items directly from real eCourts hearing timeline
-            if not orders and live_details and live_details.timeline:
-                for idx, t in enumerate(live_details.timeline, start=1):
-                    if t.eventDate and t.eventStage != "Next Scheduled Hearing":
-                        orders.append(OrderDocumentItem(
-                            id=f"ord-{idx}",
-                            orderDate=t.eventDate,
-                            orderType=f"{t.eventStage} Order" if "Order" not in t.eventStage else t.eventStage,
-                            judgeName=t.benchName or "Hon'ble Presiding Judge",
-                            summary=f"Court proceeding record & daily order for {t.title}",
-                            fileUrl=t.documentUrl or "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-                            fileSize="1.2 MB"
-                        ))
-
-            if not orders:
-                try:
-                    fallback_info = provider._parse_cnr_fallback(cnr_to_query)
-                    if fallback_info and fallback_info.orders:
-                        orders = list(fallback_info.orders)
-                except Exception as fb_err:
-                    print(f"[eCourts] Orders fallback note: {fb_err}")
+            orders = list(live_details.orders) if live_details.orders else []
 
             for idx, wf in enumerate(workflows, start=len(timeline) + 1):
                 timeline.append(TimelineEvent(
@@ -149,56 +115,153 @@ def lookup_cnr_service(cnr_number: str, db: Optional[Session] = None) -> eCourts
                         fileSize="Document File"
                     ))
 
-            # Append Next Scheduled Hearing event
-            next_date = (live_details.nextHearingDate if live_details and live_details.nextHearingDate else None) or local_case.next_hearing_date
-            if next_date:
-                timeline.append(TimelineEvent(
-                    id=str(len(timeline) + 1),
-                    eventStage="Next Scheduled Hearing",
-                    eventDate=next_date,
-                    title=f"Scheduled Hearing ({getattr(local_case, 'status', 'Pending')})",
-                    description=f"Listed before {local_case.court_name or 'Presiding Court'} for case proceedings.",
-                    benchName=(live_details.presidingJudge if live_details and live_details.presidingJudge else None) or getattr(local_case, "presiding_judge", None) or "Presiding Officer",
-                    courtHall=(live_details.courtHall if live_details and live_details.courtHall else None) or getattr(local_case, "court_hall", None) or "Court Hall 01",
-                    status="Scheduled"
+            if not orders and live_details.timeline:
+                for idx, t in enumerate(live_details.timeline, start=1):
+                    if t.eventDate and t.eventStage != "Next Scheduled Hearing":
+                        orders.append(OrderDocumentItem(
+                            id=f"ord-{idx}",
+                            orderDate=t.eventDate,
+                            orderType=f"{t.eventStage} Order" if "Order" not in t.eventStage else t.eventStage,
+                            judgeName=t.benchName or "Hon'ble Presiding Judge",
+                            summary=f"Court proceeding record & daily order for {t.title}",
+                            fileUrl=t.documentUrl or "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+                            fileSize="1.2 MB"
+                        ))
+
+            if not orders:
+                try:
+                    fb_info = provider._parse_cnr_fallback(clean_cnr)
+                    if fb_info and fb_info.orders:
+                        orders = list(fb_info.orders)
+                except Exception:
+                    pass
+
+            live_details.timeline = timeline
+            live_details.orders = orders
+
+            if local_case.client_name:
+                live_details.petitioner = local_case.client_name
+            if getattr(local_case, "opposite_party", None):
+                live_details.respondent = local_case.opposite_party
+            elif local_case.case_title and (" vs" in local_case.case_title.lower() or " v." in local_case.case_title.lower()):
+                import re
+                parts = re.split(r'\s+(?:vs\.?|v\.?)\s+', local_case.case_title, flags=re.I)
+                if len(parts) > 1 and parts[1].strip():
+                    live_details.respondent = parts[1].strip()
+
+            if live_details.petitioner and live_details.respondent:
+                live_details.caseTitle = f"{live_details.petitioner} vs. {live_details.respondent}"
+
+            if not live_details.nextHearingDate and local_case.next_hearing_date:
+                live_details.nextHearingDate = local_case.next_hearing_date
+
+            if not live_details.caseNo:
+                live_details.caseNo = local_case.case_no or f"Case #{local_case.id}"
+
+        return live_details
+
+    # If live_details failed and local_case exists, return local_case data as fallback
+    if local_case:
+        derived_respondent = ""
+        if local_case.case_title and (" vs" in local_case.case_title.lower() or " v." in local_case.case_title.lower()):
+            import re
+            parts = re.split(r'\s+(?:vs\.?|v\.?)\s+', local_case.case_title, flags=re.I)
+            if len(parts) > 1:
+                derived_respondent = parts[1].strip()
+
+        timeline = [
+            TimelineEvent(
+                id="1",
+                eventStage="Filing & Registration",
+                eventDate=getattr(local_case, "filing_date", None) or (local_case.created_at.strftime("%d-%m-%Y") if local_case.created_at else ""),
+                title="Case Registered in System",
+                description=f"Case '{local_case.case_no or local_case.case_title}' registered under {local_case.court_name or 'Court'}",
+                benchName=getattr(local_case, "presiding_judge", None) or "Presiding Officer",
+                courtHall=getattr(local_case, "court_hall", None) or "Court Hall 01",
+                status="Completed"
+            )
+        ]
+
+        notes = db.query(CaseNote).filter(CaseNote.case_id == local_case.id).order_by(CaseNote.created_at.asc()).all()
+        for idx, note in enumerate(notes, start=len(timeline) + 1):
+            timeline.append(TimelineEvent(
+                id=str(idx),
+                eventStage=note.category or "Advocate Proceeding Log",
+                eventDate=note.created_at.strftime("%d-%m-%Y") if note.created_at else "",
+                title=f"Update: {note.category or 'Case Proceeding'}",
+                description=note.text,
+                benchName=note.author or "Advocate Counsel",
+                courtHall="Court Hall",
+                status="Completed"
+            ))
+
+        workflows = db.query(CaseDocumentWorkflow).filter(CaseDocumentWorkflow.case_id == local_case.id).order_by(CaseDocumentWorkflow.created_at.asc()).all()
+        orders = []
+
+        for idx, wf in enumerate(workflows, start=len(timeline) + 1):
+            timeline.append(TimelineEvent(
+                id=str(idx),
+                eventStage=wf.document_type or "Document Filing",
+                eventDate=wf.created_at.strftime("%d-%m-%Y") if wf.created_at else "",
+                title=f"Filing: {wf.title}",
+                description=f"{wf.document_type} status: {wf.status}. Prepared by advocate.",
+                benchName="Court Bench",
+                courtHall="Court Hall",
+                status="Completed" if wf.status == "Approved" else "Pending"
+            ))
+
+            if wf.file_url or wf.status == "Approved":
+                orders.append(OrderDocumentItem(
+                    id=str(wf.id),
+                    orderDate=wf.created_at.strftime("%d-%m-%Y") if wf.created_at else "",
+                    orderType=wf.document_type or "Court Document",
+                    judgeName=getattr(local_case, "court_name", "Court Bench"),
+                    summary=wf.title,
+                    fileUrl=wf.file_url or "#",
+                    fileSize="Document File"
                 ))
 
-            # Reverse orders list so newest / most recent court orders appear at the top
-            orders.reverse()
+        next_date = local_case.next_hearing_date
+        if next_date:
+            timeline.append(TimelineEvent(
+                id=str(len(timeline) + 1),
+                eventStage="Next Scheduled Hearing",
+                eventDate=next_date,
+                title=f"Scheduled Hearing ({getattr(local_case, 'status', 'Pending')})",
+                description=f"Listed before {local_case.court_name or 'Presiding Court'} for case proceedings.",
+                benchName=getattr(local_case, "presiding_judge", None) or "Presiding Officer",
+                courtHall=getattr(local_case, "court_hall", None) or "Court Hall 01",
+                status="Scheduled"
+            ))
 
-            return eCourtsCaseDetails(
-                cnrNumber=local_case.cnr_number or clean_cnr,
-                caseTitle=(live_details.caseTitle if live_details and live_details.caseTitle else None) or local_case.case_title,
-                caseType=(live_details.caseType if live_details and live_details.caseType else None) or local_case.case_type or "Legal Case",
-                caseNo=local_case.case_no or f"Case #{local_case.id}",
-                filingDate=(live_details.filingDate if live_details and live_details.filingDate else None) or getattr(local_case, "filing_date", None) or "",
-                registrationDate=local_case.created_at.strftime("%d-%m-%Y") if local_case.created_at else "",
-                petitioner=local_case.client_name or (live_details.petitioner if live_details else "Petitioner"),
-                respondent=derived_respondent or (live_details.respondent if live_details and live_details.respondent else "State / Respondent"),
-                petitionerAdvocate=(live_details.petitionerAdvocate if live_details and live_details.petitionerAdvocate else None) or local_case.selected_advocate or "Advocate (On Record)",
-                respondentAdvocate=(live_details.respondentAdvocate if live_details and live_details.respondentAdvocate else None) or "Government Pleader / Opposing Counsel",
-                courtName=(live_details.courtName if live_details and live_details.courtName else None) or local_case.court_name or "District Court",
-                courtType=(live_details.courtType if live_details and live_details.courtType else None) or getattr(local_case, "court_type", None) or "District & Sessions Court",
-                district=(live_details.district if live_details and live_details.district else None) or getattr(local_case, "district", None) or "",
-                state=(live_details.state if live_details and live_details.state else None) or getattr(local_case, "state", None) or "",
-                presidingJudge=(live_details.presidingJudge if live_details and live_details.presidingJudge else None) or getattr(local_case, "presiding_judge", None) or "",
-                courtHall=(live_details.courtHall if live_details and live_details.courtHall else None) or getattr(local_case, "court_hall", None) or "",
-                caseStage=(live_details.caseStage if live_details and live_details.caseStage else None) or getattr(local_case, "stage", None) or "Hearing Stage",
-                status=(live_details.status if live_details and live_details.status else None) or local_case.status or "PENDING",
-                actSection=(live_details.actSection if live_details and live_details.actSection else None) or getattr(local_case, "act_section", None) or "",
-                nextHearingDate=next_date or "",
-                timeline=timeline,
-                orders=orders
-            )
+        orders.reverse()
 
-    # 2. Query Live eCourts Portal
-    provider = get_ecourts_provider()
-    details = provider.lookup_by_cnr(clean_cnr)
-    
-    if details:
-        return details
+        return eCourtsCaseDetails(
+            cnrNumber=local_case.cnr_number or clean_cnr,
+            caseTitle=local_case.case_title,
+            caseType=local_case.case_type or "Legal Case",
+            caseNo=local_case.case_no or f"Case #{local_case.id}",
+            filingDate=getattr(local_case, "filing_date", None) or "",
+            registrationDate=local_case.created_at.strftime("%d-%m-%Y") if local_case.created_at else "",
+            petitioner=local_case.client_name or "Petitioner",
+            respondent=derived_respondent or "State / Respondent",
+            petitionerAdvocate=local_case.selected_advocate or "Advocate (On Record)",
+            respondentAdvocate="Government Pleader / Opposing Counsel",
+            courtName=local_case.court_name or "District Court",
+            courtType=getattr(local_case, "court_type", None) or "District & Sessions Court",
+            district=getattr(local_case, "district", None) or "",
+            state=getattr(local_case, "state", None) or "",
+            presidingJudge=getattr(local_case, "presiding_judge", None) or "",
+            courtHall=getattr(local_case, "court_hall", None) or "",
+            caseStage=getattr(local_case, "stage", None) or "Hearing Stage",
+            status=local_case.status or "PENDING",
+            actSection=getattr(local_case, "act_section", None) or "",
+            nextHearingDate=next_date or "",
+            timeline=timeline,
+            orders=orders
+        )
 
-    # 3. Strict Real-Data Enforcement: Return 404 if not found in database or live portal
+    # 3. Strict Real-Data Enforcement: Return 404 if not found in live portal or database
     raise HTTPException(
         status_code=404, 
         detail=f"No official eCourts or registered advocate case found for CNR '{clean_cnr}'. Please verify the CNR number or register the case under Case Management."
@@ -272,6 +335,10 @@ def sync_case_with_ecourts_service(db: Session, case_id: int) -> SyncCaseRespons
     
     updated_fields = {}
     if details:
+        if details.caseTitle and details.caseTitle != case.case_title:
+            updated_fields["case_title"] = details.caseTitle
+            case.case_title = details.caseTitle
+
         if details.nextHearingDate and details.nextHearingDate != case.next_hearing_date:
             updated_fields["next_hearing_date"] = details.nextHearingDate
             case.next_hearing_date = details.nextHearingDate

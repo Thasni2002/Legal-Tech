@@ -40,6 +40,7 @@ const STATUS_OPTIONS = [
   "Advocate Assigned",
   "Under Review",
   "In Progress",
+  "Pending",
   "Won",
   "Lost",
   "On Hold",
@@ -199,7 +200,7 @@ export default function CaseTracking() {
       if (res.ok) {
         setCases((prev) =>
           prev.map((c) =>
-            c.id === caseDbId ? { ...c, status: newStatus } : c
+            String(c.id) === String(caseDbId) ? { ...c, status: newStatus } : c
           )
         );
         if (selectedCase && selectedCase.dbId === caseDbId) {

@@ -906,33 +906,34 @@ export default function CaseDetailView({ id }) {
       doc.text(`CNR NUMBER: ${selectedCase?.cnr_number || "N/A"}`, margin, 42);
       doc.text(`ORDER TYPE: ${ord.orderType || "COURT ORDER"}`, margin, 48);
       doc.text(`ORDER DATE: ${ord.orderDate || "N/A"}`, margin, 54);
-      doc.text(`BEFORE BENCH OF: ${ord.judgeName || "HON'BLE PRESIDING JUDGE"}`, margin, 60);
+      doc.text(`NEXT HEARING DATE: ${ecourtsData?.nextHearingDate || selectedCase?.next_hearing_date || "To be scheduled"}`, margin, 60);
+      doc.text(`BEFORE BENCH OF: ${ord.judgeName || "HON'BLE PRESIDING JUDGE"}`, margin, 66);
 
       doc.setLineWidth(0.2);
       doc.setDrawColor(220, 220, 220);
-      doc.line(margin, 65, margin + pageWidth, 65);
+      doc.line(margin, 71, margin + pageWidth, 71);
 
       // Case Parties
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
-      doc.text("CASE DETAILS & PARTIES:", margin, 73);
+      doc.text("CASE DETAILS & PARTIES:", margin, 79);
       doc.setFont("helvetica", "normal");
-      doc.text(`Case Title: ${selectedCase?.case_title || "Court Proceeding"}`, margin, 80);
-      doc.text(`Petitioner / Appellant: ${selectedCase?.client_name || ecourtsData?.petitioner || "Petitioner"}`, margin, 86);
-      doc.text(`Respondent / Opposing Party: ${ecourtsData?.respondent || "State / Respondent"}`, margin, 92);
+      doc.text(`Case Title: ${ecourtsData?.caseTitle || selectedCase?.case_title || "Court Proceeding"}`, margin, 86);
+      doc.text(`Petitioner / Appellant: ${selectedCase?.client_name || ecourtsData?.petitioner || "Petitioner"}`, margin, 92);
+      doc.text(`Respondent / Opposing Party: ${ecourtsData?.respondent || "State / Respondent"}`, margin, 98);
 
-      doc.line(margin, 98, margin + pageWidth, 98);
+      doc.line(margin, 104, margin + pageWidth, 104);
 
       // Order Summary Heading
       doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
-      doc.text("PROCEEDINGS & JUDGMENT ORDER RECORD:", margin, 107);
+      doc.text("PROCEEDINGS & JUDGMENT ORDER RECORD:", margin, 113);
 
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       const orderText = ord.summary || "Court hearing completed. Order details and proceedings recorded on eCourts portal.";
       const splitText = doc.splitTextToSize(orderText, pageWidth);
-      doc.text(splitText, margin, 115);
+      doc.text(splitText, margin, 121);
 
       // Official Stamp / Signature block at bottom
       const footerY = 250;
@@ -1112,8 +1113,14 @@ export default function CaseDetailView({ id }) {
         const data = await res.json();
         if (data.details) {
           setEcourtsData(data.details);
+          setSelectedCase((prev) => ({
+            ...prev,
+            case_title: data.details.caseTitle || prev?.case_title,
+            court_name: data.details.courtName || prev?.court_name,
+            next_hearing_date: data.details.nextHearingDate || prev?.next_hearing_date,
+            status: data.details.status || prev?.status,
+          }));
         }
-        fetchCaseDetails();
         alert(`✨ Case synchronized with eCourts successfully!\n\nUpdated Next Hearing: ${data.details?.nextHearingDate || "Updated"}`);
       } else {
         alert("⚠️ Failed to sync with eCourts.");
@@ -1536,7 +1543,7 @@ export default function CaseDetailView({ id }) {
           </button>
           <div className="min-w-0 flex-1">
             <h1 className="text-base sm:text-xl md:text-2xl font-black text-[#0F172A] tracking-tight leading-snug break-words">
-              {selectedCase.case_title}
+              {ecourtsData?.caseTitle || selectedCase.case_title}
             </h1>
             <p className="text-xs text-[#64748B] mt-0.5 font-mono uppercase tracking-wider">
               Case #{selectedCase.case_no}
@@ -1724,6 +1731,7 @@ export default function CaseDetailView({ id }) {
                           "Advocate Assigned",
                           "Under Review",
                           "In Progress",
+                          "Pending",
                           "Won",
                           "Lost",
                           "On Hold",
@@ -2050,7 +2058,7 @@ export default function CaseDetailView({ id }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pb-4 border-b border-[#F1F5F9]">
                 <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5">
                   <p className="text-[10px] text-[#64748B] font-bold uppercase tracking-wide">Case Title</p>
-                  <p className="text-sm font-bold text-[#0F172A] mt-0.5 truncate">{selectedCase.case_title}</p>
+                  <p className="text-sm font-bold text-[#0F172A] mt-0.5 truncate">{ecourtsData?.caseTitle || selectedCase.case_title}</p>
                 </div>
                 <div className="bg-purple-50 border border-purple-100 rounded-xl px-4 py-2.5">
                   <p className="text-[10px] text-[#64748B] font-bold uppercase tracking-wide">Client ID</p>

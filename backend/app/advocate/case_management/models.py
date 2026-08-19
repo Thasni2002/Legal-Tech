@@ -32,6 +32,7 @@ class Case(Base):
     court_type = Column(String(100))
 
     status = Column(String(50))
+    status_updated_at = Column(DateTime, nullable=True)
     selected_advocate = Column(String(255), nullable=True)
     documents = Column(LONGTEXT, nullable=True)
     next_hearing_date = Column(String(100), nullable=True)

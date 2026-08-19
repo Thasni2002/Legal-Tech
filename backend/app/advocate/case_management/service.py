@@ -137,7 +137,8 @@ def get_all_cases(db: Session, current_user=None):
                     if details.status and "disposed" in details.status.lower() and "disposed" not in (case.status or "").lower():
                         case.status = details.status
                     if details.courtName and details.courtName != case.court_name:
-                        case.court_name = details.courtName
+                        if not ('{"' in str(details.courtName) or '":"' in str(details.courtName) or '","' in str(details.courtName) or 'Court Number' in str(details.courtName) or len(str(details.courtName)) > 80):
+                            case.court_name = details.courtName
             except Exception as sync_err:
                 print(f"[eCourts Auto Sync] Error for CNR {case.cnr_number}: {sync_err}")
 
@@ -253,6 +254,9 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
         if "disposed" in curr_status_lower:
             from fastapi import HTTPException
             raise HTTPException(status_code=400, detail="Cannot update status for a disposed case.")
+        if case.status != data.status:
+            from datetime import datetime
+            case.status_updated_at = datetime.utcnow()
         case.status = data.status
         try:
             from app.advocate.lawfirm_management.models import AssignedCase
