@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import {
   Eye,
@@ -22,11 +22,11 @@ import DocumentViewerModal from "@/components/common/DocumentViewerModal";
 // ---------- status colour helper ----------
 function statusBadge(status) {
   const s = (status || "").toLowerCase();
-  if (s === "active" || s === "in progress")
+  if (s === "active" || s === "in progress" || s.includes("hearing"))
     return "bg-emerald-50 text-emerald-700 border-emerald-200";
-  if (s.includes("pending") || s.includes("review") || s.includes("consulting"))
+  if (s.includes("pending") || s.includes("review") || s.includes("consulting") || s.includes("awaiting"))
     return "bg-amber-50 text-amber-700 border-amber-200";
-  if (s === "closed" || s === "won" || s === "lost")
+  if (s === "closed" || s === "won" || s === "lost" || s.includes("disposed"))
     return "bg-red-50 text-red-700 border-red-200";
   return "bg-blue-50 text-blue-700 border-blue-200";
 }
@@ -35,22 +35,16 @@ const STATUS_OPTIONS = [
   "Active",
   "Client Consulting",
   "Client Detail Collection",
-  "Document Data Collection",
   "Document Pending",
   "Document Verified",
   "Advocate Assigned",
   "Under Review",
-  "Case Preparation",
-  "Court File",
   "In Progress",
-  "Hearing Scheduled",
-  "Hearing Completed",
-  "Awaiting Judgment",
-  "Judgment Delivered",
+  "Pending",
   "Won",
   "Lost",
   "On Hold",
-  "Closed",
+  "Disposed",
 ];
 
 export default function CaseTracking() {
@@ -67,6 +61,7 @@ export default function CaseTracking() {
   const [searchTerm, setSearchTerm] = useState("");
   const [mounted, setMounted] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const hasAutoSelectedRef = useRef(false);
 
   const handleSelectCase = (cItem) => {
     setSelectedCase(cItem);
@@ -123,7 +118,7 @@ export default function CaseTracking() {
 
   // ── auto-select targeted case when navigating via "Track Case" ──
   useEffect(() => {
-    if (!clients || clients.length === 0) return;
+    if (!clients || clients.length === 0 || hasAutoSelectedRef.current) return;
 
     let targetParam = null;
     if (typeof window !== "undefined") {
@@ -135,7 +130,7 @@ export default function CaseTracking() {
     try {
       const raw = localStorage.getItem("trackCaseData");
       if (raw) storedData = JSON.parse(raw);
-    } catch (e) {}
+    } catch (e) { }
 
     const searchTarget = (
       targetParam ||
@@ -164,9 +159,13 @@ export default function CaseTracking() {
         });
 
         if (match) {
+          hasAutoSelectedRef.current = true;
           setExpandedClient(cl.id);
           handleSelectCase(match);
           if (storedData) localStorage.removeItem("trackCaseData");
+          if (typeof window !== "undefined" && targetParam) {
+            window.history.replaceState({}, "", window.location.pathname);
+          }
           break;
         }
       }
@@ -201,7 +200,7 @@ export default function CaseTracking() {
       if (res.ok) {
         setCases((prev) =>
           prev.map((c) =>
-            c.id === caseDbId ? { ...c, status: newStatus } : c
+            String(c.id) === String(caseDbId) ? { ...c, status: newStatus } : c
           )
         );
         if (selectedCase && selectedCase.dbId === caseDbId) {
@@ -265,116 +264,121 @@ export default function CaseTracking() {
 
           {/* CASE DETAILS & DOCUMENTS */}
           <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 sm:p-6 shadow-xs space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
-                {/* Left — case info */}
-                <div className="bg-slate-50/60 rounded-xl border border-slate-200/80 p-5 space-y-3 shadow-2xs">
-                  <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200/60 pb-2 mb-3">
-                    Case Parameters
-                  </h3>
-                  {[
-                    ["Client ID", selectedCase.id],
-                    ["Case Title", selectedCase.name],
-                    ["Case No.", selectedCase.case_no || "N/A"],
-                    ["Advocate", selectedCase.selected_advocate || "N/A"],
-                    ["Court", selectedCase.court],
-                  ].map(([label, val]) => (
-                    <div
-                      key={label}
-                      className="grid grid-cols-3 gap-2 border-b border-slate-200/40 pb-2.5 last:border-0 items-center text-xs"
-                    >
-                      <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">
-                        {label}
-                      </span>
-                      <span className="col-span-2 text-[#0F172A] font-semibold text-xs sm:text-sm break-words">
-                        {val}
-                      </span>
-                    </div>
-                  ))}
-
-                  {/* Status row */}
-                  <div className="grid grid-cols-3 gap-2 pt-1 items-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+              {/* Left — case info */}
+              <div className="bg-slate-50/60 rounded-xl border border-slate-200/80 p-5 space-y-3 shadow-2xs">
+                <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200/60 pb-2 mb-3">
+                  Case Parameters
+                </h3>
+                {[
+                  ["Client ID", selectedCase.id],
+                  ["Case Title", selectedCase.name],
+                  ["Case No.", selectedCase.case_no || "N/A"],
+                  ["Advocate", selectedCase.selected_advocate || "N/A"],
+                  ["Court", selectedCase.court],
+                ].map(([label, val]) => (
+                  <div
+                    key={label}
+                    className="grid grid-cols-3 gap-2 border-b border-slate-200/40 pb-2.5 last:border-0 items-center text-xs"
+                  >
                     <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">
-                      Status
+                      {label}
                     </span>
-                    <span className="col-span-2">
-                      <span
-                        className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${statusBadge(
-                          selectedCase.status
-                        )}`}
-                      >
-                        {selectedCase.status}
-                      </span>
+                    <span className="col-span-2 text-[#0F172A] font-semibold text-xs sm:text-sm break-words">
+                      {val}
                     </span>
                   </div>
+                ))}
+
+                {/* Status row */}
+                <div className="grid grid-cols-3 gap-2 pt-1 items-center">
+                  <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">
+                    Status
+                  </span>
+                  <span className="col-span-2">
+                    <span
+                      className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${statusBadge(
+                        selectedCase.status
+                      )}`}
+                    >
+                      {selectedCase.status}
+                    </span>
+                  </span>
                 </div>
-
-                {/* Right — docs */}
-                {(() => {
-                  const validDocs = (selectedCase.documents || []).filter(
-                    (doc) => doc && (doc.file || doc.url || doc.filename || doc.name || doc.document_name)
-                  );
-                  return (
-                    <div className="space-y-4">
-                      <div className="border border-slate-200 rounded-xl p-5 bg-slate-50/80 shadow-2xs flex flex-col">
-                        <div className="flex items-center justify-between gap-2 font-bold text-sm text-[#0F172A] mb-3 pb-2 border-b border-slate-200/60">
-                          <div className="flex items-center gap-2">
-                            <Briefcase size={16} className="text-[#2563EB]" />
-                            <span>Case Documents</span>
-                          </div>
-                          <span className="text-[11px] text-[#2563EB] font-bold bg-white px-2.5 py-0.5 rounded-full border border-indigo-100 shadow-2xs">
-                            {validDocs.length} {validDocs.length === 1 ? "File" : "Files"}
-                          </span>
-                        </div>
-
-                        <div className="max-h-[280px] overflow-y-auto pr-1 space-y-2.5 scrollbar-thin scrollbar-thumb-slate-300">
-                          {validDocs.length > 0 ? (
-                            validDocs.map((doc, idx) => {
-                              const fileName = doc.file || doc.filename || doc.name || doc.document_name || doc.url || "Document";
-                              return (
-                                <div
-                                  key={idx}
-                                  className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200/80 hover:border-indigo-200 shadow-2xs transition-colors gap-2"
-                                >
-                                  <span className="text-slate-800 flex items-center gap-2 font-semibold text-xs truncate min-w-0 flex-1">
-                                    <FileText size={15} className="text-indigo-500 shrink-0" />
-                                    <span className="truncate" title={fileName}>
-                                      {fileName}
-                                    </span>
-                                  </span>
-                                  <button
-                                    onClick={() =>
-                                      setSelectedDoc({
-                                        fileUrl: doc.url || null,
-                                        title: fileName,
-                                        badge: doc.documentType || "Document",
-                                      })
-                                    }
-                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2563EB] hover:text-white bg-indigo-50 hover:bg-[#2563EB] border border-indigo-200/80 px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer shrink-0 shadow-2xs"
-                                  >
-                                    <Eye size={12} />
-                                    <span>View Document</span>
-                                  </button>
-                                </div>
-                              );
-                            })
-                          ) : (
-                            <div className="py-8 text-center text-slate-400 italic text-xs">
-                              No documents uploaded for this case
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
               </div>
 
-              {/* Update Status */}
-              <div className="border-t border-slate-100 pt-4">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  Update Case Status
-                </h3>
-                <div className="flex items-center gap-3 flex-wrap">
+              {/* Right — docs */}
+              {(() => {
+                const validDocs = (selectedCase.documents || []).filter(
+                  (doc) => doc && (doc.file || doc.url || doc.filename || doc.name || doc.document_name)
+                );
+                return (
+                  <div className="space-y-4">
+                    <div className="border border-slate-200 rounded-xl p-5 bg-slate-50/80 shadow-2xs flex flex-col">
+                      <div className="flex items-center justify-between gap-2 font-bold text-sm text-[#0F172A] mb-3 pb-2 border-b border-slate-200/60">
+                        <div className="flex items-center gap-2">
+                          <Briefcase size={16} className="text-[#2563EB]" />
+                          <span>Case Documents</span>
+                        </div>
+                        <span className="text-[11px] text-[#2563EB] font-bold bg-white px-2.5 py-0.5 rounded-full border border-indigo-100 shadow-2xs">
+                          {validDocs.length} {validDocs.length === 1 ? "File" : "Files"}
+                        </span>
+                      </div>
+
+                      <div className="max-h-[280px] overflow-y-auto pr-1 space-y-2.5 scrollbar-thin scrollbar-thumb-slate-300">
+                        {validDocs.length > 0 ? (
+                          validDocs.map((doc, idx) => {
+                            const fileName = doc.file || doc.filename || doc.name || doc.document_name || doc.url || "Document";
+                            return (
+                              <div
+                                key={idx}
+                                className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200/80 hover:border-indigo-200 shadow-2xs transition-colors gap-2"
+                              >
+                                <span className="text-slate-800 flex items-center gap-2 font-semibold text-xs truncate min-w-0 flex-1">
+                                  <FileText size={15} className="text-indigo-500 shrink-0" />
+                                  <span className="truncate" title={fileName}>
+                                    {fileName}
+                                  </span>
+                                </span>
+                                <button
+                                  onClick={() =>
+                                    setSelectedDoc({
+                                      fileUrl: doc.url || null,
+                                      title: fileName,
+                                      badge: doc.documentType || "Document",
+                                    })
+                                  }
+                                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2563EB] hover:text-white bg-indigo-50 hover:bg-[#2563EB] border border-indigo-200/80 px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer shrink-0 shadow-2xs"
+                                >
+                                  <Eye size={12} />
+                                  <span>View Document</span>
+                                </button>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="py-8 text-center text-slate-400 italic text-xs">
+                            No documents uploaded for this case
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Update Status */}
+            <div className="border-t border-slate-100 pt-4">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                Update Case Status
+              </h3>
+              <div className="flex items-center gap-3 flex-wrap">
+                {((selectedCase.status || "").toLowerCase().includes("disposed")) ? (
+                  <span className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-800 px-3.5 py-2 rounded-xl text-xs font-extrabold shadow-2xs">
+                    🔒 Disposed (Status Locked)
+                  </span>
+                ) : (
                   <div className="relative flex-1 min-w-[200px]">
                     <CheckCircle
                       size={16}
@@ -391,11 +395,17 @@ export default function CaseTracking() {
                         )
                       }
                     >
-                      {STATUS_OPTIONS.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
+                      {(() => {
+                        const currentStatus = selectedCase.status || "Active";
+                        const allStatuses = STATUS_OPTIONS.includes(currentStatus)
+                          ? STATUS_OPTIONS
+                          : [currentStatus, ...STATUS_OPTIONS];
+                        return allStatuses.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ));
+                      })()}
                     </select>
                     <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -403,14 +413,15 @@ export default function CaseTracking() {
                       </svg>
                     </div>
                   </div>
-                  {updatingStatus && (
-                    <span className="text-xs text-indigo-600 font-semibold animate-pulse">
-                      Saving status…
-                    </span>
-                  )}
-                </div>
+                )}
+                {updatingStatus && (
+                  <span className="text-xs text-indigo-600 font-semibold animate-pulse">
+                    Saving status…
+                  </span>
+                )}
               </div>
             </div>
+          </div>
         </div>
       ) : (
         /* Original Cases & Clients list view */

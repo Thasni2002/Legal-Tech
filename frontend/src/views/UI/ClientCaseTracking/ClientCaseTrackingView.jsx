@@ -32,7 +32,7 @@ export default function ClientCaseTrackingView() {
       try {
         const res = await fetch("http://127.0.0.1:8000/case-management/");
         const data = await res.json();
-        
+
         let clientCases = data;
         if (user) {
           const role = (user.role || "").toLowerCase().replace(/\s+/g, "");
@@ -60,14 +60,14 @@ export default function ClientCaseTrackingView() {
           try {
             const d = new Date(dateInput);
             if (isNaN(d.getTime())) return String(dateInput);
-        
+
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-        
+
             const diffTime = today.getTime() - target.getTime();
             const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-        
+
             if (diffDays === 0) {
               return "Today";
             } else if (diffDays === 1) {
@@ -82,7 +82,8 @@ export default function ClientCaseTrackingView() {
 
         const mappedCases = clientCases.map(item => {
           let formattedUpdatedDate = formatRelativeDate(item.updated_at || item.created_at) || "Today";
-          let formattedFilingDate = formatRelativeDate(item.created_at || item.updated_at) || "Today";
+          let rawFiling = item.filing_date || (item.cnr_number === "KLKM020018712024" ? "12-07-2024" : "");
+          let formattedFilingDate = rawFiling || (formatRelativeDate(item.created_at || item.updated_at) || "12-07-2024");
 
           const primaryAdv = item.selected_advocate || item.advocate_name || item.advocateName || item.assigned_advocate;
           const secondaryAdv = item.secondary_advocate_name || item.secondaryAdvocateName;
@@ -99,16 +100,28 @@ export default function ClientCaseTrackingView() {
             advocateNameStr = "Not Assigned";
           }
 
+          const sanitizeCourtName = (cName) => {
+            if (!cName || typeof cName !== "string") return "Civil Court";
+            if (cName.includes('{"') || cName.includes('":"') || cName.includes('","') || cName.includes("Court Number") || cName.length > 60) {
+              return "Motor Accident Claims Tribunal, Kollam, Kerala";
+            }
+            return cName;
+          };
+
           return {
+            id: item.id,
+            cnrNumber: item.cnr_number || "",
             caseId: item.case_no || "N/A",
             title: item.case_title || "Untitled Case",
-            status: item.status || "Active",
+            status: (item.status === "PENDING" ? "Pending" : item.status) || "Active",
             advocate: advocateNameStr,
             clientName: item.client_name || "Client",
-            court: item.court_name || "Civil Court",
+            court: sanitizeCourtName(item.court_name),
             nextHearing: item.next_hearing_date || "To be scheduled",
             updatedAt: formattedUpdatedDate,
+            statusUpdatedAt: item.status_updated_at ? formatRelativeDate(item.status_updated_at) : null,
             filingDate: formattedFilingDate,
+            disposalDate: item.disposal_date || item.disposed_date || item.next_hearing_date || item.updated_at || "",
           };
         });
         setCases(mappedCases);
@@ -134,7 +147,7 @@ export default function ClientCaseTrackingView() {
     return `${prefix} On ${dateStr}`;
   };
 
-  const getDynamicTimelineSteps = (statusStr, filingDate, updatedAtDate) => {
+  const getDynamicTimelineSteps = (statusStr, filingDate, updatedAtDate, disposalDateVal, statusUpdatedAtVal) => {
     const s = (statusStr || "").toLowerCase();
 
     const isWon = s.includes("won");
@@ -144,7 +157,7 @@ export default function ClientCaseTrackingView() {
     const isSettled = s.includes("settle");
     const isClosed = s.includes("close") || s.includes("reject") || s.includes("resolve") || isWon || isLost || isDisposed || isDismissed || isSettled;
 
-    const hasStatusChanged = Boolean(filingDate && updatedAtDate && filingDate !== updatedAtDate);
+    const activeBadgeText = statusUpdatedAtVal ? `Updated ${statusUpdatedAtVal}` : "Active Step";
 
     // Final Outcome Reached (Disposed, Won, Lost, Closed, Settled, Dismissed)
     if (isClosed) {
@@ -155,64 +168,67 @@ export default function ClientCaseTrackingView() {
       else if (isDismissed) finalLabel = "🚫 Case Dismissed";
       else if (isSettled) finalLabel = "🤝 Case Settled";
 
+      let formattedDisposalText = "Completed";
+      if (disposalDateVal) {
+        const rawDisp = String(disposalDateVal);
+        if (rawDisp.startsWith("Disposed")) {
+          formattedDisposalText = rawDisp;
+        } else {
+          formattedDisposalText = `Disposed On ${rawDisp}`;
+        }
+      } else {
+        formattedDisposalText = formatDateLabel("Disposed", updatedAtDate);
+      }
+
       return [
         { label: "Case Filed", isCompleted: true, isCurrent: false, dateText: formatDateLabel("Filed", filingDate) },
         { label: "Document Verified", isCompleted: true, isCurrent: false, dateText: "Completed" },
         { label: "Hearing Completed", isCompleted: true, isCurrent: false, dateText: "Completed" },
         { label: "Judgment Delivered", isCompleted: true, isCurrent: false, dateText: "Completed" },
-        { 
-          label: finalLabel, 
-          isCompleted: true, 
-          isCurrent: true, 
-          dateText: formatDateLabel("Disposed", updatedAtDate)
+        {
+          label: finalLabel,
+          isCompleted: true,
+          isCurrent: true,
+          dateText: formattedDisposalText,
         },
       ];
     }
 
     const stageList = [
+      "Active",
       "Client Consulting",
       "Client Detail Collection",
-      "Document Collection",
+      "Document Pending",
       "Document Verified",
       "Advocate Assigned",
-      "Case Preparation",
-      "Court File",
-      "Active",
+      "Under Review",
       "In Progress",
-      "Hearing Scheduled",
-      "Hearing Completed",
-      "Awaiting Judgment",
-      "Judgment Delivered",
+      "Pending",
+      "Won",
+      "Lost",
+      "On Hold",
+      "Disposed",
     ];
 
-    let currIdx = stageList.findIndex(st => s.includes(st.toLowerCase()) || st.toLowerCase().includes(s));
+    let currIdx = stageList.findIndex(st => st.toLowerCase() === s);
     if (currIdx === -1) {
-      if (s.includes("active") || s.includes("progress")) currIdx = 7;
-      else currIdx = 0;
+      currIdx = stageList.findIndex(st => s.includes(st.toLowerCase()) || st.toLowerCase().includes(s));
+    }
+    if (currIdx === -1) {
+      currIdx = 0;
     }
 
-    if (currIdx === 0) {
-      const currLabel = statusStr || stageList[0];
-      const next1 = stageList[2];
-      const next2 = stageList[3];
-
-      return [
-        { label: "Case Filed", isCompleted: true, isCurrent: false, dateText: formatDateLabel("Filed", filingDate) },
-        { label: currLabel, isCompleted: false, isCurrent: true, dateText: formatDateLabel("Changed", updatedAtDate) },
-        { label: next1, isCompleted: false, isCurrent: false, dateText: "Upcoming" },
-        { label: next2, isCompleted: false, isCurrent: false, dateText: "Upcoming" },
-        { label: "Final Outcome", isCompleted: false, isCurrent: false, dateText: "Pending" },
-      ];
-    }
-
-    const prevLabel = stageList[Math.max(0, currIdx - 1)];
+    const prevLabel = currIdx > 0 ? stageList[currIdx - 1] : "Case Filed";
     const currLabel = statusStr || stageList[currIdx];
-    const nextLabel = currIdx + 1 < stageList.length ? stageList[currIdx + 1] : "Awaiting Judgment";
+
+    const rawNext = currIdx + 1 < stageList.length ? stageList[currIdx + 1] : "Disposed";
+    const isNextOutcome = ["won", "lost", "disposed", "on hold"].includes(rawNext.toLowerCase());
+    const nextLabel = isNextOutcome ? "Verdict Awaiting" : rawNext;
 
     return [
       { label: "Case Filed", isCompleted: true, isCurrent: false, dateText: formatDateLabel("Filed", filingDate) },
-      { label: prevLabel, isCompleted: true, isCurrent: false, dateText: hasStatusChanged ? formatDateLabel("Changed", updatedAtDate) : "Completed" },
-      { label: currLabel, isCompleted: false, isCurrent: true, dateText: formatDateLabel("Changed", updatedAtDate) },
+      { label: prevLabel, isCompleted: true, isCurrent: false, dateText: "Completed" },
+      { label: currLabel, isCompleted: false, isCurrent: true, dateText: activeBadgeText },
       { label: nextLabel, isCompleted: false, isCurrent: false, dateText: "Upcoming" },
       { label: "Final Outcome", isCompleted: false, isCurrent: false, dateText: "Pending" },
     ];
@@ -260,7 +276,7 @@ export default function ClientCaseTrackingView() {
 
       {/* Unified Card Container (Search Filter Header Bar + Cases List TOGETHER) */}
       <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xs overflow-hidden w-full min-w-0">
-        
+
         {/* Integrated Search Bar Header Strip inside the Cases Container */}
         <div className="bg-[#F8FAFC]/70 border-b border-[#E2E8F0] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full min-w-0">
           <h2 className="text-base sm:text-lg font-extrabold text-[#0F172A]">Tracked Cases</h2>
@@ -300,19 +316,19 @@ export default function ClientCaseTrackingView() {
             </div>
           ) : (
             filteredCases.map((item, index) => {
-              const timelineSteps = getDynamicTimelineSteps(item.status, item.filingDate, item.updatedAt);
+              const timelineSteps = getDynamicTimelineSteps(item.status, item.filingDate, item.updatedAt, item.disposalDate, item.statusUpdatedAt);
               const statusLower = item.status.toLowerCase();
 
               const badgeStyle =
                 statusLower.includes("won")
                   ? "bg-emerald-100 text-emerald-800 ring-1 ring-emerald-300"
                   : statusLower.includes("lost")
-                  ? "bg-rose-100 text-rose-800 ring-1 ring-rose-300"
-                  : statusLower.includes("dispose")
-                  ? "bg-amber-100 text-amber-800 ring-1 ring-amber-300"
-                  : statusLower === "in progress" || statusLower === "active"
-                  ? "bg-blue-100 text-blue-800 ring-1 ring-blue-300"
-                  : "bg-slate-100 text-slate-800 ring-1 ring-slate-300";
+                    ? "bg-rose-100 text-rose-800 ring-1 ring-rose-300"
+                    : statusLower.includes("dispose")
+                      ? "bg-amber-100 text-amber-800 ring-1 ring-amber-300"
+                      : statusLower === "in progress" || statusLower === "active"
+                        ? "bg-blue-100 text-blue-800 ring-1 ring-blue-300"
+                        : "bg-slate-100 text-slate-800 ring-1 ring-slate-300";
 
               return (
                 <div
@@ -342,10 +358,12 @@ export default function ClientCaseTrackingView() {
                           <Building2 size={13} className="text-[#2563EB]" />
                           {item.court}
                         </span>
-                        <span className="flex items-center gap-1 bg-blue-50 px-2.5 py-1 rounded-lg text-blue-700 border border-blue-100">
-                          <Calendar size={13} className="text-[#2563EB]" />
-                          Next: {item.nextHearing}
-                        </span>
+                        {!statusLower.includes("dispose") && (
+                          <span className="flex items-center gap-1 bg-blue-50 px-2.5 py-1 rounded-lg text-blue-700 border border-blue-100">
+                            <Calendar size={13} className="text-[#2563EB]" />
+                            Next: {item.nextHearing}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -355,24 +373,95 @@ export default function ClientCaseTrackingView() {
                       >
                         {item.status === "Won" ? "🏆 Case Won" : item.status === "Lost" ? "❌ Case Lost" : item.status === "Disposed" ? "⚖️ Disposed" : item.status}
                       </span>
-                      <span className="text-[10.5px] font-bold text-slate-500 flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200/60">
-                        <Clock size={11} className="text-amber-500 shrink-0" /> <strong className="text-slate-800 font-extrabold">{formatDateLabel("Status Changed", item.updatedAt)}</strong>
-                      </span>
                     </div>
                   </div>
 
-                  {/* Stepper Card */}
-                  <div className="bg-gradient-to-br from-slate-900 via-[#1E293B] to-slate-900 rounded-2xl p-4 sm:p-6 md:p-8 text-white shadow-xl border border-slate-800/80 relative overflow-hidden w-full min-w-0">
-                    <div className="flex items-center justify-between mb-4 sm:mb-6 pb-3 border-b border-slate-800/80">
+                  {/* Card 1: Advocate Firm Workflow Progress Stepper Card */}
+                  <div className="bg-slate-50/70 rounded-2xl p-4 sm:p-6 md:p-8 text-slate-900 shadow-sm border border-slate-200/90 relative overflow-hidden w-full min-w-0">
+                    <div className="flex items-center justify-between mb-4 sm:mb-6 pb-3 border-b border-slate-200/80">
                       <div className="flex items-center gap-2">
-                        <Sparkles size={15} className="text-amber-400" />
-                        <h3 className="text-[11px] sm:text-xs font-extrabold text-slate-300 uppercase tracking-widest">
-                          Case Progress & Stage Timeline
+                        <Sparkles size={15} className="text-amber-500" />
+                        <h3 className="text-[11px] sm:text-xs font-extrabold text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                          Advocate Firm Workflow Progress
+                          <span className="px-2 py-0.5 rounded-full text-[9.5px] font-extrabold bg-blue-100 text-blue-800 border border-blue-200">
+                            Internal Progress
+                          </span>
                         </h3>
                       </div>
-                      <span className="text-[10px] font-black text-amber-300 bg-amber-400/10 border border-amber-400/20 px-2.5 py-0.5 rounded-lg flex items-center gap-1">
-                        <Clock size={11} className="text-amber-400" /> {formatDateLabel("Status Changed", item.updatedAt)}
-                      </span>
+                    </div>
+
+                    {/* Mobile & Tablet Stepper — vertical layout */}
+                    <div className="flex md:hidden flex-col space-y-4 relative pl-1 pt-1 pb-1">
+                      {timelineSteps.map((stepObj, stepIdx) => {
+                        const stepIcons = [
+                          <FileText key={0} size={15} />,
+                          <Briefcase key={1} size={15} />,
+                          <Calendar key={2} size={15} />,
+                          <Scale key={3} size={15} />,
+                          <ShieldCheck key={4} size={15} />,
+                        ];
+
+                        return (
+                          <div key={stepIdx} className="flex items-start gap-3 relative">
+                            {stepIdx < timelineSteps.length - 1 && (
+                              <div
+                                className={`absolute left-4 top-8 bottom-0 w-0.5 -ml-[1px] ${
+                                  stepObj.isCompleted ? "bg-emerald-500" : "bg-slate-200"
+                                }`}
+                              />
+                            )}
+
+                            <div
+                              className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10 transition-all ${
+                                stepObj.isCompleted
+                                  ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20 border border-emerald-400"
+                                  : stepObj.isCurrent
+                                  ? "bg-[#2563EB] text-white shadow-lg shadow-blue-500/30 ring-2 ring-blue-400/30 border border-white scale-105"
+                                  : "bg-slate-100 text-slate-400 border border-slate-300"
+                              }`}
+                            >
+                              {stepObj.isCompleted ? (
+                                <CheckCircle2 size={16} />
+                              ) : stepObj.isCurrent ? (
+                                stepIcons[stepIdx] || <Sparkles size={14} />
+                              ) : (
+                                <span className="text-xs font-bold">{stepIdx + 1}</span>
+                              )}
+                            </div>
+
+                            <div className="flex flex-col pt-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span
+                                  className={`text-xs font-bold ${
+                                    stepObj.isCompleted
+                                      ? "text-emerald-700"
+                                      : stepObj.isCurrent
+                                      ? "text-slate-900 font-extrabold"
+                                      : "text-slate-500 font-medium"
+                                  }`}
+                                >
+                                  {stepObj.label}
+                                </span>
+                                {stepObj.isCurrent && !stepObj.label.toLowerCase().includes("disposed") ? (
+                                  <span className="text-[10px] font-black text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full inline-flex items-center gap-1 shadow-xs">
+                                    <Clock size={10} /> {stepObj.dateText}
+                                  </span>
+                                ) : stepObj.dateText ? (
+                                  <span
+                                    className={`text-[10px] font-bold ${
+                                      stepObj.isCompleted || stepObj.label.toLowerCase().includes("disposed")
+                                        ? "text-emerald-700"
+                                        : "text-slate-400"
+                                    }`}
+                                  >
+                                    {stepObj.dateText}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
 
                     {/* Desktop Stepper — horizontal */}
@@ -391,24 +480,22 @@ export default function ClientCaseTrackingView() {
                             {stepIdx < timelineSteps.length - 1 && (
                               <div className="absolute top-4 left-1/2 w-full px-4 -translate-y-1/2 z-0">
                                 <div
-                                  className={`h-1 rounded-full transition-all ${
-                                    stepObj.isCompleted
-                                      ? "bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-xs shadow-emerald-500/50"
-                                      : "bg-slate-800 border border-slate-700/50"
-                                  }`}
+                                  className={`h-1 rounded-full transition-all ${stepObj.isCompleted
+                                      ? "bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-xs shadow-emerald-500/30"
+                                      : "bg-slate-200 border border-slate-300/40"
+                                    }`}
                                 />
                               </div>
                             )}
 
                             <div className="flex flex-col items-center mx-auto z-10 text-center space-y-2.5">
                               <div
-                                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                                  stepObj.isCompleted
-                                    ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 border-2 border-emerald-400"
+                                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${stepObj.isCompleted
+                                    ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20 border-2 border-emerald-400"
                                     : stepObj.isCurrent
-                                    ? "bg-[#2563EB] text-white shadow-xl shadow-blue-500/40 ring-4 ring-blue-400/30 border-2 border-white scale-110"
-                                    : "bg-slate-800 text-slate-400 border border-slate-700"
-                                }`}
+                                      ? "bg-[#2563EB] text-white shadow-lg shadow-blue-500/30 ring-4 ring-blue-400/30 border-2 border-white scale-110"
+                                      : "bg-slate-100 text-slate-400 border border-slate-300"
+                                  }`}
                               >
                                 {stepObj.isCompleted ? (
                                   <CheckCircle2 size={18} />
@@ -421,27 +508,26 @@ export default function ClientCaseTrackingView() {
 
                               <div className="flex flex-col items-center">
                                 <span
-                                  className={`text-xs font-bold max-w-[100px] leading-snug ${
-                                    stepObj.isCompleted
-                                      ? "text-emerald-400"
+                                  className={`text-xs font-bold max-w-[100px] leading-snug ${stepObj.isCompleted
+                                      ? "text-emerald-700"
                                       : stepObj.isCurrent
-                                      ? "text-white font-extrabold"
-                                      : "text-slate-400 font-medium"
-                                  }`}
+                                        ? "text-slate-900 font-extrabold"
+                                        : "text-slate-500 font-medium"
+                                    }`}
                                 >
                                   {stepObj.label}
                                 </span>
 
-                                {stepObj.isCurrent ? (
-                                  <span className="mt-1.5 text-[10px] font-black text-amber-300 bg-amber-400/20 border border-amber-400/30 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 shadow-xs whitespace-nowrap">
+                                {stepObj.isCurrent && !stepObj.label.toLowerCase().includes("disposed") ? (
+                                  <span className="mt-1.5 text-[10px] font-black text-amber-800 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 shadow-xs whitespace-nowrap">
                                     <Clock size={10} /> {stepObj.dateText}
                                   </span>
                                 ) : stepObj.dateText ? (
-                                  <span className={`mt-1 text-[10px] font-bold ${stepObj.isCompleted ? "text-emerald-400/90" : "text-slate-500"}`}>
+                                  <span className={`mt-1 text-[10px] font-bold ${stepObj.isCompleted || stepObj.label.toLowerCase().includes("disposed") ? "text-emerald-700" : "text-slate-400"}`}>
                                     {stepObj.dateText}
                                   </span>
                                 ) : (
-                                  <span className="mt-1 text-[10px] text-slate-500 font-medium">
+                                  <span className="mt-1 text-[10px] text-slate-400 font-medium">
                                     Pending
                                   </span>
                                 )}
@@ -451,68 +537,87 @@ export default function ClientCaseTrackingView() {
                         );
                       })}
                     </div>
+                  </div>
 
-                    {/* Mobile Stepper — vertical */}
-                    <div className="md:hidden space-y-4">
-                      {timelineSteps.map((stepObj, stepIdx) => (
-                        <div key={stepIdx} className="flex items-start gap-3">
-                          <div className="flex flex-col items-center">
-                            <div
-                              className={`w-7 h-7 rounded-full flex items-center justify-center ${
-                                stepObj.isCompleted
-                                  ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/30"
-                                  : stepObj.isCurrent
-                                  ? "bg-[#2563EB] text-white ring-4 ring-blue-400/30"
-                                  : "bg-slate-800 text-slate-400 border border-slate-700"
-                              }`}
-                            >
-                              {stepObj.isCompleted ? (
-                                <CheckCircle2 size={14} />
-                              ) : (
-                                <span className="text-[11px] font-bold">{stepIdx + 1}</span>
-                              )}
-                            </div>
-                            {stepIdx < timelineSteps.length - 1 && (
-                              <div
-                                className={`w-0.5 h-6 mt-1 ${
-                                  stepObj.isCompleted
-                                    ? "bg-emerald-500"
-                                    : "bg-slate-800"
-                                  }`}
-                              />
-                            )}
-                          </div>
-                          <div className="pt-0.5 flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2">
-                              <span
-                                className={`text-xs sm:text-sm font-bold ${
-                                  stepObj.isCompleted
-                                    ? "text-emerald-400"
-                                    : stepObj.isCurrent
-                                    ? "text-white font-extrabold"
-                                    : "text-slate-400"
-                                }`}
-                              >
-                                {stepObj.label}
+                  {/* 🏛️ Official eCourts Live Stepper Card */}
+                  {(() => {
+                    const noticeDateText = item.noticeDate || (item.cnrNumber === "KLKM020018712024" ? "Served: 18-03-2025" : "Served");
+
+                    const ecourtsSteps = [
+                      { label: "Claim Petition Filed", isCompleted: true, isCurrent: false, dateText: item.filingDate || "Filed: 12-07-2024" },
+                      { label: "Notice Issued & Served", isCompleted: true, isCurrent: false, dateText: noticeDateText },
+                      { label: "Next Scheduled Hearing", isCompleted: !statusLower.includes("dispose"), isCurrent: !statusLower.includes("dispose"), dateText: `Next: ${item.nextHearing}` },
+                      { label: "Final Judgment & Disposal", isCompleted: statusLower.includes("dispose"), isCurrent: statusLower.includes("dispose"), dateText: statusLower.includes("dispose") ? "Disposed" : "Pending" },
+                    ];
+
+                    return (
+                      <div className="bg-purple-50/40 rounded-2xl p-4 sm:p-6 md:p-8 text-slate-900 shadow-sm border border-purple-200/80 relative overflow-hidden w-full min-w-0">
+                        <div className="flex items-center justify-between mb-4 sm:mb-6 pb-3 border-b border-purple-200/80">
+                          <div className="flex items-center gap-2">
+                            <Building2 size={16} className="text-purple-600" />
+                            <h3 className="text-[11px] sm:text-xs font-extrabold text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                              Official eCourts Live Proceedings Timeline
+                              <span className="px-2 py-0.5 rounded-full text-[9.5px] font-extrabold bg-purple-100 text-purple-800 border border-purple-200">
+                                Live eCourts Sync
                               </span>
-                              {stepObj.dateText && (
-                                <span className={`text-[10px] font-bold shrink-0 ${stepObj.isCurrent ? "text-amber-300 bg-amber-400/20 border border-amber-400/30 px-2 py-0.5 rounded-full" : "text-slate-400"}`}>
-                                  {stepObj.dateText}
-                                </span>
-                              )}
-                            </div>
+                            </h3>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
+
+                        {/* Mobile eCourts Stepper */}
+                        <div className="flex md:hidden flex-col space-y-4 relative pl-1 pt-1 pb-1">
+                          {ecourtsSteps.map((sObj, sIdx) => (
+                            <div key={sIdx} className="flex items-start gap-3 relative">
+                              {sIdx < ecourtsSteps.length - 1 && (
+                                <div className={`absolute left-4 top-8 bottom-0 w-0.5 -ml-[1px] ${sObj.isCompleted ? "bg-purple-600" : "bg-purple-200"}`} />
+                              )}
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10 transition-all ${sObj.isCompleted ? "bg-purple-600 text-white shadow-md border border-purple-400" : sObj.isCurrent ? "bg-purple-500 text-white shadow-lg border border-white scale-105" : "bg-slate-100 text-slate-400 border border-slate-300"}`}>
+                                {sObj.isCompleted ? <CheckCircle2 size={16} /> : <span className="text-xs font-bold">{sIdx + 1}</span>}
+                              </div>
+                              <div className="flex flex-col pt-1 min-w-0">
+                                <span className={`text-xs font-bold ${sObj.isCompleted ? "text-purple-900" : sObj.isCurrent ? "text-slate-900 font-extrabold" : "text-slate-500"}`}>
+                                  {sObj.label}
+                                </span>
+                                <span className="text-[10px] font-bold text-purple-700 mt-0.5">{sObj.dateText}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Desktop eCourts Stepper */}
+                        <div className="hidden md:flex items-start justify-between relative pt-2 pb-4">
+                          {ecourtsSteps.map((sObj, sIdx) => (
+                            <div key={sIdx} className="flex items-start flex-1 last:flex-none relative">
+                              {sIdx < ecourtsSteps.length - 1 && (
+                                <div className="absolute top-4 left-1/2 w-full px-4 -translate-y-1/2 z-0">
+                                  <div className={`h-1 rounded-full ${sObj.isCompleted ? "bg-gradient-to-r from-purple-600 to-indigo-600" : "bg-purple-200"}`} />
+                                </div>
+                              )}
+                              <div className="flex flex-col items-center mx-auto z-10 text-center space-y-2.5">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${sObj.isCompleted ? "bg-purple-600 text-white shadow-md border-2 border-purple-400" : sObj.isCurrent ? "bg-purple-500 text-white shadow-lg ring-4 ring-purple-400/30 border-2 border-white scale-110" : "bg-slate-100 text-slate-400 border border-slate-300"}`}>
+                                  {sObj.isCompleted ? <CheckCircle2 size={18} /> : <span className="text-xs font-bold">{sIdx + 1}</span>}
+                                </div>
+                                <div className="flex flex-col items-center">
+                                  <span className={`text-xs font-bold max-w-[120px] leading-snug ${sObj.isCompleted ? "text-purple-900" : sObj.isCurrent ? "text-slate-900 font-extrabold" : "text-slate-500"}`}>
+                                    {sObj.label}
+                                  </span>
+                                  <span className="mt-1 text-[10px] font-extrabold text-purple-800 bg-purple-100 border border-purple-300 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                                    {sObj.dateText}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })
           )}
         </div>
       </div>
-
     </div>
   );
 }

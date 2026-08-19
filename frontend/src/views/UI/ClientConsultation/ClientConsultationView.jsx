@@ -303,6 +303,24 @@ export default function ClientConsultationView() {
       return;
     }
 
+    // Pre-check if slot is already booked by another active consultation
+    const isConflict = upcomingMeetings.some(
+      (m) =>
+        String(m.date) === String(formData.date) &&
+        String(m.time).toLowerCase().trim() === String(formData.time).toLowerCase().trim() &&
+        m.status !== "Rejected" && m.status !== "Cancelled"
+    );
+
+    if (isConflict) {
+      setAlertModal({
+        show: true,
+        title: "Slot Already Booked!",
+        message: `The time slot (${formData.date} at ${formData.time}) is already booked by another client. Please choose another slot.`,
+        type: "warning",
+      });
+      return;
+    }
+
     const bookData = {
       client_name: resolvedClientName,
       client_id: user ? user.id : null,
@@ -335,7 +353,14 @@ export default function ClientConsultationView() {
         setMeetingLink("");
         setSelectedTimeDate(null);
       } else {
-        triggerSuccess("Failed to book appointment.", "error");
+        const errorData = await res.json().catch(() => ({}));
+        const errMsg = errorData.detail || "The selected time slot is already booked. Please choose another slot.";
+        setAlertModal({
+          show: true,
+          title: "Slot Already Booked!",
+          message: errMsg,
+          type: "warning",
+        });
       }
     } catch (err) {
       console.error("Error booking consultation:", err);
@@ -380,7 +405,14 @@ export default function ClientConsultationView() {
         setMeetingLink("");
         setSelectedTimeDate(null);
       } else {
-        triggerSuccess("Failed to reschedule consultation.", "error");
+        const errorData = await res.json().catch(() => ({}));
+        const errMsg = errorData.detail || "Failed to reschedule consultation. The selected slot may already be booked.";
+        setAlertModal({
+          show: true,
+          title: "Slot Already Booked!",
+          message: errMsg,
+          type: "warning",
+        });
       }
     } catch (err) {
       console.error("Error rescheduling:", err);
