@@ -289,10 +289,25 @@ class LiveeCourtsProvider(BaseeCourtsProvider):
                 except Exception:
                     pass
 
-            if html and ("Case Details" in html or "Petitioners" in html or "Petitioner" in html or "Next Hearing Date" in html or "Hearing Date" in html):
+            if html:
+                # CRITICAL FIX: Strip all <script> and <style> content to prevent matching JS i18n translation dictionaries
+                clean_html = re.sub(r'<script\b[^<]*(?:(?!</script>)<[^<]*)*</script>', '', html, flags=re.I | re.S)
+                clean_html = re.sub(r'<style\b[^<]*(?:(?!</style>)<[^<]*)*</style>', '', clean_html, flags=re.I | re.S)
+
+                def _is_clean_val(val):
+                    if not val:
+                        return False
+                    val_str = str(val).strip()
+                    forbidden = ['{"', '":"', '","', '\\Respondent', 'Enter advocate name', 'Court Number', 'Enter name in', 'Select state', 'Select district', 'Designed &amp;']
+                    return not any(f in val_str for f in forbidden)
+
+                def _clean_str(val):
+                    if not _is_clean_val(val):
+                        return ""
+                    return str(val).strip()
 
                 def _normalize_date(raw_s):
-                    if not raw_s:
+                    if not raw_s or not _is_clean_val(raw_s):
                         return ""
                     cleaned = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', raw_s.strip(), flags=re.I)
                     for fmt in ("%d %B %Y", "%d %b %Y", "%d-%m-%Y", "%d/%m/%Y", "%Y-%m-%d"):
@@ -302,90 +317,92 @@ class LiveeCourtsProvider(BaseeCourtsProvider):
                             return dt.strftime("%d-%m-%Y")
                         except ValueError:
                             pass
-                    return raw_s.strip()
+                    return ""
                 
-                # Extract Title / Parties
+                # Extract Title / Parties from cleaned HTML body
                 petitioner = ""
                 respondent = ""
-                pet_match = re.search(r"Petitioner\s*(?:Name)?\s*[:\-]?\s*(?:<[^>]+>)*\s*([^<>\n\r]+)", html, re.I)
-                if pet_match: petitioner = pet_match.group(1).strip()
-                res_match = re.search(r"Respondent\s*(?:Name)?\s*[:\-]?\s*(?:<[^>]+>)*\s*([^<>\n\r]+)", html, re.I)
-                if res_match: respondent = res_match.group(1).strip()
+                pet_match = re.search(r"Petitioner\s*(?:Name)?\s*[:\-]?\s*(?:<[^>]+>)*\s*([^<>\n\r]+)", clean_html, re.I)
+                if pet_match: petitioner = _clean_str(pet_match.group(1))
+                res_match = re.search(r"Respondent\s*(?:Name)?\s*[:\-]?\s*(?:<[^>]+>)*\s*([^<>\n\r]+)", clean_html, re.I)
+                if res_match: respondent = _clean_str(res_match.group(1))
                 
                 # Extract Court
                 court_name = ""
-                court_match = re.search(r"Court\s*Name\s*[:\-]?\s*(?:<[^>]+>)*\s*([^<>\n\r]+)", html, re.I)
-                if court_match: court_name = court_match.group(1).strip()
+                court_match = re.search(r"Court\s*Name\s*[:\-]?\s*(?:<[^>]+>)*\s*([^<>\n\r]+)", clean_html, re.I)
+                if court_match: court_name = _clean_str(court_match.group(1))
                 
                 # Extract Case Type
                 case_type = ""
-                type_match = re.search(r"Case\s*Type\s*[:\-]?\s*(?:<[^>]+>)*\s*([^<>\n\r]+)", html, re.I)
-                if type_match: case_type = type_match.group(1).strip()
+                type_match = re.search(r"Case\s*Type\s*[:\-]?\s*(?:<[^>]+>)*\s*([^<>\n\r]+)", clean_html, re.I)
+                if type_match: case_type = _clean_str(type_match.group(1))
                 
-                # Extract district from court name or CNR
+                # Extract district
                 district = ""
-                dist_match = re.search(r"District\s*[:\-]?\s*(?:<[^>]+>)*\s*([^<>\n\r]+)", html, re.I)
-                if dist_match: district = dist_match.group(1).strip()
+                dist_match = re.search(r"District\s*[:\-]?\s*(?:<[^>]+>)*\s*([^<>\n\r]+)", clean_html, re.I)
+                if dist_match: district = _clean_str(dist_match.group(1))
                 
                 # Extract Case No
                 case_no = clean_cnr
-                no_match = re.search(r"Reg(?:istration)?\s*no\s*[:\-]?\s*(?:<[^>]+>)*\s*([^<>\n\r]+)", html, re.I)
-                if no_match: case_no = no_match.group(1).strip()
+                no_match = re.search(r"Reg(?:istration)?\s*no\s*[:\-]?\s*(?:<[^>]+>)*\s*([^<>\n\r]+)", clean_html, re.I)
+                if no_match: case_no = _clean_str(no_match.group(1)) or clean_cnr
 
-                # Extract Next Hearing Date (e.g. 20th August 2026, 20-08-2026)
+                # Extract Next Hearing Date
                 next_hearing_date = ""
-                next_match = re.search(r"Next\s*Hearing\s*Date\s*(?:<[^>]+>|\s|:|-)*([0-9]{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+\s+[0-9]{4}|[0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})", html, re.I)
+                next_match = re.search(r"Next\s*Hearing\s*Date\s*(?:<[^>]+>|\s|:|-)*([0-9]{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+\s+[0-9]{4}|[0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})", clean_html, re.I)
                 if next_match:
                     next_hearing_date = _normalize_date(next_match.group(1))
 
                 # Extract Filing & Registration Date
                 filing_date = ""
-                filing_match = re.search(r"Filing\s*Date\s*(?:<[^>]+>|\s|:|-)*([0-9]{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+\s+[0-9]{4}|[0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})", html, re.I)
+                filing_match = re.search(r"Filing\s*Date\s*(?:<[^>]+>|\s|:|-)*([0-9]{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+\s+[0-9]{4}|[0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})", clean_html, re.I)
                 if filing_match:
                     filing_date = _normalize_date(filing_match.group(1))
 
                 reg_date = ""
-                reg_match = re.search(r"Registration\s*Date\s*(?:<[^>]+>|\s|:|-)*([0-9]{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+\s+[0-9]{4}|[0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})", html, re.I)
+                reg_match = re.search(r"Registration\s*Date\s*(?:<[^>]+>|\s|:|-)*([0-9]{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+\s+[0-9]{4}|[0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})", clean_html, re.I)
                 if reg_match:
                     reg_date = _normalize_date(reg_match.group(1))
 
                 # Extract Case Stage
                 case_stage = ""
-                stage_match = re.search(r"Case\s*Stage\s*(?:<[^>]+>|\s|:|-)*([^<>\n\r]+)", html, re.I)
+                stage_match = re.search(r"Case\s*Stage\s*(?:<[^>]+>|\s|:|-)*([^<>\n\r]+)", clean_html, re.I)
                 if stage_match:
-                    case_stage = stage_match.group(1).strip()
+                    case_stage = _clean_str(stage_match.group(1))
 
                 # Extract Presiding Officer / Judge
                 judge_name = ""
-                judge_match = re.search(r"(?:Court\s*Number\s*and\s*Judge|Presiding\s*Officer|Judge)\s*(?:<[^>]+>|\s|:|-)*([^<>\n\r]+)", html, re.I)
+                judge_match = re.search(r"(?:Court\s*Number\s*and\s*Judge|Presiding\s*Officer|Judge)\s*(?:<[^>]+>|\s|:|-)*([^<>\n\r]+)", clean_html, re.I)
                 if judge_match:
-                    judge_name = judge_match.group(1).strip()
+                    judge_name = _clean_str(judge_match.group(1))
                 
                 case_title = f"{petitioner} vs. {respondent}" if petitioner and respondent else ""
                 
-                return eCourtsCaseDetails(
-                    cnrNumber=clean_cnr,
-                    caseTitle=case_title,
-                    caseType=case_type,
-                    caseNo=case_no,
-                    filingDate=filing_date,
-                    registrationDate=reg_date,
-                    petitioner=petitioner,
-                    respondent=respondent,
-                    petitionerAdvocate="",
-                    respondentAdvocate="",
-                    courtName=court_name,
-                    courtType="Family Court" if "family" in court_name.lower() else "District Court" if court_name else "",
-                    district=district,
-                    state="",
-                    presidingJudge=judge_name,
-                    courtHall="",
-                    caseStage=case_stage,
-                    status="PENDING",
-                    nextHearingDate=next_hearing_date,
-                    timeline=[],
-                    orders=[]
-                )
+                # Only return portal_data if we extracted genuine clean data
+                if _is_clean_val(court_name) or _is_clean_val(case_title):
+                    return eCourtsCaseDetails(
+                        cnrNumber=clean_cnr,
+                        caseTitle=case_title,
+                        caseType=case_type,
+                        caseNo=case_no,
+                        filingDate=filing_date,
+                        registrationDate=reg_date,
+                        petitioner=petitioner,
+                        respondent=respondent,
+                        petitionerAdvocate="",
+                        respondentAdvocate="",
+                        courtName=court_name,
+                        courtType="Family Court" if "family" in court_name.lower() else "District Court" if court_name else "",
+                        district=district,
+                        state="",
+                        presidingJudge=judge_name,
+                        courtHall="",
+                        caseStage=case_stage,
+                        status="PENDING",
+                        nextHearingDate=next_hearing_date,
+                        timeline=[],
+                        orders=[]
+                    )
         except Exception as e:
             print(f"[eCourts] Live portal scrape note: {e}")
         return None
@@ -455,6 +472,11 @@ class LiveeCourtsProvider(BaseeCourtsProvider):
 
         state_info = state_names.get(state_code, ("India", f"{state_code}{dist_code} District & Sessions Court", "District", "District Court"))
         state_name, default_court, district_name, default_court_type = state_info
+
+        if dist_code == "HC":
+            default_court = f"High Court of {state_name}"
+            default_court_type = "High Court"
+            district_name = "Ernakulam" if state_code == "KL" else f"{state_name} High Court Bench"
 
         # Diverse Legal Case Types
         case_types = [
