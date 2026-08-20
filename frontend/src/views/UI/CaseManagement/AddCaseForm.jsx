@@ -468,6 +468,8 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
   };
 
   const isEditMode = !!editId;
+  const clientSectionRef = useRef(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [documents, setDocuments] = useState([
     { documentCategory: "", documentType: "", advocate: "", file: null },
   ]);
@@ -1100,6 +1102,15 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
     });
     setErrors(newErrors);
     setTouched(newTouched);
+
+    if (!valid) {
+      const clientFields = ["clientName", "contactNumber", "emailId", "altContactNumber"];
+      const hasClientError = clientFields.some((f) => newErrors[f]);
+      if (hasClientError && clientSectionRef.current) {
+        clientSectionRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
+
     return valid;
   }
 
@@ -1274,8 +1285,13 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (isSubmitting) return;
+
     if (clientMode === "") {
       alert("Please select New Client or Existing Client and fill the details.");
+      if (clientSectionRef.current) {
+        clientSectionRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
       return;
     }
 
@@ -1319,6 +1335,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
       }
     }
 
+    setIsSubmitting(true);
     try {
       // 1. Process and upload any new files using FormData sequentially
       const processedDocs = [];
@@ -1518,6 +1535,8 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
     } catch (error) {
       console.error("Save error:", error);
       alert(error.message || "Something went wrong while saving the case.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1639,7 +1658,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
           </div>
 
           {/* Client Information */}
-          <div className="space-y-5">
+          <div ref={clientSectionRef} className="space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">Client Details</h3>
               <div className="flex bg-[#F1F5F9] rounded-lg p-1">
@@ -2349,9 +2368,19 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
             </button>
             <button
               type="submit"
-              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-8 py-3.5 rounded-lg font-medium text-sm shadow-sm transition-all duration-200 cursor-pointer"
+              disabled={isSubmitting}
+              className={`bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-8 py-3.5 rounded-lg font-medium text-sm shadow-sm transition-all duration-200 flex items-center justify-center gap-2 ${
+                isSubmitting ? "opacity-65 cursor-not-allowed" : "cursor-pointer"
+              }`}
             >
-              {isEditMode ? "Update Case" : isConfidential ? "🔐 Save Confidential Case" : "Save Case File"}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving Case...</span>
+                </>
+              ) : (
+                isEditMode ? "Update Case" : isConfidential ? "🔐 Save Confidential Case" : "Save Case File"
+              )}
             </button>
           </div>
         </form>

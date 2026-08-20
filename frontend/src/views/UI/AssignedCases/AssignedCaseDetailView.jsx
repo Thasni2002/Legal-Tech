@@ -166,6 +166,8 @@ export default function AssignedCaseDetailView({
   // Billing state
   const [caseInvoices, setCaseInvoices] = useState([]);
   const [feeLoading, setFeeLoading] = useState(false);
+  const [billingPage, setBillingPage] = useState(0);
+  const billingPageSize = 10;
 
   // Timeline state
   const [timelineEvents, setTimelineEvents] = useState([]);
@@ -380,13 +382,35 @@ export default function AssignedCaseDetailView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCase?.id]);
 
+  const getEffectiveInvoiceStatus = (inv) => {
+    const rawStatus = (inv?.status || "Pending").trim();
+    const lower = rawStatus.toLowerCase();
+
+    if (lower === "paid") {
+      return "Paid";
+    }
+
+    if (inv?.created_at) {
+      try {
+        const createdDate = new Date(inv.created_at);
+        const now = new Date();
+        const diffDays = (now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
+        if (diffDays >= 7) {
+          return "Overdue";
+        }
+      } catch (e) {}
+    }
+
+    return rawStatus;
+  };
+
   // ─── Billing computed ─────────────────────────────────────────────────────────
   const totalBilled = caseInvoices.reduce((sum, inv) => sum + (Number(inv.grand_total) || 0), 0);
   const totalPaid = caseInvoices
-    .filter((inv) => inv.status === "Paid")
+    .filter((inv) => getEffectiveInvoiceStatus(inv) === "Paid")
     .reduce((sum, inv) => sum + (Number(inv.grand_total) || 0), 0);
   const totalPending = caseInvoices
-    .filter((inv) => inv.status !== "Paid")
+    .filter((inv) => getEffectiveInvoiceStatus(inv) !== "Paid")
     .reduce((sum, inv) => sum + (Number(inv.grand_total) || 0), 0);
   const paymentStatus =
     caseInvoices.length === 0
@@ -1417,48 +1441,134 @@ export default function AssignedCaseDetailView({
                       <span className="text-xs font-bold text-slate-500">{caseInvoices.length} Invoice{caseInvoices.length !== 1 ? "s" : ""}</span>
                     </div>
                     {caseInvoices.length > 0 ? (
-                      <div className="w-full max-w-full overflow-x-auto min-w-0">
-                        <table className="w-full min-w-[650px] text-left border-collapse">
-                          <thead>
-                            <tr className="bg-slate-50/50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                              <th className="px-4 sm:px-5 py-3">Invoice #</th>
-                              <th className="px-4 sm:px-5 py-3">Date</th>
-                              <th className="px-4 sm:px-5 py-3">Client</th>
-                              <th className="px-4 sm:px-5 py-3">Payment Mode</th>
-                              <th className="px-4 sm:px-5 py-3">Advocate Fee</th>
-                              <th className="px-4 sm:px-5 py-3 text-right">Grand Total (₹)</th>
-                              <th className="px-4 sm:px-5 py-3 text-center">Status</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100 text-xs">
-                            {caseInvoices.map((inv) => {
+                      <>
+                        {/* MOBILE CARDS VIEW (No horizontal scroll) */}
+                        <div className="block sm:hidden divide-y divide-slate-100 p-3 space-y-3">
+                          {caseInvoices
+                            .slice(billingPage * billingPageSize, (billingPage + 1) * billingPageSize)
+                            .map((inv) => {
                               const createdDate = inv.created_at
                                 ? new Date(inv.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
                                 : "—";
+                              const effectiveStatus = getEffectiveInvoiceStatus(inv);
                               const statusColor =
-                                inv.status === "Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                  : inv.status === "Overdue" ? "bg-rose-50 text-rose-700 border-rose-200"
-                                    : inv.status === "Sent" ? "bg-blue-50 text-blue-700 border-blue-200"
+                                effectiveStatus === "Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : effectiveStatus === "Overdue" ? "bg-rose-50 text-rose-700 border-rose-200"
+                                    : effectiveStatus === "Sent" ? "bg-blue-50 text-blue-700 border-blue-200"
                                       : "bg-amber-50 text-amber-700 border-amber-200";
                               return (
-                                <tr key={inv.id} className="hover:bg-slate-50/80 transition">
-                                  <td className="px-4 sm:px-5 py-3.5 font-bold text-blue-600">INV-{String(inv.id).padStart(4, "0")}</td>
-                                  <td className="px-4 sm:px-5 py-3.5 text-slate-600 font-medium">{createdDate}</td>
-                                  <td className="px-4 sm:px-5 py-3.5 text-slate-800 font-semibold">{inv.client_name || "—"}</td>
-                                  <td className="px-4 sm:px-5 py-3.5 text-slate-600">{inv.payment_method || "—"}</td>
-                                  <td className="px-4 sm:px-5 py-3.5 text-slate-700 font-semibold">
-                                    {inv.advocate_fee_amount > 0 ? `₹${Number(inv.advocate_fee_amount).toLocaleString("en-IN")}` : "—"}
-                                  </td>
-                                  <td className="px-4 sm:px-5 py-3.5 text-right font-black text-slate-800">₹{Number(inv.grand_total || 0).toLocaleString("en-IN")}</td>
-                                  <td className="px-4 sm:px-5 py-3.5 text-center">
-                                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${statusColor}`}>{inv.status}</span>
-                                  </td>
-                                </tr>
+                                <div key={inv.id} className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80 space-y-2.5">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-blue-600 text-xs">INV-{String(inv.id).padStart(4, "0")}</span>
+                                      <span className="text-[11px] text-slate-500 font-medium">• {createdDate}</span>
+                                    </div>
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusColor}`}>
+                                      {effectiveStatus}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between pt-1 border-t border-slate-200/50">
+                                    <div>
+                                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Client</span>
+                                      <span className="text-xs font-semibold text-slate-800">{inv.client_name || "—"}</span>
+                                    </div>
+                                    <div className="text-right">
+                                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Grand Total</span>
+                                      <span className="text-sm font-black text-slate-900">₹{Number(inv.grand_total || 0).toLocaleString("en-IN")}</span>
+                                    </div>
+                                  </div>
+                                </div>
                               );
                             })}
-                          </tbody>
-                        </table>
-                      </div>
+                        </div>
+
+                        {/* TABLET & DESKTOP TABLE VIEW (Full width, No horizontal scroll) */}
+                        <div className="hidden sm:block w-full">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="bg-slate-50/50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                <th className="px-4 py-3">Invoice #</th>
+                                <th className="px-4 py-3">Date</th>
+                                <th className="px-4 py-3">Client</th>
+                                <th className="px-4 py-3 text-right">Grand Total (₹)</th>
+                                <th className="px-4 py-3 text-center">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 text-xs">
+                              {caseInvoices
+                                .slice(billingPage * billingPageSize, (billingPage + 1) * billingPageSize)
+                                .map((inv) => {
+                                  const createdDate = inv.created_at
+                                    ? new Date(inv.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+                                    : "—";
+                                  const effectiveStatus = getEffectiveInvoiceStatus(inv);
+                                  const statusColor =
+                                    effectiveStatus === "Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                      : effectiveStatus === "Overdue" ? "bg-rose-50 text-rose-700 border-rose-200"
+                                        : effectiveStatus === "Sent" ? "bg-blue-50 text-blue-700 border-blue-200"
+                                          : "bg-amber-50 text-amber-700 border-amber-200";
+                                  return (
+                                    <tr key={inv.id} className="hover:bg-slate-50/80 transition">
+                                      <td className="px-4 py-3.5 font-bold text-blue-600 whitespace-nowrap">INV-{String(inv.id).padStart(4, "0")}</td>
+                                      <td className="px-4 py-3.5 text-slate-600 font-medium whitespace-nowrap">{createdDate}</td>
+                                      <td className="px-4 py-3.5 text-slate-800 font-semibold">{inv.client_name || "—"}</td>
+                                      <td className="px-4 py-3.5 text-right font-black text-slate-800 whitespace-nowrap">₹{Number(inv.grand_total || 0).toLocaleString("en-IN")}</td>
+                                      <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${statusColor}`}>{effectiveStatus}</span>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {caseInvoices.length > billingPageSize && (() => {
+                          const totalInvoices = caseInvoices.length;
+                          const totalPages = Math.ceil(totalInvoices / billingPageSize);
+                          const startIdx = billingPage * billingPageSize + 1;
+                          const endIdx = Math.min((billingPage + 1) * billingPageSize, totalInvoices);
+
+                          return (
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-[#E2E8F0] bg-white rounded-b-2xl">
+                              <span className="text-xs text-[#64748B] font-semibold text-center sm:text-left">
+                                Showing <span className="font-bold text-[#0F172A]">{startIdx}</span> to <span className="font-bold text-[#0F172A]">{endIdx}</span> of <span className="font-bold text-[#0F172A]">{totalInvoices}</span> invoices
+                              </span>
+                              <div className="flex flex-wrap items-center justify-center gap-1.5 max-w-full">
+                                <button
+                                  onClick={() => setBillingPage((p) => Math.max(0, p - 1))}
+                                  disabled={billingPage === 0}
+                                  className="px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg border border-[#E2E8F0] bg-white text-[#475569] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-2xs"
+                                >
+                                  &lt; Prev
+                                </button>
+
+                                {Array.from({ length: totalPages }, (_, idx) => (
+                                  <button
+                                    key={idx}
+                                    onClick={() => setBillingPage(idx)}
+                                    className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-xs font-bold rounded-lg border transition-all cursor-pointer shadow-2xs ${
+                                      billingPage === idx
+                                        ? "bg-[#2563EB] text-white border-[#2563EB]"
+                                        : "bg-white text-[#475569] border-[#E2E8F0] hover:bg-[#F8FAFC]"
+                                    }`}
+                                  >
+                                    {idx + 1}
+                                  </button>
+                                ))}
+
+                                <button
+                                  onClick={() => setBillingPage((p) => Math.min(totalPages - 1, p + 1))}
+                                  disabled={billingPage >= totalPages - 1}
+                                  className="px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg border border-[#E2E8F0] bg-white text-[#475569] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-2xs"
+                                >
+                                  Next &gt;
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </>
                     ) : (
                       <div className="p-6 sm:p-10 text-center bg-slate-50 w-full max-w-full min-w-0">
                         <p className="text-slate-500 text-xs sm:text-sm font-semibold mb-1">No billing invoices found for this case</p>

@@ -206,6 +206,12 @@ export default function CaseTracking() {
         if (selectedCase && selectedCase.dbId === caseDbId) {
           setSelectedCase((prev) => ({ ...prev, status: newStatus }));
         }
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("caseStatusUpdated"));
+          try {
+            localStorage.setItem("lastStatusUpdate", Date.now().toString());
+          } catch (e) {}
+        }
       } else {
         alert("Failed to update status. Please try again.");
       }

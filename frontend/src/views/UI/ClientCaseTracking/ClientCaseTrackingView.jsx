@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Scale,
 } from "lucide-react";
+import { API_BASE_URL } from "@/utils/api";
 import useModulePermission from "@/utils/useModulePermission";
 import { getLoggedInUser } from "@/utils/auth";
 
@@ -26,11 +27,15 @@ export default function ClientCaseTrackingView() {
   const [cases, setCases] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
 
-  // Fetch cases dynamically
+  // Fetch cases dynamically with real-time auto-refresh
   useEffect(() => {
-    const fetchCases = async () => {
+    let intervalId = null;
+
+    const fetchCases = async (showLoading = false) => {
+      if (showLoading) setDataLoading(true);
       try {
-        const res = await fetch("http://127.0.0.1:8000/case-management/");
+        const res = await fetch(`${API_BASE_URL}/case-management/`);
+        if (!res.ok) return;
         const data = await res.json();
 
         let clientCases = data;
@@ -128,11 +133,34 @@ export default function ClientCaseTrackingView() {
       } catch (err) {
         console.error("Error fetching case tracking data:", err);
       } finally {
-        setDataLoading(false);
+        if (showLoading) setDataLoading(false);
       }
     };
+
     if (!loading && perms.view) {
-      fetchCases();
+      fetchCases(true);
+
+      const handleRefresh = () => fetchCases(false);
+      window.addEventListener("focus", handleRefresh);
+      window.addEventListener("caseStatusUpdated", handleRefresh);
+
+      const handleStorage = (e) => {
+        if (e.key === "lastStatusUpdate") {
+          fetchCases(false);
+        }
+      };
+      window.addEventListener("storage", handleStorage);
+
+      intervalId = setInterval(() => {
+        fetchCases(false);
+      }, 3000);
+
+      return () => {
+        window.removeEventListener("focus", handleRefresh);
+        window.removeEventListener("caseStatusUpdated", handleRefresh);
+        window.removeEventListener("storage", handleStorage);
+        if (intervalId) clearInterval(intervalId);
+      };
     }
   }, [loading, perms.view, user]);
 
@@ -148,53 +176,10 @@ export default function ClientCaseTrackingView() {
   };
 
   const getDynamicTimelineSteps = (statusStr, filingDate, updatedAtDate, disposalDateVal, statusUpdatedAtVal) => {
-    const s = (statusStr || "").toLowerCase();
+    const s = (statusStr || "").trim().toLowerCase();
 
-    const isWon = s.includes("won");
-    const isLost = s.includes("lost");
-    const isDisposed = s.includes("dispose");
-    const isDismissed = s.includes("dismiss");
-    const isSettled = s.includes("settle");
-    const isClosed = s.includes("close") || s.includes("reject") || s.includes("resolve") || isWon || isLost || isDisposed || isDismissed || isSettled;
-
-    const activeBadgeText = statusUpdatedAtVal ? `Updated ${statusUpdatedAtVal}` : "Active Step";
-
-    // Final Outcome Reached (Disposed, Won, Lost, Closed, Settled, Dismissed)
-    if (isClosed) {
-      let finalLabel = "Case Closed";
-      if (isWon) finalLabel = "🏆 Case Won";
-      else if (isLost) finalLabel = "❌ Case Lost";
-      else if (isDisposed) finalLabel = "⚖️ Disposed";
-      else if (isDismissed) finalLabel = "🚫 Case Dismissed";
-      else if (isSettled) finalLabel = "🤝 Case Settled";
-
-      let formattedDisposalText = "Completed";
-      if (disposalDateVal) {
-        const rawDisp = String(disposalDateVal);
-        if (rawDisp.startsWith("Disposed")) {
-          formattedDisposalText = rawDisp;
-        } else {
-          formattedDisposalText = `Disposed On ${rawDisp}`;
-        }
-      } else {
-        formattedDisposalText = formatDateLabel("Disposed", updatedAtDate);
-      }
-
-      return [
-        { label: "Case Filed", isCompleted: true, isCurrent: false, dateText: formatDateLabel("Filed", filingDate) },
-        { label: "Document Verified", isCompleted: true, isCurrent: false, dateText: "Completed" },
-        { label: "Hearing Completed", isCompleted: true, isCurrent: false, dateText: "Completed" },
-        { label: "Judgment Delivered", isCompleted: true, isCurrent: false, dateText: "Completed" },
-        {
-          label: finalLabel,
-          isCompleted: true,
-          isCurrent: true,
-          dateText: formattedDisposalText,
-        },
-      ];
-    }
-
-    const stageList = [
+    // Actual workflow stages from update status options
+    const baseStages = [
       "Active",
       "Client Consulting",
       "Client Detail Collection",
@@ -204,34 +189,123 @@ export default function ClientCaseTrackingView() {
       "Under Review",
       "In Progress",
       "Pending",
-      "Won",
-      "Lost",
-      "On Hold",
-      "Disposed",
     ];
 
-    let currIdx = stageList.findIndex(st => st.toLowerCase() === s);
+    const isWon = s.includes("won");
+    const isLost = s.includes("lost");
+    const isDisposed = s.includes("dispose");
+    const isOnHold = s.includes("hold");
+    const isClosed = isWon || isLost || isDisposed || isOnHold || s.includes("close") || s.includes("dismiss") || s.includes("settle");
+
+    const activeBadgeText = statusUpdatedAtVal ? `Updated ${statusUpdatedAtVal}` : "Active Step";
+
+    let finalOutcomeLabel = "Final Outcome";
+    if (isWon) finalOutcomeLabel = "🏆 Case Won";
+    else if (isLost) finalOutcomeLabel = "❌ Case Lost";
+    else if (isDisposed) finalOutcomeLabel = "⚖️ Disposed";
+    else if (isOnHold) finalOutcomeLabel = "⏸️ On Hold";
+
+    // 1. If Case is Closed/Finished: Show 5 milestone steps ending with Final Outcome
+    if (isClosed) {
+      let formattedDisposalText = "Completed";
+      if (disposalDateVal) {
+        const rawDisp = String(disposalDateVal);
+        formattedDisposalText = rawDisp.startsWith("Disposed") ? rawDisp : `Disposed On ${rawDisp}`;
+      } else {
+        formattedDisposalText = formatDateLabel("Disposed", updatedAtDate);
+      }
+
+      return [
+        { label: "Active", isCompleted: true, isCurrent: false, dateText: formatDateLabel("Active", filingDate) },
+        { label: "Document Verified", isCompleted: true, isCurrent: false, dateText: "Completed" },
+        { label: "Under Review", isCompleted: true, isCurrent: false, dateText: "Completed" },
+        { label: "Pending", isCompleted: true, isCurrent: false, dateText: "Completed" },
+        { label: finalOutcomeLabel, isCompleted: true, isCurrent: true, dateText: formattedDisposalText },
+      ];
+    }
+
+    let currIdx = baseStages.findIndex(st => st.toLowerCase() === s);
     if (currIdx === -1) {
-      currIdx = stageList.findIndex(st => s.includes(st.toLowerCase()) || st.toLowerCase().includes(s));
+      currIdx = baseStages.findIndex(st => s.includes(st.toLowerCase()) || st.toLowerCase().includes(s));
     }
     if (currIdx === -1) {
       currIdx = 0;
     }
 
-    const prevLabel = currIdx > 0 ? stageList[currIdx - 1] : "Case Filed";
-    const currLabel = statusStr || stageList[currIdx];
+    // Handle early indexes (0 and 1) with clean 5 steps
+    if (currIdx === 0) {
+      return [
+        { label: "Active", isCompleted: false, isCurrent: true, dateText: activeBadgeText },
+        { label: "Client Consulting", isCompleted: false, isCurrent: false, dateText: "Upcoming" },
+        { label: "Document Verified", isCompleted: false, isCurrent: false, dateText: "Upcoming" },
+        { label: "In Progress", isCompleted: false, isCurrent: false, dateText: "Upcoming" },
+        { label: "Final Outcome", isCompleted: false, isCurrent: false, dateText: "Pending" },
+      ];
+    }
 
-    const rawNext = currIdx + 1 < stageList.length ? stageList[currIdx + 1] : "Disposed";
-    const isNextOutcome = ["won", "lost", "disposed", "on hold"].includes(rawNext.toLowerCase());
-    const nextLabel = isNextOutcome ? "Verdict Awaiting" : rawNext;
+    if (currIdx === 1) {
+      return [
+        { label: "Active", isCompleted: true, isCurrent: false, dateText: filingDate ? formatDateLabel("Active", filingDate) : "Completed" },
+        { label: "Client Consulting", isCompleted: false, isCurrent: true, dateText: activeBadgeText },
+        { label: "Document Pending", isCompleted: false, isCurrent: false, dateText: "Upcoming" },
+        { label: "In Progress", isCompleted: false, isCurrent: false, dateText: "Upcoming" },
+        { label: "Final Outcome", isCompleted: false, isCurrent: false, dateText: "Pending" },
+      ];
+    }
 
-    return [
-      { label: "Case Filed", isCompleted: true, isCurrent: false, dateText: formatDateLabel("Filed", filingDate) },
-      { label: prevLabel, isCompleted: true, isCurrent: false, dateText: "Completed" },
-      { label: currLabel, isCompleted: false, isCurrent: true, dateText: activeBadgeText },
-      { label: nextLabel, isCompleted: false, isCurrent: false, dateText: "Upcoming" },
-      { label: "Final Outcome", isCompleted: false, isCurrent: false, dateText: "Pending" },
+    // Dynamic 5-step window: [First (Active), Previous, Current, Next, Last (Final Outcome)]
+    const firstLabel = baseStages[0]; // Active
+    const prevLabel = baseStages[currIdx - 1]; // Previous status
+    const currLabel = statusStr || baseStages[currIdx]; // Current status
+    const hasNext = currIdx + 1 < baseStages.length;
+    const nextLabel = hasNext ? baseStages[currIdx + 1] : "Hearing Awaiting"; // Next status
+
+    const resultSteps = [
+      {
+        label: firstLabel,
+        isCompleted: true,
+        isCurrent: false,
+        dateText: filingDate ? formatDateLabel("Active", filingDate) : "Completed",
+      },
     ];
+
+    // Add Previous step if not identical to first
+    if (currIdx - 1 > 0) {
+      resultSteps.push({
+        label: prevLabel,
+        isCompleted: true,
+        isCurrent: false,
+        dateText: "Completed",
+      });
+    }
+
+    // Add Current step
+    resultSteps.push({
+      label: currLabel,
+      isCompleted: false,
+      isCurrent: true,
+      dateText: activeBadgeText,
+    });
+
+    // Add Next step if available
+    if (hasNext) {
+      resultSteps.push({
+        label: nextLabel,
+        isCompleted: false,
+        isCurrent: false,
+        dateText: "Upcoming",
+      });
+    }
+
+    // Add Last Outcome step
+    resultSteps.push({
+      label: "Final Outcome",
+      isCompleted: false,
+      isCurrent: false,
+      dateText: "Pending",
+    });
+
+    return resultSteps;
   };
 
   // Filter cases based on inputs
@@ -395,10 +469,15 @@ export default function ClientCaseTrackingView() {
                       {timelineSteps.map((stepObj, stepIdx) => {
                         const stepIcons = [
                           <FileText key={0} size={15} />,
-                          <Briefcase key={1} size={15} />,
-                          <Calendar key={2} size={15} />,
-                          <Scale key={3} size={15} />,
+                          <User key={1} size={15} />,
+                          <FileText key={2} size={15} />,
+                          <Clock key={3} size={15} />,
                           <ShieldCheck key={4} size={15} />,
+                          <User key={5} size={15} />,
+                          <Search key={6} size={15} />,
+                          <Briefcase key={7} size={15} />,
+                          <Calendar key={8} size={15} />,
+                          <Scale key={9} size={15} />,
                         ];
 
                         return (
@@ -469,10 +548,15 @@ export default function ClientCaseTrackingView() {
                       {timelineSteps.map((stepObj, stepIdx) => {
                         const stepIcons = [
                           <FileText key={0} size={16} />,
-                          <Briefcase key={1} size={16} />,
-                          <Calendar key={2} size={16} />,
-                          <Scale key={3} size={16} />,
+                          <User key={1} size={16} />,
+                          <FileText key={2} size={16} />,
+                          <Clock key={3} size={16} />,
                           <ShieldCheck key={4} size={16} />,
+                          <User key={5} size={16} />,
+                          <Search key={6} size={16} />,
+                          <Briefcase key={7} size={16} />,
+                          <Calendar key={8} size={16} />,
+                          <Scale key={9} size={16} />,
                         ];
 
                         return (
