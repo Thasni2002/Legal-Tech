@@ -62,7 +62,12 @@ def seed_admin_and_permissions():
         db.commit()
         print("Created default admin user.")
     else:
-        print("Default admin user already exists.")
+        if admin.email != "shiyaxxx3@gmail.com":
+            admin.email = "shiyaxxx3@gmail.com"
+            db.commit()
+            print("Updated default admin user email to shiyaxxx3@gmail.com.")
+        else:
+            print("Default admin user already exists.")
 
     db.close()
     print("Admin and roles seeding completed successfully.")
