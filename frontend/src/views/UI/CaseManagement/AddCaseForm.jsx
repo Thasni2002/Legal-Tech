@@ -544,17 +544,36 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
       }
       const data = await res.json();
 
+      const cleanString = (val) => {
+        if (!val || typeof val !== "string") return "";
+        const s = val.trim();
+        if (
+          s.includes('{"') ||
+          s.includes('":"') ||
+          s.includes('","') ||
+          s.includes('\\Respondent') ||
+          s.includes('Enter advocate name') ||
+          s.includes('Court Number') ||
+          s.includes('Select state') ||
+          s.includes('Select district') ||
+          s.includes('Designed &amp;')
+        ) {
+          return "";
+        }
+        return s;
+      };
+
       // Smart category & subtype matching from live eCourts payload
       // Classification is based purely on API response data (courtName, caseType, act, title)
       // No state-specific CNR prefix assumptions — works for any Indian state
       let category = "";
       let subtype = "";
 
-      const rawType = (data.caseType || "").toLowerCase();
-      const rawCategory = (data.caseCategory || data.category || "").toLowerCase();
-      const rawAct = (data.act || data.actSection || "").toLowerCase();
-      const rawCourt = (data.courtName || "").toLowerCase();
-      const rawTitle = (data.caseTitle || "").toLowerCase();
+      const rawType = (cleanString(data.caseType) || "").toLowerCase();
+      const rawCategory = (cleanString(data.caseCategory || data.category) || "").toLowerCase();
+      const rawAct = (cleanString(data.act || data.actSection) || "").toLowerCase();
+      const rawCourt = (cleanString(data.courtName) || "").toLowerCase();
+      const rawTitle = (cleanString(data.caseTitle) || "").toLowerCase();
       const combinedSearchStr = `${rawType} ${rawCategory} ${rawAct} ${rawCourt} ${rawTitle}`.toLowerCase();
 
       // Detect High Court by court name keywords only (works for any state)
@@ -609,20 +628,20 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
       setSelectedSubtype(subtype);
 
       // 1. District: use directly from API, no Kerala-specific filtering
-      let districtFetched = data.district || data.courtDistrict || "";
+      let districtFetched = cleanString(data.district || data.courtDistrict);
 
       // 2. Court Name & Type: use directly from API, no local list matching
-      const rawCourtName = (data.courtName || "").trim();
+      const rawCourtName = cleanString(data.courtName);
       const finalCourtName = rawCourtName || "";
       const courtTypes = getTypesForCourtName(finalCourtName);
       const matchedCourtType = courtTypes && courtTypes.length > 0 ? courtTypes[0] : "";
 
 
       // 3. Case ID preservation (keep sequential system caseId format case-YYYY-XXX)
-      const fetchedCaseNo = data.caseNo || "";
+      const fetchedCaseNo = cleanString(data.caseNo) || "";
 
       // 4. Clean Client details & Facts (Do not auto-fetch clientName per user request)
-      const fetchedPetitionerName = data.petitioner || "";
+      const fetchedPetitionerName = cleanString(data.petitioner);
 
       const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
       let autoPassword = "temp_";
@@ -630,19 +649,19 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
         autoPassword += chars.charAt(Math.floor(Math.random() * chars.length));
       }
 
-      const cleanFacts = data.facts
-        ? data.facts
-        : (data.caseStage
-            ? `Case Stage: ${data.caseStage}\nPetitioner: ${fetchedPetitionerName || "N/A"}\nRespondent: ${data.respondent || "N/A"}\nPresiding Judge: ${data.presidingJudge || "N/A"}`
+      const cleanFacts = cleanString(data.facts)
+        ? cleanString(data.facts)
+        : (cleanString(data.caseStage)
+            ? `Case Stage: ${cleanString(data.caseStage)}\nPetitioner: ${fetchedPetitionerName || "N/A"}\nRespondent: ${cleanString(data.respondent) || "N/A"}\nPresiding Judge: ${cleanString(data.presidingJudge) || "N/A"}`
             : (formData.facts || "Case details auto-imported from eCourts."));
 
       const courtInfo = findStateAndDistrictByCourt(finalCourtName || districtFetched || "");
-      const stateFetched = data.state || data.courtState || courtInfo.state || "Kerala";
+      const stateFetched = cleanString(data.state || data.courtState) || courtInfo.state || "Kerala";
 
       setFormData((prev) => ({
         ...prev,
         cnrNumber: data.cnrNumber || cnr,
-        caseTitle: data.caseTitle || prev.caseTitle,
+        caseTitle: cleanString(data.caseTitle) || prev.caseTitle,
         courtName: finalCourtName || prev.courtName,
         courtType: matchedCourtType || prev.courtType || "Criminal",
         caseType: `${category}: ${subtype}`,
