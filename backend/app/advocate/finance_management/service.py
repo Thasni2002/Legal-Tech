@@ -125,17 +125,39 @@ def delete_invoice(db: Session, invoice_id: int) -> bool:
 # invoice report/summary
 
 def get_invoice_stats(db: Session, advocate_id: Optional[int] = None) -> dict:
+    from datetime import datetime
+
     query = db.query(Invoice)
 
     if advocate_id is not None:
         query = query.filter(Invoice.advocate_id == advocate_id)
 
     invoices = query.all()
+    now = datetime.now()
 
-    total_invoiced = sum(inv.grand_total for inv in invoices)
-    total_paid = sum(inv.grand_total for inv in invoices if inv.status.lower() == "paid")
-    total_pending = sum(inv.grand_total for inv in invoices if inv.status.lower() in ("pending", "sent"))
-    total_overdue = sum(inv.grand_total for inv in invoices if inv.status.lower() == "overdue")
+    total_invoiced = sum(inv.grand_total for inv in invoices if inv.grand_total)
+    total_paid = 0.0
+    total_pending = 0.0
+    total_overdue = 0.0
+
+    for inv in invoices:
+        amount = inv.grand_total or 0.0
+        st = (inv.status or "Pending").lower()
+
+        if st == "paid":
+            total_paid += amount
+        elif st == "overdue":
+            total_overdue += amount
+        else:
+            is_overdue = False
+            if inv.created_at:
+                c_date = inv.created_at.replace(tzinfo=None) if inv.created_at.tzinfo else inv.created_at
+                if (now - c_date).days >= 7:
+                    is_overdue = True
+            if is_overdue:
+                total_overdue += amount
+            else:
+                total_pending += amount
 
     return {
         "total_invoiced": total_invoiced,

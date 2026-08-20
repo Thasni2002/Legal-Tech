@@ -231,6 +231,13 @@ export default function AssignedCasesView() {
           status: newStatus,
         }));
       }
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("caseStatusUpdated"));
+        try {
+          localStorage.setItem("lastStatusUpdate", Date.now().toString());
+        } catch (e) {}
+      }
     } catch (error) {
       console.error("Status update error:", error);
       alert("Failed to update status. Please try again.");

@@ -40,6 +40,28 @@ const InvoiceHistoryView = ({
     return clientMatch && monthMatch;
   });
 
+  const getEffectiveInvoiceStatus = (inv) => {
+    const rawStatus = (inv.status || "Pending").trim();
+    const lower = rawStatus.toLowerCase();
+
+    if (lower === "paid") {
+      return "Paid";
+    }
+
+    if (inv.created_at) {
+      try {
+        const createdDate = new Date(inv.created_at);
+        const now = new Date();
+        const diffDays = (now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
+        if (diffDays >= 7) {
+          return "Overdue";
+        }
+      } catch (e) {}
+    }
+
+    return rawStatus;
+  };
+
   const getHeaderLabel = (dateStr) => {
     if (!dateStr) return "GENERATED RECORD";
     const d = new Date(dateStr);
@@ -167,6 +189,8 @@ const InvoiceHistoryView = ({
                       const dateKey = typeof rawDate === "string" ? rawDate.split("T")[0] : String(rawDate);
                       const showHeader = dateKey !== lastGroupKey;
                       if (showHeader) lastGroupKey = dateKey;
+                      const effectiveStatus = getEffectiveInvoiceStatus(inv);
+                      const isPaid = effectiveStatus.toLowerCase() === "paid";
 
                       return (
                         <React.Fragment key={inv.id}>
@@ -189,42 +213,19 @@ const InvoiceHistoryView = ({
                                 </p>
                               </div>
                               <div>
-                                {hasPermission("Finance Management", "edit") ? (
-                                  <select
-                                    value={inv.status}
-                                    onChange={(e) =>
-                                      handleUpdateStatus(inv.id, e.target.value)
-                                    }
-                                    className={`text-xs border rounded-lg px-2.5 py-1 font-bold focus:outline-none transition-colors cursor-pointer ${
-                                      inv.status.toLowerCase() === "paid"
-                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                        : inv.status.toLowerCase() === "sent"
-                                        ? "bg-blue-50 text-blue-700 border-blue-200"
-                                        : inv.status.toLowerCase() === "overdue"
-                                        ? "bg-red-50 text-red-700 border-red-200"
-                                        : "bg-amber-50 text-amber-700 border-amber-200"
-                                    }`}
-                                  >
-                                    <option value="Pending">Pending</option>
-                                    <option value="Sent">Sent</option>
-                                    <option value="Paid">Paid</option>
-                                    <option value="Overdue">Overdue</option>
-                                  </select>
-                                ) : (
-                                  <span
-                                    className={`inline-block text-xs border rounded-lg px-2.5 py-1 font-bold ${
-                                      inv.status.toLowerCase() === "paid"
-                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                        : inv.status.toLowerCase() === "sent"
-                                        ? "bg-blue-50 text-blue-700 border-blue-200"
-                                        : inv.status.toLowerCase() === "overdue"
-                                        ? "bg-red-50 text-red-700 border-red-200"
-                                        : "bg-amber-50 text-amber-700 border-amber-200"
-                                    }`}
-                                  >
-                                    {inv.status}
-                                  </span>
-                                )}
+                                <span
+                                  className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-extrabold border ${
+                                    effectiveStatus.toLowerCase() === "paid"
+                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                      : effectiveStatus.toLowerCase() === "sent"
+                                      ? "bg-blue-50 text-blue-700 border-blue-200"
+                                      : effectiveStatus.toLowerCase() === "overdue"
+                                      ? "bg-rose-50 text-rose-700 border-rose-200"
+                                      : "bg-amber-50 text-amber-700 border-amber-200"
+                                  }`}
+                                >
+                                  {effectiveStatus}
+                                </span>
                               </div>
                             </div>
 
@@ -300,6 +301,7 @@ const InvoiceHistoryView = ({
                           const dateKey = typeof rawDate === "string" ? rawDate.split("T")[0] : String(rawDate);
                           const showHeader = dateKey !== lastGroupKey;
                           if (showHeader) lastGroupKey = dateKey;
+                          const effectiveStatus = getEffectiveInvoiceStatus(inv);
 
                           return (
                             <React.Fragment key={inv.id}>
@@ -343,42 +345,19 @@ const InvoiceHistoryView = ({
 
                                 {/* Status */}
                                 <td className="px-4 py-3 text-center">
-                                  {hasPermission("Finance Management", "edit") ? (
-                                    <select
-                                      value={inv.status}
-                                      onChange={(e) =>
-                                        handleUpdateStatus(inv.id, e.target.value)
-                                      }
-                                      className={`text-xs border rounded px-2.5 py-1 font-semibold focus:outline-none transition-colors ${
-                                        inv.status.toLowerCase() === "paid"
-                                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                          : inv.status.toLowerCase() === "sent"
-                                          ? "bg-blue-50 text-blue-700 border-blue-200"
-                                          : inv.status.toLowerCase() === "overdue"
-                                          ? "bg-red-50 text-red-700 border-red-200"
-                                          : "bg-amber-50 text-amber-700 border-amber-200"
-                                      }`}
-                                    >
-                                      <option value="Pending">Pending</option>
-                                      <option value="Sent">Sent</option>
-                                      <option value="Paid">Paid</option>
-                                      <option value="Overdue">Overdue</option>
-                                    </select>
-                                  ) : (
-                                    <span
-                                      className={`inline-block text-xs border rounded px-2.5 py-1 font-semibold ${
-                                        inv.status.toLowerCase() === "paid"
-                                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                          : inv.status.toLowerCase() === "sent"
-                                          ? "bg-blue-50 text-blue-700 border-blue-200"
-                                          : inv.status.toLowerCase() === "overdue"
-                                          ? "bg-red-50 text-red-700 border-red-200"
-                                          : "bg-amber-50 text-amber-700 border-amber-200"
-                                      }`}
-                                    >
-                                      {inv.status}
-                                    </span>
-                                  )}
+                                  <span
+                                    className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-extrabold border ${
+                                      effectiveStatus.toLowerCase() === "paid"
+                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                        : effectiveStatus.toLowerCase() === "sent"
+                                        ? "bg-blue-50 text-blue-700 border-blue-200"
+                                        : effectiveStatus.toLowerCase() === "overdue"
+                                        ? "bg-rose-50 text-rose-700 border-rose-200"
+                                        : "bg-amber-50 text-amber-700 border-amber-200"
+                                    }`}
+                                  >
+                                    {effectiveStatus}
+                                  </span>
                                 </td>
 
                                 {/* Actions */}
