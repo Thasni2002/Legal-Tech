@@ -12,7 +12,12 @@ def create_default_user(db: Session):
     ).first()
 
     if existing_user:
-        print(f"Default admin user already exists.")
+        if existing_user.email != target_email:
+            existing_user.email = target_email
+            db.commit()
+            print(f"Updated default admin user email to {target_email}")
+        else:
+            print(f"Default admin user already exists.")
     else:
         default_user = User(
             username=target_username,
