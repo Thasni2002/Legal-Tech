@@ -272,12 +272,14 @@ export default function ClientHistory() {
 
   useEffect(() => {
     const targetName = (client?.fullName || client?.clientName || "").trim().toLowerCase();
+    const targetClientId = (client?.clientId || "").trim();
 
     const fetchDbCases = async () => {
       try {
-        const [res, resAssigned] = await Promise.all([
+        const [res, resAssigned, resClients] = await Promise.all([
           fetch(`${API_BASE_URL}/case-management/`),
           fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases`).catch(() => null),
+          fetch(`${API_BASE_URL}/clients/`).catch(() => null),
         ]);
 
         if (res.ok) {
@@ -288,43 +290,39 @@ export default function ClientHistory() {
               assignedData = await resAssigned.json();
             } catch (e) {}
           }
+
+          let dbClients = [];
+          if (resClients && resClients.ok) {
+            try {
+              dbClients = await resClients.json();
+            } catch (e) {}
+          }
           
-          const clientMap = {};
-          let idCounter = 1;
-          data.forEach(c => {
-            const name = c.client_name;
-            if (!name) return;
-            if (!clientMap[name]) {
-              clientMap[name] = {
-                clientId: `CUST-${String(idCounter).padStart(4, '0')}`,
-                fullName: name,
-                clientName: name,
-                phone: c.contact_number || "N/A",
-                altPhone: c.alt_contact_number || "",
-                email: c.email_id || "N/A",
-                address: c.client_address || "",
-                district: c.client_district || "",
-                caseStatus: c.status || "N/A",
-                caseTitle: c.case_title || "N/A",
-                caseNumber: c.case_no || "N/A",
-                courtName: c.court_name || "N/A",
-                assignedAdvocate: c.selected_advocate || c.advocate_name || "Not Assigned",
-              };
-              idCounter++;
-            } else {
-              if (!clientMap[name].address && c.client_address) clientMap[name].address = c.client_address;
-              if (!clientMap[name].district && c.client_district) clientMap[name].district = c.client_district;
-              if (!clientMap[name].altPhone && c.alt_contact_number) clientMap[name].altPhone = c.alt_contact_number;
-            }
-          });
-          const clientsArray = Object.values(clientMap);
+          const clientsArray = dbClients.map(c => ({
+            clientId: c.client_id,
+            fullName: c.full_name,
+            clientName: c.full_name,
+            phone: c.phone || "N/A",
+            altPhone: c.alt_phone || "",
+            email: c.email || "N/A",
+            address: c.address || "",
+            district: c.district || "",
+            caseStatus: c.status || "Active",
+            totalCases: c.total_cases || 0,
+            activeCases: c.active_cases || 0,
+            courtName: c.court_name || "N/A",
+            assignedAdvocate: "Senior Advocate",
+          }));
+
           setAllClientsList(clientsArray);
           setStats({
             clientCount: clientsArray.length,
             caseCount: data.length
           });
+
           const matchedCases = client
             ? data.filter(item => {
+                if (targetClientId && item.client_id && item.client_id === targetClientId) return true;
                 const itemClientName = (item.client_name || "").trim().toLowerCase();
                 return itemClientName === targetName || targetName.includes(itemClientName) || itemClientName.includes(targetName);
               })

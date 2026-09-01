@@ -435,8 +435,8 @@ class LiveeCourtsProvider(BaseeCourtsProvider):
                     TimelineEvent(id="3", eventStage="Scheduled Hearing", eventDate="20-08-2026", title="Next Scheduled Hearing (Adjourned)", description="Listed before Motor Accident Claims Tribunal, Kollam for evidence and proceedings", benchName="Hon'ble Motor Accidents Claims Tribunal", courtHall="1-Motor Accidents Claims Tribunal", status="Scheduled"),
                 ],
                 orders=[
-                    OrderDocumentItem(id="1", orderDate="12-07-2024", orderType="Filing Order", judgeName="Hon'ble Motor Accidents Claims Tribunal", summary="Claim petition registered under Motor Vehicles Act Sec 166", fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", fileSize="1.0 MB"),
-                    OrderDocumentItem(id="2", orderDate="18-03-2025", orderType="First Hearing Order", judgeName="Hon'ble Motor Accidents Claims Tribunal", summary="Notice served to respondents; adjourned to 20-08-2026", fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", fileSize="1.5 MB"),
+                    OrderDocumentItem(id="1", orderDate="12-07-2024", orderType="Filing Order", judgeName="Hon'ble Motor Accidents Claims Tribunal", summary="Claim petition registered under Motor Vehicles Act Sec 166", fileUrl="", fileSize="1.0 MB"),
+                    OrderDocumentItem(id="2", orderDate="18-03-2025", orderType="First Hearing Order", judgeName="Hon'ble Motor Accidents Claims Tribunal", summary="Notice served to respondents; adjourned to 20-08-2026", fileUrl="", fileSize="1.5 MB"),
                 ]
             )
         import hashlib
@@ -555,11 +555,11 @@ class LiveeCourtsProvider(BaseeCourtsProvider):
                 TimelineEvent(id="8", eventStage="Scheduled Final Hearing", eventDate=next_hearing_str, title="Final Oral Arguments & Judgment", description="Listed for final arguments of both counsels and judgment pronouncement", benchName=rng.choice(judges_pool), courtHall=rng.choice(court_halls), status="Scheduled"),
             ]
             order_items = [
-                OrderDocumentItem(id="1", orderDate=reg_date_str, orderType="Cognizance Order", judgeName=rng.choice(judges_pool), summary="Cognizance taken u/s 138 NI Act; summons issued to accused", fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", fileSize="1.1 MB"),
-                OrderDocumentItem(id="2", orderDate=f"19-04-{year}", orderType="Bail & Notice Order", judgeName=rng.choice(judges_pool), summary="Bail allowed on personal bond; plea of not guilty recorded", fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", fileSize="1.3 MB"),
-                OrderDocumentItem(id="3", orderDate=f"14-06-{year}", orderType="Daily Deposition Order", judgeName=rng.choice(judges_pool), summary="Deposition of CW-1 completed; bank manager witness summoned", fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", fileSize="1.8 MB"),
-                OrderDocumentItem(id="4", orderDate=f"20-08-{year}", orderType="313 Record Order", judgeName=rng.choice(judges_pool), summary="Sec 313 examination recorded; posted for DW evidence", fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", fileSize="1.4 MB"),
-                OrderDocumentItem(id="5", orderDate=f"10-11-{year}", orderType="Argument Hearing Order", judgeName=rng.choice(judges_pool), summary="Defense evidence closed; written arguments directed", fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", fileSize="2.0 MB"),
+                OrderDocumentItem(id="1", orderDate=reg_date_str, orderType="Cognizance Order", judgeName=rng.choice(judges_pool), summary="Cognizance taken u/s 138 NI Act; summons issued to accused", fileUrl="", fileSize="1.1 MB"),
+                OrderDocumentItem(id="2", orderDate=f"19-04-{year}", orderType="Bail & Notice Order", judgeName=rng.choice(judges_pool), summary="Bail allowed on personal bond; plea of not guilty recorded", fileUrl="", fileSize="1.3 MB"),
+                OrderDocumentItem(id="3", orderDate=f"14-06-{year}", orderType="Daily Deposition Order", judgeName=rng.choice(judges_pool), summary="Deposition of CW-1 completed; bank manager witness summoned", fileUrl="", fileSize="1.8 MB"),
+                OrderDocumentItem(id="4", orderDate=f"20-08-{year}", orderType="313 Record Order", judgeName=rng.choice(judges_pool), summary="Sec 313 examination recorded; posted for DW evidence", fileUrl="", fileSize="1.4 MB"),
+                OrderDocumentItem(id="5", orderDate=f"10-11-{year}", orderType="Argument Hearing Order", judgeName=rng.choice(judges_pool), summary="Defense evidence closed; written arguments directed", fileUrl="", fileSize="2.0 MB"),
             ]
         elif case_type_prefix == "M.A.C.P.":
             timeline_events = [
@@ -572,9 +572,9 @@ class LiveeCourtsProvider(BaseeCourtsProvider):
                 TimelineEvent(id="7", eventStage="Final Award Arguments", eventDate=next_hearing_str, title="Arguments on Award & Multiplier", description="Listed before MACT Tribunal Judge for final compensation award calculation", benchName=rng.choice(judges_pool), courtHall=rng.choice(court_halls), status="Scheduled"),
             ]
             order_items = [
-                OrderDocumentItem(id="1", orderDate=reg_date_str, orderType="Notice Order", judgeName=rng.choice(judges_pool), summary="Notice issued to driver, owner, and insurer", fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", fileSize="1.0 MB"),
-                OrderDocumentItem(id="2", orderDate=f"18-06-{year}", orderType="Medical Board Order", judgeName=rng.choice(judges_pool), summary="Medical Board disability certificate taken on record", fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", fileSize="1.5 MB"),
-                OrderDocumentItem(id="3", orderDate=f"10-09-{year}", orderType="Interim Award Order", judgeName=rng.choice(judges_pool), summary="No-fault liability interim award of ₹50,000 ordered", fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", fileSize="1.7 MB"),
+                OrderDocumentItem(id="1", orderDate=reg_date_str, orderType="Notice Order", judgeName=rng.choice(judges_pool), summary="Notice issued to driver, owner, and insurer", fileUrl="", fileSize="1.0 MB"),
+                OrderDocumentItem(id="2", orderDate=f"18-06-{year}", orderType="Medical Board Order", judgeName=rng.choice(judges_pool), summary="Medical Board disability certificate taken on record", fileUrl="", fileSize="1.5 MB"),
+                OrderDocumentItem(id="3", orderDate=f"10-09-{year}", orderType="Interim Award Order", judgeName=rng.choice(judges_pool), summary="No-fault liability interim award of ₹50,000 ordered", fileUrl="", fileSize="1.7 MB"),
             ]
         elif case_type_prefix == "O.P.":
             timeline_events = [
@@ -586,8 +586,8 @@ class LiveeCourtsProvider(BaseeCourtsProvider):
                 TimelineEvent(id="6", eventStage="Final Hearing", eventDate=next_hearing_str, title="Scheduled Final Arguments & Order", description="Listed for final submissions and judgment/decree", benchName=rng.choice(judges_pool), courtHall=rng.choice(court_halls), status="Scheduled"),
             ]
             order_items = [
-                OrderDocumentItem(id="1", orderDate=f"14-02-{year}", orderType="Conciliation Order", judgeName=rng.choice(judges_pool), summary="Referred to Family Mediation & Counseling Centre", fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", fileSize="1.1 MB"),
-                OrderDocumentItem(id="2", orderDate=f"18-05-{year}", orderType="Interim Maintenance Order", judgeName=rng.choice(judges_pool), summary="Interim maintenance of ₹15,000/month ordered pending petition", fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", fileSize="1.6 MB"),
+                OrderDocumentItem(id="1", orderDate=f"14-02-{year}", orderType="Conciliation Order", judgeName=rng.choice(judges_pool), summary="Referred to Family Mediation & Counseling Centre", fileUrl="", fileSize="1.1 MB"),
+                OrderDocumentItem(id="2", orderDate=f"18-05-{year}", orderType="Interim Maintenance Order", judgeName=rng.choice(judges_pool), summary="Interim maintenance of ₹15,000/month ordered pending petition", fileUrl="", fileSize="1.6 MB"),
             ]
         else:
             # Civil Suit / Commercial Suit Default
@@ -601,9 +601,9 @@ class LiveeCourtsProvider(BaseeCourtsProvider):
                 TimelineEvent(id="7", eventStage="Final Arguments", eventDate=next_hearing_str, title="Scheduled Final Arguments", description="Listed before Presiding Judge for final arguments and decree", benchName=rng.choice(judges_pool), courtHall=rng.choice(court_halls), status="Scheduled"),
             ]
             order_items = [
-                OrderDocumentItem(id="1", orderDate=reg_date_str, orderType="Admission Order", judgeName=rng.choice(judges_pool), summary="Plaint admitted; summons issued to defendant", fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", fileSize="1.2 MB"),
-                OrderDocumentItem(id="2", orderDate=f"10-06-{year}", orderType="Interim Injunction Order", judgeName=rng.choice(judges_pool), summary="Temporary injunction granted ordering status quo", fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", fileSize="1.6 MB"),
-                OrderDocumentItem(id="3", orderDate=f"15-08-{year}", orderType="Framing of Issues Order", judgeName=rng.choice(judges_pool), summary="Issues framed under CPC Order XIV; posted for trial evidence", fileUrl="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", fileSize="1.4 MB"),
+                OrderDocumentItem(id="1", orderDate=reg_date_str, orderType="Admission Order", judgeName=rng.choice(judges_pool), summary="Plaint admitted; summons issued to defendant", fileUrl="", fileSize="1.2 MB"),
+                OrderDocumentItem(id="2", orderDate=f"10-06-{year}", orderType="Interim Injunction Order", judgeName=rng.choice(judges_pool), summary="Temporary injunction granted ordering status quo", fileUrl="", fileSize="1.6 MB"),
+                OrderDocumentItem(id="3", orderDate=f"15-08-{year}", orderType="Framing of Issues Order", judgeName=rng.choice(judges_pool), summary="Issues framed under CPC Order XIV; posted for trial evidence", fileUrl="", fileSize="1.4 MB"),
             ]
 
         return eCourtsCaseDetails(

@@ -56,99 +56,62 @@ export default function ClientView() {
   const fetchClients = async () => {
     setLoading(true);
     try {
-      const [casesRes, advRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/case-management/`),
-        fetch(`${API_BASE_URL}/lawfirm-management/`).catch(() => null),
+      const [clientsRes, casesRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/clients/`),
+        fetch(`${API_BASE_URL}/case-management/`).catch(() => null),
       ]);
 
-      let profilesMap = {};
-      if (advRes && advRes.ok) {
-        const advList = await advRes.json();
-        advList.forEach((adv) => {
-          if (adv.emailAddress) {
-            profilesMap[adv.emailAddress.toLowerCase().trim()] = adv;
-          }
-          if (adv.advocateName) {
-            profilesMap[adv.advocateName.toLowerCase().trim()] = adv;
-          }
-        });
+      let backendClients = [];
+      if (clientsRes.ok) {
+        backendClients = await clientsRes.json();
       }
 
-      // Check local cache if client saved profile locally
-      try {
-        const saved = localStorage.getItem("advocate_profile");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed.emailAddress) {
-            profilesMap[parsed.emailAddress.toLowerCase().trim()] = parsed;
-          }
-          if (parsed.advocateName) {
-            profilesMap[parsed.advocateName.toLowerCase().trim()] = parsed;
-          }
-        }
-      } catch (e) {}
-
-      if (casesRes.ok) {
-        const casesData = await casesRes.json();
-        const clientMap = {};
-        let idCounter = 1;
-
-        casesData.forEach(c => {
-          const name = c.client_name;
-          if (!name) return;
-
-          const emailKey = (c.email_id || "").toLowerCase().trim();
-          const nameKey = name.toLowerCase().trim();
-          const matchedProfile = profilesMap[emailKey] || profilesMap[nameKey] || {};
-
-          if (!clientMap[name]) {
-            clientMap[name] = {
-              clientId: c.client_id || `CLT-2026-${String(idCounter).padStart(3, '0')}`,
-              clientName: matchedProfile.advocateName || name,
-              contactNumber: matchedProfile.phoneNumber || c.contact_number || "N/A",
-              altPhone: c.alt_contact_number || "",
-              emailId: matchedProfile.emailAddress || c.email_id || "N/A",
-              clientAddress: c.client_address || "",
-              clientDistrict: c.client_district || "",
-              profileImage: matchedProfile.profileImage || null,
-              activeCases: 1,
-              courtName: c.court_name || "N/A",
-              status: c.status || "N/A",
-            };
-            idCounter++;
-          } else {
-            clientMap[name].activeCases += 1;
-            if (!clientMap[name].clientAddress && c.client_address) clientMap[name].clientAddress = c.client_address;
-            if (!clientMap[name].clientDistrict && c.client_district) clientMap[name].clientDistrict = c.client_district;
-            if (!clientMap[name].altPhone && c.alt_contact_number) clientMap[name].altPhone = c.alt_contact_number;
-            if (!clientMap[name].profileImage && matchedProfile.profileImage) {
-              clientMap[name].profileImage = matchedProfile.profileImage;
-            }
-          }
-        });
-
-        const clientList = Object.values(clientMap);
-        setClients(clientList);
-
-        let activeCount = 0;
-        let casesSum = 0;
-
-        clientList.forEach(c => {
-          const statusLower = (c.status || "").toLowerCase();
-          if (statusLower === "active" || statusLower === "progress" || statusLower === "in progress") {
-            activeCount++;
-          }
-          casesSum += c.activeCases;
-        });
-
-        setMetrics({
-          totalClients: clientList.length,
-          activeClients: activeCount,
-          totalCases: casesSum,
-        });
+      let casesData = [];
+      if (casesRes && casesRes.ok) {
+        casesData = await casesRes.json();
       }
+
+      const clientList = backendClients.map((c) => {
+        const matchingCases = casesData.filter(
+          (k) => (k.client_id && k.client_id === c.client_id) ||
+                 (k.client_name && k.client_name.trim().toLowerCase() === (c.full_name || "").trim().toLowerCase())
+        );
+
+        const totalCases = c.total_cases !== undefined ? c.total_cases : matchingCases.length;
+        const activeCases = c.active_cases !== undefined ? c.active_cases : matchingCases.filter(
+          (k) => !["disposed", "closed", "won", "lost"].includes((k.status || "").toLowerCase())
+        ).length;
+
+        const firstCase = matchingCases[0] || {};
+
+        return {
+          clientId: c.client_id,
+          clientName: c.full_name,
+          contactNumber: c.phone || firstCase.contact_number || "N/A",
+          altPhone: c.alt_phone || firstCase.alt_contact_number || "",
+          emailId: c.email || firstCase.email_id || "N/A",
+          clientAddress: c.address || firstCase.client_address || "",
+          clientDistrict: c.district || firstCase.client_district || "",
+          profileImage: null,
+          activeCases: activeCases,
+          totalCases: totalCases,
+          courtName: c.court_name || firstCase.court_name || "N/A",
+          status: c.status || (activeCases > 0 ? "Active" : "Inactive"),
+        };
+      });
+
+      setClients(clientList);
+
+      const activeCount = clientList.filter((c) => (c.status || "").toLowerCase() === "active").length;
+      const casesSum = clientList.reduce((acc, c) => acc + (c.totalCases || 0), 0);
+
+      setMetrics({
+        totalClients: clientList.length,
+        activeClients: activeCount,
+        totalCases: casesSum,
+      });
     } catch (err) {
-      console.error("Failed to fetch clients from case-management:", err);
+      console.error("Failed to fetch clients:", err);
     } finally {
       setLoading(false);
     }

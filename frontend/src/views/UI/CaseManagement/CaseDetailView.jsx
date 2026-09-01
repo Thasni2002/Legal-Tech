@@ -879,7 +879,7 @@ export default function CaseDetailView({ id }) {
 
   const handleDownloadOrderPDF = async (ord) => {
     if (!ord) return;
-    if (ord.fileUrl && ord.fileUrl.startsWith("http") && !ord.fileUrl.includes("dummy.pdf") && !ord.fileUrl.includes("w3.org")) {
+    if (ord.fileUrl && ord.fileUrl.startsWith("http")) {
       window.open(ord.fileUrl, "_blank");
       return;
     }

@@ -124,7 +124,7 @@ def lookup_cnr_service(cnr_number: str, db: Optional[Session] = None) -> eCourts
                             orderType=f"{t.eventStage} Order" if "Order" not in t.eventStage else t.eventStage,
                             judgeName=t.benchName or "Hon'ble Presiding Judge",
                             summary=f"Court proceeding record & daily order for {t.title}",
-                            fileUrl=t.documentUrl or "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+                            fileUrl=t.documentUrl or "",
                             fileSize="1.2 MB"
                         ))
 
@@ -373,7 +373,7 @@ def sync_case_with_ecourts_service(db: Session, case_id: int) -> SyncCaseRespons
                             orderType=f"{t.eventStage} Order" if "Order" not in t.eventStage else t.eventStage,
                             judgeName=t.benchName or "Hon'ble Presiding Judge",
                             summary=f"Court proceeding record & daily order for {t.title}",
-                            fileUrl=t.documentUrl or "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+                            fileUrl=t.documentUrl or "",
                             fileSize="1.2 MB"
                         ))
                 if mapped_orders:

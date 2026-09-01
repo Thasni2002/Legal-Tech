@@ -441,9 +441,14 @@ export default function CalendarView() {
       const uniqueClientsMap = new Map();
       uniqueClientsMap.set("free slot available", { id: "free", clientName: "Free Slot Available" });
 
-      try {
-        const resUsers = await fetch(`${API_BASE_URL}/permissions/users`);
-        if (resUsers.ok) {
+      const [resUsers, resClients, resCases] = await Promise.all([
+        fetch(`${API_BASE_URL}/permissions/users`).catch(() => null),
+        fetch(`${API_BASE_URL}/clients/`).catch(() => null),
+        fetch(`${API_BASE_URL}/case-management/`).catch(() => null),
+      ]);
+
+      if (resUsers && resUsers.ok) {
+        try {
           const usersData = await resUsers.json();
           usersData.forEach((u) => {
             if (u.role && u.role.toLowerCase() === "client") {
@@ -459,44 +464,42 @@ export default function CalendarView() {
               }
             }
           });
-        }
-      } catch (e) {}
+        } catch (e) {}
+      }
 
-      try {
-        const resClientMgmt = await fetch(`${API_BASE_URL}/client-management/`);
-        if (resClientMgmt.ok) {
-          const clientsData = await resClientMgmt.json();
+      if (resClients && resClients.ok) {
+        try {
+          const clientsData = await resClients.json();
           clientsData.forEach((c) => {
-            const cName = (c.name || c.client_name || c.clientName || "").trim();
+            const cName = (c.full_name || c.name || c.client_name || c.clientName || "").trim();
             if (cName) {
               const key = cName.toLowerCase();
               if (!uniqueClientsMap.has(key)) {
-                uniqueClientsMap.set(key, { id: c.id || cName, clientName: cName, email: c.email || c.email_id || "" });
+                uniqueClientsMap.set(key, { id: c.client_id || c.id || cName, clientName: cName, email: c.email || c.email_id || "" });
               }
             }
           });
-        }
-      } catch (e) {}
+        } catch (e) {}
+      }
 
-      try {
-        const resCases = await fetch(`${API_BASE_URL}/case-management/`);
-        if (resCases.ok) {
+      if (resCases && resCases.ok) {
+        try {
           const casesData = await resCases.json();
           casesData.forEach((c) => {
             const cName = (c.clientName || c.client_name || "").trim();
             if (cName) {
               const key = cName.toLowerCase();
               if (!uniqueClientsMap.has(key)) {
-                uniqueClientsMap.set(key, { id: cName, clientName: cName, email: c.emailId || c.email_id || "" });
+                uniqueClientsMap.set(key, { id: c.client_id || cName, clientName: cName, email: c.emailId || c.email_id || "" });
               }
             }
           });
-        }
-      } catch (e) {}
+        } catch (e) {}
+      }
 
       setClients(Array.from(uniqueClientsMap.values()));
     } catch (err) {
-      console.error("Failed to fetch clients for calendar:", err);
+      console.error("Error fetching clients for calendar:", err);
     }
   };
 

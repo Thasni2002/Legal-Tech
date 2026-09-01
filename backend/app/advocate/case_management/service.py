@@ -16,12 +16,80 @@ from .models import Case, AIDocumentHistory
 from .schemas import CaseCreate, CaseUpdate
 
 
+def _sync_client_record(db: Session, client_id: str, full_name: str, email: str, phone: str, alt_phone: str = None, address: str = None, district: str = None) -> str:
+    """Ensure a Client record exists in clients table and return the valid client_id."""
+    try:
+        from app.advocate.client_management.models import Client
+        if not full_name or not full_name.strip():
+            return client_id or ""
+
+        client = None
+        if client_id and client_id.strip():
+            client = db.query(Client).filter(Client.client_id == client_id.strip()).first()
+        if not client and full_name and full_name.strip():
+            client = db.query(Client).filter(func.lower(Client.full_name) == full_name.strip().lower()).first()
+
+        cid = client_id.strip() if client_id and client_id.strip() else None
+
+        if not cid and client and client.client_id:
+            cid = client.client_id
+
+        if not cid:
+            current_year = datetime.now().year
+            total_clients = db.query(Client).count()
+            cid = f"CLT-{current_year}-{str(total_clients + 1).zfill(3)}"
+
+        if client:
+            if not client.client_id or client.client_id != cid:
+                client.client_id = cid
+            if full_name:
+                client.full_name = full_name
+            if email and email != "N/A":
+                client.email = email
+            if phone and phone != "N/A":
+                client.phone = phone
+            if alt_phone:
+                client.alt_phone = alt_phone
+            if address:
+                client.address = address
+            if district:
+                client.district = district
+        else:
+            new_client = Client(
+                client_id=cid,
+                full_name=full_name,
+                email=email or "",
+                phone=phone or "",
+                alt_phone=alt_phone or "",
+                address=address or "",
+                district=district or ""
+            )
+            db.add(new_client)
+
+        return cid
+    except Exception as e:
+        print(f"Error syncing client record: {e}")
+        return client_id or ""
+
+
 def create_case(db: Session, data: CaseCreate, current_user=None):
     if data.cnrNumber and data.cnrNumber.strip():
         cnr_val = data.cnrNumber.strip()
         existing = db.query(Case).filter(func.lower(Case.cnr_number) == func.lower(cnr_val)).first()
         if existing:
             raise HTTPException(status_code=400, detail="A case with this CNR Number already exists.")
+
+    # Sync and get verified client_id
+    assigned_client_id = _sync_client_record(
+        db=db,
+        client_id=data.clientId or data.caseId,
+        full_name=data.clientName,
+        email=data.emailId,
+        phone=data.contactNumber,
+        alt_phone=data.altContactNumber,
+        address=data.clientAddress,
+        district=data.clientDistrict
+    )
 
     # ── Confidential Vault: validate and hash password if needed ──
     is_confidential = bool(data.isConfidential)
@@ -38,8 +106,8 @@ def create_case(db: Session, data: CaseCreate, current_user=None):
         owner_id = getattr(current_user, 'id', None)
 
     new_case = Case(
-        case_id=data.caseId,
-        client_id=data.clientId,
+        case_id=data.caseId or assigned_client_id,
+        client_id=assigned_client_id,
         case_title=data.caseTitle,
         case_no=data.caseNo,
         case_type=data.caseType,
@@ -125,23 +193,6 @@ def get_all_cases(db: Session, current_user=None):
         ac_map_id, ac_map_no = {}, {}
 
     for case in cases:
-        # Automatic eCourts background status sync if active and CNR number present
-        if case.cnr_number and (case.status or "").lower() not in ["disposed", "closed", "won", "lost"]:
-            try:
-                from app.advocate.ecourts.service import get_ecourts_provider
-                provider = get_ecourts_provider()
-                details = provider.lookup_by_cnr(case.cnr_number)
-                if details:
-                    if details.nextHearingDate and details.nextHearingDate != case.next_hearing_date:
-                        case.next_hearing_date = details.nextHearingDate
-                    if details.status and "disposed" in details.status.lower() and "disposed" not in (case.status or "").lower():
-                        case.status = details.status
-                    if details.courtName and details.courtName != case.court_name:
-                        if not ('{"' in str(details.courtName) or '":"' in str(details.courtName) or '","' in str(details.courtName) or 'Court Number' in str(details.courtName) or len(str(details.courtName)) > 80):
-                            case.court_name = details.courtName
-            except Exception as sync_err:
-                print(f"[eCourts Auto Sync] Error for CNR {case.cnr_number}: {sync_err}")
-
         db.expunge(case)
         if isinstance(case.documents, str):
             try:
@@ -320,6 +371,19 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
         case.cnr_number = data.cnrNumber
 
     case.updated_at = datetime.utcnow()
+
+    # Sync client record in clients table
+    if case.client_name:
+        _sync_client_record(
+            db=db,
+            client_id=case.client_id,
+            full_name=case.client_name,
+            email=case.email_id,
+            phone=case.contact_number,
+            alt_phone=case.alt_contact_number,
+            address=case.client_address,
+            district=case.client_district
+        )
 
     if isinstance(case.documents, (list, dict)):
         case.documents = json.dumps(case.documents)

@@ -274,36 +274,29 @@ export default function CourtFeeCalView() {
     })
     .reduce((sum, invoice) => sum + Number(invoice.grand_total || 0), 0);
 
-  // Fetch data from FastAPI backend
+  // Fetch data from FastAPI backend in parallel
   const fetchInvoicesAndStats = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/finance/invoices`);
-      if (res.ok) {
-        const data = await res.json();
+      const [invoicesRes, statsRes, clientsRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/finance/invoices`).catch(() => null),
+        fetch(`${API_BASE_URL}/finance/stats`).catch(() => null),
+        fetch(`${API_BASE_URL}/finance/clients`).catch(() => null),
+      ]);
+
+      if (invoicesRes && invoicesRes.ok) {
+        const data = await invoicesRes.json();
         setInvoices(data);
       }
-    } catch (err) {
-      console.error("FAILED URL:", `${API_BASE_URL}/finance/invoices`, err);
-    }
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/finance/stats`);
-      if (res.ok) {
-        const data = await res.json();
+      if (statsRes && statsRes.ok) {
+        const data = await statsRes.json();
         setStats(data);
       }
-    } catch (err) {
-      console.error("FAILED URL:", `${API_BASE_URL}/finance/stats`, err);
-    }
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/finance/clients`);
-      if (res.ok) {
-        const data = await res.json();
+      if (clientsRes && clientsRes.ok) {
+        const data = await clientsRes.json();
         setClients(data);
       }
     } catch (err) {
-      console.error("FAILED URL:", `${API_BASE_URL}/finance/clients`, err);
+      console.error("Error fetching finance data:", err);
     }
   }, []);
 
