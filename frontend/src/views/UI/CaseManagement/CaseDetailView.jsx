@@ -59,6 +59,7 @@ import SimilarCasesClient from "@/app/case-management/similar-cases/[id]/Similar
 import OCRPanel from "./OCRPanel";
 import DocumentViewerModal from "@/components/common/DocumentViewerModal";
 import CaseTimelineView from "@/components/case/CaseTimelineView";
+import CaseProgressSummaryModal from "@/components/case/CaseProgressSummaryModal";
 
 // Helper to compute Hearing Date alert status and days-remaining countdown
 export function getHearingAlertInfo(rawHearingDate, status) {
@@ -304,6 +305,7 @@ export default function CaseDetailView({ id }) {
   const [showPasswordIdx, setShowPasswordIdx] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [viewBriefModal, setViewBriefModal] = useState(null);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [billingPage, setBillingPage] = useState(0);
@@ -975,26 +977,52 @@ export default function CaseDetailView({ id }) {
   };
 
   const fetchCaseInvoices = async (caseNo, clientEmail) => {
-    if (!caseNo && !clientEmail) return;
+    if (!selectedCase) return;
     setFeeLoading(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/finance/invoices`);
+      const res = await fetch(`${API_BASE_URL}/finance/invoices`);
       if (res.ok) {
         const data = await res.json();
-        const searchNo = (caseNo || "").trim().toLowerCase();
-        const searchEmail = (clientEmail || "").trim().toLowerCase();
+        
+        // Collect all valid identifiers for the currently selected case
+        const validIdentifiers = [
+          selectedCase.case_no,
+          selectedCase.case_id,
+          selectedCase.id ? String(selectedCase.id) : null,
+          selectedCase.cnr_number
+        ]
+          .filter(Boolean)
+          .map((s) => String(s).trim().toLowerCase());
 
-        const matched = data.filter((inv) => {
+        const searchEmail = (clientEmail || selectedCase.email_id || selectedCase.email || "").trim().toLowerCase();
+        const searchClientName = (selectedCase.client_name || "").trim().toLowerCase();
+
+        const matched = (Array.isArray(data) ? data : []).filter((inv) => {
           const invCase = (inv.case_number || "").trim().toLowerCase();
+          const invClientId = (inv.client_id || "").trim().toLowerCase();
           const invEmail = (inv.email || "").trim().toLowerCase();
+          const invClientName = (inv.client_name || "").trim().toLowerCase();
 
-          // Match by exact case number (if invoice has a case number)
-          const caseMatch = searchNo && invCase !== "" && invCase === searchNo;
-          // Match by exact client email (if both sides have an email and no case number on invoice)
-          const emailMatch = searchEmail && invEmail !== "" && invEmail === searchEmail;
+          // 1. If invoice specifies a case_number, it MUST match this case's identifiers
+          if (invCase !== "") {
+            return validIdentifiers.some((id) => id === invCase);
+          }
 
-          return caseMatch || emailMatch;
+          // 2. If invoice specifies client_id matching case identifier
+          if (invClientId !== "" && validIdentifiers.some((id) => id === invClientId)) {
+            return true;
+          }
+
+          // 3. If invoice has NO case_number specified, match by client email or client name ONLY IF invoice has no other case_number
+          if (invCase === "") {
+            const emailMatches = searchEmail !== "" && invEmail !== "" && invEmail === searchEmail;
+            const nameMatches = searchClientName !== "" && invClientName !== "" && invClientName === searchClientName;
+            return emailMatches || nameMatches;
+          }
+
+          return false;
         });
+
         setCaseInvoices(matched);
       }
     } catch (e) {
@@ -1581,18 +1609,7 @@ export default function CaseDetailView({ id }) {
             {/* AI Strategic Tools Group */}
             <button
               id="btn-view-summary-header"
-              onClick={() => {
-                try {
-                  const saved = JSON.parse(localStorage.getItem(`saved_briefs_${selectedCase.id}`) || "[]");
-                  if (saved && saved.length > 0) {
-                    setViewBriefModal(saved[0]);
-                  } else {
-                    router.push(`/case-management/similar-cases/${selectedCase.id}`);
-                  }
-                } catch (e) {
-                  router.push(`/case-management/similar-cases/${selectedCase.id}`);
-                }
-              }}
+              onClick={() => setShowSummaryModal(true)}
               className="flex items-center justify-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-xs hover:shadow active:scale-95 cursor-pointer text-center min-w-0"
             >
               <Eye size={14} className="shrink-0" />
@@ -3570,15 +3587,12 @@ export default function CaseDetailView({ id }) {
         document.body
       )}
 
-      {/* Document Viewer Modal */}
-      {viewingDocument && (
-        <DocumentViewerModal
-          fileUrl={viewingDocument.url}
-          title={viewingDocument.file}
-          badge={viewingDocument.documentType}
-          onClose={() => setViewingDocument(null)}
-        />
-      )}
+      {/* AI Case Progress & Master Summary Modal */}
+      <CaseProgressSummaryModal
+        isOpen={showSummaryModal}
+        onClose={() => setShowSummaryModal(false)}
+        caseId={selectedCase?.id}
+      />
     </div>
   );
 }

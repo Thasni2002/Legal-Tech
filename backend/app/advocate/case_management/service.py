@@ -1076,3 +1076,198 @@ def get_case_timeline(db: Session, case_id: int, current_user=None):
     return events
 
 
+def get_full_case_ai_summary(db: Session, case_id: int, current_user=None) -> dict:
+    """
+    Generates a 100% dynamic AI Master Case Progress & Summary report for a specific case.
+    Analyzes the entire journey:
+    - Core Case Details (Title, No, CNR, Court, Category, Client, Filing Date, Next Hearing Date, Status)
+    - Assigned Advocate(s) & Team Members
+    - Full Chronological Timeline Events
+    - Case Notes, Discussions & Hearing Logs
+    - Document Workflows & Files
+    """
+    import os
+    import json
+    import re
+    try:
+        import google.generativeai as genai
+    except Exception:
+        genai = None
+
+    case = db.query(Case).filter(Case.id == case_id).first()
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    # Security check for confidential vault cases
+    if case.is_confidential:
+        owner_id = getattr(current_user, 'id', None)
+        user_role = (getattr(current_user, 'role', '') or '').lower()
+        if case.confidential_owner_id != owner_id and 'admin' not in user_role:
+            raise HTTPException(status_code=403, detail="Confidential case access restricted")
+
+    # 1. Fetch Timeline Events
+    timeline_events = get_case_timeline(db, case_id, current_user)
+
+    # 2. Fetch Assigned Advocates / Team Members
+    assigned_members = []
+    try:
+        from app.advocate.lawfirm_management.models import AssignedCase
+        ac_list = db.query(AssignedCase).filter(
+            (AssignedCase.case_id == case.id) |
+            (AssignedCase.case_id.is_(None) & (AssignedCase.case_number == case.case_no))
+        ).all()
+        for ac in ac_list:
+            assigned_members.append({
+                "advocate_name": ac.assigned_advocate or ac.advocate_email or "Assigned Advocate",
+                "assigned_role": ac.practice_area or "Lead Counsel",
+                "assigned_date": str(ac.assigned_date.date()) if ac.assigned_date else "N/A",
+                "assignment_notes": ac.assignment_notes or "Active case counsel"
+            })
+    except Exception as e:
+        print("[CaseSummary] Error fetching assigned advocates:", e)
+
+    if not assigned_members and case.selected_advocate:
+        assigned_members.append({
+            "advocate_name": case.selected_advocate,
+            "assigned_role": "Primary Advocate",
+            "assigned_date": str(case.created_at.date()) if case.created_at else "N/A",
+            "assignment_notes": "Primary assigned legal counsel"
+        })
+
+    # 3. Fetch Case Notes
+    notes_list = []
+    try:
+        notes_db = db.query(CaseNote).filter(CaseNote.case_id == case_id).order_by(CaseNote.created_at.desc()).all()
+        for n in notes_db:
+            notes_list.append({
+                "author": n.author or "Advocate",
+                "category": n.category or "General Note",
+                "text": n.text,
+                "date": str(n.created_at.strftime("%Y-%m-%d %H:%M")) if n.created_at else "N/A"
+            })
+    except Exception as e:
+        print("[CaseSummary] Error fetching notes:", e)
+
+    # 4. Fetch Document Workflows
+    doc_workflows = []
+    try:
+        wfs = db.query(CaseDocumentWorkflow).filter(CaseDocumentWorkflow.case_id == case_id).all()
+        for w in wfs:
+            doc_workflows.append({
+                "title": w.title,
+                "document_type": w.document_type,
+                "status": w.status,
+                "created_at": str(w.created_at.date()) if w.created_at else "N/A"
+            })
+    except Exception as e:
+        print("[CaseSummary] Error fetching document workflows:", e)
+
+    # Core Case Metadata Dictionary
+    case_info = {
+        "case_id": case.id,
+        "case_title": case.case_title or f"Case #{case.id}",
+        "case_no": case.case_no or "N/A",
+        "cnr_number": case.cnr_number or "N/A",
+        "case_type": case.case_type or "General Civil / Criminal",
+        "court_name": case.court_name or "District & Sessions Court",
+        "court_type": case.court_type or "High Court / District Court",
+        "client_name": case.client_name or "Client",
+        "contact_number": case.contact_number or "N/A",
+        "email_id": case.email_id or "N/A",
+        "client_role": case.client_role or "Petitioner / Plaintiff",
+        "client_address": case.client_address or "N/A",
+        "client_district": case.client_district or "N/A",
+        "status": case.status or "Active",
+        "next_hearing_date": case.next_hearing_date or "To be scheduled",
+        "filing_date": str(case.created_at.date()) if case.created_at else "N/A",
+        "case_description": case.case_description or "Case registered in Legal Tech system."
+    }
+
+    # Construct Fallback Summary
+    adv_names = ", ".join([m["advocate_name"] for m in assigned_members]) if assigned_members else (case.selected_advocate or "Unassigned Advocate")
+
+    fallback_analysis = {
+        "masterSummary": f"Complete Case Progress Summary for '{case_info['case_title']}' (Case No: {case_info['case_no']}, CNR: {case_info['cnr_number']}) pending before {case_info['court_name']}. The matter was registered on {case_info['filing_date']} for client {case_info['client_name']}. Assigned Legal Team: {adv_names}. Current status is listed as '{case_info['status']}' with next hearing scheduled for {case_info['next_hearing_date']}.",
+        "assignedAdvocateDetails": f"Assigned Counsel: {adv_names}. Team Role: Primary Advocate / Lead Trial Counsel. Assigned on {case_info['filing_date']}.",
+        "nextHearingPreparation": f"Next Hearing Date: {case_info['next_hearing_date']}. Forum: {case_info['court_name']}. Action: Verify filing of latest affidavits, review court cause list, and organize trial brief.",
+        "chronologicalMilestones": [
+            f"Case Filing ({case_info['filing_date']}): Onboarded client {case_info['client_name']} and filed matter before {case_info['court_name']}.",
+            f"Advocate Assignment: Assigned to {adv_names} for representation.",
+            f"Current Stage ({case_info['status']}): Proceeding active. Next hearing on {case_info['next_hearing_date']}."
+        ],
+        "latestUpdatesSummary": f"Latest update recorded: Case is currently {case_info['status']}. Next hearing date is scheduled for {case_info['next_hearing_date']}.",
+        "discussionHighlights": f"Case notes & discussions logged: {len(notes_list)} advocate note(s), {len(doc_workflows)} document workflow(s) active.",
+        "actionPlan": [
+            f"Review statutory compliance and case documents before {case_info['next_hearing_date']}",
+            f"Coordinate with assigned counsel ({adv_names}) and client ({case_info['client_name']})",
+            "Ensure all hearing logs and orders are updated in eCourts portal tracker"
+        ]
+    }
+
+    # 5. Generate Dynamic AI Analysis using Gemini AI (if available)
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if api_key and genai:
+        try:
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel("gemini-2.0-flash")
+
+            events_text = "\n".join([f"- [{e.get('date', 'N/A')}] {e.get('title', 'Event')}: {e.get('description', '')}" for e in timeline_events[:15]])
+            notes_text = "\n".join([f"- [{n['date']}] {n['author']} ({n['category']}): {n['text']}" for n in notes_list[:10]])
+            docs_text = "\n".join([f"- [{d['created_at']}] {d['title']} ({d['document_type']}) - Status: {d['status']}" for d in doc_workflows[:10]])
+
+            prompt = f"""You are a Supreme Court Senior Advocate reviewing the complete case file and timeline history for a specific case.
+
+CASE CORE DATA:
+- Case Title: {case_info['case_title']}
+- Case Number: {case_info['case_no']}
+- CNR Number: {case_info['cnr_number']}
+- Case Category: {case_info['case_type']}
+- Court: {case_info['court_name']} ({case_info['court_type']})
+- Client: {case_info['client_name']} ({case_info['client_role']}) | Phone: {case_info['contact_number']} | Email: {case_info['email_id']}
+- Assigned Advocates: {adv_names}
+- Filing Date: {case_info['filing_date']}
+- Next Hearing Date: {case_info['next_hearing_date']}
+- Status: {case_info['status']}
+- Description: {case_info['case_description']}
+
+CHRONOLOGICAL TIMELINE EVENTS:
+{events_text if events_text.strip() else 'No timeline events logged yet.'}
+
+ADVOCATE NOTES & DISCUSSIONS:
+{notes_text if notes_text.strip() else 'No internal advocate notes logged yet.'}
+
+DOCUMENT WORKFLOWS & FILINGS:
+{docs_text if docs_text.strip() else 'No document workflows logged yet.'}
+
+Analyze every detail of this case's journey from filing to present day and return ONLY a valid JSON object:
+{{
+  "masterSummary": "<3-4 sentences synthesizing the complete case standing, history, and status>",
+  "assignedAdvocateDetails": "<2 sentences detailing assigned advocates, roles, and representation>",
+  "nextHearingPreparation": "<2-3 sentences specifying exact preparation for the next hearing date>",
+  "chronologicalMilestones": ["<Milestone 1 with date>", "<Milestone 2 with date>", "<Milestone 3 with date>"],
+  "latestUpdatesSummary": "<2-3 sentences summarizing the most recent hearing notes, status change, or update>",
+  "discussionHighlights": "<2-3 sentences summarizing internal advocate notes, team discussions, and document workflows>",
+  "actionPlan": ["<action item 1>", "<action item 2>", "<action item 3>"]
+}}
+"""
+            response = model.generate_content(prompt)
+            raw = response.text.strip()
+            raw = re.sub(r"^```(?:json)?\s*", "", raw)
+            raw = re.sub(r"\s*```$", "", raw)
+            ai_json = json.loads(raw)
+            if ai_json:
+                fallback_analysis.update(ai_json)
+        except Exception as err:
+            print("[CaseSummary] Gemini AI generation note:", err)
+
+    return {
+        "case": case_info,
+        "assigned_members": assigned_members,
+        "timeline_events": timeline_events,
+        "notes": notes_list,
+        "documents": doc_workflows,
+        "ai_analysis": fallback_analysis
+    }
+
+
+

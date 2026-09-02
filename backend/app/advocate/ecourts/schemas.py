@@ -17,7 +17,7 @@ class CaseSearchRequest(BaseModel):
 
 class TimelineEvent(BaseModel):
     id: Optional[str] = None
-    eventStage: str  # e.g., 'Case Filed', 'First Hearing', 'Adjourned', 'Order Uploaded', 'Judgment Passed'
+    eventStage: str
     eventDate: str
     title: str
     description: str
@@ -30,7 +30,7 @@ class TimelineEvent(BaseModel):
 class OrderDocumentItem(BaseModel):
     id: str
     orderDate: str
-    orderType: str  # e.g., 'Interim Order', 'Daily Order', 'Final Judgment', 'Notice'
+    orderType: str
     judgeName: str
     summary: str
     fileUrl: str
@@ -101,14 +101,17 @@ class eCourtsDashboardMetrics(BaseModel):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Similar Case History Feature Schemas
+# AI Case Analysis & Similar Case Intelligence Schemas
 # ─────────────────────────────────────────────────────────────────────────────
 
 class SimilarCaseRequest(BaseModel):
-    caseType: str
+    caseType: Optional[str] = "Civil"
     courtType: Optional[str] = None
     courtName: Optional[str] = None
-    caseId: Optional[int] = None          # Exclude the current case from results
+    caseId: Optional[int] = None
+    caseTitle: Optional[str] = None
+    caseDescription: Optional[str] = None
+    similarityThreshold: Optional[int] = 50
 
 
 class CaseAnalysisResult(BaseModel):
@@ -124,22 +127,24 @@ class CaseAnalysisResult(BaseModel):
     petitioner: str
     respondent: str
     mainArgument: str                     # Key legal argument / main issue
-    loopholes: List[str]                  # Identified weaknesses / gaps
-    importantSections: List[str]          # Key acts / sections cited e.g. "IPC 420"
-    seniorAdvocateTip: Optional[str] = None # Strategic advice to win active case
+    loopholes: List[str] = []             # Identified weaknesses / gaps
+    importantSections: List[str] = []     # Key acts / sections cited e.g. "IPC 420"
+    seniorAdvocateTip: Optional[str] = None
     presidingJudge: Optional[str] = None
     nextHearingDate: Optional[str] = None
-    source: str                           # "internal" | "ecourts"
+    source: str                           # "Verified Source: Internal Database" | "Verified Source: eCourts Portal"
     similarityScore: int                  # 0–100
+    reasons: List[str] = []               # Reasons why identified as similar
 
 
 class SimilarCasesResponse(BaseModel):
-    totalFound: int
-    internalCount: int
-    ecourtsCount: int
-    cases: List[CaseAnalysisResult]
-    summaryStats: Dict[str, Any]          # { won, lost, pending, topActs }
-    masterStrategy: Optional[Dict[str, Any]] = None # { winProbability, currentCaseSummary, winningFormula, mainLoophole, advocateRecommendation, keyLoopholes, mainArguments, importantActs }
-
-
-
+    caseId: Optional[int] = None
+    similarCasesFound: bool = False
+    totalFound: int = 0
+    internalCount: int = 0
+    ecourtsCount: int = 0
+    similarityThreshold: int = 50
+    cases: List[CaseAnalysisResult] = []
+    summaryStats: Dict[str, Any] = {}
+    masterStrategy: Optional[Dict[str, Any]] = None
+    aiAnalysis: Optional[Dict[str, Any]] = None

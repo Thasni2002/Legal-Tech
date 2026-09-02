@@ -5,10 +5,10 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Scale, Mail, Lock, Eye, EyeOff, AlertCircle, Sparkles,
-  FileText, Calendar, ShieldCheck, ArrowRight, Bot, Zap,
-  Briefcase, Users, X, ChevronRight, TrendingUp, Clock,
+  FileText, Calendar, ShieldCheck, ArrowRight, UserPlus, LogIn,
+  Briefcase, Users, X, ChevronRight, User, UserCheck,
   ExternalLink, Cpu, CheckCircle2, Activity, Gavel, BookOpen,
-  Landmark, Award, Scroll, BarChart2, Hash, ClipboardList
+  BarChart2, ClipboardList, FolderKanban, CreditCard
 } from "lucide-react";
 
 /* ─────────────────────────────────────────────────────────────
@@ -29,14 +29,6 @@ const KEYFRAMES = `
 @keyframes sway-r {
   0%,100% { transform: rotate(6deg); }
   50%     { transform: rotate(-6deg); }
-}
-@keyframes orbit {
-  from { transform: rotate(0deg) translateX(var(--orbit-r,120px)) rotate(0deg); }
-  to   { transform: rotate(360deg) translateX(var(--orbit-r,120px)) rotate(-360deg); }
-}
-@keyframes orbit-ccw {
-  from { transform: rotate(0deg) translateX(var(--orbit-r,160px)) rotate(0deg); }
-  to   { transform: rotate(-360deg) translateX(var(--orbit-r,160px)) rotate(360deg); }
 }
 @keyframes pulse-ring {
   0%   { transform: scale(1); opacity: 0.6; }
@@ -62,17 +54,7 @@ const KEYFRAMES = `
 }
 @keyframes slide-in-up {
   from { opacity:0; transform: translateY(30px); }
-  to   { opacity:1; transform: translateY(0); }
-}
-@keyframes shimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position: 200% center; }
-}
-@keyframes stamp-in {
-  0%   { transform: scale(1.8) rotate(-15deg); opacity:0; }
-  60%  { transform: scale(0.95) rotate(1deg); opacity:1; }
-  80%  { transform: scale(1.04) rotate(-0.5deg); }
-  100% { transform: scale(1) rotate(0deg); opacity:1; }
+  to   { opacity:1; transform: translateX(0); }
 }
 `;
 
@@ -94,11 +76,6 @@ const C = {
   goldL:    "#fdf8ee",   /* gold tint                           */
 };
 
-/* convenience aliases so existing references still resolve */
-const crimson  = "#1d4ed8";   /* mapped → blue  */
-const crimsonL = "#eff6ff";   /* mapped → blueL */
-
-
 /* ─────────────────────────────────────────────────────────────
    FONTS — Times New Roman throughout
 ───────────────────────────────────────────────────────────── */
@@ -106,7 +83,7 @@ const fontHeading = { fontFamily: "'Times New Roman', Times, Georgia, serif" };
 const fontBody    = { fontFamily: "'Times New Roman', Times, Georgia, serif" };
 
 /* ── Validation ─────────────────────────────────────────── */
-function validate(fd) {
+function validateLogin(fd) {
   const e = {};
   if (!fd.email) e.email = "Email is required.";
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fd.email))
@@ -117,18 +94,46 @@ function validate(fd) {
   return e;
 }
 
+function validateRegister(fd) {
+  const e = {};
+  if (!fd.first_name) e.first_name = "First name is required.";
+  if (!fd.email) e.email = "Email is required.";
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fd.email))
+    e.email = "Enter a valid email.";
+  if (!fd.password) e.password = "Password is required.";
+  else if (fd.password.length < 6)
+    e.password = "Min. 6 characters.";
+  if (fd.password !== fd.confirmPassword)
+    e.confirmPassword = "Passwords do not match.";
+  return e;
+}
+
 export default function Login() {
   const router = useRouter();
-  const [formData, setFormData]   = useState({ email: "", password: "" });
+  const [authMode, setAuthMode] = useState("signin"); // "signin" | "signup"
+
+  // Login form state
+  const [formData, setFormData] = useState({ email: "", password: "" });
+  
+  // Register form state
+  const [registerData, setRegisterData] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    role: "Advocate",
+    password: "",
+    confirmPassword: "",
+  });
+
   const [errors, setErrors]       = useState({});
   const [touched, setTouched]     = useState({});
   const [showPass, setShowPass]   = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [loading, setLoading]     = useState(false);
   const [overviewOpen, setOverviewOpen] = useState(false);
-  const [aiOpen, setAiOpen]       = useState(false);
-  const [aiTab, setAiTab]         = useState(0);
+  const [modulesOpen, setModulesOpen]   = useState(false);
+  const [activeTab, setActiveTab]       = useState(0);
   const [heroVisible, setHeroVisible]   = useState(false);
-  const [scalesAngle, setScalesAngle]   = useState(0);  // for scales sway tick
 
   // Forgot password state
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
@@ -138,19 +143,6 @@ export default function Login() {
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState("");
   const [forgotSuccess, setForgotSuccess] = useState("");
-
-  // Mouse Parallax Offset
-  const [mouseOffset, setMouseOffset] = useState({ x: 0, y: 0 });
-  useEffect(() => {
-    const handleMouse = (e) => {
-      setMouseOffset({
-        x: (e.clientX - window.innerWidth / 2) * 0.02,
-        y: (e.clientY - window.innerHeight / 2) * 0.02,
-      });
-    };
-    window.addEventListener("mousemove", handleMouse);
-    return () => window.removeEventListener("mousemove", handleMouse);
-  }, []);
 
   // Inject keyframes once
   useEffect(() => {
@@ -165,37 +157,9 @@ export default function Login() {
   // Hero entrance
   useEffect(() => { const t = setTimeout(() => setHeroVisible(true), 80); return () => clearTimeout(t); }, []);
 
-  // Animated Legal Count-Up
-  const [countCases, setCountCases] = useState(0);
-  const [countAccuracy, setCountAccuracy] = useState(0);
-
-  useEffect(() => {
-    let start = 0;
-    const duration = 1200;
-    const stepTime = 30;
-    const steps = duration / stepTime;
-    let currentStep = 0;
-
-    const timer = setInterval(() => {
-      currentStep++;
-      const progress = currentStep / steps;
-      setCountCases(Math.floor(progress * 500));
-      setCountAccuracy(Number((progress * 100).toFixed(0)));
-
-      if (currentStep >= steps) {
-        setCountCases(500);
-        setCountAccuracy(100);
-        clearInterval(timer);
-      }
-    }, stepTime);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  // Canvas ref for particle background
+  // Canvas ref for interactive ambient particle background
   const canvasRef = useRef(null);
 
-  // Interactive ambient particle canvas effect
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -286,59 +250,30 @@ export default function Login() {
     };
   }, []);
 
-  // Typewriter animation state machine
-  const [typedText, setTypedText] = useState("");
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [loopNum, setLoopNum] = useState(0);
-  const [typingSpeed, setTypingSpeed] = useState(100);
-
-  const phrases = [
-    "Case Management Streamlined.",
-    "Law Firm Operations Simplified.",
-    "Consultations & Notes Tracked.",
-    "Granular Permission Controls.",
-  ];
-
-  useEffect(() => {
-    let timer;
-    const currentPhrase = phrases[loopNum % phrases.length];
-
-    if (isDeleting) {
-      timer = setTimeout(() => {
-        setTypedText(currentPhrase.substring(0, typedText.length - 1));
-        setTypingSpeed(35);
-      }, typingSpeed);
-    } else {
-      timer = setTimeout(() => {
-        setTypedText(currentPhrase.substring(0, typedText.length + 1));
-        setTypingSpeed(85);
-      }, typingSpeed);
-    }
-
-    if (!isDeleting && typedText === currentPhrase) {
-      timer = setTimeout(() => setIsDeleting(true), 2000);
-    } else if (isDeleting && typedText === "") {
-      setIsDeleting(false);
-      setLoopNum((prev) => prev + 1);
-      setTypingSpeed(250);
-    }
-
-    return () => clearTimeout(timer);
-  }, [typedText, isDeleting, loopNum, typingSpeed]);
-
   const handleChange = (e) => {
     const d = { ...formData, [e.target.name]: e.target.value };
     setFormData(d);
-    if (touched[e.target.name]) setErrors(validate(d));
+    if (touched[e.target.name]) setErrors(validateLogin(d));
   };
   const handleBlur = (e) => {
     setTouched({ ...touched, [e.target.name]: true });
-    setErrors(validate(formData));
+    setErrors(validateLogin(formData));
   };
+
+  const handleRegisterChange = (e) => {
+    const d = { ...registerData, [e.target.name]: e.target.value };
+    setRegisterData(d);
+    if (touched[e.target.name]) setErrors(validateRegister(d));
+  };
+  const handleRegisterBlur = (e) => {
+    setTouched({ ...touched, [e.target.name]: true });
+    setErrors(validateRegister(registerData));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setTouched({ email: true, password: true });
-    const ve = validate(formData);
+    const ve = validateLogin(formData);
     setErrors(ve);
     if (Object.keys(ve).length) return;
     setLoading(true);
@@ -356,9 +291,44 @@ export default function Login() {
     finally { setLoading(false); }
   };
 
+  const handleRegisterSubmit = async (e) => {
+    e.preventDefault();
+    setTouched({ first_name: true, email: true, password: true, confirmPassword: true });
+    const ve = validateRegister(registerData);
+    setErrors(ve);
+    if (Object.keys(ve).length) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: registerData.email,
+          password: registerData.password,
+          first_name: registerData.first_name,
+          last_name: registerData.last_name,
+          role: registerData.role,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem("token", data.access_token);
+        const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+        const nextUrl = params ? params.get("next") : null;
+        router.push(nextUrl ? decodeURIComponent(nextUrl) : "/");
+      } else {
+        setErrors({ api: data.detail || "Failed to create account." });
+      }
+    } catch {
+      setErrors({ api: "Connection error. Please retry." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleForgotSendOtp = async (e) => {
     e.preventDefault();
-    if (forgotLoading) return; // Prevent duplicate requests
+    if (forgotLoading) return;
     setForgotError("");
     setForgotSuccess("");
     if (!forgotEmail) { setForgotError("Email is required."); return; }
@@ -374,7 +344,7 @@ export default function Login() {
 
   const handleForgotVerifyOtp = async (e) => {
     e.preventDefault();
-    if (forgotLoading) return; // Prevent duplicate requests
+    if (forgotLoading) return;
     setForgotError("");
     setForgotSuccess("");
     if (!forgotOtp || forgotOtp.length < 6) { setForgotError("Please enter the 6-digit OTP."); return; }
@@ -383,7 +353,6 @@ export default function Login() {
       const res = await fetch(`${API_BASE_URL}/forgot-password/login-with-otp`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: forgotEmail, otp: forgotOtp }) });
       const data = await res.json();
       if (res.ok) {
-        // OTP correct → save token and go to dashboard
         localStorage.setItem("token", data.access_token);
         setForgotSuccess("OTP verified! Logging you in...");
         setTimeout(() => router.push("/"), 800);
@@ -394,36 +363,113 @@ export default function Login() {
     finally { setForgotLoading(false); }
   };
 
-  /* ── Content ─────────────────────────────────────────── */
-  const aiFeatures = [
-    { id: "case_mgmt", icon: <Briefcase className="w-4 h-4" />, tag: "Case Binder",
+  /* ── Authentic Project Modules ──────────────────────── */
+  const projectShowcase = [
+    {
+      id: "case_mgmt",
+      icon: <Briefcase className="w-4 h-4" />,
+      tag: "Case Binder",
       title: "Case Management & Tracking",
-      description: "Complete lifecycle tracking of legal cases, filing details, hearing schedules, bench assignments, and case stages.",
-      prompt: "View Case #LC-2026-089 — Commercial Dispute",
-      output: { summary: "Active Case Summary & Status:", bullets: ["Case Title: Apex Tech vs. Horizon Infra (HC Bench 3).", "Assigned Advocate: Senior Advocate Rahul Sharma.", "Hearing Schedule: Next hearing on 18 Aug 2026 at 10:30 AM."] } },
-    { id: "lawfirm_mgmt", icon: <Users className="w-4 h-4" />, tag: "Organization",
+      description: "Complete lifecycle tracking of legal matters, eCourts details, hearing schedules, bench allocations, and stage tracking.",
+      previewTitle: "Active Case Binder",
+      output: {
+        summary: "Digital Matter Overview:",
+        bullets: [
+          "Matter Title: Apex Tech vs. Horizon Infra (Commercial Dispute).",
+          "Assigned Counsel: Senior Advocate Rahul Sharma & Junior Associate.",
+          "Hearing Schedule: Next hearing on 18 Aug 2026 at High Court Bench 3.",
+          "Status: Active Case Stage — Evidence & Rejoinder Filing."
+        ]
+      }
+    },
+    {
+      id: "lawfirm_mgmt",
+      icon: <Users className="w-4 h-4" />,
+      tag: "Organization",
       title: "Law Firm & Role Management",
-      description: "Manage Senior Advocates, Junior Advocates, Clerks, and Clients with dedicated role clearances and team rosters.",
-      prompt: "Law Firm Team & Roster Overview",
-      output: { summary: "Firm Organization & Access Control:", bullets: ["Roles Provisioned: Senior Advocate, Junior Advocate, Clerk, Client.", "Custom Permissions: Granular view/add/edit/delete clearances per module.", "User Management: Temp password provisioning and active account controls."] } },
-    { id: "consultations", icon: <BookOpen className="w-4 h-4" />, tag: "Discussions",
+      description: "Provision and organize Senior Advocates, Junior Advocates, Clerks, and Clients with dedicated roles and security clearances.",
+      previewTitle: "Law Firm Roster & Clearances",
+      output: {
+        summary: "Firm Hierarchy & Access Controls:",
+        bullets: [
+          "Roles Configured: Senior Advocate (Admin), Junior Advocate, Clerk, Client.",
+          "Granular Permissions: Module-level View / Add / Edit / Delete security rules.",
+          "Team Operations: Temp password provisioning and active account activation."
+        ]
+      }
+    },
+    {
+      id: "consultations",
+      icon: <BookOpen className="w-4 h-4" />,
+      tag: "Discussions",
       title: "Case Discussions & Consultations",
-      description: "Schedule client meetings, log detailed consultation session notes, track action items, and manage follow-ups.",
-      prompt: "Schedule Client Consultation — Advisory Session",
-      output: { summary: "Consultation Record & Action Notes:", bullets: ["Client: Priya Nair · Mode: Video Conference / Office Meeting.", "Meeting Notes: Legal strategy finalized, evidence documents attached.", "Task Delegation: Follow-up drafting assigned to Junior Advocate."] } },
-    { id: "finance_billing", icon: <BarChart2 className="w-4 h-4" />, tag: "Finance",
-      title: "Finance, Billing & Invoicing",
-      description: "Comprehensive financial tracking, automated GST-compliant invoice generation, fee status, and payment histories.",
-      prompt: "Generate Client Invoice — Retainer Fee",
-      output: { summary: "Invoice & Financial History Summary:", bullets: ["Invoice #INV-2026-102: ₹45,000 for Consultation & Case Filing.", "Payment Status: Paid via Client Payment Portal.", "Ledger: Invoice history & retainer balance automatically updated."] } },
+      description: "Schedule client meetings, document comprehensive consultation session notes, attach evidence, and delegate action items.",
+      previewTitle: "Client Consultation Record",
+      output: {
+        summary: "Consultation Session Summary:",
+        bullets: [
+          "Client: Priya Nair · Mode: Video Conference / Law Office Session.",
+          "Discussion Notes: Strategy formulated, contract clauses reviewed.",
+          "Action Items: Brief drafting assigned to Junior Associate for court submission."
+        ]
+      }
+    },
+    {
+      id: "finance_billing",
+      icon: <BarChart2 className="w-4 h-4" />,
+      tag: "Finance",
+      title: "Billing & Invoicing",
+      description: "Professional client invoice creation, retainer balance management, fee status tracking, and structured payment histories.",
+      previewTitle: "Client Invoicing & Payment",
+      output: {
+        summary: "Financial & Ledger Overview:",
+        bullets: [
+          "Invoice #INV-2026-102: ₹45,000 for Advisory Retainer & Court Filing.",
+          "Payment Status: Paid via Razorpay / Client Portal.",
+          "Financial Ledger: Retainer balance and client history logged automatically."
+        ]
+      }
+    },
+    {
+      id: "clerk_workflows",
+      icon: <ClipboardList className="w-4 h-4" />,
+      tag: "Operations",
+      title: "Clerk & Court Operations",
+      description: "Manage daily court visit logs, document intake records, physical file formatting, and junior clerk task allocations.",
+      previewTitle: "Court Visit & Task Register",
+      output: {
+        summary: "Court Clerk Operations:",
+        bullets: [
+          "Court Visits: Physical filing at High Court Registry Bench 3.",
+          "File Formatting: Document indexation and physical stamping completed.",
+          "Daily Tasks: Cause list verification and certified copy collection logged."
+        ]
+      }
+    },
+    {
+      id: "permissions",
+      icon: <ShieldCheck className="w-4 h-4" />,
+      tag: "Security",
+      title: "Granular Permission System",
+      description: "Strict module-level role access ensuring confidential case files, billing numbers, and documents remain strictly compartmentalized.",
+      previewTitle: "Security & Role Access Matrix",
+      output: {
+        summary: "Access Control Enforcement:",
+        bullets: [
+          "Advocates: Full firm administration, case lifecycle, and financial management.",
+          "Juniors & Clerks: Assigned cases, assigned tasks, and court visit logging.",
+          "Clients: Secure case tracking, consultation records, and invoice payments."
+        ]
+      }
+    }
   ];
 
   const coreFeatures = [
     { icon: <Briefcase className="w-5 h-5" />, title: "Case Management",    desc: "Digital case binders — filing info, hearing schedules, and stage tracking." },
     { icon: <Users className="w-5 h-5" />,     title: "Law Firm Portal",    desc: "Role-based portals for Senior Advocates, Junior Advocates, Clerks, and Clients." },
     { icon: <BookOpen className="w-5 h-5" />,  title: "Case Discussions",   desc: "Schedule client consultations, log detailed session notes, and set action items." },
-    { icon: <BarChart2 className="w-5 h-5" />, title: "Finance & Invoicing", desc: "Create client invoices, track retainer balances, and record payment histories." },
-    { icon: <ClipboardList className="w-5 h-5" />, title: "Clerk Workflows",  desc: "Track court visits, physical file formatting, and document intake." },
+    { icon: <CreditCard className="w-5 h-5" />, title: "Finance & Invoicing", desc: "Create client invoices, track retainer balances, and record payment histories." },
+    { icon: <ClipboardList className="w-5 h-5" />, title: "Clerk Workflows",  desc: "Track court visits, physical file formatting, document intake, and task records." },
     { icon: <ShieldCheck className="w-5 h-5" />, title: "Permission Controls", desc: "Granular view/add/edit/delete security clearances per user role." },
   ];
 
@@ -468,13 +514,13 @@ export default function Login() {
 
   /* ── Floating legal document tiles data ───────────── */
   const floatingDocs = [
-    { label: "Case Binder",      sub: "#LC-2026-089",    icon: <Briefcase size={13} />,   delay: "0s",   dur: "14s", x: "8%",  r: "-4deg",  opS: "0", opE: "0.72" },
-    { label: "Law Firm Portal",  sub: "Advocate Roster", icon: <Users size={13} />,       delay: "3s",   dur: "17s", x: "18%", r: "5deg",   opS: "0", opE: "0.65" },
-    { label: "Fee Invoice",      sub: "#INV-2026-102",   icon: <BarChart2 size={13} />,   delay: "6s",   dur: "13s", x: "76%", r: "-6deg",  opS: "0", opE: "0.68" },
-    { label: "Consultation",     sub: "Meeting Notes",   icon: <BookOpen size={13} />,    delay: "1.5s", dur: "16s", x: "86%", r: "3deg",   opS: "0", opE: "0.70" },
-    { label: "Clerk Tasks",      sub: "Court Visits",    icon: <ClipboardList size={13} />, delay: "9s", dur: "18s", x: "44%", r: "-2deg",  opS: "0", opE: "0.55" },
-    { label: "Doc Storage",      sub: "Legal Repository",icon: <FileText size={13} />,    delay: "4s",   dur: "15s", x: "60%", r: "7deg",   opS: "0", opE: "0.60" },
-    { label: "Leave Requests",   sub: "Schedule Sync",   icon: <Calendar size={13} />,    delay: "11s",  dur: "12s", x: "30%", r: "-5deg",  opS: "0", opE: "0.58" },
+    { label: "Case Binder",      sub: "#LC-2026-089",      icon: <Briefcase size={13} />,   delay: "0s",   dur: "14s", x: "8%",  r: "-4deg",  opS: "0", opE: "0.72" },
+    { label: "Law Firm Portal",  sub: "Advocate Roster",   icon: <Users size={13} />,       delay: "3s",   dur: "17s", x: "18%", r: "5deg",   opS: "0", opE: "0.65" },
+    { label: "Fee Invoice",      sub: "#INV-2026-102",     icon: <CreditCard size={13} />,  delay: "6s",   dur: "13s", x: "76%", r: "-6deg",  opS: "0", opE: "0.68" },
+    { label: "Consultation",     sub: "Meeting Notes",     icon: <BookOpen size={13} />,    delay: "1.5s", dur: "16s", x: "86%", r: "3deg",   opS: "0", opE: "0.70" },
+    { label: "Clerk Tasks",      sub: "Court Visits",      icon: <ClipboardList size={13} />, delay: "9s", dur: "18s", x: "44%", r: "-2deg",  opS: "0", opE: "0.55" },
+    { label: "Doc Storage",      sub: "Legal Repository",  icon: <FileText size={13} />,    delay: "4s",   dur: "15s", x: "60%", r: "7deg",   opS: "0", opE: "0.60" },
+    { label: "Leave Requests",   sub: "Schedule Sync",     icon: <Calendar size={13} />,    delay: "11s",  dur: "12s", x: "30%", r: "-5deg",  opS: "0", opE: "0.58" },
   ];
 
   return (
@@ -556,12 +602,9 @@ export default function Login() {
         <div className="absolute bottom-10 right-8 pointer-events-none" style={{ opacity: 0.06 }}>
           <svg viewBox="0 0 80 80" width="120" height="120" fill="none">
             <g style={{ transformOrigin: "20px 20px", animation: "gavel-strike 2.2s ease-in-out infinite" }}>
-              {/* Gavel head */}
               <rect x="8" y="4" width="28" height="16" rx="4" fill="#0d1b2e" />
-              {/* Handle */}
               <line x1="32" y1="18" x2="68" y2="54" stroke="#0d1b2e" strokeWidth="8" strokeLinecap="round" />
             </g>
-            {/* Sound block */}
             <rect x="10" y="64" width="32" height="10" rx="3" fill="#0d1b2e" opacity="0.6" />
           </svg>
         </div>
@@ -571,7 +614,8 @@ export default function Login() {
           style={{ background: `radial-gradient(circle, ${C.goldL} 0%, transparent 70%)`, transform: "translate(30%,-30%)" }} />
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full opacity-40"
           style={{ background: `radial-gradient(circle, ${C.blueL} 0%, transparent 70%)`, transform: "translate(-30%,30%)" }} />
-        {/* Fine column lines — legal document texture */}
+        
+        {/* Fine column lines */}
         <div className="absolute inset-0 opacity-[0.025]"
           style={{ backgroundImage: `repeating-linear-gradient(90deg, ${C.ink} 0px, ${C.ink} 1px, transparent 1px, transparent 48px)` }} />
       </div>
@@ -605,7 +649,7 @@ export default function Login() {
             {[
               { label: "Overview",       icon: <Cpu className="w-3.5 h-3.5" />,       action: () => setOverviewOpen(true), href: null },
               { label: "Core Features",  icon: <Briefcase className="w-3.5 h-3.5" />, action: null, href: "#features" },
-              { label: "Main Features",  icon: <Sparkles className="w-3.5 h-3.5" />,  action: null, href: "#ai-features" },
+              { label: "System Modules", icon: <FolderKanban className="w-3.5 h-3.5" />,  action: null, href: "#modules" },
             ].map((item) => {
               const cls = "flex items-center gap-1.5 text-[12px] font-medium px-3.5 py-1.5 rounded-full transition-all duration-200 cursor-pointer";
               const s   = { color: C.muted, ...fontBody };
@@ -626,17 +670,8 @@ export default function Login() {
             })}
           </nav>
 
-          {/* Status */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-medium shadow-xs"
-            style={{ backgroundColor: "#f0faf5", border: "1px solid #bbf0d8", color: "#2d7a54", ...fontBody }}>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-            <span className="hidden sm:inline font-bold tracking-tight">SYSTEM ONLINE // LEGAL-TECH PORTAL</span>
-          </div>
-
         </div>
       </header>
-
-
 
       {/* ════════════════════════════════════════════════
           HERO SECTION
@@ -645,7 +680,7 @@ export default function Login() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8 w-full py-16 lg:py-20">
           <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
 
-            {/* ── LEFT: Minimal Hero ───────────────────── */}
+            {/* ── LEFT: Hero Content ───────────────────── */}
             <div className="lg:col-span-7 space-y-9"
               style={{ animation: heroVisible ? "slide-in-left 0.7s cubic-bezier(.25,.8,.25,1) both" : "none" }}>
 
@@ -662,8 +697,7 @@ export default function Login() {
                   style={{ ...fontHeading, fontSize: "clamp(40px, 5vw, 62px)", fontWeight: 600, color: C.ink }}>
                   Your Legal Practice,
                   <br />
-                  <em style={{ color: C.blue, fontStyle: "italic" }}>{typedText}</em>
-                  <span className="inline-block w-1 h-8 ml-1 bg-blue-600 animate-pulse align-middle" />
+                  <em style={{ color: C.blue, fontStyle: "italic" }}>Streamlined.</em>
                 </h1>
                 <p className="text-sm leading-relaxed max-w-md"
                   style={{ color: C.muted, fontWeight: 400, ...fontBody }}>
@@ -671,28 +705,7 @@ export default function Login() {
                 </p>
               </div>
 
-              {/* Stats — clean interactive cards */}
-              <div className="flex flex-wrap items-center gap-8">
-                {[
-                  { value: `${countCases}+`,  label: "Cases tracked",  color: C.ink },
-                  { value: `${countAccuracy}%`, label: "Security rating", color: C.blue },
-                  { value: "Active",  label: "Multi-Role Portal", color: "#2d7a54" },
-                ].map((s, i, arr) => (
-                  <div key={i} className="flex items-center gap-8 group cursor-default">
-                    <div className="transition-all duration-300 transform group-hover:-translate-y-1">
-                      <p className="font-semibold text-2xl leading-tight"
-                        style={{ color: s.color, ...fontHeading }}>{s.value}</p>
-                      <p className="text-[11px] mt-0.5 font-normal tracking-wide uppercase"
-                        style={{ color: C.faint, ...fontBody, letterSpacing: "0.06em" }}>{s.label}</p>
-                    </div>
-                    {i < arr.length - 1 && (
-                      <div className="w-px h-10" style={{ backgroundColor: C.border }} />
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Workspace Canvas with Corner Brackets */}
+              {/* Workspace Preview Canvas */}
               <div className="relative group p-0.5 rounded-2xl transition-all duration-300 hover:shadow-2xl">
 
                 <div className="rounded-2xl overflow-hidden"
@@ -709,9 +722,6 @@ export default function Login() {
                         <Activity size={12} className="text-blue-600 animate-spin" /> Legal-Tech Platform Engine
                       </span>
                     </div>
-                    <span className="flex items-center gap-1.5 text-[10px] font-bold" style={{ color: "#2d7a54", ...fontBody }}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />SYSTEM ONLINE
-                    </span>
                   </div>
 
                   {/* Inner cards */}
@@ -752,7 +762,7 @@ export default function Login() {
                       <Sparkles className="w-3 h-3" style={{ color: C.gold }} />
                       Multi-role law firm operations workspace
                     </span>
-                    <button onClick={() => setAiOpen(true)}
+                    <button onClick={() => setModulesOpen(true)}
                       className="flex items-center gap-0.5 text-[11px] font-semibold cursor-pointer hover:underline"
                       style={{ color: C.blue, ...fontBody }}>
                       Explore <ChevronRight className="w-3 h-3" />
@@ -763,42 +773,64 @@ export default function Login() {
 
             </div>
 
-            {/* ── RIGHT: Sign-In Card ───────────────────── */}
+            {/* ── RIGHT: Sign-In / Sign-Up Auth Card ───── */}
             <div id="signin" className="lg:col-span-5 scroll-mt-24 relative group p-0.5 rounded-2xl"
               style={{ animation: heroVisible ? "slide-in-right 0.7s 0.15s cubic-bezier(.25,.8,.25,1) both" : "none" }}>
-
 
               <div className="rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 group-hover:shadow-blue-500/10"
                 style={{ backgroundColor: C.white, border: `1px solid ${C.border}` }}>
 
-                {/* Crimson top accent line */}
+                {/* Top accent line */}
                 <div className="h-[3px]"
                   style={{ background: `linear-gradient(90deg, ${C.blue} 0%, #2563eb 50%, ${C.gold} 100%)` }} />
 
-                <div className="p-8 sm:p-9">
+                <div className="p-7 sm:p-8">
 
-                  {/* Brand */}
-                  <div className="flex items-center gap-3 mb-8">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                      style={{ backgroundColor: C.blueL, border: `1.5px solid #bfdbfe` }}>
-                      <Scale className="w-5 h-5" style={{ color: C.blue }} />
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: C.blue, ...fontBody }}>Legal-Tech AI</p>
-                      <p className="text-[10px] font-normal -mt-0.5" style={{ color: C.faint, ...fontBody }}>Secure Advocate Portal</p>
+                  {/* Brand Header */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                        style={{ backgroundColor: C.blueL, border: `1.5px solid #bfdbfe` }}>
+                        <Scale className="w-4.5 h-4.5" style={{ color: C.blue }} />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: C.blue, ...fontBody }}>Legal-Tech Portal</p>
+                        <p className="text-[10px] font-normal -mt-0.5" style={{ color: C.faint, ...fontBody }}>Secure Advocate Workspace</p>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Heading */}
-                  <div className="mb-8">
-                    <h2 className="tracking-tight leading-tight"
-                      style={{ ...fontHeading, fontSize: 32, fontWeight: 600, color: C.ink }}>
-                      Welcome back,{" "}
-                      <em style={{ color: C.blue, fontStyle: "italic" }}>Counsel.</em>
-                    </h2>
-                    <p className="text-[13px] mt-2 leading-relaxed" style={{ color: C.muted, ...fontBody }}>
-                      Access your case workspace, consultations, and firm management portal.
-                    </p>
+                  {/* ── MODE TAB SWITCHER ─────────────────────────── */}
+                  <div className="grid grid-cols-2 gap-1 p-1 rounded-xl mb-6"
+                    style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
+                    <button
+                      type="button"
+                      onClick={() => { setAuthMode("signin"); setErrors({}); }}
+                      className="py-2 px-3 rounded-lg text-[12px] font-semibold transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5"
+                      style={{
+                        backgroundColor: authMode === "signin" ? C.white : "transparent",
+                        color: authMode === "signin" ? C.ink : C.muted,
+                        boxShadow: authMode === "signin" ? "0 2px 8px rgba(0,0,0,0.06)" : "none",
+                        ...fontBody,
+                      }}
+                    >
+                      <LogIn className="w-3.5 h-3.5" style={{ color: authMode === "signin" ? C.blue : C.faint }} />
+                      <span>Sign In</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setAuthMode("signup"); setErrors({}); }}
+                      className="py-2 px-3 rounded-lg text-[12px] font-semibold transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5"
+                      style={{
+                        backgroundColor: authMode === "signup" ? C.white : "transparent",
+                        color: authMode === "signup" ? C.ink : C.muted,
+                        boxShadow: authMode === "signup" ? "0 2px 8px rgba(0,0,0,0.06)" : "none",
+                        ...fontBody,
+                      }}
+                    >
+                      <UserPlus className="w-3.5 h-3.5" style={{ color: authMode === "signup" ? C.blue : C.faint }} />
+                      <span>Advocate Register</span>
+                    </button>
                   </div>
 
                   {/* API Error */}
@@ -810,116 +842,255 @@ export default function Login() {
                     </div>
                   )}
 
-                  {/* Form */}
-                  <form onSubmit={handleSubmit} noValidate className="space-y-5">
-
-                    {/* Email */}
-                    <div className="space-y-1.5">
-                      <label className="block text-[11px] font-semibold uppercase tracking-widest"
-                        style={{ color: C.muted, ...fontBody }}>Email address</label>
-                      <div className="relative">
-                        <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: C.faint }} />
-                        <input type="email" name="email"
-                          placeholder="advocate@lawfirm.com"
-                          value={formData.email}
-                          onChange={handleChange} onBlur={handleBlur}
-                          onFocus={inputFocus}
-                          onBlurCapture={inputBlurStyle("email")}
-                          suppressHydrationWarning
-                          className="w-full pl-10 pr-4 py-3 rounded-xl text-[13px] outline-none"
-                          style={{ ...inputStyle("email"), "::placeholder": { color: C.faint } }}
-                        />
-                      </div>
-                      {errors.email && touched.email && (
-                        <p className="text-[11px] flex items-center gap-1" style={{ color: C.blue, ...fontBody }}>
-                          <AlertCircle className="w-3 h-3" /> {errors.email}
+                  {/* ════════════════════════════════════════════
+                      MODE 1: SIGN IN FORM
+                  ════════════════════════════════════════════ */}
+                  {authMode === "signin" ? (
+                    <div>
+                      <div className="mb-6">
+                        <h2 className="tracking-tight leading-tight"
+                          style={{ ...fontHeading, fontSize: 28, fontWeight: 600, color: C.ink }}>
+                          Welcome back,{" "}
+                          <em style={{ color: C.blue, fontStyle: "italic" }}>Counsel.</em>
+                        </h2>
+                        <p className="text-[12px] mt-1.5 leading-relaxed" style={{ color: C.muted, ...fontBody }}>
+                          Access your case workspace, consultations, and firm management portal.
                         </p>
-                      )}
-                    </div>
+                      </div>
 
-                    {/* Password */}
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between items-center">
-                        <label className="block text-[11px] font-semibold uppercase tracking-widest"
-                          style={{ color: C.muted, ...fontBody }}>Password</label>
-                        <button type="button" onClick={() => { setForgotPasswordOpen(true); setForgotStep(1); setForgotError(""); setForgotSuccess(""); setForgotEmail(formData.email); }}
-                          className="text-[11px] font-medium hover:underline cursor-pointer" style={{ color: C.blue, ...fontBody }}>
-                          Forgot Password?
+                      <form onSubmit={handleSubmit} noValidate className="space-y-4">
+                        {/* Email */}
+                        <div className="space-y-1.5">
+                          <label className="block text-[11px] font-semibold uppercase tracking-widest"
+                            style={{ color: C.muted, ...fontBody }}>Email address</label>
+                          <div className="relative">
+                            <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: C.faint }} />
+                            <input type="email" name="email"
+                              placeholder="advocate@lawfirm.com"
+                              value={formData.email}
+                              onChange={handleChange} onBlur={handleBlur}
+                              onFocus={inputFocus}
+                              onBlurCapture={inputBlurStyle("email")}
+                              suppressHydrationWarning
+                              className="w-full pl-10 pr-4 py-2.5 rounded-xl text-[13px] outline-none"
+                              style={{ ...inputStyle("email") }}
+                            />
+                          </div>
+                          {errors.email && touched.email && (
+                            <p className="text-[11px] flex items-center gap-1" style={{ color: C.blue, ...fontBody }}>
+                              <AlertCircle className="w-3 h-3" /> {errors.email}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Password */}
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between items-center">
+                            <label className="block text-[11px] font-semibold uppercase tracking-widest"
+                              style={{ color: C.muted, ...fontBody }}>Password</label>
+                            <button type="button" onClick={() => { setForgotPasswordOpen(true); setForgotStep(1); setForgotError(""); setForgotSuccess(""); setForgotEmail(formData.email); }}
+                              className="text-[11px] font-medium hover:underline cursor-pointer" style={{ color: C.blue, ...fontBody }}>
+                              Forgot Password?
+                            </button>
+                          </div>
+                          <div className="relative">
+                            <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: C.faint }} />
+                            <input type={showPass ? "text" : "password"} name="password"
+                              placeholder="Enter your password"
+                              value={formData.password}
+                              onChange={handleChange} onBlur={handleBlur}
+                              onFocus={inputFocus}
+                              onBlurCapture={inputBlurStyle("password")}
+                              suppressHydrationWarning
+                              className="w-full pl-10 pr-11 py-2.5 rounded-xl text-[13px] outline-none"
+                              style={inputStyle("password")}
+                            />
+                            <button type="button" onClick={() => setShowPass(!showPass)}
+                              className="absolute right-3.5 top-1/2 -translate-y-1/2 cursor-pointer hover:opacity-60 transition-opacity"
+                              style={{ color: C.faint }} suppressHydrationWarning>
+                              {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                          {errors.password && touched.password && (
+                            <p className="text-[11px] flex items-center gap-1" style={{ color: C.blue, ...fontBody }}>
+                              <AlertCircle className="w-3 h-3" /> {errors.password}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Remember */}
+                        <label className="flex items-center gap-2.5 cursor-pointer pt-0.5">
+                          <div className="w-4 h-4 rounded flex items-center justify-center"
+                            style={{ backgroundColor: C.blue, border: `1.5px solid ${C.blue}` }}>
+                            <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                          <span className="text-[12px]" style={{ color: C.muted, ...fontBody }}>Keep me signed in</span>
+                        </label>
+
+                        {/* CTA */}
+                        <button type="submit" disabled={loading}
+                          className="w-full py-3.5 rounded-xl font-semibold text-[13px] text-white flex items-center justify-center gap-2.5 group cursor-pointer relative overflow-hidden transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed mt-2 shadow-lg hover:shadow-blue-500/25"
+                          style={{ background: `linear-gradient(135deg, #1e3a8a 0%, ${C.blue} 60%, #2563eb 100%)`, boxShadow: `0 6px 24px rgba(29,78,216,0.2), inset 0 1px 0 rgba(255,255,255,0.12)`, ...fontBody }}
+                          suppressHydrationWarning>
+                          {loading ? (
+                            <span className="flex items-center gap-2">
+                              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                              </svg>
+                              Authenticating...
+                            </span>
+                          ) : (
+                            <>
+                              <Gavel className="w-4 h-4 text-amber-300 transition-transform duration-300 group-hover:rotate-[-25deg] group-hover:scale-110" />
+                              <span>Continue to Workspace</span>
+                              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
+                            </>
+                          )}
                         </button>
-                      </div>
-                      <div className="relative">
-                        <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: C.faint }} />
-                        <input type={showPass ? "text" : "password"} name="password"
-                          placeholder="Enter your password"
-                          value={formData.password}
-                          onChange={handleChange} onBlur={handleBlur}
-                          onFocus={inputFocus}
-                          onBlurCapture={inputBlurStyle("password")}
-                          suppressHydrationWarning
-                          className="w-full pl-10 pr-11 py-3 rounded-xl text-[13px] outline-none"
-                          style={inputStyle("password")}
-                        />
-                        <button type="button" onClick={() => setShowPass(!showPass)}
-                          className="absolute right-3.5 top-1/2 -translate-y-1/2 cursor-pointer hover:opacity-60 transition-opacity"
-                          style={{ color: C.faint }} suppressHydrationWarning>
-                          {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </form>
+
+                      {/* Mode switcher prompt */}
+                      <p className="text-[11px] text-center mt-5" style={{ color: C.muted, ...fontBody }}>
+                        Don&apos;t have an account?{" "}
+                        <button type="button" onClick={() => { setAuthMode("signup"); setErrors({}); }} className="font-semibold hover:underline cursor-pointer" style={{ color: C.blue }}>
+                          Create Account
                         </button>
-                      </div>
-                      {errors.password && touched.password && (
-                        <p className="text-[11px] flex items-center gap-1" style={{ color: C.blue, ...fontBody }}>
-                          <AlertCircle className="w-3 h-3" /> {errors.password}
+                      </p>
+                    </div>
+                  ) : (
+                    /* ════════════════════════════════════════════
+                        MODE 2: SIGN UP / REGISTER FORM
+                    ════════════════════════════════════════════ */
+                    <div>
+                      <div className="mb-5">
+                        <h2 className="tracking-tight leading-tight"
+                          style={{ ...fontHeading, fontSize: 26, fontWeight: 600, color: C.ink }}>
+                          Register Law Firm{" "}
+                          <em style={{ color: C.blue, fontStyle: "italic" }}>Workspace.</em>
+                        </h2>
+                        <p className="text-[11.5px] mt-1.5 leading-relaxed" style={{ color: C.muted, ...fontBody }}>
+                          For Senior Advocates & Firm Admins. Junior Advocates, Clerks, and Clients are provisioned inside the workspace.
                         </p>
-                      )}
-                    </div>
-
-                    {/* Remember */}
-                    <label className="flex items-center gap-2.5 cursor-pointer">
-                      <div className="w-4 h-4 rounded flex items-center justify-center"
-                        style={{ backgroundColor: C.blue, border: `1.5px solid ${C.blue}` }}>
-                        <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
                       </div>
-                      <span className="text-[12px]" style={{ color: C.muted, ...fontBody }}>Keep me signed in</span>
-                    </label>
 
-                    {/* CTA */}
-                    <button type="submit" disabled={loading}
-                      className="w-full py-3.5 rounded-xl font-semibold text-[13px] text-white flex items-center justify-center gap-2.5 group cursor-pointer relative overflow-hidden transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed mt-1 shadow-lg hover:shadow-blue-500/25"
-                      style={{ background: `linear-gradient(135deg, #1e3a8a 0%, ${C.blue} 60%, #2563eb 100%)`, boxShadow: `0 6px 24px rgba(29,78,216,0.2), inset 0 1px 0 rgba(255,255,255,0.12)`, ...fontBody }}
-                      suppressHydrationWarning>
-                      <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl"
-                        style={{ background: "linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.06) 50%, transparent 70%)" }} />
-                      {loading ? (
-                        <span className="flex items-center gap-2">
-                          <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                          </svg>
-                          Authenticating...
-                        </span>
-                      ) : (
-                        <>
-                          <Gavel className="w-4 h-4 text-amber-300 transition-transform duration-300 group-hover:rotate-[-25deg] group-hover:scale-110" />
-                          <span>Continue to Workspace</span>
-                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
-                        </>
-                      )}
-                    </button>
+                      <form onSubmit={handleRegisterSubmit} noValidate className="space-y-3.5">
+                        
+                        {/* Name Grid */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="block text-[10px] font-semibold uppercase tracking-widest" style={{ color: C.muted, ...fontBody }}>First Name</label>
+                            <div className="relative">
+                              <User className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: C.faint }} />
+                              <input type="text" name="first_name" placeholder="First Name" value={registerData.first_name}
+                                onChange={handleRegisterChange} onBlur={handleRegisterBlur} onFocus={inputFocus} onBlurCapture={inputBlurStyle("first_name")}
+                                className="w-full pl-9 pr-3 py-2.5 rounded-xl text-[12px] outline-none" style={inputStyle("first_name")} />
+                            </div>
+                            {errors.first_name && touched.first_name && (
+                              <p className="text-[10px]" style={{ color: C.blue, ...fontBody }}>{errors.first_name}</p>
+                            )}
+                          </div>
 
-                  </form>
+                          <div className="space-y-1">
+                            <label className="block text-[10px] font-semibold uppercase tracking-widest" style={{ color: C.muted, ...fontBody }}>Last Name</label>
+                            <input type="text" name="last_name" placeholder="Last Name" value={registerData.last_name}
+                              onChange={handleRegisterChange} onFocus={inputFocus} onBlurCapture={inputBlurStyle("last_name")}
+                              className="w-full px-3 py-2.5 rounded-xl text-[12px] outline-none" style={inputStyle("last_name")} />
+                          </div>
+                        </div>
+
+                        {/* Email */}
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-semibold uppercase tracking-widest" style={{ color: C.muted, ...fontBody }}>Email Address</label>
+                          <div className="relative">
+                            <Mail className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: C.faint }} />
+                            <input type="email" name="email" placeholder="advocate@lawfirm.com" value={registerData.email}
+                              onChange={handleRegisterChange} onBlur={handleRegisterBlur} onFocus={inputFocus} onBlurCapture={inputBlurStyle("email")}
+                              className="w-full pl-9 pr-3 py-2.5 rounded-xl text-[12px] outline-none" style={inputStyle("email")} />
+                          </div>
+                          {errors.email && touched.email && (
+                            <p className="text-[10px]" style={{ color: C.blue, ...fontBody }}>{errors.email}</p>
+                          )}
+                        </div>
+
+
+
+                        {/* Password */}
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-semibold uppercase tracking-widest" style={{ color: C.muted, ...fontBody }}>Password</label>
+                          <div className="relative">
+                            <Lock className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: C.faint }} />
+                            <input type={showPass ? "text" : "password"} name="password" placeholder="Min. 6 characters" value={registerData.password}
+                              onChange={handleRegisterChange} onBlur={handleRegisterBlur} onFocus={inputFocus} onBlurCapture={inputBlurStyle("password")}
+                              className="w-full pl-9 pr-9 py-2.5 rounded-xl text-[12px] outline-none" style={inputStyle("password")} />
+                            <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer" style={{ color: C.faint }}>
+                              {showPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                          {errors.password && touched.password && (
+                            <p className="text-[10px]" style={{ color: C.blue, ...fontBody }}>{errors.password}</p>
+                          )}
+                        </div>
+
+                        {/* Confirm Password */}
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-semibold uppercase tracking-widest" style={{ color: C.muted, ...fontBody }}>Confirm Password</label>
+                          <div className="relative">
+                            <Lock className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: C.faint }} />
+                            <input type={showConfirmPass ? "text" : "password"} name="confirmPassword" placeholder="Repeat password" value={registerData.confirmPassword}
+                              onChange={handleRegisterChange} onBlur={handleRegisterBlur} onFocus={inputFocus} onBlurCapture={inputBlurStyle("confirmPassword")}
+                              className="w-full pl-9 pr-9 py-2.5 rounded-xl text-[12px] outline-none" style={inputStyle("confirmPassword")} />
+                            <button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)} className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer" style={{ color: C.faint }}>
+                              {showConfirmPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                          {errors.confirmPassword && touched.confirmPassword && (
+                            <p className="text-[10px]" style={{ color: C.blue, ...fontBody }}>{errors.confirmPassword}</p>
+                          )}
+                        </div>
+
+                        {/* CTA */}
+                        <button type="submit" disabled={loading}
+                          className="w-full py-3.5 rounded-xl font-semibold text-[13px] text-white flex items-center justify-center gap-2.5 group cursor-pointer relative overflow-hidden transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed mt-2 shadow-lg hover:shadow-blue-500/25"
+                          style={{ background: `linear-gradient(135deg, #1e3a8a 0%, ${C.blue} 60%, #2563eb 100%)`, boxShadow: `0 6px 24px rgba(29,78,216,0.2)`, ...fontBody }}>
+                          {loading ? (
+                            <span className="flex items-center gap-2">
+                              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
+                              Creating Account...
+                            </span>
+                          ) : (
+                            <>
+                              <UserCheck className="w-4 h-4 text-amber-300" />
+                              <span>Create Account & Continue</span>
+                              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                            </>
+                          )}
+                        </button>
+                      </form>
+
+                      {/* Mode switcher prompt */}
+                      <p className="text-[11px] text-center mt-4" style={{ color: C.muted, ...fontBody }}>
+                        Already have an account?{" "}
+                        <button type="button" onClick={() => { setAuthMode("signin"); setErrors({}); }} className="font-semibold hover:underline cursor-pointer" style={{ color: C.blue }}>
+                          Sign In
+                        </button>
+                      </p>
+                    </div>
+                  )}
 
                   {/* Trust badges */}
-                  <div className="mt-8 pt-6 grid grid-cols-3 gap-2 text-center"
+                  <div className="mt-6 pt-5 grid grid-cols-3 gap-2 text-center"
                     style={{ borderTop: `1px solid ${C.border}` }}>
                     {[
-                      { icon: <ShieldCheck className="w-4 h-4" />, label: "256-Bit\nEncrypted" },
-                      { icon: <CheckCircle2 className="w-4 h-4" />, label: "ISO 27001\nCertified" },
-                      { icon: <Scale className="w-4 h-4" />, label: "Bar Council\nCompliant" },
+                      { icon: <ShieldCheck className="w-3.5 h-3.5" />, label: "Role-Based\nSecurity" },
+                      { icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: "Encrypted\nStorage" },
+                      { icon: <Scale className="w-3.5 h-3.5" />, label: "Bar Council\nStandards" },
                     ].map((t, i) => (
-                      <div key={i} className="flex flex-col items-center gap-1.5">
+                      <div key={i} className="flex flex-col items-center gap-1">
                         <span style={{ color: C.faint }}>{t.icon}</span>
-                        <span className="text-[10px] font-medium leading-tight whitespace-pre-line"
+                        <span className="text-[9.5px] font-medium leading-tight whitespace-pre-line"
                           style={{ color: C.faint, ...fontBody }}>{t.label}</span>
                       </div>
                     ))}
@@ -934,22 +1105,22 @@ export default function Login() {
       </section>
 
       {/* ════════════════════════════════════════════════
-          AI FEATURES SECTION
+          SYSTEM MODULES SHOWCASE SECTION
       ════════════════════════════════════════════════ */}
-      <section id="ai-features" className="relative z-10 py-24 scroll-mt-16"
+      <section id="modules" className="relative z-10 py-24 scroll-mt-16"
         style={{ borderTop: `1px solid ${C.border}`, animation: "slide-in-up 0.7s 0.3s cubic-bezier(.25,.8,.25,1) both" }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
 
           <div className="text-center max-w-xl mx-auto mb-14 space-y-3">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-medium"
               style={{ backgroundColor: C.blueL, border: `1px solid #bfdbfe`, color: C.blue, ...fontBody }}>
-              <Briefcase className="w-3.5 h-3.5" /> Project Features
+              <Briefcase className="w-3.5 h-3.5" /> Platform Capabilities
             </div>
             <h2 className="tracking-tight" style={{ ...fontHeading, fontSize: 36, fontWeight: 600, color: C.ink }}>
               Built for Modern Legal Practice
             </h2>
             <p className="text-sm leading-relaxed" style={{ color: C.muted, ...fontBody }}>
-              Integrated case binders, client consultations, law firm management, and invoice tracking.
+              Integrated case binders, client consultations, law firm management, clerk operations, and invoice tracking.
             </p>
           </div>
 
@@ -957,27 +1128,27 @@ export default function Login() {
 
             {/* Tab list */}
             <div className="lg:col-span-5 space-y-2">
-              {aiFeatures.map((f, idx) => (
-                <div key={f.id} onClick={() => setAiTab(idx)}
+              {projectShowcase.map((f, idx) => (
+                <div key={f.id} onClick={() => setActiveTab(idx)}
                   className="p-4 rounded-xl cursor-pointer transition-all duration-200"
                   style={{
-                    backgroundColor: aiTab === idx ? C.white : "transparent",
-                    border: aiTab === idx ? `1.5px solid ${C.border}` : `1.5px solid transparent`,
-                    boxShadow: aiTab === idx ? "0 4px 16px rgba(28,20,9,0.08)" : "none",
+                    backgroundColor: activeTab === idx ? C.white : "transparent",
+                    border: activeTab === idx ? `1.5px solid ${C.border}` : `1.5px solid transparent`,
+                    boxShadow: activeTab === idx ? "0 4px 16px rgba(28,20,9,0.08)" : "none",
                   }}>
                   <div className="flex items-center justify-between mb-1">
                     <span className="flex items-center gap-2 font-semibold text-sm"
-                      style={{ color: aiTab === idx ? C.ink : C.muted, ...fontBody }}>
-                      <span style={{ color: aiTab === idx ? C.blue : C.faint }}>{f.icon}</span>
+                      style={{ color: activeTab === idx ? C.ink : C.muted, ...fontBody }}>
+                      <span style={{ color: activeTab === idx ? C.blue : C.faint }}>{f.icon}</span>
                       {f.title}
                     </span>
                     <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
-                      style={{ backgroundColor: aiTab === idx ? C.blueL : C.surface, color: aiTab === idx ? C.blue : C.faint, ...fontBody }}>
+                      style={{ backgroundColor: activeTab === idx ? C.blueL : C.surface, color: activeTab === idx ? C.blue : C.faint, ...fontBody }}>
                       {f.tag}
                     </span>
                   </div>
                   <p className="text-[12px] leading-relaxed line-clamp-2"
-                    style={{ color: aiTab === idx ? C.muted : C.faint, ...fontBody }}>{f.description}</p>
+                    style={{ color: activeTab === idx ? C.muted : C.faint, ...fontBody }}>{f.description}</p>
                 </div>
               ))}
             </div>
@@ -991,34 +1162,34 @@ export default function Login() {
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: "#e57373" }} />
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: "#ffb74d" }} />
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: "#66bb6a" }} />
-                  <span className="ml-3 text-[11px] font-mono" style={{ color: C.muted }}>ai_engine.log</span>
+                  <span className="ml-3 text-[11px] font-mono" style={{ color: C.muted }}>module_preview.log</span>
                 </div>
                 <span className="text-[9px] font-bold px-2.5 py-1 rounded-full"
                   style={{ backgroundColor: C.blueL, color: C.blue, ...fontBody }}>
-                  {aiFeatures[aiTab].tag}
+                  {projectShowcase[activeTab].tag}
                 </span>
               </div>
 
               <div className="p-6 space-y-5">
                 <div>
                   <h3 className="font-semibold text-xl mb-1.5" style={{ ...fontHeading, color: C.ink }}>
-                    {aiFeatures[aiTab].title}
+                    {projectShowcase[activeTab].title}
                   </h3>
                   <p className="text-[13px] leading-relaxed" style={{ color: C.muted, ...fontBody }}>
-                    {aiFeatures[aiTab].description}
+                    {projectShowcase[activeTab].description}
                   </p>
                 </div>
 
-                {/* Prompt */}
+                {/* Module Scope */}
                 <div className="p-4 rounded-xl space-y-1.5"
                   style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: C.gold, ...fontBody }}>Prompt</span>
-                  <p className="text-[13px] italic" style={{ color: C.ink, fontFamily: "Georgia, serif" }}>
-                    &quot;{aiFeatures[aiTab].prompt}&quot;
+                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: C.gold, ...fontBody }}>Active Scope</span>
+                  <p className="text-[13px] font-medium" style={{ color: C.ink, ...fontBody }}>
+                    {projectShowcase[activeTab].previewTitle}
                   </p>
                 </div>
 
-                {/* Output */}
+                {/* Output bullets */}
                 <div className="p-4 rounded-xl space-y-3"
                   style={{ backgroundColor: C.blueL, border: `1px solid #bfdbfe` }}>
                   <div className="flex items-center justify-between">
@@ -1028,10 +1199,10 @@ export default function Login() {
                     <span className="text-[10px] font-mono" style={{ color: C.faint }}>Active</span>
                   </div>
                   <p className="text-[13px] font-semibold" style={{ color: C.ink, ...fontBody }}>
-                    {aiFeatures[aiTab].output.summary}
+                    {projectShowcase[activeTab].output.summary}
                   </p>
                   <ul className="space-y-1.5">
-                    {aiFeatures[aiTab].output.bullets.map((b, i) => (
+                    {projectShowcase[activeTab].output.bullets.map((b, i) => (
                       <li key={i} className="flex gap-2 text-[12px] leading-relaxed" style={{ color: C.muted, ...fontBody }}>
                         <span style={{ color: C.blue, flexShrink: 0 }}>·</span>{b}
                       </li>
@@ -1045,7 +1216,7 @@ export default function Login() {
       </section>
 
       {/* ════════════════════════════════════════════════
-          FEATURES SECTION
+          CORE FEATURES SECTION
       ════════════════════════════════════════════════ */}
       <section id="features" className="relative z-10 py-24 scroll-mt-16"
         style={{ borderTop: `1px solid ${C.border}` }}>
@@ -1060,7 +1231,7 @@ export default function Login() {
               Everything a Law Practice Needs
             </h2>
             <p className="text-sm leading-relaxed" style={{ color: C.muted, ...fontBody }}>
-              Unified platform for advocates, senior counsels, and legal teams.
+              Unified platform for senior advocates, associate counsels, clerks, and clients.
             </p>
           </div>
 
@@ -1094,7 +1265,7 @@ export default function Login() {
             How It All Works
           </h2>
           <p className="text-sm leading-relaxed" style={{ color: C.muted, ...fontBody }}>
-            Client onboarding → AI research & drafting → e-Courts hearing sync → Retainer settlement.
+            Client onboarding → Case filing & eCourts tracking → Discussion session notes → Clerk visit logs & Invoice settlement.
           </p>
           <button onClick={() => setOverviewOpen(true)}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-medium text-sm cursor-pointer transition-all hover:opacity-90"
@@ -1113,15 +1284,15 @@ export default function Login() {
             <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: C.blue }}>
               <Scale className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="font-semibold text-sm" style={{ color: C.ink, ...fontBody }}>Legal-Tech AI</span>
-            <span style={{ color: C.faint }}>&nbsp;· Advocate OS 2026</span>
+            <span className="font-semibold text-sm" style={{ color: C.ink, ...fontBody }}>Legal-Tech</span>
+            <span style={{ color: C.faint }}>&nbsp;· Advocate Practice Workspace</span>
           </div>
           <div className="flex items-center gap-5" style={{ color: C.muted, ...fontBody }}>
             <button onClick={() => setOverviewOpen(true)} className="hover:opacity-70 cursor-pointer">Overview</button>
-            <a href="#features"    className="hover:opacity-70">Features</a>
-            <a href="#ai-features" className="hover:opacity-70">AI Features</a>
+            <a href="#features" className="hover:opacity-70">Features</a>
+            <a href="#modules" className="hover:opacity-70">Modules</a>
           </div>
-          <p style={{ color: C.faint, ...fontBody }}>© 2026 Legal-Tech Inc. · ISO 27001 · Bar Council</p>
+          <p style={{ color: C.faint, ...fontBody }}>© {new Date().getFullYear()} Legal-Tech Practice Management.</p>
         </div>
       </footer>
 
@@ -1130,7 +1301,6 @@ export default function Login() {
       ════════════════════════════════════════════════ */}
       <Modal open={forgotPasswordOpen} onClose={() => { if (!forgotLoading) { setForgotPasswordOpen(false); setForgotStep(1); setForgotError(""); setForgotSuccess(""); setForgotEmail(""); setForgotOtp(""); } }}>
         <div className="p-7 sm:p-8">
-          {/* Header */}
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center"
               style={{ backgroundColor: C.blueL, border: `1px solid #bfdbfe` }}>
@@ -1146,7 +1316,6 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Step indicator */}
           <div className="flex items-center gap-2 mb-5">
             {[1, 2].map((s) => (
               <div key={s} className="flex items-center gap-2">
@@ -1164,7 +1333,6 @@ export default function Login() {
             </span>
           </div>
 
-          {/* Messages */}
           {(forgotError || forgotSuccess) && (
             <div className={`mb-4 flex items-start gap-2.5 text-[12px] px-4 py-3 rounded-xl`}
               style={{ 
@@ -1178,7 +1346,6 @@ export default function Login() {
             </div>
           )}
 
-          {/* Step 1: Email */}
           {forgotStep === 1 && (
             <form onSubmit={handleForgotSendOtp} className="space-y-4">
               <div className="space-y-1.5">
@@ -1206,7 +1373,6 @@ export default function Login() {
             </form>
           )}
 
-          {/* Step 2: OTP */}
           {forgotStep === 2 && (
             <form onSubmit={handleForgotVerifyOtp} className="space-y-4">
               <div className="space-y-1.5">
@@ -1224,10 +1390,6 @@ export default function Login() {
                   style={{ backgroundColor: C.surface, border: `1.5px solid ${C.border}`, color: C.ink, letterSpacing: "0.5em" }}
                 />
                 <p className="text-[11px] text-center" style={{ color: C.faint, ...fontBody }}>Enter the code sent to <strong>{forgotEmail}</strong></p>
-                <p className="text-[11px] text-center mt-1 flex items-center justify-center gap-1" style={{ color: "#d97706", ...fontBody }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  Also check your <strong>Spam / Junk</strong> folder if not in inbox
-                </p>
               </div>
               <div className="flex gap-3">
                 <button type="button" onClick={() => { setForgotStep(1); setForgotError(""); setForgotSuccess(""); setForgotOtp(""); }}
@@ -1257,7 +1419,7 @@ export default function Login() {
       </Modal>
 
       {/* ════════════════════════════════════════════════
-          OVERVIEW MODAL
+          PROJECT OVERVIEW MODAL
       ════════════════════════════════════════════════ */}
       <Modal open={overviewOpen} onClose={() => setOverviewOpen(false)}>
         <div className="p-7 sm:p-8">
@@ -1268,7 +1430,7 @@ export default function Login() {
             </div>
             <div>
               <h3 className="font-semibold text-xl" style={{ ...fontHeading, color: C.ink }}>Project Overview</h3>
-              <p className="text-[11px]" style={{ color: C.muted, ...fontBody }}>Architecture & System Specs</p>
+              <p className="text-[11px]" style={{ color: C.muted, ...fontBody }}>Practice Management Architecture</p>
             </div>
           </div>
 
@@ -1278,22 +1440,8 @@ export default function Login() {
                 <ShieldCheck className="w-4 h-4" /> Platform Mission
               </h4>
               <p className="leading-relaxed" style={{ color: C.muted, ...fontBody }}>
-                Legal-Tech unifies digital case binders, client consultations, law firm management, clerk court visits, and invoice tracking into a high-security workspace for law practice.
+                Legal-Tech unifies digital case binders, client consultations, law firm management, clerk court visits, and invoice tracking into a secure workspace for law practice.
               </p>
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-3">
-              {[
-                { label: "Core Framework", value: "Next.js 16 + React 19", sub: "Tailwind CSS v4 · Lucide Icons" },
-                { label: "Backend Engine", value: "Python FastAPI + PostgreSQL", sub: "OAuth2 JWT · e-Courts Scraper" },
-              ].map((item, i) => (
-                <div key={i} className="p-4 rounded-xl space-y-1"
-                  style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: C.faint, ...fontBody }}>{item.label}</span>
-                  <p className="font-semibold text-sm" style={{ color: C.ink, ...fontBody }}>{item.value}</p>
-                  <p style={{ color: C.muted, ...fontBody }}>{item.sub}</p>
-                </div>
-              ))}
             </div>
 
             <div className="space-y-2">
@@ -1303,6 +1451,8 @@ export default function Login() {
                 ["Law Firm Hierarchy (Advocate, Junior, Clerk, Client)",    "ROLE-BASED"],
                 ["Case Discussions & Consultation Notes",                   "LOGGED"],
                 ["Invoice Generation & Payment Histories",                  "SECURE"],
+                ["Clerk Court Visits & Physical File Formatting",            "REGISTERED"],
+                ["Granular Permissions (View, Add, Edit, Delete)",          "PROTECTED"],
               ].map(([label, tag], i) => (
                 <div key={i} className="flex items-center justify-between p-3 rounded-xl"
                   style={{ backgroundColor: C.ivory, border: `1px solid ${C.border}` }}>
@@ -1323,9 +1473,9 @@ export default function Login() {
       </Modal>
 
       {/* ════════════════════════════════════════════════
-          AI MODAL
+          MODULES EXPLORE MODAL
       ════════════════════════════════════════════════ */}
-      <Modal open={aiOpen} onClose={() => setAiOpen(false)}>
+      <Modal open={modulesOpen} onClose={() => setModulesOpen(false)}>
         <div className="p-7 sm:p-8">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center"
@@ -1333,13 +1483,13 @@ export default function Login() {
               <Briefcase className="w-5 h-5" style={{ color: C.blue }} />
             </div>
             <div>
-              <h3 className="font-semibold text-xl" style={{ ...fontHeading, color: C.ink }}>Project Features</h3>
+              <h3 className="font-semibold text-xl" style={{ ...fontHeading, color: C.ink }}>Platform Modules</h3>
               <p className="text-[11px]" style={{ color: C.muted, ...fontBody }}>Core Modules Powering Legal-Tech</p>
             </div>
           </div>
 
           <div className="space-y-4">
-            {aiFeatures.map((f, i) => (
+            {projectShowcase.map((f, i) => (
               <div key={i} className="p-4 rounded-xl space-y-2"
                 style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
                 <div className="flex items-center justify-between">
@@ -1350,17 +1500,10 @@ export default function Login() {
                     style={{ backgroundColor: C.blueL, color: C.blue, ...fontBody }}>{f.tag}</span>
                 </div>
                 <p className="text-[12px] leading-relaxed" style={{ color: C.muted, ...fontBody }}>{f.description}</p>
-                <div className="p-3 rounded-lg"
-                  style={{ backgroundColor: C.ivory, border: `1px solid ${C.border}` }}>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider block mb-1" style={{ color: C.gold, ...fontBody }}>Example</span>
-                  <p className="text-[12px] italic" style={{ color: C.ink, fontFamily: "Georgia, serif" }}>
-                    &quot;{f.prompt}&quot;
-                  </p>
-                </div>
               </div>
             ))}
             <div className="flex justify-end pt-1">
-              <button onClick={() => setAiOpen(false)}
+              <button onClick={() => setModulesOpen(false)}
                 className="px-5 py-2.5 rounded-xl font-medium cursor-pointer transition-opacity hover:opacity-80 text-white text-sm"
                 style={{ backgroundColor: C.blue, ...fontBody }}>Got It</button>
             </div>
