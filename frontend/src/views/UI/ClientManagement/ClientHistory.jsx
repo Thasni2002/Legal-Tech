@@ -247,14 +247,29 @@ export default function ClientHistory() {
   const [searchQuery, setSearchQuery] = useState("");
   const [mounted, setMounted] = useState(false);
 
-  // Dedicated Case Timeline States
+  // Dedicated Case Timeline & Activity States
   const [selectedTimelineCaseId, setSelectedTimelineCaseId] = useState(null);
+  const [selectedActivityCaseId, setSelectedActivityCaseId] = useState("all");
   const [timelineEvents, setTimelineEvents] = useState([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [selectedTimelineEvent, setSelectedTimelineEvent] = useState(null);
 
   useEffect(() => {
     setMounted(true);
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const caseIdParam = searchParams.get("case_id");
+      const tabParam = searchParams.get("tab");
+      if (caseIdParam) {
+        const parsedId = Number(caseIdParam);
+        if (!isNaN(parsedId)) {
+          setSelectedTimelineCaseId(parsedId);
+        }
+      }
+      if (tabParam === "timeline" || caseIdParam) {
+        setMainTab("timeline");
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -276,10 +291,12 @@ export default function ClientHistory() {
 
     const fetchDbCases = async () => {
       try {
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const [res, resAssigned, resClients] = await Promise.all([
-          fetch(`${API_BASE_URL}/case-management/`),
-          fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases`).catch(() => null),
-          fetch(`${API_BASE_URL}/clients/`).catch(() => null),
+          fetch(`${API_BASE_URL}/case-management/`, { headers }),
+          fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases`, { headers }).catch(() => null),
+          fetch(`${API_BASE_URL}/clients/`, { headers }).catch(() => null),
         ]);
 
         if (res.ok) {
@@ -412,6 +429,8 @@ export default function ClientHistory() {
             return {
               id: `db-case-${item.id}`,
               type: "case",
+              caseId: item.id,
+              caseNo: item.case_no,
               title: "Case Created / Updated",
               desc: `Case '${item.case_title || item.case_no}' under court '${item.court_name}' is currently '${item.status}'${formattedCaseAdv ? ` | Assigned Advocate: ${formattedCaseAdv}` : ''}.`,
               clientName: item.client_name || "Unknown",
@@ -439,6 +458,8 @@ export default function ClientHistory() {
               docItems.push({
                 id: `db-doc-${item.id}-${idx}`,
                 type: "document",
+                caseId: item.id,
+                caseNo: item.case_no,
                 title: doc.documentType || "Document Uploaded",
                 fileName: doc.file || "File",
                 caseName: item.case_title || item.case_no,
@@ -483,9 +504,12 @@ export default function ClientHistory() {
 
           const mapped = matchedInvoices.map((item) => {
             const dt = formatExactDateTime(item.created_at || item.updated_at);
+            const matchedCaseObj = (clientCases || []).find(c => (c.case_no && item.case_number && c.case_no === item.case_number) || (c.id && item.case_id && c.id === item.case_id));
             return {
               id: `db-billing-${item.id}`,
               type: "billing",
+              caseId: matchedCaseObj ? matchedCaseObj.id : (item.case_id || null),
+              caseNo: item.case_number || (matchedCaseObj ? matchedCaseObj.case_no : null),
               title: `₹${(item.grand_total || item.subtotal || 0).toLocaleString("en-IN")} — ${item.status === 'Paid' ? 'Received' : item.status || 'Pending'}`,
               desc: `Invoice for ${item.client_name || "Client"} | Case: ${item.case_number || "N/A"} | Method: ${item.payment_method || "N/A"}.`,
               clientName: item.client_name || "Unknown",
@@ -523,6 +547,7 @@ export default function ClientHistory() {
 
           const mapped = matchedConsultations.map((item) => {
             const dt = formatExactDateTime(item.created_at || item.date);
+            const matchedCaseObj = (clientCases || []).find(c => (c.id && item.case_id && c.id === item.case_id) || (c.case_no && item.case_no && c.case_no === item.case_no));
             const primaryAdv = (item.advocate_name && item.advocate_name.toLowerCase() !== "counsel" && item.advocate_name.toLowerCase() !== "n/a" && item.advocate_name.trim() !== "")
               ? item.advocate_name
               : (assignedAdvocatesList.length > 0 ? assignedAdvocatesList[0] : "Senior Advocate");
@@ -531,6 +556,8 @@ export default function ClientHistory() {
             return {
               id: `db-discussion-${item.id}`,
               type: "discussion",
+              caseId: matchedCaseObj ? matchedCaseObj.id : (item.case_id || null),
+              caseNo: item.case_no || (matchedCaseObj ? matchedCaseObj.case_no : null),
               title: `Discussion Scheduled — ${item.status}`,
               desc: `Discussion appointment for issue: '${item.issue || "N/A"}' with ${formattedAdv} (${item.type || "N/A"}).`,
               clientName: item.client_name || "Unknown",
@@ -561,13 +588,18 @@ export default function ClientHistory() {
 
   // Fetch Timeline Events for Selected Case
   const fetchCaseTimeline = async (caseId, silent = false) => {
-    if (!caseId) return;
+    if (!caseId || typeof caseId === 'object') return;
     if (!silent) setTimelineLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/case-management/${caseId}/timeline`);
+      const headers = {};
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      const res = await fetch(`${API_BASE_URL}/case-management/${caseId}/timeline`, { headers });
       if (res.ok) {
         const data = await res.json();
-        setTimelineEvents(data);
+        setTimelineEvents(Array.isArray(data) ? data : []);
       } else {
         setTimelineEvents([]);
       }
@@ -649,6 +681,18 @@ export default function ClientHistory() {
   const filteredItems = historyItems.filter((item) => {
     if (activeTab !== "all" && item.type !== activeTab) {
       return false;
+    }
+
+    if (selectedActivityCaseId && selectedActivityCaseId !== "all") {
+      const selectedCaseObj = clientCases.find(c => c.id === selectedActivityCaseId || String(c.id) === String(selectedActivityCaseId));
+      const isCaseMatch = (
+        (item.caseId && String(item.caseId) === String(selectedActivityCaseId)) ||
+        (item.case_id && String(item.case_id) === String(selectedActivityCaseId)) ||
+        (selectedCaseObj && item.caseNo && item.caseNo === selectedCaseObj.case_no) ||
+        (selectedCaseObj && item.desc && selectedCaseObj.case_no && item.desc.includes(selectedCaseObj.case_no)) ||
+        (selectedCaseObj && item.desc && selectedCaseObj.case_title && item.desc.includes(selectedCaseObj.case_title))
+      );
+      if (!isCaseMatch) return false;
     }
 
     const search = searchQuery.trim().toLowerCase();
@@ -956,80 +1000,66 @@ export default function ClientHistory() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {clientCases.map((cItem) => (
-                        <div
-                          key={cItem.id}
-                          className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0] space-y-3 hover:border-blue-300 transition-all"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <h5 className="font-bold text-[#0F172A] text-sm leading-tight">
-                                {cItem.case_title || "Untitled Case"}
-                              </h5>
-                              <p className="text-[11px] text-[#64748B] font-mono mt-0.5">
-                                Case No: {cItem.case_no || "N/A"} {cItem.cnr_number ? `• CNR: ${cItem.cnr_number}` : ""}
-                              </p>
+                      {clientCases.map((cItem) => {
+                        const isSelectedForActivities = selectedActivityCaseId === cItem.id || String(selectedActivityCaseId) === String(cItem.id);
+                        return (
+                          <div
+                            key={cItem.id}
+                            onClick={() => {
+                              setSelectedActivityCaseId(cItem.id);
+                              setActiveTab("all");
+                              setMainTab("activities");
+                            }}
+                            className={`p-4 rounded-xl border space-y-3 transition-all cursor-pointer group ${
+                              isSelectedForActivities
+                                ? "bg-blue-50/40 border-[#2563EB] ring-2 ring-blue-500/20 shadow-xs"
+                                : "bg-[#F8FAFC] border-[#E2E8F0] hover:border-[#2563EB] hover:shadow-md hover:bg-white"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <h5 className="font-bold text-[#0F172A] group-hover:text-[#2563EB] text-sm leading-tight transition-colors">
+                                  {cItem.case_title || "Untitled Case"}
+                                </h5>
+                                <p className="text-[11px] text-[#64748B] font-mono mt-0.5">
+                                  Case No: {cItem.case_no || "N/A"} {cItem.cnr_number ? `• CNR: ${cItem.cnr_number}` : ""}
+                                </p>
+                              </div>
+                              <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-white border border-[#E2E8F0] text-[#0F172A] uppercase shadow-2xs">
+                                {cItem.status || "Active"}
+                              </span>
                             </div>
-                            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-white border border-[#E2E8F0] text-[#0F172A] uppercase">
-                              {cItem.status || "Active"}
-                            </span>
-                          </div>
 
-                          <div className="space-y-1.5 text-xs text-[#64748B]">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[11px] font-semibold text-[#94A3B8]">Court:</span>
-                              <span className="font-semibold text-[#0F172A] truncate max-w-[200px]" title={cItem.court_name}>
-                                {cItem.court_name || "N/A"}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-[11px] font-semibold text-[#94A3B8]">Advocate:</span>
-                              <span
-                                className={`font-semibold text-xs truncate max-w-[200px] ${
-                                  cItem.assigned_advocates_display && cItem.assigned_advocates_display !== "Not Assigned Advocate"
-                                    ? "text-[#0F172A]"
-                                    : "text-[#64748B]"
-                                }`}
-                                title={cItem.assigned_advocates_display || cItem.selected_advocate || "Not Assigned Advocate"}
-                              >
-                                {cItem.assigned_advocates_display || cItem.selected_advocate || "Not Assigned Advocate"}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-[11px] font-semibold text-[#94A3B8]">Documents Attached:</span>
-                              <span className="font-bold text-[#2563EB]">
-                                {Array.isArray(cItem.documents) ? cItem.documents.length : 0} files
-                              </span>
+                            <div className="space-y-1.5 text-xs text-[#64748B]">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-semibold text-[#94A3B8]">Court:</span>
+                                <span className="font-semibold text-[#0F172A] truncate max-w-[200px]" title={cItem.court_name}>
+                                  {cItem.court_name || "N/A"}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-semibold text-[#94A3B8]">Advocate:</span>
+                                <span
+                                  className={`font-semibold text-xs truncate max-w-[200px] ${
+                                    cItem.assigned_advocates_display && cItem.assigned_advocates_display !== "Not Assigned Advocate"
+                                      ? "text-[#0F172A]"
+                                      : "text-[#64748B]"
+                                  }`}
+                                  title={cItem.assigned_advocates_display || cItem.selected_advocate || "Not Assigned Advocate"}
+                                >
+                                  {cItem.assigned_advocates_display || cItem.selected_advocate || "Not Assigned Advocate"}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-semibold text-[#94A3B8]">Documents Attached:</span>
+                                <span className="font-bold text-[#2563EB]">
+                                  {Array.isArray(cItem.documents) ? cItem.documents.length : 0} files
+                                </span>
+                              </div>
                             </div>
                           </div>
-
-                          <div className="pt-2 border-t border-[#E2E8F0] flex justify-end">
-                            <button
-                              onClick={() => {
-                                const targetId = cItem.case_id || cItem.case_no || cItem.id;
-                                localStorage.setItem(
-                                  "trackCaseData",
-                                  JSON.stringify({
-                                    case_id: cItem.case_id || cItem.id,
-                                    case_no: cItem.case_no,
-                                    dbId: cItem.id,
-                                    case_title: cItem.case_title,
-                                  })
-                                );
-                                router.push(
-                                  `/client-management/case-tracking?case_id=${encodeURIComponent(
-                                    targetId || ""
-                                  )}`
-                                );
-                              }}
-                              className="px-3 py-1.5 bg-white hover:bg-blue-50 text-[#2563EB] font-bold text-xs rounded-lg border border-blue-200 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                            >
-                              <Briefcase size={13} />
-                              <span>Track Case</span>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -1068,9 +1098,9 @@ export default function ClientHistory() {
         {/* TAB 2: ACTIVITIES TAB */}
         {mainTab === "activities" && (
           <>
-            {/* Compact Filters Toolbar and Search Bar */}
+            {/* Compact Filters Toolbar */}
             <div className="px-4 py-2.5 border-b border-[#F1F5F9] flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white">
-              {/* Compact Tabs */}
+              {/* Compact Activity Type Tabs */}
               <div className="flex flex-wrap items-center gap-1 bg-[#F8FAFC] p-1 rounded-xl border border-[#E2E8F0]">
                 {["all", "case", "document", "billing", "discussion"].map((tab) => (
                   <button
@@ -1087,37 +1117,68 @@ export default function ClientHistory() {
                 ))}
               </div>
 
-              {/* Compact Search Input */}
-              <div className="relative w-full sm:w-56">
-                <Search size={13} className="absolute left-3 top-2 text-[#94A3B8]" />
-                <input
-                  type="text"
-                  placeholder="Search activity..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-7 py-1.5 rounded-xl border border-[#E2E8F0] bg-[#FAFAFA] text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-2.5 top-2 text-[#94A3B8] hover:text-[#0F172A]"
+              {/* Case Filter Dropdown (Placed on the right side where Search was) */}
+              {clientCases && clientCases.length > 0 && (
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <span className="text-xs font-bold text-[#64748B]">Filter Case:</span>
+                  <select
+                    value={selectedActivityCaseId || "all"}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSelectedActivityCaseId(val === "all" ? "all" : Number(val));
+                      setActiveTab("all");
+                      setMainTab("activities");
+                    }}
+                    className="rounded-xl border border-[#E2E8F0] bg-white px-3 py-1.5 text-xs text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200 cursor-pointer font-bold shadow-2xs max-w-[240px] truncate"
                   >
-                    <X size={12} />
-                  </button>
-                )}
-              </div>
+                    <option value="all">All Cases ({clientCases.length})</option>
+                    {clientCases.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.case_title ? `${c.case_title.slice(0, 26)}...` : `Case #${c.case_no || c.id}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
+
+            {/* Active Case Filter Indicator Banner */}
+            {selectedActivityCaseId && selectedActivityCaseId !== "all" && (
+              <div className="px-4 py-2 bg-blue-50/90 border-b border-blue-100 flex items-center justify-between text-xs font-bold text-[#2563EB]">
+                <div className="flex items-center gap-2 truncate">
+                  <Briefcase size={14} className="shrink-0" />
+                  <span className="truncate">
+                    Showing activities for:{" "}
+                    <strong className="text-[#0F172A]">
+                      {clientCases.find(c => c.id === selectedActivityCaseId || String(c.id) === String(selectedActivityCaseId))?.case_title || `Case #${selectedActivityCaseId}`}
+                    </strong>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedActivityCaseId("all");
+                    setActiveTab("all");
+                    setMainTab("activities");
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-white border border-blue-200 hover:bg-blue-100 text-blue-700 text-[11px] flex items-center gap-1 transition-all cursor-pointer shadow-2xs shrink-0 ml-2"
+                >
+                  <X size={12} />
+                  <span>Show All Cases</span>
+                </button>
+              </div>
+            )}
 
             {/* Timeline Content */}
             <div className="p-4 sm:p-6 bg-slate-50/40">
               {filteredItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <div className="w-12 h-12 bg-[#F1F5F9] text-[#64748B] rounded-full flex items-center justify-center mb-3 border border-[#E2E8F0]">
-                    <Search size={18} />
+                    <Activity size={18} />
                   </div>
                   <h4 className="font-bold text-[#0F172A] text-sm mb-1">No activities found</h4>
                   <p className="text-xs text-[#64748B] max-w-xs">
-                    No history logs match your search filter for this client.
+                    No activity logs match the selected filter for this client.
                   </p>
                 </div>
               ) : (

@@ -193,8 +193,8 @@ export default function ClientDashboard() {
           };
         });
 
-        // Filter: ONLY show cases in the table if an advocate name occurs / is assigned!
-        const clientCases = mappedClientCases.filter((c) => Boolean(c.display_advocate));
+        // Show all client cases matching logged in user (advocate will display 'Not Assigned' if unassigned)
+        const clientCases = mappedClientCases;
 
         setCases(clientCases);
 

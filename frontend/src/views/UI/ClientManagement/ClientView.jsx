@@ -57,12 +57,12 @@ export default function ClientView() {
     setLoading(true);
     try {
       const [clientsRes, casesRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/clients/`),
+        fetch(`${API_BASE_URL}/clients/`).catch(() => null),
         fetch(`${API_BASE_URL}/case-management/`).catch(() => null),
       ]);
 
       let backendClients = [];
-      if (clientsRes.ok) {
+      if (clientsRes && clientsRes.ok) {
         backendClients = await clientsRes.json();
       }
 
@@ -174,6 +174,28 @@ export default function ClientView() {
       clientId: clientId,
       clientName: client.clientName
     });
+  };
+
+  const handleViewClientProfile = (client) => {
+    localStorage.setItem(
+      "clientData",
+      JSON.stringify({
+        clientId: client.clientId,
+        fullName: client.clientName,
+        clientName: client.clientName,
+        email: client.emailId,
+        emailId: client.emailId,
+        phone: client.contactNumber,
+        contactNumber: client.contactNumber,
+        altPhone: client.altPhone || "",
+        address: client.clientAddress || "",
+        district: client.clientDistrict || "",
+        profileImage: client.profileImage || null,
+        caseStatus: client.status,
+        status: client.status,
+      })
+    );
+    router.push("/client-management/view-history");
   };
 
   const ITEMS_PER_PAGE = 5;
@@ -364,20 +386,24 @@ export default function ClientView() {
                     >
                       {/* Card Top Header */}
                       <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3">
+                        <div
+                          onClick={() => handleViewClientProfile(client)}
+                          className="flex items-center gap-3 cursor-pointer group/profile"
+                          title={`View ${client.clientName}'s profile`}
+                        >
                           {client.profileImage ? (
                             <img
                               src={client.profileImage}
                               alt={client.clientName}
-                              className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-100 shadow-xs shrink-0"
+                              className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-100 shadow-xs shrink-0 group-hover/profile:scale-105 transition-transform"
                             />
                           ) : (
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] text-white flex items-center justify-center font-bold text-sm select-none shadow-xs shrink-0">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] text-white flex items-center justify-center font-bold text-sm select-none shadow-xs shrink-0 group-hover/profile:scale-105 transition-transform">
                               {initials}
                             </div>
                           )}
                           <div>
-                            <h3 className="font-bold text-[#0F172A] text-sm leading-tight">
+                            <h3 className="font-bold text-[#0F172A] text-sm leading-tight group-hover/profile:text-[#2563EB] transition-colors">
                               {client.clientName}
                             </h3>
                             <span className="text-[10px] text-[#94A3B8] font-mono mt-0.5 block">
@@ -424,24 +450,7 @@ export default function ClientView() {
                       {/* Card Footer Actions */}
                       <div className="flex items-center justify-between pt-2 border-t border-[#F1F5F9] gap-2">
                         <button
-                          onClick={() => {
-                            localStorage.setItem("clientData", JSON.stringify({
-                              clientId: client.clientId,
-                              fullName: client.clientName,
-                              clientName: client.clientName,
-                              email: client.emailId,
-                              emailId: client.emailId,
-                              phone: client.contactNumber,
-                              contactNumber: client.contactNumber,
-                              altPhone: client.altPhone || "",
-                              address: client.clientAddress || "",
-                              district: client.clientDistrict || "",
-                              profileImage: client.profileImage || null,
-                              caseStatus: client.status,
-                              status: client.status,
-                            }));
-                            router.push("/client-management/view-history");
-                          }}
+                          onClick={() => handleViewClientProfile(client)}
                           className="flex-1 py-1.5 px-3 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-xl transition border border-blue-200 flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer"
                           title="View Client"
                         >
@@ -526,20 +535,24 @@ export default function ClientView() {
                       className="group hover:bg-[#F8FAFC] transition-colors"
                     >
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-3">
+                        <div
+                          onClick={() => handleViewClientProfile(client)}
+                          className="flex items-center gap-3 cursor-pointer group/profile w-fit"
+                          title={`View ${client.clientName}'s profile`}
+                        >
                           {client.profileImage ? (
                             <img
                               src={client.profileImage}
                               alt={client.clientName}
-                              className="w-8 h-8 rounded-full object-cover ring-2 ring-blue-100 shadow-xs shrink-0"
+                              className="w-8 h-8 rounded-full object-cover ring-2 ring-blue-100 shadow-xs shrink-0 group-hover/profile:scale-105 transition-transform"
                             />
                           ) : (
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] text-white flex items-center justify-center font-bold text-xs select-none shadow-xs shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] text-white flex items-center justify-center font-bold text-xs select-none shadow-xs shrink-0 group-hover/profile:scale-105 transition-transform">
                               {initials}
                             </div>
                           )}
                           <div>
-                            <span className="font-semibold text-[#0F172A] text-xs block leading-tight">
+                            <span className="font-semibold text-[#0F172A] text-xs block leading-tight group-hover/profile:text-[#2563EB] transition-colors">
                               {client.clientName}
                             </span>
                             <span className="text-[10px] text-[#94A3B8] font-mono mt-0.5 block">{client.clientId}</span>
@@ -580,24 +593,7 @@ export default function ClientView() {
                       <td className="py-3.5 px-4 text-center whitespace-nowrap overflow-hidden">
                         <div className="flex items-center justify-center gap-2 shrink-0">
                           <button
-                            onClick={() => {
-                              localStorage.setItem("clientData", JSON.stringify({
-                                clientId: client.clientId,
-                                fullName: client.clientName,
-                                clientName: client.clientName,
-                                email: client.emailId,
-                                emailId: client.emailId,
-                                phone: client.contactNumber,
-                                contactNumber: client.contactNumber,
-                                altPhone: client.altPhone || "",
-                                address: client.clientAddress || "",
-                                district: client.clientDistrict || "",
-                                profileImage: client.profileImage || null,
-                                caseStatus: client.status,
-                                status: client.status,
-                              }));
-                              router.push("/client-management/view-history");
-                            }}
+                            onClick={() => handleViewClientProfile(client)}
                             title="View Client History"
                             className="p-2 rounded-full bg-blue-50 text-[#2563EB] hover:bg-blue-100 transition cursor-pointer flex items-center justify-center border border-blue-100 shadow-2xs shrink-0"
                           >
@@ -665,20 +661,24 @@ export default function ClientView() {
                   className="bg-white rounded-xl border border-[#E2E8F0] p-3.5 space-y-3 shadow-xs"
                 >
                   <div className="flex items-start justify-between gap-3 border-b border-[#F1F5F9] pb-2.5">
-                    <div className="flex items-center gap-2.5">
+                    <div
+                      onClick={() => handleViewClientProfile(client)}
+                      className="flex items-center gap-2.5 cursor-pointer group/profile"
+                      title={`View ${client.clientName}'s profile`}
+                    >
                       {client.profileImage ? (
                         <img
                           src={client.profileImage}
                           alt={client.clientName}
-                          className="w-8 h-8 rounded-full object-cover ring-2 ring-blue-100 shadow-xs shrink-0"
+                          className="w-8 h-8 rounded-full object-cover ring-2 ring-blue-100 shadow-xs shrink-0 group-hover/profile:scale-105 transition-transform"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] text-white flex items-center justify-center font-bold text-xs shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] text-white flex items-center justify-center font-bold text-xs shrink-0 group-hover/profile:scale-105 transition-transform">
                           {initials}
                         </div>
                       )}
                       <div>
-                        <h3 className="font-bold text-[#0F172A] text-xs leading-tight">
+                        <h3 className="font-bold text-[#0F172A] text-xs leading-tight group-hover/profile:text-[#2563EB] transition-colors">
                           {client.clientName}
                         </h3>
                         <span className="text-[10px] text-[#94A3B8] font-mono block mt-0.5">
@@ -707,23 +707,7 @@ export default function ClientView() {
 
                   <div className="flex items-center gap-2 pt-2 border-t border-[#F1F5F9]">
                     <button
-                      onClick={() => {
-                        localStorage.setItem(
-                          "clientData",
-                          JSON.stringify({
-                            clientId: client.clientId,
-                            fullName: client.clientName,
-                            clientName: client.clientName,
-                            email: client.emailId,
-                            emailId: client.emailId,
-                            phone: client.contactNumber,
-                            contactNumber: client.contactNumber,
-                            caseStatus: client.status,
-                            status: client.status,
-                          })
-                        );
-                        router.push("/client-management/view-history");
-                      }}
+                      onClick={() => handleViewClientProfile(client)}
                       title="View Client"
                       className="flex-1 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-lg font-bold text-xs transition border border-blue-200 flex items-center justify-center gap-1 cursor-pointer"
                     >
