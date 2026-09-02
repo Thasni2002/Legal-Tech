@@ -1162,6 +1162,56 @@ def get_full_case_ai_summary(db: Session, case_id: int, current_user=None) -> di
     except Exception as e:
         print("[CaseSummary] Error fetching document workflows:", e)
 
+    # 5. Fetch Payment & Invoice Details
+    payment_info = {
+        "total_amount": 0.0,
+        "paid_amount": 0.0,
+        "pending_amount": 0.0,
+        "payment_status": "No Invoices",
+        "invoices": []
+    }
+    try:
+        from app.advocate.finance_management.models import Invoice
+        invoices = db.query(Invoice).filter(
+            (Invoice.case_id == case.id) |
+            (Invoice.case_number == case.case_no) |
+            (Invoice.client_name == case.client_name)
+        ).all()
+        if invoices:
+            total = sum(inv.amount or 0.0 for inv in invoices)
+            paid = sum(inv.amount or 0.0 for inv in invoices if (inv.status or '').lower() in ['paid', 'completed'])
+            pending = total - paid
+
+            payment_info["total_amount"] = round(total, 2)
+            payment_info["paid_amount"] = round(paid, 2)
+            payment_info["pending_amount"] = round(pending, 2)
+            payment_info["payment_status"] = "Paid" if pending <= 0 else ("Partially Paid" if paid > 0 else "Pending")
+
+            for inv in invoices:
+                payment_info["invoices"].append({
+                    "id": inv.id,
+                    "invoice_number": inv.invoice_number or f"INV-{inv.id}",
+                    "amount": inv.amount or 0.0,
+                    "status": inv.status or "Pending",
+                    "issue_date": str(inv.issue_date.date()) if inv.issue_date else "N/A",
+                    "due_date": str(inv.due_date.date()) if inv.due_date else "N/A",
+                    "notes": inv.notes or "Legal Fee Invoice"
+                })
+    except Exception as e:
+        print("[CaseSummary] Error fetching payment info:", e)
+
+    # 6. Extract Last Update & Most Recent Proceeding
+    latest_evt = timeline_events[0] if timeline_events else None
+    last_update_info = {
+        "title": latest_evt.get("title", "No updates recorded") if latest_evt else "Case Onboarded",
+        "date": latest_evt.get("date", str(case.created_at.date())) if latest_evt else str(case.created_at.date()),
+        "time": latest_evt.get("time", "10:00 AM") if latest_evt else "10:00 AM",
+        "actor": latest_evt.get("actor", "System Advocate") if latest_evt else "System Advocate",
+        "description": latest_evt.get("description", "Case registered in Legal Tech platform.") if latest_evt else "Initial case registration.",
+        "status": case.status or "Active",
+        "updated_at": str(case.status_updated_at.strftime("%Y-%m-%d %H:%M")) if case.status_updated_at else str(case.updated_at.strftime("%Y-%m-%d %H:%M")) if case.updated_at else "N/A"
+    }
+
     # Core Case Metadata Dictionary
     case_info = {
         "case_id": case.id,
@@ -1187,35 +1237,36 @@ def get_full_case_ai_summary(db: Session, case_id: int, current_user=None) -> di
     adv_names = ", ".join([m["advocate_name"] for m in assigned_members]) if assigned_members else (case.selected_advocate or "Unassigned Advocate")
 
     fallback_analysis = {
-        "masterSummary": f"Complete Case Progress Summary for '{case_info['case_title']}' (Case No: {case_info['case_no']}, CNR: {case_info['cnr_number']}) pending before {case_info['court_name']}. The matter was registered on {case_info['filing_date']} for client {case_info['client_name']}. Assigned Legal Team: {adv_names}. Current status is listed as '{case_info['status']}' with next hearing scheduled for {case_info['next_hearing_date']}.",
-        "assignedAdvocateDetails": f"Assigned Counsel: {adv_names}. Team Role: Primary Advocate / Lead Trial Counsel. Assigned on {case_info['filing_date']}.",
-        "nextHearingPreparation": f"Next Hearing Date: {case_info['next_hearing_date']}. Forum: {case_info['court_name']}. Action: Verify filing of latest affidavits, review court cause list, and organize trial brief.",
+        "masterSummary": f"Comprehensive AI Case Progress Analysis for '{case_info['case_title']}' (Case No: {case_info['case_no']}, CNR: {case_info['cnr_number']}). The matter is pending before {case_info['court_name']} ({case_info['court_type']}). It was registered on {case_info['filing_date']} for client {case_info['client_name']} ({case_info['client_role']}). Current status: '{case_info['status']}'. Legal representation is led by {adv_names}. Most Recent Proceeding on {last_update_info['date']}: {last_update_info['title']} ({last_update_info['description']}). Next hearing date is scheduled for {case_info['next_hearing_date']}.",
+        "assignedAdvocateDetails": f"Primary Legal Representation: {adv_names}. Case Responsibility: Lead Trial Counsel / Senior Advocate. Assigned on {case_info['filing_date']}. Team notes: Active representation with client coordination.",
+        "nextHearingPreparation": f"Next Hearing Date: {case_info['next_hearing_date']}. Forum: {case_info['court_name']}. Strategic Action: Audit filing of latest affidavits, review court cause list, coordinate with client {case_info['client_name']}, and prepare trial brief.",
         "chronologicalMilestones": [
-            f"Case Filing ({case_info['filing_date']}): Onboarded client {case_info['client_name']} and filed matter before {case_info['court_name']}.",
-            f"Advocate Assignment: Assigned to {adv_names} for representation.",
-            f"Current Stage ({case_info['status']}): Proceeding active. Next hearing on {case_info['next_hearing_date']}."
+            f"Case Filing & Registration ({case_info['filing_date']}): Matter registered before {case_info['court_name']} for {case_info['client_name']}.",
+            f"Advocate Representation ({case_info['filing_date']}): Lead counsel {adv_names} assigned to manage court proceedings.",
+            f"Latest Proceeding ({last_update_info['date']}): {last_update_info['title']} - {last_update_info['description']}",
+            f"Active Proceedings & Timeline ({case_info['status']}): {len(timeline_events)} timeline event(s) logged. Next hearing on {case_info['next_hearing_date']}."
         ],
-        "latestUpdatesSummary": f"Latest update recorded: Case is currently {case_info['status']}. Next hearing date is scheduled for {case_info['next_hearing_date']}.",
-        "discussionHighlights": f"Case notes & discussions logged: {len(notes_list)} advocate note(s), {len(doc_workflows)} document workflow(s) active.",
+        "latestUpdatesSummary": f"Most Recent Proceeding on {last_update_info['date']} at {last_update_info['time']}: {last_update_info['title']}. Description: {last_update_info['description']}. Conducted by: {last_update_info['actor']}.",
+        "discussionHighlights": f"Case Discussions & Notes ({len(notes_list)} logged): {'; '.join([n['text'] for n in notes_list[:3]]) if notes_list else 'No internal discussion notes logged yet.'}",
         "actionPlan": [
             f"Review statutory compliance and case documents before {case_info['next_hearing_date']}",
             f"Coordinate with assigned counsel ({adv_names}) and client ({case_info['client_name']})",
-            "Ensure all hearing logs and orders are updated in eCourts portal tracker"
+            "Ensure all daily hearing logs, orders, and notices are updated in eCourts portal tracker"
         ]
     }
 
-    # 5. Generate Dynamic AI Analysis using Gemini AI (if available)
+    # 7. Generate Dynamic AI Analysis using Gemini AI (if available)
     api_key = os.environ.get("GEMINI_API_KEY", "")
     if api_key and genai:
         try:
             genai.configure(api_key=api_key)
             model = genai.GenerativeModel("gemini-2.0-flash")
 
-            events_text = "\n".join([f"- [{e.get('date', 'N/A')}] {e.get('title', 'Event')}: {e.get('description', '')}" for e in timeline_events[:15]])
+            events_text = "\n".join([f"- [{e.get('date', 'N/A')} {e.get('time', '')}] {e.get('title', 'Event')}: {e.get('description', '')}" for e in timeline_events[:15]])
             notes_text = "\n".join([f"- [{n['date']}] {n['author']} ({n['category']}): {n['text']}" for n in notes_list[:10]])
             docs_text = "\n".join([f"- [{d['created_at']}] {d['title']} ({d['document_type']}) - Status: {d['status']}" for d in doc_workflows[:10]])
 
-            prompt = f"""You are a Supreme Court Senior Advocate reviewing the complete case file and timeline history for a specific case.
+            prompt = f"""You are a Supreme Court Senior Advocate reviewing the complete case file, discussions, and payment status for a specific case.
 
 CASE CORE DATA:
 - Case Title: {case_info['case_title']}
@@ -1229,6 +1280,8 @@ CASE CORE DATA:
 - Next Hearing Date: {case_info['next_hearing_date']}
 - Status: {case_info['status']}
 - Description: {case_info['case_description']}
+- Last Update Event: [{last_update_info['date']} {last_update_info['time']}] {last_update_info['title']} - {last_update_info['description']} (By: {last_update_info['actor']})
+- Payment / Financial Summary: Total: ₹{payment_info['total_amount']} | Paid: ₹{payment_info['paid_amount']} | Pending: ₹{payment_info['pending_amount']} | Status: {payment_info['payment_status']}
 
 CHRONOLOGICAL TIMELINE EVENTS:
 {events_text if events_text.strip() else 'No timeline events logged yet.'}
@@ -1239,14 +1292,14 @@ ADVOCATE NOTES & DISCUSSIONS:
 DOCUMENT WORKFLOWS & FILINGS:
 {docs_text if docs_text.strip() else 'No document workflows logged yet.'}
 
-Analyze every detail of this case's journey from filing to present day and return ONLY a valid JSON object:
+Perform a thorough, comprehensive analysis of every detail of this case's journey from filing to present day and return ONLY a valid JSON object:
 {{
-  "masterSummary": "<3-4 sentences synthesizing the complete case standing, history, and status>",
-  "assignedAdvocateDetails": "<2 sentences detailing assigned advocates, roles, and representation>",
-  "nextHearingPreparation": "<2-3 sentences specifying exact preparation for the next hearing date>",
-  "chronologicalMilestones": ["<Milestone 1 with date>", "<Milestone 2 with date>", "<Milestone 3 with date>"],
-  "latestUpdatesSummary": "<2-3 sentences summarizing the most recent hearing notes, status change, or update>",
-  "discussionHighlights": "<2-3 sentences summarizing internal advocate notes, team discussions, and document workflows>",
+  "masterSummary": "<Comprehensive 3-4 sentence analysis synthesizing case standing, filing history, latest update, discussions, and payment standing>",
+  "assignedAdvocateDetails": "<2-3 sentence analysis detailing assigned advocates, team roles, assignment date, and trial representation duties>",
+  "nextHearingPreparation": "<2-3 sentence strategic roadmap detailing exact preparation needed before the next hearing date>",
+  "chronologicalMilestones": ["<Key Milestone 1 with date>", "<Key Milestone 2 with date>", "<Key Milestone 3 with date>"],
+  "latestUpdatesSummary": "<2-3 sentence detailed summary of the most recent update, hearing outcome, or status change>",
+  "discussionHighlights": "<2-3 sentence summary detailing advocate discussions, notes, and team collaboration>",
   "actionPlan": ["<action item 1>", "<action item 2>", "<action item 3>"]
 }}
 """
@@ -1266,6 +1319,8 @@ Analyze every detail of this case's journey from filing to present day and retur
         "timeline_events": timeline_events,
         "notes": notes_list,
         "documents": doc_workflows,
+        "payment_info": payment_info,
+        "last_update_info": last_update_info,
         "ai_analysis": fallback_analysis
     }
 

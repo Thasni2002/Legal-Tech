@@ -119,12 +119,16 @@ export default function DocumentViewerModal({ document: docProp, fileUrl, title,
         ext = (cleanTitle || "").split(".").pop().toLowerCase().split("?")[0];
       }
 
-      setIsImage(["jpg", "jpeg", "png", "webp", "gif", "bmp", "svg"].includes(ext));
-      setIsPdf(ext === "pdf");
-      setIsAudio(["mp3", "wav", "ogg", "aac", "m4a", "wma", "flac"].includes(ext));
-      setIsVideo(["mp4", "webm", "ogg", "mov", "avi", "mkv", "3gp"].includes(ext));
-      
+      const isImg = ["jpg", "jpeg", "png", "webp", "gif", "bmp", "svg"].includes(ext);
+      const isAud = ["mp3", "wav", "ogg", "aac", "m4a", "wma", "flac"].includes(ext);
+      const isVid = ["mp4", "webm", "ogg", "mov", "avi", "mkv", "3gp"].includes(ext);
       const isMd = ext === "md" || ext === "txt" || ext === "json" || ext === "log" || ext === "html";
+      const isPdfDoc = ext === "pdf" || (effectiveUrl.startsWith("blob:") && !isImg && !isAud && !isVid && !isMd) || (rawTitle || "").toLowerCase().includes("pdf") || (effectiveBadge || "").toLowerCase().includes("pdf") || (effectiveBadge || "").toLowerCase().includes("order");
+
+      setIsImage(isImg);
+      setIsPdf(isPdfDoc);
+      setIsAudio(isAud);
+      setIsVideo(isVid);
       setIsMarkdown(isMd);
       setViewerUrl(normalizedUrl);
 
