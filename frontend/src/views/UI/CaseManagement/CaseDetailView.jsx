@@ -46,6 +46,7 @@ import {
   Heading3,
   Maximize2,
   Minimize2,
+  Upload,
   X,
 } from "lucide-react";
 import { findStateAndDistrictByCourt } from "@/utils/districtCourts";
@@ -331,6 +332,93 @@ export default function CaseDetailView({ id }) {
   const [showVaultModal, setShowVaultModal] = useState(false);
   const [showVaultReset, setShowVaultReset] = useState(false);
   // ─────────────────────────────────────────────────────────────────────
+
+  // ── Computer Document Upload State ─────────────────────────────────────
+  const [uploadingComputerDoc, setUploadingComputerDoc] = useState(false);
+  const [computerDocType, setComputerDocType] = useState("Vakalatnama");
+  const [computerUploadSuccess, setComputerUploadSuccess] = useState(false);
+  const computerFileRef = useRef(null);
+
+  const handleComputerFileUpload = async (e) => {
+    const file = e.target.files?.[0] || e.dataTransfer?.files?.[0];
+    if (!file || !selectedCase) return;
+    setUploadingComputerDoc(true);
+
+    try {
+      let fileUrl = "";
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const uploadRes = await fetch(`${API_BASE_URL}/clerk/efiling/upload-document`, {
+          method: "POST",
+          body: formData,
+        });
+        if (uploadRes.ok) {
+          const data = await uploadRes.json();
+          fileUrl = data.url;
+        }
+      } catch (err) {
+        console.warn("Server file upload endpoint fallback to base64:", err);
+      }
+
+      if (!fileUrl) {
+        fileUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => resolve(ev.target.result);
+          reader.onerror = (err) => reject(err);
+          reader.readAsDataURL(file);
+        });
+      }
+
+      const newDocObj = {
+        documentType: computerDocType || "Uploaded Document",
+        advocate: getLoggedInUser()?.username || selectedCase.selected_advocate || "Advocate",
+        file: file.name,
+        url: fileUrl,
+        password: ""
+      };
+
+      const updatedDocuments = [...(selectedCase.documents || []), newDocObj];
+
+      const res = await fetch(`${API_BASE_URL}/case-management/${selectedCase.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caseId: selectedCase.case_id,
+          cnrNumber: selectedCase.cnr_number,
+          caseTitle: selectedCase.case_title,
+          caseNo: selectedCase.case_no,
+          caseType: selectedCase.case_type,
+          caseDes: selectedCase.case_description,
+          clientName: selectedCase.client_name,
+          contactNumber: selectedCase.contact_number,
+          emailId: selectedCase.email_id,
+          courtName: selectedCase.court_name,
+          courtType: selectedCase.court_type,
+          status: selectedCase.status,
+          selectedAdvocate: selectedCase.selected_advocate,
+          documents: updatedDocuments,
+          nextHearingDate: selectedCase.next_hearing_date
+        })
+      });
+
+      if (!res.ok) throw new Error("Failed to save document to case files.");
+
+      setSelectedCase(prev => ({
+        ...prev,
+        documents: updatedDocuments
+      }));
+
+      setComputerUploadSuccess(true);
+      setTimeout(() => setComputerUploadSuccess(false), 3500);
+      if (computerFileRef.current) computerFileRef.current.value = "";
+    } catch (err) {
+      console.error("Error uploading computer document:", err);
+      alert("Failed to upload document from computer: " + (err.message || "Unknown error"));
+    } finally {
+      setUploadingComputerDoc(false);
+    }
+  };
 
 
   const handleSaveOcrToCaseDocuments = async (extractedText, originalFilename, detectedDocType, digitizedHtml) => {
@@ -953,6 +1041,77 @@ export default function CaseDetailView({ id }) {
     } catch (err) {
       console.error("Order PDF generation error:", err);
       alert("Downloading order document...");
+    }
+  };
+
+  const handleViewOrderPDF = async (ord) => {
+    if (!ord) return;
+    if (ord.fileUrl && ord.fileUrl.startsWith("http")) {
+      setViewingDocument({
+        url: ord.fileUrl,
+        file: `${ord.orderType || 'Court Order'} (${ord.orderDate || 'N/A'}).pdf`,
+        documentType: ord.orderType || 'Court Order'
+      });
+      return;
+    }
+
+    try {
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF();
+      const margin = 20;
+      const pageWidth = doc.internal.pageSize.getWidth() - margin * 2;
+
+      // Header
+      doc.setFontSize(13);
+      doc.setFont("helvetica", "bold");
+      doc.text("IN THE COURT OF THE DISTRICT & SESSIONS JUDGE", margin, 22);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`AT ${selectedCase?.court_name || "DISTRICT COURT COMPLEX"}`, margin, 28);
+
+      doc.setLineWidth(0.5);
+      doc.setDrawColor(37, 99, 235);
+      doc.line(margin, 33, margin + pageWidth, 33);
+
+      // Metadata Block
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text(`CNR NUMBER: ${selectedCase?.cnr_number || "N/A"}`, margin, 42);
+      doc.text(`ORDER TYPE: ${ord.orderType || "COURT ORDER"}`, margin, 48);
+      doc.text(`ORDER DATE: ${ord.orderDate || "N/A"}`, margin, 54);
+      doc.text(`NEXT HEARING DATE: ${ecourtsData?.nextHearingDate || selectedCase?.next_hearing_date || "To be scheduled"}`, margin, 60);
+      doc.text(`BEFORE BENCH OF: ${ord.judgeName || "HON'BLE PRESIDING JUDGE"}`, margin, 66);
+
+      doc.setLineWidth(0.2);
+      doc.setDrawColor(220, 220, 220);
+      doc.line(margin, 71, margin + pageWidth, 71);
+
+      // Case Parties
+      doc.setFont("helvetica", "bold");
+      doc.text(`CASE TITLE: ${selectedCase?.case_title || "N/A"}`, margin, 80);
+      doc.setFont("helvetica", "normal");
+      doc.text(`PLAINTIFF / PETITIONER: ${selectedCase?.client_name || "N/A"}`, margin, 86);
+
+      // Summary & Order Body
+      doc.setFont("helvetica", "bold");
+      doc.text("ORDER SUMMARY / JUDGMENT DIRECTIVE:", margin, 98);
+
+      doc.setFont("helvetica", "normal");
+      const splitText = doc.splitTextToSize(
+        ord.summary || "Plaint admitted; court order issued to parties. Formal notices and summons dispatched.",
+        pageWidth
+      );
+      doc.text(splitText, margin, 106);
+
+      const blob = doc.output("blob");
+      const blobUrl = URL.createObjectURL(blob);
+      setViewingDocument({
+        url: blobUrl,
+        file: `${ord.orderType || 'Court Order'} (${ord.orderDate || 'N/A'}).pdf`,
+        documentType: ord.orderType || 'Court Order'
+      });
+    } catch (err) {
+      console.error("Order PDF generation error:", err);
     }
   };
 
@@ -2225,18 +2384,116 @@ export default function CaseDetailView({ id }) {
                 <OCRPanel caseId={selectedCase?.id} onSaveToDocuments={handleSaveOcrToCaseDocuments} />
               </div>
 
-              {/* Documents list table */}
-              {selectedCase.documents && selectedCase.documents.length > 0 ? (
-                <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-x-auto">
-                  <table className="w-full min-w-[650px]">
-                    <thead>
-                      <tr className="bg-slate-800 text-white text-xs font-bold uppercase tracking-wider">
-                        <th className="py-3.5 px-5 text-left">Case Documents</th>
-                        <th className="py-3.5 px-5 text-left">Doc Type</th>
-                        <th className="py-3.5 px-5 text-left">Document Password</th>
-                        <th className="py-3.5 px-5 text-left">Action</th>
-                      </tr>
-                    </thead>
+              {/* Case Documents Table Container with Integrated Computer Uploader */}
+              <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden space-y-0">
+                {/* Table Header & Computer Uploader Box (Light Theme) */}
+                <div className="bg-gradient-to-br from-slate-50 via-white to-blue-50/40 p-4 sm:p-5 border-b border-slate-200 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#2563EB] text-white flex items-center justify-center shadow-xs shrink-0">
+                        <FileText size={20} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-2 uppercase tracking-wider">
+                          Case Documents
+                          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 border border-blue-200 normal-case tracking-normal">
+                            {(selectedCase.documents || []).length} File{(selectedCase.documents || []).length !== 1 ? "s" : ""}
+                          </span>
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Manage, password-protect, assign, and upload computer files directly into your case document repository.
+                        </p>
+                      </div>
+                    </div>
+
+                    {computerUploadSuccess && (
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl animate-in fade-in shadow-2xs">
+                        <CheckCircle size={14} className="text-emerald-600" /> Uploaded to Case Documents!
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Integrated Computer File Drag & Drop Uploader */}
+                  <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 sm:p-4 space-y-2.5 shadow-2xs">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                      {/* Document Type Dropdown */}
+                      <div className="sm:w-64 shrink-0">
+                        <label className="text-[10px] font-extrabold text-slate-600 uppercase tracking-wider block mb-1">
+                          Doc Type / Category
+                        </label>
+                        <select
+                          value={computerDocType}
+                          onChange={(e) => setComputerDocType(e.target.value)}
+                          className="w-full rounded-lg border border-slate-300 bg-slate-50/50 hover:bg-white px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-2xs cursor-pointer"
+                        >
+                          <option value="Vakalatnama">Vakalatnama</option>
+                          <option value="Plaint / Petition">Plaint / Petition</option>
+                          <option value="Written Statement / Reply">Written Statement / Reply</option>
+                          <option value="Evidence / Exhibit">Evidence / Exhibit</option>
+                          <option value="Court Order / Decree">Court Order / Decree</option>
+                          <option value="Legal Notice">Legal Notice</option>
+                          <option value="Aadhaar / Identity Proof">Client Identity (Aadhaar/PAN)</option>
+                          <option value="Contract / Agreement">Contract / Agreement</option>
+                          <option value="Invoice / Receipt">Invoice / Receipt</option>
+                          <option value="Other">Other Document</option>
+                        </select>
+                      </div>
+
+                      {/* Dropzone & Button */}
+                      <div className="flex-1 space-y-1">
+                        <label className="text-[10px] font-extrabold text-slate-600 uppercase tracking-wider block">
+                          Upload File from Computer
+                        </label>
+                        <input
+                          type="file"
+                          ref={computerFileRef}
+                          onChange={handleComputerFileUpload}
+                          className="hidden"
+                          accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.webp,.tiff,.bmp,.html,.json,.csv"
+                        />
+                        <div
+                          onClick={() => computerFileRef.current?.click()}
+                          onDragOver={(e) => { e.preventDefault(); }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            handleComputerFileUpload(e);
+                          }}
+                          className="border-2 border-dashed border-blue-200 hover:border-blue-500 bg-blue-50/30 hover:bg-blue-50/80 rounded-lg px-3.5 py-2 transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <Upload size={16} className="text-blue-600 group-hover:scale-110 transition-transform shrink-0" />
+                            <span className="text-xs font-bold text-slate-800 truncate group-hover:text-blue-600 transition-colors">
+                              {uploadingComputerDoc ? "Uploading file from computer..." : "Click to Browse Computer Files or Drag & Drop Here"}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={uploadingComputerDoc}
+                            className="px-3.5 py-1.5 bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded-lg transition shadow-xs cursor-pointer disabled:opacity-50 shrink-0"
+                          >
+                            {uploadingComputerDoc ? "Uploading..." : "+ Choose File"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-slate-500 font-medium pl-0.5">
+                      Supports PDF, Word (.docx), Scanned Images (JPG, PNG), TXT, and spreadsheets.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Documents list table */}
+                {selectedCase.documents && selectedCase.documents.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[650px]">
+                      <thead>
+                        <tr className="bg-slate-800 text-white text-xs font-bold uppercase tracking-wider border-b border-slate-700">
+                          <th className="py-3.5 px-5 text-left">Case Documents</th>
+                          <th className="py-3.5 px-5 text-left">Doc Type</th>
+                          <th className="py-3.5 px-5 text-left">Document Password</th>
+                          <th className="py-3.5 px-5 text-left">Action</th>
+                        </tr>
+                      </thead>
                     <tbody className="divide-y divide-[#F1F5F9] text-sm">
                       {selectedCase.documents.map((doc, idx) => (
                         <tr key={idx} className="hover:bg-slate-50 transition-colors">
@@ -2373,7 +2630,8 @@ export default function CaseDetailView({ id }) {
                 </div>
               )}
             </div>
-          )}
+          </div>
+        )}
 
           {/* TAB: TIMELINE */}
           {activeTab === "timeline" && (
@@ -2483,7 +2741,7 @@ export default function CaseDetailView({ id }) {
                         <th className="py-3.5 px-4">Type</th>
                         <th className="py-3.5 px-4">Presiding Judge</th>
                         <th className="py-3.5 px-4">Order Summary / Judgment</th>
-                        <th className="py-3.5 px-4 text-right">Download PDF</th>
+                        <th className="py-3.5 px-4 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
@@ -2500,13 +2758,22 @@ export default function CaseDetailView({ id }) {
                             <td className="py-3.5 px-4 font-semibold text-slate-800">{ord.judgeName || "Hon'ble Presiding Judge"}</td>
                             <td className="py-3.5 px-4 max-w-xs">{ord.summary || "Court judgment document"}</td>
                             <td className="py-3.5 px-4 text-right">
-                              <button
-                                type="button"
-                                onClick={() => handleDownloadOrderPDF(ord)}
-                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer shadow-xs"
-                              >
-                                <Download size={12} /> PDF
-                              </button>
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleViewOrderPDF(ord)}
+                                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95"
+                                >
+                                  <Eye size={12} /> View
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadOrderPDF(ord)}
+                                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95"
+                                >
+                                  <Download size={12} /> PDF
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -3593,6 +3860,17 @@ export default function CaseDetailView({ id }) {
         onClose={() => setShowSummaryModal(false)}
         caseId={selectedCase?.id}
       />
+
+      {/* Document Viewer Modal */}
+      {viewingDocument && (
+        <DocumentViewerModal
+          document={viewingDocument}
+          fileUrl={viewingDocument.url || viewingDocument.fileUrl || viewingDocument.file}
+          title={viewingDocument.file || viewingDocument.title || "Court Order Document"}
+          badge={viewingDocument.documentType || viewingDocument.badge}
+          onClose={() => setViewingDocument(null)}
+        />
+      )}
     </div>
   );
 }

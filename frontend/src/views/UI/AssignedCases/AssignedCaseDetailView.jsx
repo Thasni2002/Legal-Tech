@@ -1259,28 +1259,37 @@ export default function AssignedCaseDetailView({
                         <th className="py-3 px-4">Type</th>
                         <th className="py-3 px-4">Presiding Judge</th>
                         <th className="py-3 px-4">Order Summary</th>
-                        <th className="py-3 px-4 text-right">Download</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
                       {[...ecourtsData.orders]
                         .sort((a, b) => (b.orderDate || "").localeCompare(a.orderDate || ""))
-                        .map((ord) => (
-                        <tr key={ord.id} className="hover:bg-slate-50">
-                          <td className="py-3 px-4 font-mono font-bold text-slate-900">{ord.orderDate}</td>
+                        .map((ord, idx) => (
+                        <tr key={ord.id || idx} className="hover:bg-slate-50">
+                          <td className="py-3 px-4 font-mono font-bold text-slate-900">{ord.orderDate || "N/A"}</td>
                           <td className="py-3 px-4">
-                            <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 font-bold border border-purple-200">{ord.orderType}</span>
+                            <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 font-bold border border-purple-200">{ord.orderType || "Court Order"}</span>
                           </td>
-                          <td className="py-3 px-4">{ord.judgeName}</td>
-                          <td className="py-3 px-4">{ord.summary}</td>
+                          <td className="py-3 px-4">{ord.judgeName || "Hon'ble Judge"}</td>
+                          <td className="py-3 px-4">{ord.summary || "Court Judgment Document"}</td>
                           <td className="py-3 px-4 text-right">
-                            {ord.fileUrl ? (
-                              <a href={ord.fileUrl} target="_blank" rel="noreferrer" className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1 transition cursor-pointer">
-                                PDF
-                              </a>
-                            ) : (
-                              <span className="text-slate-400 font-semibold">N/A</span>
-                            )}
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleViewOrderPDF(ord)}
+                                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95"
+                              >
+                                <Eye size={12} /> View
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadOrderPDF(ord)}
+                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95"
+                              >
+                                <Download size={12} /> PDF
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
