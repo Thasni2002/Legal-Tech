@@ -132,6 +132,21 @@ def fetch_case_timeline(
     return events
 
 
+@router.get("/{case_id}/ai-summary")
+def fetch_case_ai_summary(
+    case_id: int,
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+):
+    """
+    Fetches 100% dynamic AI Master Case Progress & Summary for a specific case,
+    analyzing its entire journey from filing date through all timeline events,
+    assigned advocates, hearing notes, discussions, and status updates.
+    """
+    from .service import get_full_case_ai_summary
+    return get_full_case_ai_summary(db, case_id, current_user)
+
+
 @router.get("/{case_id}")
 def fetch_case(
     case_id: int,

@@ -40,6 +40,7 @@ import {
 import { findStateAndDistrictByCourt } from "@/utils/districtCourts";
 import { getHearingAlertInfo } from "@/views/UI/CaseManagement/CaseDetailView";
 import CaseTimelineView from "@/components/case/CaseTimelineView";
+import CaseProgressSummaryModal from "@/components/case/CaseProgressSummaryModal";
 import { getLoggedInUser, getAuthHeaders } from "@/utils/auth";
 import { isSensitiveCase } from "@/utils/caseSensitivity";
 import DocumentViewerModal from "@/components/common/DocumentViewerModal";
@@ -125,6 +126,7 @@ export default function AssignedCaseDetailView({
 }) {
   const router = useRouter();
   const [viewBriefModal, setViewBriefModal] = useState(null);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedDocument, setSelectedDocument] = useState(null);
 
@@ -352,17 +354,45 @@ export default function AssignedCaseDetailView({
 
   // ─── Billing fetch ────────────────────────────────────────────────────────────
   const fetchCaseInvoices = async () => {
-    const caseNo = (selectedCase?.caseNo || "").trim().toLowerCase();
-    if (!caseNo) return;
+    if (!selectedCase) return;
     setFeeLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/finance/invoices`);
       if (res.ok) {
         const data = await res.json();
+        const validIdentifiers = [
+          selectedCase.caseNo,
+          selectedCase.case_no,
+          selectedCase.case_id,
+          selectedCase.id ? String(selectedCase.id) : null,
+          selectedCase.cnr_number
+        ]
+          .filter(Boolean)
+          .map((s) => String(s).trim().toLowerCase());
+
+        const searchEmail = (selectedCase.email_id || selectedCase.email || "").trim().toLowerCase();
+        const searchClientName = (selectedCase.client_name || "").trim().toLowerCase();
+
         const matched = (Array.isArray(data) ? data : []).filter((inv) => {
           const invCase = (inv.case_number || "").trim().toLowerCase();
-          return invCase !== "" && invCase === caseNo;
+          const invClientId = (inv.client_id || "").trim().toLowerCase();
+          const invEmail = (inv.email || "").trim().toLowerCase();
+          const invClientName = (inv.client_name || "").trim().toLowerCase();
+
+          if (invCase !== "") {
+            return validIdentifiers.some((id) => id === invCase);
+          }
+          if (invClientId !== "" && validIdentifiers.some((id) => id === invClientId)) {
+            return true;
+          }
+          if (invCase === "") {
+            const emailMatches = searchEmail !== "" && invEmail !== "" && invEmail === searchEmail;
+            const nameMatches = searchClientName !== "" && invClientName !== "" && invClientName === searchClientName;
+            return emailMatches || nameMatches;
+          }
+          return false;
         });
+
         setCaseInvoices(matched);
       }
     } catch (e) {
@@ -656,20 +686,7 @@ export default function AssignedCaseDetailView({
             <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full xl:w-auto shrink-0">
               <button
                 id="btn-view-summary-assigned"
-                onClick={() => {
-                  try {
-                    const targetId = selectedCase.caseId || selectedCase.case_id || selectedCase.id;
-                    const saved = JSON.parse(localStorage.getItem(`saved_briefs_${targetId}`) || "[]");
-                    if (saved && saved.length > 0) {
-                      setViewBriefModal(saved[0]);
-                    } else {
-                      router.push(`/case-management/similar-cases/${targetId}`);
-                    }
-                  } catch (e) {
-                    const targetId = selectedCase.caseId || selectedCase.case_id || selectedCase.id;
-                    router.push(`/case-management/similar-cases/${targetId}`);
-                  }
-                }}
+                onClick={() => setShowSummaryModal(true)}
                 className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-xs hover:shadow active:scale-95 cursor-pointer text-center min-w-0"
               >
                 <Eye size={14} className="shrink-0" />
@@ -2005,6 +2022,13 @@ export default function AssignedCaseDetailView({
         </div>,
         document.body
       )}
+
+      {/* AI Case Progress & Master Summary Modal */}
+      <CaseProgressSummaryModal
+        isOpen={showSummaryModal}
+        onClose={() => setShowSummaryModal(false)}
+        caseId={selectedCase?.caseId || selectedCase?.case_id || selectedCase?.id}
+      />
     </div>
   );
 }

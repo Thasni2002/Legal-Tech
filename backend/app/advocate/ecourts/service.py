@@ -9,6 +9,7 @@ from app.advocate.lawfirm_management.models import AssignedCase
 from .schemas import (
     eCourtsCaseDetails,
     CaseSearchRequest,
+    SimilarCaseRequest,
     CauseListItem,
     SyncCaseResponse,
     eCourtsDashboardMetrics,
@@ -601,20 +602,89 @@ def get_ecourts_metrics_service(db: Session, current_user: Any = None) -> eCourt
 # Similar Case History Service
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _compute_similarity_score(target_type: str, target_court: str, candidate_type: str, candidate_court: str) -> int:
-    """Compute a 0-100 similarity score between current case and a candidate case."""
+# ─────────────────────────────────────────────────────────────────────────────
+# Similar Case History Service & AI Case Analysis
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _compute_similarity_details(
+    target_type: str,
+    target_court: str,
+    target_title: str,
+    target_desc: str,
+    candidate_type: str,
+    candidate_court: str,
+    candidate_title: str,
+    candidate_desc: str
+) -> tuple:
+    """
+    Computes a realistic 0-100 similarity score based on legal attributes:
+    - Case type / category match (up to 40%)
+    - Court / jurisdiction match (up to 25%)
+    - Title / subject matter keyword overlap (up to 20%)
+    - Description / factual keyword overlap (up to 15%)
+    Returns (score: int, reasons: List[str]).
+    """
     score = 0
-    if target_type and candidate_type:
-        t_words = set(target_type.lower().split())
-        c_words = set(candidate_type.lower().split())
-        if t_words & c_words:
-            overlap = len(t_words & c_words) / max(len(t_words | c_words), 1)
-            score += int(overlap * 60)
-    if target_court and candidate_court:
-        if target_court.lower()[:10] in candidate_court.lower() or candidate_court.lower()[:10] in target_court.lower():
-            score += 30
-    score = max(10, min(score, 100))
-    return score
+    reasons = []
+
+    ttype = (target_type or "").strip().lower()
+    ctype = (candidate_type or "").strip().lower()
+
+    if ttype and ctype:
+        if ttype == ctype:
+            score += 40
+            reasons.append(f"Matching case category ({target_type})")
+        else:
+            t_words = set(ttype.split())
+            c_words = set(ctype.split())
+            overlap = t_words & c_words
+            if overlap:
+                ratio = len(overlap) / max(len(t_words | c_words), 1)
+                pts = int(ratio * 35)
+                if pts > 0:
+                    score += pts
+                    reasons.append(f"Similar legal category ({candidate_type})")
+
+    tcourt = (target_court or "").strip().lower()
+    ccourt = (candidate_court or "").strip().lower()
+
+    if tcourt and ccourt:
+        if tcourt == ccourt:
+            score += 25
+            reasons.append(f"Same court jurisdiction ({target_court})")
+        elif (tcourt[:10] in ccourt or ccourt[:10] in tcourt) and len(tcourt) > 4:
+            score += 15
+            reasons.append("Matching judicial forum level")
+
+    ttitle = (target_title or "").strip().lower()
+    ctitle = (candidate_title or "").strip().lower()
+    if ttitle and ctitle:
+        stopwords = {"vs", "v", "and", "the", "in", "of", "re", "matter", "case", "petition", "vs.", "services", "pvt", "ltd"}
+        t_title_words = set(ttitle.split()) - stopwords
+        c_title_words = set(ctitle.split()) - stopwords
+        overlap = t_title_words & c_title_words
+        if len(overlap) >= 2:
+            score += 20
+            reasons.append("Similar legal issue & subject matter")
+        elif len(overlap) == 1:
+            score += 10
+            reasons.append("Related legal dispute subject")
+
+    tdesc = (target_desc or "").strip().lower()
+    cdesc = (candidate_desc or "").strip().lower()
+    if tdesc and cdesc:
+        t_desc_words = set(tdesc.split())
+        c_desc_words = set(cdesc.split())
+        overlap = t_desc_words & c_desc_words
+        if len(overlap) >= 3:
+            score += 15
+            reasons.append("Similar factual circumstances & legal pleadings")
+
+    final_score = min(100, score)
+    if final_score < 15:
+        final_score = 0
+
+    return final_score, reasons
 
 
 def _analyse_case_with_gemini(
@@ -633,7 +703,6 @@ def _analyse_case_with_gemini(
     import google.generativeai as genai
     from dotenv import load_dotenv
 
-    # Dynamic fallback generator based on case type & title
     ctype = case_type or "Legal Case"
     ctitle = case_title or "Dispute"
     pet = petitioner or "Petitioner"
@@ -671,10 +740,7 @@ Current Status: {status}
 Description / Notes: {description or "Not provided"}
 
 CRITICAL INSTRUCTIONS:
-- You MUST generate specific, realistic legal loopholes and vulnerabilities tailored to this exact case type "{ctype}" and parties "{pet} vs {resp}".
-- For Criminal Revision / CRLRC / CRLP: focus on CrPC Sec 397/401, revision scope, FIR delay, lower court finding errors.
-- For Civil Cases / OS / WA / OP: focus on CPC Order 39, limitation act, contract breach, mandatory notice.
-- For Negotiable Instruments / NI Act / CC: focus on Sec 138 notice window, statutory presumption under Sec 139, cheque dishonour.
+- Generate specific, realistic legal loopholes and vulnerabilities tailored to this exact case type "{ctype}" and parties "{pet} vs {resp}".
 - NEVER return generic placeholders like "Evidence assessment required". Each loophole must mention specific legal or procedural issues.
 
 Return ONLY this exact JSON object structure:
@@ -697,7 +763,6 @@ Return ONLY this exact JSON object structure:
         raw = re.sub(r"\s*```$", "", raw)
         parsed = json.loads(raw)
         
-        # Ensure loopholes are not empty or generic
         if not parsed.get("loopholes") or len(parsed.get("loopholes")) == 0:
             parsed["loopholes"] = dynamic_fallback["loopholes"]
 
@@ -705,7 +770,6 @@ Return ONLY this exact JSON object structure:
     except Exception as e:
         print(f"[SimilarCases] Gemini analysis error for {ctitle}: {e}")
         return dynamic_fallback
-
 
 
 def _generate_master_strategy_with_gemini(case_type: str, cases: list) -> dict:
@@ -719,12 +783,10 @@ def _generate_master_strategy_with_gemini(case_type: str, cases: list) -> dict:
     won_count = sum(1 for c in cases if c.outcome == "Won")
     tot = max(len(cases), 1)
     est_prob = round((won_count / tot) * 100)
-    if est_prob < 45:
-        est_prob = 70  # benchmark baseline for active legal defense
 
     fallback = {
         "winProbability": est_prob,
-        "structuredLegalNote": f"Comprehensive Legal Brief for {case_type}:\n\n1. EXECUTIVE SUMMARY & LEGAL STANDING:\nBased on analysis of {len(cases)} precedent cases in {case_type}, Indian courts consistently emphasize mandatory statutory preconditions, clear documentary trails of breach, and strict compliance with limitation deadlines.\n\n2. KEY WINNING FORMULA:\nEstablish a clear documentary evidence trail establishing breach of legal obligation. Ensure all statutory pre-notice requirements are verified before trial commencement.\n\n3. CRITICAL LOOPHOLES & VULNERABILITIES TO FIX:\n- Statutory legal notice service delayed beyond limitation window.\n- Electronic evidence submitted without required Section 65B Certificate under Indian Evidence Act.\n- Failure to quantify precise quantum of monetary loss or specific performance.\n- Missing original agreements or unverified signatures.\n\n4. MAIN LEGAL ARGUMENTS TO PRESENT:\n- Argument I: Mandatory statutory compliance and procedural regularity.\n- Argument II: Highlight fatal contradictions in opposing party's pleadings.\n- Argument III: Invoke Apex Court precedents on fundamental fairness and constitutional safeguards under Article 21.\n\n5. STATUTORY SECTIONS TO CITE:\nIPC Section 420, CPC Order 39 Rule 1 & 2, Indian Evidence Act Section 65B, Constitution Article 21.\n\n6. SENIOR ADVOCATE TRIAL PLAYBOOK:\nFile interim protective applications early. Cross-examine opposing witnesses specifically on timeline gaps and lack of primary electronic certificates.",
+        "structuredLegalNote": f"Comprehensive Legal Brief for {case_type}:\n\n1. EXECUTIVE SUMMARY & LEGAL STANDING:\nBased on analysis of {len(cases)} precedent cases in {case_type}, Indian courts consistently emphasize mandatory statutory preconditions, clear documentary trails of breach, and strict compliance with limitation deadlines.\n\n2. KEY WINNING FORMULA:\nEstablish a clear documentary evidence trail establishing breach of legal obligation. Ensure all statutory pre-notice requirements are verified before trial commencement.",
         "currentCaseSummary": f"Based on {len(cases)} precedent cases in {case_type}, courts consistently prioritize clear documentary proof of breach and strict adherence to statutory filing deadlines.",
         "winningFormula": f"Establish a solid documentary trail and prove compliance with statutory preconditions in {case_type} proceedings.",
         "mainLoophole": "Lapse in statutory notice service, missing original documents, or unexcused limitation delays.",
@@ -745,7 +807,7 @@ def _generate_master_strategy_with_gemini(case_type: str, cases: list) -> dict:
 
     load_dotenv()
     api_key = os.environ.get("GEMINI_API_KEY", "")
-    if not api_key:
+    if not api_key or not cases:
         return fallback
 
     try:
@@ -764,14 +826,14 @@ Case Summaries:
 
 Synthesize all findings into ONE FULL STRUCTURED LEGAL NOTE and Return ONLY a valid JSON object with these exact keys:
 {{
-  "winProbability": <integer between 55 and 95 representing estimated win likelihood percentage>,
-  "structuredLegalNote": "<One comprehensive, unified structured legal note with clear numbered sections: 1. Executive Strategy, 2. Winning Formula, 3. Critical Loopholes, 4. Key Arguments, 5. Statutory Sections, 6. Senior Advocate Action Plan>",
-  "currentCaseSummary": "<3-4 sentences synthesizing how precedents apply to the current case and what the current legal standing is>",
+  "winProbability": <integer representing estimated win likelihood percentage based on precedents>,
+  "structuredLegalNote": "<One comprehensive, unified structured legal note with clear numbered sections>",
+  "currentCaseSummary": "<3-4 sentences synthesizing how precedents apply to the current case>",
   "winningFormula": "<2-3 sentences outlining the core winning legal strategy>",
-  "mainLoophole": "<2-3 sentences detailing the single biggest vulnerability or risk in this type of case>",
+  "mainLoophole": "<2-3 sentences detailing the single biggest vulnerability in this type of case>",
   "advocateRecommendation": "<2-3 sentences providing step-by-step practical trial playbook for Senior Advocate>",
-  "keyLoopholes": ["<loophole 1 in current case>", "<loophole 2>", "<loophole 3>", "<loophole 4>"],
-  "mainArguments": ["<key winning argument 1>", "<key winning argument 2>", "<key winning argument 3>"],
+  "keyLoopholes": ["<loophole 1>", "<loophole 2>", "<loophole 3>", "<loophole 4>"],
+  "mainArguments": ["<key argument 1>", "<key argument 2>", "<key argument 3>"],
   "importantActs": ["<Act/Section 1>", "<Act/Section 2>", "<Act/Section 3>", "<Act/Section 4>"]
 }}
 """
@@ -787,6 +849,128 @@ Synthesize all findings into ONE FULL STRUCTURED LEGAL NOTE and Return ONLY a va
         return fallback
 
 
+def _generate_current_case_ai_analysis(
+    db: Session,
+    case_id: Optional[int],
+    case_type: str,
+    case_title: str,
+    court_name: str,
+    case_description: str
+) -> dict:
+    """Generates structured AI analysis of the current case using real database case data."""
+    import os
+    import json
+    import re
+    import google.generativeai as genai
+    from dotenv import load_dotenv
+
+    db_case = None
+    if case_id:
+        try:
+            from app.advocate.case_management.models import Case as CaseModel
+            db_case = db.query(CaseModel).filter(CaseModel.id == case_id).first()
+        except Exception as e:
+            print(f"[SimilarCases] DB fetch error: {e}")
+
+    ctitle = (db_case.case_title if db_case and db_case.case_title else case_title) or "Legal Matter"
+    cno = (db_case.case_no if db_case and db_case.case_no else "") or "N/A"
+    cnr = (db_case.cnr_number if db_case and db_case.cnr_number else "") or "N/A"
+    ctype = (db_case.case_type if db_case and db_case.case_type else case_type) or "Civil"
+    court = (db_case.court_name if db_case and db_case.court_name else court_name) or "Court"
+    client = (db_case.client_name if db_case and db_case.client_name else "") or "Client"
+    desc = (db_case.case_description if db_case and db_case.case_description else case_description) or ""
+
+    is_sufficient = len(ctitle.strip()) > 3 and (len(desc.strip()) > 5 or len(ctype.strip()) > 2)
+
+    fallback = {
+        "summary": f"AI Case Analysis for '{ctitle}' (Case No: {cno}) under {ctype} category at {court}. Client: {client}. The proceedings require legal evaluation of statutory compliance, documentary proof, and limitation deadlines.",
+        "keyIssues": [
+            f"Statutory preconditions and procedural timeline compliance under {ctype} law",
+            f"Evidentiary weight and admissibility of pleadings filed on behalf of {client}",
+            f"Limitation period and jurisdictional validity before {court}"
+        ],
+        "relevantFacts": [
+            f"Case '{ctitle}' registered under {ctype} at {court}.",
+            f"Client representation: {client} (Case No: {cno}).",
+            f"Pleadings logged in system for case ID #{case_id or 'N/A'}."
+        ],
+        "applicableProvisions": [
+            f"{ctype} Applicable Acts & Provisions",
+            "Indian Evidence Act (Primary & Secondary Evidence Standards)",
+            "Code of Civil Procedure / Code of Criminal Procedure",
+            "Constitutional Safeguards & Due Process"
+        ],
+        "strengths": [
+            f"Filing established before {court}",
+            f"Client representation active for {client}",
+            "Statutory cause of action formulated in case records"
+        ],
+        "risks": [
+            "Limitation period and statutory pre-notice dates require verification",
+            "Primary documentary proof must be verified against original records",
+            "Timeline gaps in pleadings must be reviewed prior to hearing"
+        ],
+        "influencingFactors": [
+            "Timely submission of rejoinders and witness affidavits",
+            "Admissibility of documentary evidence",
+            "Judicial bench schedule and procedural compliance"
+        ],
+        "recommendedReview": [
+            "Audit pre-notice timelines and limitation compliance",
+            "Verify all supporting documents attached to case binder",
+            "Prepare witness cross-examination outline targeting timeline gaps"
+        ],
+        "outcomeAssessment": f"Based on available case information for '{ctitle}', current legal factors indicate active proceedings before {court}. This is an AI-assisted assessment based on available case data and is not a guaranteed prediction of the court's final decision.",
+        "isSufficient": is_sufficient,
+        "noticeText": None if is_sufficient else "Insufficient case details for a full AI assessment. Please add detailed case description or hearing notes."
+    }
+
+    load_dotenv()
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not api_key:
+        return fallback
+
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-2.0-flash")
+
+        prompt = f"""You are an expert Senior Advocate analyzing this specific real case from the firm's database.
+
+ACTUAL CASE DETAILS FROM DATABASE:
+- Case Title: {ctitle}
+- Case Number: {cno}
+- CNR Number: {cnr}
+- Case Type / Category: {ctype}
+- Court: {court}
+- Client Name: {client}
+- Detailed Case Notes & Facts: {desc if desc.strip() else 'No additional factual notes entered yet.'}
+
+Analyze ONLY this actual case and return ONLY a valid JSON object:
+{{
+  "summary": "<3-4 sentences synthesizing the actual case standing for {ctitle}>",
+  "keyIssues": ["<key legal issue 1 for {ctype}>", "<key legal issue 2>", "<key legal issue 3>"],
+  "relevantFacts": ["<actual fact 1 based on case details>", "<actual fact 2>", "<actual fact 3>"],
+  "applicableProvisions": ["<statute/section 1 applicable to {ctype}>", "<statute/section 2>", "<statute/section 3>"],
+  "strengths": ["<real favorable factor 1>", "<real favorable factor 2>", "<real favorable factor 3>"],
+  "risks": ["<real risk factor 1>", "<real risk factor 2>", "<real risk factor 3>"],
+  "influencingFactors": ["<factor 1>", "<factor 2>", "<factor 3>"],
+  "recommendedReview": ["<recommended review area 1>", "<recommended review area 2>", "<recommended review area 3>"],
+  "outcomeAssessment": "<3-4 sentences evaluating legal standing based on available facts. Must be clearly stated as AI-assisted assessment and not a guaranteed court prediction.>",
+  "isSufficient": true
+}}
+"""
+        response = model.generate_content(prompt)
+        raw = response.text.strip()
+        raw = re.sub(r"^```(?:json)?\s*", "", raw)
+        raw = re.sub(r"\s*```$", "", raw)
+        parsed = json.loads(raw)
+        parsed["isSufficient"] = is_sufficient
+        if not is_sufficient:
+            parsed["noticeText"] = "Insufficient information for a reliable AI assessment. Please provide additional case details or documents."
+        return parsed
+    except Exception as e:
+        print(f"[SimilarCases] Current Case AI Analysis error: {e}")
+        return fallback
 
 
 def _map_status_to_outcome(status: str) -> str:
@@ -801,68 +985,74 @@ def _map_status_to_outcome(status: str) -> str:
     return "Pending"
 
 
-def get_similar_cases_service(db: Session, data: CaseSearchRequest) -> SimilarCasesResponse:
+def get_similar_cases_service(db: Session, data: SimilarCaseRequest) -> SimilarCasesResponse:
     """
-    Fetches similar cases from:
-    1. Internal firm DB (cases with matching case_type)
-    2. Live eCourts API (search by case_type)
-    Each result is analysed by Gemini AI.
+    Fetches genuine similar cases based on legal attributes and similarity threshold.
+    If no cases meet the threshold, returns similarCasesFound = False and AI analysis for current case.
     """
+    threshold = data.similarityThreshold if data.similarityThreshold is not None else 50
     results: List[CaseAnalysisResult] = []
     internal_count = 0
     ecourts_count = 0
 
+    target_type = data.caseType or "Civil"
+    target_court = data.courtName or data.courtType or ""
+    target_title = data.caseTitle or ""
+    target_desc = data.caseDescription or ""
+
     # ── Step 1: Internal DB query ────────────────────────────────────────────
     try:
         from app.advocate.case_management.models import Case as CaseModel
-        internal_cases = (
-            db.query(CaseModel)
-            .filter(CaseModel.case_type.ilike(f"%{data.caseType}%"))
-        )
+        query = db.query(CaseModel)
         if data.caseId:
-            internal_cases = internal_cases.filter(CaseModel.id != data.caseId)
-        internal_cases = internal_cases.order_by(CaseModel.id.desc()).limit(20).all()
+            query = query.filter(CaseModel.id != data.caseId)
+
+        internal_cases = query.order_by(CaseModel.id.desc()).limit(30).all()
 
         for case in internal_cases:
             pet = case.client_name or "Petitioner"
             resp = (case.case_title or "").split(" vs ")[-1].strip() if " vs " in (case.case_title or "").lower() else "Respondent"
             title = case.case_title or f"{pet} vs. {resp}"
 
-            ai = _analyse_case_with_gemini(
-                case_title=title,
-                case_type=case.case_type or "",
-                status=case.status or "",
-                description=case.case_description or "",
-                petitioner=pet,
-                respondent=resp,
-                court_name=case.court_name or "",
+            score, reasons = _compute_similarity_details(
+                target_type, target_court, target_title, target_desc,
+                case.case_type or "", case.court_name or "", title, case.case_description or ""
             )
-            score = _compute_similarity_score(
-                data.caseType, data.courtName or "",
-                case.case_type or "", case.court_name or ""
-            )
-            results.append(CaseAnalysisResult(
-                cnrNumber=case.cnr_number,
-                caseTitle=title,
-                caseNo=case.case_no,
-                caseType=case.case_type or "",
-                courtName=case.court_name or "",
-                courtType=case.court_type,
-                filingDate=str(case.created_at.date()) if case.created_at else None,
-                outcome=ai.get("outcome", "Unknown"),
-                outcomeDetail=ai.get("outcomeDetail", f"Status: {case.status}"),
-                petitioner=pet,
-                respondent=resp,
-                mainArgument=ai.get("mainArgument", ""),
-                loopholes=ai.get("loopholes", []),
-                importantSections=ai.get("importantSections", []),
-                seniorAdvocateTip=ai.get("seniorAdvocateTip", ""),
-                presidingJudge=None,
-                nextHearingDate=case.next_hearing_date,
-                source="internal",
-                similarityScore=score,
-            ))
-            internal_count += 1
+
+            # Strict threshold check!
+            if score >= threshold:
+                ai = _analyse_case_with_gemini(
+                    case_title=title,
+                    case_type=case.case_type or "",
+                    status=case.status or "",
+                    description=case.case_description or "",
+                    petitioner=pet,
+                    respondent=resp,
+                    court_name=case.court_name or "",
+                )
+                results.append(CaseAnalysisResult(
+                    cnrNumber=case.cnr_number,
+                    caseTitle=title,
+                    caseNo=case.case_no,
+                    caseType=case.case_type or "",
+                    courtName=case.court_name or "",
+                    courtType=case.court_type,
+                    filingDate=str(case.created_at.date()) if case.created_at else None,
+                    outcome=ai.get("outcome", "Unknown"),
+                    outcomeDetail=ai.get("outcomeDetail", f"Status: {case.status}"),
+                    petitioner=pet,
+                    respondent=resp,
+                    mainArgument=ai.get("mainArgument", ""),
+                    loopholes=ai.get("loopholes", []),
+                    importantSections=ai.get("importantSections", []),
+                    seniorAdvocateTip=ai.get("seniorAdvocateTip", ""),
+                    presidingJudge=None,
+                    nextHearingDate=case.next_hearing_date,
+                    source="Verified Source: Internal Database",
+                    similarityScore=score,
+                    reasons=reasons
+                ))
+                internal_count += 1
     except Exception as e:
         print(f"[SimilarCases] Internal DB query error: {e}")
 
@@ -870,8 +1060,8 @@ def get_similar_cases_service(db: Session, data: CaseSearchRequest) -> SimilarCa
     try:
         provider = get_ecourts_provider()
         search_params = CaseSearchRequest(
-            caseType=data.caseType,
-            courtName=data.courtName or None,
+            caseType=target_type,
+            courtName=target_court or None,
         )
         ecourts_cases = provider.search_cases(search_params)
 
@@ -879,80 +1069,79 @@ def get_similar_cases_service(db: Session, data: CaseSearchRequest) -> SimilarCa
             pet = ec.petitioner or "Petitioner"
             resp = ec.respondent or "Respondent"
             title = ec.caseTitle or f"{pet} vs. {resp}"
-            if title.strip().lower() in ["court case", "case"]:
-                title = f"{pet} vs. {resp}"
 
-            ai = _analyse_case_with_gemini(
-                case_title=title,
-                case_type=ec.caseType or "",
-                status=ec.status or "",
-                description="",
-                petitioner=pet,
-                respondent=resp,
-                court_name=ec.courtName or "",
+            score, reasons = _compute_similarity_details(
+                target_type, target_court, target_title, target_desc,
+                ec.caseType or "", ec.courtName or "", title, ""
             )
-            score = _compute_similarity_score(
-                data.caseType, data.courtName or "",
-                ec.caseType or "", ec.courtName or ""
-            )
-            results.append(CaseAnalysisResult(
-                cnrNumber=ec.cnrNumber,
-                caseTitle=title,
-                caseNo=ec.caseNo,
-                caseType=ec.caseType or "",
-                courtName=ec.courtName or "",
-                courtType=ec.courtType,
-                filingDate=ec.filingDate,
-                outcome=ai.get("outcome", "Unknown"),
-                outcomeDetail=ai.get("outcomeDetail", f"Status: {ec.status}"),
-                petitioner=pet,
-                respondent=resp,
-                mainArgument=ai.get("mainArgument", ""),
-                loopholes=ai.get("loopholes", []),
-                importantSections=ai.get("importantSections", []),
-                seniorAdvocateTip=ai.get("seniorAdvocateTip", ""),
-                presidingJudge=ec.presidingJudge or None,
-                nextHearingDate=ec.nextHearingDate,
-                source="ecourts",
-                similarityScore=score,
-            ))
-            ecourts_count += 1
+
+            if score >= threshold:
+                ai = _analyse_case_with_gemini(
+                    case_title=title,
+                    case_type=ec.caseType or "",
+                    status=ec.status or "",
+                    description="",
+                    petitioner=pet,
+                    respondent=resp,
+                    court_name=ec.courtName or "",
+                )
+                results.append(CaseAnalysisResult(
+                    cnrNumber=ec.cnrNumber,
+                    caseTitle=title,
+                    caseNo=ec.caseNo,
+                    caseType=ec.caseType or "",
+                    courtName=ec.courtName or "",
+                    courtType=ec.courtType,
+                    filingDate=ec.filingDate,
+                    outcome=ai.get("outcome", "Unknown"),
+                    outcomeDetail=ai.get("outcomeDetail", f"Status: {ec.status}"),
+                    petitioner=pet,
+                    respondent=resp,
+                    mainArgument=ai.get("mainArgument", ""),
+                    loopholes=ai.get("loopholes", []),
+                    importantSections=ai.get("importantSections", []),
+                    seniorAdvocateTip=ai.get("seniorAdvocateTip", ""),
+                    presidingJudge=ec.presidingJudge or None,
+                    nextHearingDate=ec.nextHearingDate,
+                    source="Verified Source: eCourts Registry",
+                    similarityScore=score,
+                    reasons=reasons
+                ))
+                ecourts_count += 1
     except Exception as e:
         print(f"[SimilarCases] eCourts search error: {e}")
 
-    # ── Step 3: Sort by similarity score (highest first) ─────────────────────
+    # Sort results by similarity score descending
     results.sort(key=lambda x: x.similarityScore, reverse=True)
 
-    # ── Step 4: Master Legal Strategy & Statistics ─────────────────────────
-    won_count = sum(1 for r in results if r.outcome == "Won")
-    lost_count = sum(1 for r in results if r.outcome == "Lost")
-    pending_count = sum(1 for r in results if r.outcome == "Pending")
-    disposed_count = sum(1 for r in results if r.outcome == "Disposed")
+    similar_found = len(results) > 0
 
-    from collections import Counter
-    all_sections: List[str] = []
-    for r in results:
-        all_sections.extend(r.importantSections)
-    top_acts = [s for s, _ in Counter(all_sections).most_common(6)]
+    # Current Case AI Analysis
+    ai_analysis = _generate_current_case_ai_analysis(
+        db, data.caseId, target_type, target_title, target_court, target_desc
+    )
 
     summary_stats = {
-        "won": won_count,
-        "lost": lost_count,
-        "pending": pending_count,
-        "disposed": disposed_count,
-        "topActs": top_acts,
-        "winRate": round((won_count / max(len(results), 1)) * 100, 1),
+        "won": sum(1 for r in results if r.outcome == "Won"),
+        "lost": sum(1 for r in results if r.outcome == "Lost"),
+        "pending": sum(1 for r in results if r.outcome == "Pending"),
+        "disposed": sum(1 for r in results if r.outcome == "Disposed"),
     }
 
-    master_strategy = _generate_master_strategy_with_gemini(data.caseType, results)
+    master_strategy = _generate_master_strategy_with_gemini(target_type, results) if similar_found else None
 
     return SimilarCasesResponse(
+        caseId=data.caseId,
+        similarCasesFound=similar_found,
         totalFound=len(results),
         internalCount=internal_count,
         ecourtsCount=ecourts_count,
+        similarityThreshold=threshold,
         cases=results,
         summaryStats=summary_stats,
         masterStrategy=master_strategy,
+        aiAnalysis=ai_analysis
     )
+
 
 

@@ -10,7 +10,7 @@ from typing import Optional, List
 from datetime import datetime, timedelta, date
 from jose import jwt
 from app.database import SessionLocal
-from .schemas import LoginSchema, TokenSchema
+from .schemas import LoginSchema, RegisterSchema, TokenSchema
 from . import service
 from .service import SECRET_KEY, ALGORITHM, hash_password
 from .models import User, UserNotificationRead, AppNotification
@@ -207,6 +207,57 @@ def login(user: LoginSchema, db: Session = Depends(get_db)):
         "access_token": token,
         "token_type": "bearer"
     }
+
+
+@router.post("/register", response_model=TokenSchema)
+def register_user(data: RegisterSchema, db: Session = Depends(get_db)):
+    email_clean = (data.email or "").strip().lower()
+    if not email_clean:
+        raise HTTPException(status_code=400, detail="Email address is required.")
+
+    existing_user = db.query(User).filter(func.lower(User.email) == email_clean).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="An account with this email address already exists. Please sign in instead."
+        )
+
+    base_name = (data.username or f"{data.first_name or ''} {data.last_name or ''}").strip() or email_clean.split("@")[0]
+    uname = base_name
+    counter = 1
+    while db.query(User).filter(func.lower(User.username) == uname.lower()).first():
+        uname = f"{base_name}_{counter}"
+        counter += 1
+
+    try:
+        new_user = User(
+            email=email_clean,
+            username=uname,
+            password=hash_password(data.password),
+            role=data.role or "Advocate",
+            first_name=data.first_name,
+            last_name=data.last_name,
+            temp_password=data.password,
+            custom_permissions={},
+            document_access=[]
+        )
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+    except Exception as err:
+        db.rollback()
+        print(f"[Register Error] {err}")
+        raise HTTPException(status_code=400, detail="Failed to create account. Please check inputs and retry.")
+
+    token = service.create_token({
+        "id": new_user.id,
+        "email": new_user.email,
+        "role": new_user.role,
+        "username": new_user.username,
+        "firstName": new_user.first_name or "",
+        "lastName": new_user.last_name or ""
+    })
+    return {"access_token": token, "token_type": "bearer"}
 
 
 def _time_ago(dt: datetime) -> str:
