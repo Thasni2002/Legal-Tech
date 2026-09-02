@@ -161,15 +161,15 @@ const Page = ({ params }) => {
       if (verifyRes.ok && verifyData.success) {
         showAlert(
           "success",
-          "Mock Payment Successful!",
-          "Invoice status updated to Paid.",
+          "Payment Completed Successfully!",
+          "Invoice payment confirmed and status updated to Paid.",
           () => { window.location.href = "/client-payments"; }
         );
       } else {
-        showAlert("error", "Simulation Failed", "Mock payment process failed.");
+        showAlert("error", "Payment Verification Failed", verifyData.message || "Payment process could not be completed.");
       }
     } catch (err) {
-      showAlert("error", "Error", "Error simulating payment.");
+      showAlert("error", "Error", "Error processing payment.");
     } finally {
       setLoading(false);
     }

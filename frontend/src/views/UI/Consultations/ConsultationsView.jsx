@@ -216,10 +216,14 @@ export default function ConsultationsView() {
             try {
                 const uniqueClientsMap = new Map();
 
-                // 1. Registered client users
-                try {
-                    const resUsers = await fetch(`${API_BASE_URL}/permissions/users`);
-                    if (resUsers.ok) {
+                const [resUsers, resClients, resCases] = await Promise.all([
+                    fetch(`${API_BASE_URL}/permissions/users`).catch(() => null),
+                    fetch(`${API_BASE_URL}/clients/`).catch(() => null),
+                    fetch(`${API_BASE_URL}/case-management/`).catch(() => null),
+                ]);
+
+                if (resUsers && resUsers.ok) {
+                    try {
                         const usersData = await resUsers.json();
                         usersData.forEach(u => {
                             if (u.role && u.role.toLowerCase() === "client") {
@@ -240,34 +244,30 @@ export default function ConsultationsView() {
                                 }
                             }
                         });
-                    }
-                } catch (e) {}
+                    } catch (e) {}
+                }
 
-                // 2. Client Management entries
-                try {
-                    const resClientMgmt = await fetch(`${API_BASE_URL}/client-management/`);
-                    if (resClientMgmt.ok) {
-                        const clientsData = await resClientMgmt.json();
+                if (resClients && resClients.ok) {
+                    try {
+                        const clientsData = await resClients.json();
                         clientsData.forEach(c => {
-                            const cName = (c.name || c.client_name || c.clientName || "").trim();
+                            const cName = (c.full_name || c.name || c.client_name || c.clientName || "").trim();
                             if (cName) {
                                 const key = cName.toLowerCase();
                                 if (!uniqueClientsMap.has(key)) {
                                     uniqueClientsMap.set(key, {
-                                        id: c.id || cName,
+                                        id: c.client_id || c.id || cName,
                                         clientName: cName,
                                         emailId: c.email || c.email_id || ""
                                     });
                                 }
                             }
                         });
-                    }
-                } catch (e) {}
+                    } catch (e) {}
+                }
 
-                // 3. Case Management entries
-                try {
-                    const resCases = await fetch(`${API_BASE_URL}/case-management/`);
-                    if (resCases.ok) {
+                if (resCases && resCases.ok) {
+                    try {
                         const casesData = await resCases.json();
                         casesData.forEach(c => {
                             const cName = (c.clientName || c.client_name || "").trim();
@@ -275,15 +275,15 @@ export default function ConsultationsView() {
                                 const key = cName.toLowerCase();
                                 if (!uniqueClientsMap.has(key)) {
                                     uniqueClientsMap.set(key, {
-                                        id: cName,
+                                        id: c.client_id || cName,
                                         clientName: cName,
                                         emailId: c.emailId || c.email_id || ""
                                     });
                                 }
                             }
                         });
-                    }
-                } catch (e) {}
+                    } catch (e) {}
+                }
 
                 setClients(Array.from(uniqueClientsMap.values()));
             } catch (err) {

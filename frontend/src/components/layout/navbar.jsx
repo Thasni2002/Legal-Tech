@@ -116,8 +116,10 @@ export default function Navbar() {
     setProfileImage(img);
 
     if (loggedInUser) {
-      fetchNotifications(loggedInUser);
-      fetchMsgUnreadCount(loggedInUser);
+      Promise.all([
+        fetchNotifications(loggedInUser),
+        fetchMsgUnreadCount(loggedInUser)
+      ]).catch(() => {});
     }
   }, []);
 

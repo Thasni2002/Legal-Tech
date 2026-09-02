@@ -2,24 +2,82 @@ import { useState, useEffect } from "react";
 import { getLoggedInUser } from "./auth";
 import { API_BASE_URL } from "./api";
 
+// Global in-memory cache & promise deduplication for permissions
+let permissionsCache = {
+  matrix: null,
+  userPermissions: {},
+  matrixPromise: null,
+  userPromises: {},
+  lastFetched: 0,
+};
+
+export const clearPermissionsCache = () => {
+  permissionsCache = {
+    matrix: null,
+    userPermissions: {},
+    matrixPromise: null,
+    userPromises: {},
+    lastFetched: 0,
+  };
+};
+
+const fetchMatrixDeduplicated = async () => {
+  if (permissionsCache.matrix && Date.now() - permissionsCache.lastFetched < 60000) {
+    return permissionsCache.matrix;
+  }
+  if (!permissionsCache.matrixPromise) {
+    permissionsCache.matrixPromise = fetch(`${API_BASE_URL}/permissions`)
+      .then((res) => (res.status === 200 ? res.json() : {}))
+      .then((data) => {
+        permissionsCache.matrix = data;
+        permissionsCache.lastFetched = Date.now();
+        return data;
+      })
+      .catch(() => ({}))
+      .finally(() => {
+        permissionsCache.matrixPromise = null;
+      });
+  }
+  return permissionsCache.matrixPromise;
+};
+
+const fetchUserPermsDeduplicated = async (userId) => {
+  if (permissionsCache.userPermissions[userId] && Date.now() - permissionsCache.lastFetched < 60000) {
+    return permissionsCache.userPermissions[userId];
+  }
+  if (!permissionsCache.userPromises[userId]) {
+    permissionsCache.userPromises[userId] = fetch(`${API_BASE_URL}/permissions/users/${userId}`)
+      .then((res) => (res.status === 200 ? res.json() : { customPermissions: {} }))
+      .then((data) => {
+        permissionsCache.userPermissions[userId] = data;
+        return data;
+      })
+      .catch(() => ({ customPermissions: {} }))
+      .finally(() => {
+        delete permissionsCache.userPromises[userId];
+      });
+  }
+  return permissionsCache.userPromises[userId];
+};
+
 export function usePermissions() {
   const [user, setUser] = useState(null);
   const [customPermissions, setCustomPermissions] = useState({});
   const [rolePermissions, setRolePermissions] = useState({});
   const [loading, setLoading] = useState(true);
 
-  const loadPermissions = () => {
+  const loadPermissions = (force = false) => {
     const loggedIn = getLoggedInUser();
     setUser(loggedIn);
 
+    if (force) {
+      clearPermissionsCache();
+    }
+
     if (loggedIn && loggedIn.id) {
       Promise.all([
-        fetch(`${API_BASE_URL}/permissions/users/${loggedIn.id}`)
-          .then((res) => (res.status === 200 ? res.json() : { customPermissions: {} }))
-          .catch(() => ({ customPermissions: {} })),
-        fetch(`${API_BASE_URL}/permissions`)
-          .then((res) => (res.status === 200 ? res.json() : {}))
-          .catch(() => ({}))
+        fetchUserPermsDeduplicated(loggedIn.id),
+        fetchMatrixDeduplicated(),
       ])
         .then(([userData, matrix]) => {
           setCustomPermissions(userData?.customPermissions || {});
@@ -49,16 +107,12 @@ export function usePermissions() {
 
   useEffect(() => {
     loadPermissions();
-    const handleUpdate = () => loadPermissions();
+    const handleUpdate = () => loadPermissions(true);
     window.addEventListener("permissions_updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
-    window.addEventListener("focus", handleUpdate);
-    document.addEventListener("visibilitychange", handleUpdate);
     return () => {
       window.removeEventListener("permissions_updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
-      window.removeEventListener("focus", handleUpdate);
-      document.removeEventListener("visibilitychange", handleUpdate);
     };
   }, []);
 
@@ -80,5 +134,6 @@ export function usePermissions() {
     return true; // fallback — allow access by default if no explicit restriction rule is matched
   };
 
-  return { user, hasPermission, loading };
+  return { user, hasPermission, loading, customPermissions, rolePermissions };
 }
+

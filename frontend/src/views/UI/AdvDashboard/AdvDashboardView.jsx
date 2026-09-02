@@ -77,16 +77,15 @@ export default function AdvDashboardView() {
             const loggedIn = getLoggedInUser();
             if (!user && loggedIn) setUser(loggedIn);
 
-            const advParam = loggedIn && loggedIn.id ? `?advocate_id=${loggedIn.id}` : "";
-
-            const [resUsers, resCases, resAssigned, resConsultations] = await Promise.all([
-                fetch(`${API_BASE_URL}/permissions/users`),
-                fetch(`${API_BASE_URL}/case-management/`),
-                fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases`),
-                fetch(`${API_BASE_URL}/consultations`),
+            const [resUsers, resCases, resAssigned, resConsultations, resDocs] = await Promise.all([
+                fetch(`${API_BASE_URL}/permissions/users`).catch(() => null),
+                fetch(`${API_BASE_URL}/case-management/`).catch(() => null),
+                fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases`).catch(() => null),
+                fetch(`${API_BASE_URL}/consultations`).catch(() => null),
+                fetch(`${API_BASE_URL}/dashboard/recent-documents?limit=8`).catch(() => null),
             ]);
 
-            if (!resUsers.ok || !resCases.ok) {
+            if (!resUsers || !resUsers.ok || !resCases || !resCases.ok) {
                 throw new Error("Failed to fetch dashboard data from backend resources");
             }
 
@@ -113,14 +112,13 @@ export default function AdvDashboardView() {
                 }
             }
 
-
-            // Documents — fetched separately so backend restart isn't required
             let documents = [];
-            try {
-                const resDocs = await fetch(`${API_BASE_URL}/dashboard/recent-documents?limit=8`);
-                if (resDocs.ok) documents = await resDocs.json();
-            } catch (e) {
-                console.warn("Recent documents endpoint not available:", e.message);
+            if (resDocs && resDocs.ok) {
+                try {
+                    documents = await resDocs.json();
+                } catch (e) {
+                    console.warn("Failed to parse recent documents:", e);
+                }
             }
 
             // 1. Total advocates count

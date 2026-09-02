@@ -34,6 +34,7 @@ import threading
 import json
 
 def export_database_state():
+    """Manual export of database state if needed for seeding."""
     try:
         metadata = MetaData()
         metadata.reflect(bind=engine)
@@ -64,11 +65,7 @@ def export_database_state():
         with open(seed_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
     except Exception as e:
-        print(f"Error auto-exporting database state: {e}")
-
-@event.listens_for(SessionLocal, 'after_commit')
-def receive_after_commit(session):
-    threading.Thread(target=export_database_state).start()
+        print(f"Error exporting database state: {e}")
 
 # Dependency to get database session
 def get_db():
@@ -76,4 +73,4 @@ def get_db():
     try:
         yield db
     finally:
-        db.close()
+        db.close()

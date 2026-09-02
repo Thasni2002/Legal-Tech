@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getLoggedInUser } from "@/utils/auth";
+import { usePermissions } from "@/utils/usePermissions";
 import {
   Home,
   Scale,
@@ -27,54 +28,13 @@ import { API_BASE_URL } from "@/utils/api";
 export default function Sidebar({ isCollapsed, setIsCollapsed, onModuleCountChange }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { user, hasPermission, loading, customPermissions, rolePermissions } = usePermissions();
   const [isOpen, setIsOpen] = useState(false); // Mobile drawer overlay state
   const [activeModuleId, setActiveModuleId] = useState("advocate");
-  const [user, setUser] = useState(null);
-  const [customPermissions, setCustomPermissions] = useState({});
-  const [rolePermissions, setRolePermissions] = useState({});
-  const [loading, setLoading] = useState(true);
   const [profileImage, setProfileImage] = useState(null);
-
-  const fetchPermissions = () => {
-    const loggedIn = getLoggedInUser();
-    if (loggedIn && loggedIn.id) {
-      Promise.all([
-        fetch(`${API_BASE_URL}/permissions/users/${loggedIn.id}`)
-          .then((res) => (res.status === 200 ? res.json() : { customPermissions: {} }))
-          .catch(() => ({ customPermissions: {} })),
-        fetch(`${API_BASE_URL}/permissions`)
-          .then((res) => (res.status === 200 ? res.json() : {}))
-          .catch(() => ({})),
-      ])
-        .then(([userData, matrix]) => {
-          setCustomPermissions(userData.customPermissions || {});
-
-          const roleKey = Object.keys(matrix).find(
-            (k) =>
-              k.toLowerCase().replace(/\s+/g, "") ===
-              (loggedIn.role || "").toLowerCase().replace(/\s+/g, "")
-          );
-          if (roleKey) {
-            setRolePermissions(matrix[roleKey] || {});
-          } else {
-            setRolePermissions(matrix[loggedIn.role] || {});
-          }
-        })
-        .catch((err) => {
-          console.warn("Sidebar: could not load permissions —", err?.message || err);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    } else {
-      setLoading(false);
-    }
-  };
 
   const loadSidebarUser = async () => {
     const loggedIn = getLoggedInUser();
-    setUser(loggedIn);
-
     if (!loggedIn) return;
 
     const userKey = (loggedIn?.email || loggedIn?.username || "").toLowerCase().trim();
@@ -140,13 +100,11 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, onModuleCountChan
   useEffect(() => {
     loadSidebarUser();
     setIsOpen(false);
-    fetchPermissions();
   }, [pathname]);
 
   useEffect(() => {
     const handleUpdate = () => {
       loadSidebarUser();
-      fetchPermissions();
     };
     window.addEventListener("permissions_updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
@@ -158,21 +116,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, onModuleCountChan
 
   const hasViewPermission = (moduleKey) => {
     if (!moduleKey) return true;
-
-    // Check custom permissions (direct permissions) first
-    if (customPermissions && customPermissions[moduleKey] !== undefined) {
-      if (customPermissions[moduleKey].view !== undefined) {
-        return !!customPermissions[moduleKey].view;
-      }
-    }
-
-    // Check role permissions next
-    if (rolePermissions && rolePermissions[moduleKey] !== undefined) {
-      return !!rolePermissions[moduleKey].view;
-    }
-
-    // Default fallback: allow access if no explicit restriction rule is matched
-    return true;
+    return hasPermission(moduleKey, "view");
   };
 
   // Define 2-Tier Modules with sub-items
@@ -541,3 +485,5 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, onModuleCountChan
     </>
   );
 }
+
+

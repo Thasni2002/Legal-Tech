@@ -86,19 +86,16 @@ export default function ClerkFormatPhysicalFile() {
       console.warn("Backend physical files fetch error, using local cache:", e);
     }
 
-    // Fallback to localStorage
+    // Fallback to localStorage if offline, or empty list
     const saved = localStorage.getItem("clerk_physical_files");
     if (saved) {
       try {
         setFiles(deduplicateFiles(JSON.parse(saved)));
-      } catch (e) {}
+      } catch (e) {
+        setFiles([]);
+      }
     } else {
-      // Default seed sample
-      const initialSeed = [
-        { id: 1, fileNumber: "PF-2026-001", caseTitle: "Mary Joseph v. BSNL", cabinet: "Cabinet A", shelf: "Shelf 1", dateFiled: new Date().toISOString().split("T")[0] }
-      ];
-      setFiles(initialSeed);
-      localStorage.setItem("clerk_physical_files", JSON.stringify(initialSeed));
+      setFiles([]);
     }
   };
 
