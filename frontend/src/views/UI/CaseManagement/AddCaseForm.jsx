@@ -350,6 +350,11 @@ const getTypesForCourtName = (courtName) => {
     ];
   }
 
+
+
+
+
+  
   if (courtName.includes("Consumer")) {
     return [
       "Consumer Complaint",
