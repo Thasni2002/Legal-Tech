@@ -13,7 +13,16 @@ import { generateProfessionalInvoicePDF } from "@/utils/generateProfessionalInvo
 import InvoiceHistoryView from "./InvoiceHistoryView";
 import { usePermissions } from "@/utils/usePermissions";
 import ConfirmModal from "@/components/common/ConfirmModal";
-import { API_BASE_URL } from "@/utils/api";
+import {
+  getInvoices,
+  getFinanceStats,
+  getFinanceClients,
+  createInvoice,
+  uploadInvoicePDF,
+  sendPaymentEmail,
+  updateInvoiceStatus,
+  deleteInvoice,
+} from "@/services/apiServices";
 
 
 export default function CourtFeeCalView() {
@@ -277,23 +286,20 @@ export default function CourtFeeCalView() {
   // Fetch data from FastAPI backend in parallel
   const fetchInvoicesAndStats = useCallback(async () => {
     try {
-      const [invoicesRes, statsRes, clientsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/finance/invoices`).catch(() => null),
-        fetch(`${API_BASE_URL}/finance/stats`).catch(() => null),
-        fetch(`${API_BASE_URL}/finance/clients`).catch(() => null),
+      const [invoicesData, statsData, clientsData] = await Promise.all([
+        getInvoices().catch(() => null),
+        getFinanceStats().catch(() => null),
+        getFinanceClients().catch(() => null),
       ]);
 
-      if (invoicesRes && invoicesRes.ok) {
-        const data = await invoicesRes.json();
-        setInvoices(data);
+      if (invoicesData) {
+        setInvoices(invoicesData);
       }
-      if (statsRes && statsRes.ok) {
-        const data = await statsRes.json();
-        setStats(data);
+      if (statsData) {
+        setStats(statsData);
       }
-      if (clientsRes && clientsRes.ok) {
-        const data = await clientsRes.json();
-        setClients(data);
+      if (clientsData) {
+        setClients(clientsData);
       }
     } catch (err) {
       console.error("Error fetching finance data:", err);
@@ -366,17 +372,9 @@ export default function CourtFeeCalView() {
         status: "Sent"
       };
 
-      const res = await fetch(`${API_BASE_URL}/finance/invoices`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-      });
+      const savedInvoice = await createInvoice(payload);
 
-      if (res.ok) {
-        const savedInvoice = await res.json();
-
+      if (savedInvoice) {
         // 🚀 SHOW SUCCESS MODAL INSTANTLY FOR SPEED
         setShowSuccessModal(true);
         setIsSendingPayment(false);
@@ -392,13 +390,8 @@ export default function CourtFeeCalView() {
             const formData = new FormData();
             formData.append("file", pdfBlob, `invoice_${savedInvoice.id}.pdf`);
 
-            const uploadRes = await fetch(`${API_BASE_URL}/finance/upload-invoice/${savedInvoice.id}`, {
-              method: "POST",
-              body: formData,
-            });
-
-            if (uploadRes.ok) {
-              const uploadData = await uploadRes.json();
+            const uploadData = await uploadInvoicePDF(savedInvoice.id, formData);
+            if (uploadData && uploadData.file_path) {
               backendPdfPath = uploadData.file_path;
             }
           } catch (pdfErr) {
@@ -407,30 +400,21 @@ export default function CourtFeeCalView() {
 
           if (email) {
             try {
-              await fetch(`${API_BASE_URL}/finance/send-payment-email`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                  email,
-                  client_name: clientName,
-                  amount: grandTotal,
-                  payment_method: paymentMethod,
-                  gpay_number: gpayNumber,
-                  upi_id: upiId,
-                  payment_link: `${window.location.origin}/client-payments/${savedInvoice.id}`,
-                  invoice_pdf_path: backendPdfPath || `invoices/invoice_${savedInvoice.id}.pdf`
-                })
+              await sendPaymentEmail({
+                email,
+                client_name: clientName,
+                amount: grandTotal,
+                payment_method: paymentMethod,
+                gpay_number: gpayNumber,
+                upi_id: upiId,
+                payment_link: `${window.location.origin}/client-payments/${savedInvoice.id}`,
+                invoice_pdf_path: backendPdfPath || `invoices/invoice_${savedInvoice.id}.pdf`
               });
             } catch (emailErr) {
               console.error("Error sending payment email:", emailErr);
             }
           }
         })();
-      } else {
-        setIsSendingPayment(false);
-        alert("Failed to create payment request.");
       }
     } catch (error) {
       console.error(error);
@@ -460,20 +444,11 @@ export default function CourtFeeCalView() {
   };
   const handleUpdateStatus = async (invoiceId, newStatus) => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/finance/invoices/${invoiceId}/status`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
-      if (res.ok) {
-        fetchInvoicesAndStats();
-      } else {
-        alert("Failed to update status");
-      }
+      await updateInvoiceStatus(invoiceId, newStatus);
+      fetchInvoicesAndStats();
     } catch (err) {
       console.error("Error updating status:", err);
+      alert("Failed to update status");
     }
   };
 
@@ -485,16 +460,11 @@ export default function CourtFeeCalView() {
     if (!deleteConfirmInvoiceId) return;
     setDeletingInvoice(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/finance/invoices/${deleteConfirmInvoiceId}`, {
-        method: "DELETE"
-      });
-      if (res.ok) {
-        fetchInvoicesAndStats();
-      } else {
-        alert("Failed to delete invoice");
-      }
+      await deleteInvoice(deleteConfirmInvoiceId);
+      fetchInvoicesAndStats();
     } catch (err) {
       console.error("Error deleting invoice:", err);
+      alert("Failed to delete invoice");
     } finally {
       setDeletingInvoice(false);
       setDeleteConfirmInvoiceId(null);

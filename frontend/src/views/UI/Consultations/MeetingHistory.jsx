@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import { getLoggedInUser } from "@/utils/auth";
 import Link from "next/link";
 import DatePicker from "react-datepicker";

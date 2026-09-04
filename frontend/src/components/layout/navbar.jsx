@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getLoggedInUser } from "@/utils/auth";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import { Bell, ChevronDown, LoaderCircle, CheckCheck, X } from "lucide-react";
 import DoubleMessageIcon from "@/components/common/DoubleMessageIcon";
 import MessagingHub from "@/components/messaging/MessagingHub";

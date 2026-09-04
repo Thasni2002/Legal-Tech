@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Upload, Eye, Trash, FileText, Download, ExternalLink, X, ClipboardList, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import useModulePermission from "@/utils/useModulePermission";
 import { getLoggedInUser } from "@/utils/auth";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import { createPortal } from "react-dom";
 import DocumentViewerModal from "@/components/common/DocumentViewerModal";
 import DocumentFormatGenerateView from "./ClientDocumentFormatGenerateView";
@@ -1040,4 +1040,4 @@ export default function ClientDocuments() {
 
     </div>
   );
-}
+}

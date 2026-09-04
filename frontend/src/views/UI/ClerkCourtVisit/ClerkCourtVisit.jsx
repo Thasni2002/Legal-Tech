@@ -21,7 +21,7 @@ import {
   ChevronDown
 } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import { usePermissions } from "@/utils/usePermissions";
 
 export default function ClerkCourtVisit() {

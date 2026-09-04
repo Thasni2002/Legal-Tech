@@ -1,6 +1,6 @@
 "use client";
 
-import { API_BASE_URL } from "@/utils/api";
+import { getRoles, createRole, updateRole, deleteRole } from "@/services/apiServices";
 
 import React, { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, Search, Shield, Info, AlertTriangle, Check } from "lucide-react";
@@ -34,9 +34,8 @@ export default function RolesView() {
   useEffect(() => {
     const loadRoles = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/permissions/roles`);
-        if (res.ok) {
-          const data = await res.json();
+        const data = await getRoles();
+        if (data) {
           setRoles(data);
         }
       } catch (e) {
@@ -69,51 +68,35 @@ export default function RolesView() {
       }
 
       try {
-        const res = await fetch(`${API_BASE_URL}/permissions/roles/${editingRole.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: roleName.trim(),
-            description: roleDescription.trim()
-          })
+        const updatedRole = await updateRole(editingRole.id, {
+          name: roleName.trim(),
+          description: roleDescription.trim()
         });
-        if (res.ok) {
-          const updatedRole = await res.json();
+        if (updatedRole) {
           setRoles((prev) => prev.map((r) => r.id === editingRole.id ? updatedRole : r));
           showToast(`Role "${roleName}" updated successfully!`);
           setEditingRole(null);
           setRoleName("");
           setRoleDescription("");
-        } else {
-          const errData = await res.json();
-          showToast(errData.detail || "Error updating role", "error");
         }
       } catch (err) {
-        showToast("Unable to connect to backend", "error");
+        showToast(err.message || "Unable to connect to backend", "error");
       }
     } else {
       // Creating Mode
       try {
-        const res = await fetch(`${API_BASE_URL}/permissions/roles`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: roleName.trim(),
-            description: roleDescription.trim()
-          })
+        const newRole = await createRole({
+          name: roleName.trim(),
+          description: roleDescription.trim()
         });
-        if (res.ok) {
-          const newRole = await res.json();
+        if (newRole) {
           setRoles((prev) => [...prev, newRole]);
           setProvisionedRole(newRole);
           setRoleName("");
           setRoleDescription("");
-        } else {
-          const errData = await res.json();
-          showToast(errData.detail || "Error creating role", "error");
         }
       } catch (err) {
-        showToast("Unable to connect to backend", "error");
+        showToast(err.message || "Unable to connect to backend", "error");
       }
     }
   };
@@ -141,12 +124,9 @@ export default function RolesView() {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/permissions/roles/${roleId}`, {
-        method: "DELETE"
-      });
-      if (res.ok) {
-        setRoles((prev) => prev.filter((r) => r.id !== roleId));
-        setDeletedRoleName(roleName);
+      await deleteRole(roleId);
+      setRoles((prev) => prev.filter((r) => r.id !== roleId));
+      setDeletedRoleName(roleName);
 
         // Clear edit state if we just deleted the role being edited
         if (editingRole && editingRole.id === roleId) {
@@ -154,12 +134,8 @@ export default function RolesView() {
           setRoleName("");
           setRoleDescription("");
         }
-      } else {
-        const errData = await res.json();
-        showToast(errData.detail || "Error deleting role", "error");
-      }
     } catch (err) {
-      showToast("Unable to connect to backend", "error");
+      showToast(err.message || "Error deleting role", "error");
     }
   };
 

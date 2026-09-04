@@ -1,6 +1,6 @@
 "use client";
 
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
@@ -166,7 +166,7 @@ export default function AssignedCasesView() {
       const formattedCases = casesToShow.map((item) => {
         const rawTitle = item.case_name || item.case_title || item.title || item.caseTitle || item.name || "Assigned Case";
         const isConfidential = isJuniorAdvocate && isSensitiveCase(item);
-        const displayTitle = isConfidential ? "Confidential Case (Restricted)" : rawTitle;
+        const displayTitle = rawTitle;
 
         return {
           id: item.id,

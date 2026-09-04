@@ -44,7 +44,7 @@ import {
   Check
 } from "lucide-react";
 import { createPortal } from "react-dom";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import DocumentViewerModal from "@/components/common/DocumentViewerModal";
 import ClientEdit from "./ClientEdit";
 import CaseTimelineView from "@/components/case/CaseTimelineView";

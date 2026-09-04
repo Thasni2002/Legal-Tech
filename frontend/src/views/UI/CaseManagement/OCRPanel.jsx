@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import DocumentScannerTab from "./DocumentScannerTab";
 import {
   FileText,

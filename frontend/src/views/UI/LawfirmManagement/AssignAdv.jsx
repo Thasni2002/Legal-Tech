@@ -1,6 +1,14 @@
 "use client";
 
-import { API_BASE_URL } from "@/utils/api";
+import {
+  getAssignedCaseById,
+  getAdvocates,
+  getCases,
+  getAssignedCases,
+  deleteCaseAssignment,
+  updateCaseAssignment,
+  assignCaseToAdvocate,
+} from "@/services/apiServices";
 import { DISTRICT_COURTS } from "@/utils/districtCourts";
 
 import { useSearchParams, useRouter } from "next/navigation";
@@ -52,26 +60,24 @@ export default function AssignAdv({ isOpen, onClose }) {
 
     const fetchCase = async () => {
       try {
-        const res = await fetch(
-          `${API_BASE_URL}/lawfirm-management/assigned-cases/${caseId}`
-        );
+        const data = await getAssignedCaseById(caseId);
+        if (data) {
+          const courtNameVal = data.practiceCourt || data.practice_court || "";
+          const districtVal = data.district || data.client_district || findDistrictForCourt(courtNameVal);
 
-        const data = await res.json();
-        const courtNameVal = data.practiceCourt || data.practice_court || "";
-        const districtVal = data.district || data.client_district || findDistrictForCourt(courtNameVal);
-
-        setFormData({
-          caseName: data.case_name || "",
-          caseNumber: data.case_number || "",
-          advocateName: data.advocate_name || "",
-          secondaryAdvocateName: data.secondary_advocate_name || data.secondaryAdvocateName || "",
-          district: districtVal,
-          courtName: courtNameVal,
-          assignmentNotes: data.assignment_notes || "",
-          status: data.status || "Active",
-          clientName: data.client_name || "",
-          caseIdVal: data.case_id || "",
-        });
+          setFormData({
+            caseName: data.case_name || "",
+            caseNumber: data.case_number || "",
+            advocateName: data.advocate_name || "",
+            secondaryAdvocateName: data.secondary_advocate_name || data.secondaryAdvocateName || "",
+            district: districtVal,
+            courtName: courtNameVal,
+            assignmentNotes: data.assignment_notes || "",
+            status: data.status || "Active",
+            clientName: data.client_name || "",
+            caseIdVal: data.case_id || "",
+          });
+        }
       } catch (error) {
         console.error("Error fetching case:", error);
       }
@@ -83,13 +89,9 @@ export default function AssignAdv({ isOpen, onClose }) {
   const [advocates, setAdvocates] = useState([]);
 
   useEffect(() => {
-    const fetchAdvocates = async () => {
+    const fetchAdvocatesData = async () => {
       try {
-        const res = await fetch(
-          `${API_BASE_URL}/lawfirm-management/`
-        );
-
-        const data = await res.json();
+        const data = await getAdvocates();
         const list = Array.isArray(data) ? data : [];
         const advocateOnlyList = list.filter((adv) => {
           const role = (adv.role || "").toLowerCase().trim();
@@ -101,28 +103,21 @@ export default function AssignAdv({ isOpen, onClose }) {
       }
     };
 
-    fetchAdvocates();
+    fetchAdvocatesData();
   }, []);
 
   const [cases, setCases] = useState([]);
 
   useEffect(() => {
-    const fetchCases = async () => {
+    const fetchCasesData = async () => {
       try {
-        const [casesRes, assignedRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/case-management/`),
-          fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases`).catch(() => null),
+        const [casesData, assignedList] = await Promise.all([
+          getCases().catch(() => []),
+          getAssignedCases().catch(() => []),
         ]);
 
-        let assignedList = [];
-        if (assignedRes && assignedRes.ok) {
-          try {
-            assignedList = await assignedRes.json();
-          } catch (e) {}
-        }
-
-        if (casesRes.ok) {
-          const data = await casesRes.json();
+        if (casesData) {
+          const data = casesData;
           const mappedCases = data.map((c) => {
             const courtName = c.court_name || "";
             const district = c.client_district || c.district || findDistrictForCourt(courtName);
@@ -220,15 +215,9 @@ export default function AssignAdv({ isOpen, onClose }) {
     if (!caseId) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/lawfirm-management/assigned-cases/${caseId}`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        if (onClose) onClose();
-        else router.back();
-      } else {
-        alert("Failed to unassign case.");
-      }
+      await deleteCaseAssignment(caseId);
+      if (onClose) onClose();
+      else router.back();
     } catch (error) {
       console.error("Error unassigning case:", error);
       alert("Error unassigning case.");
@@ -254,49 +243,16 @@ export default function AssignAdv({ isOpen, onClose }) {
     };
 
     try {
-      const url = caseId
-        ? `${API_BASE_URL}/lawfirm-management/assigned-cases/${caseId}`
-        : `${API_BASE_URL}/lawfirm-management/assign-case`;
-      const method = caseId ? "PUT" : "POST";
-
-      const response = await fetch(
-        url,
-        {
-          method: method,
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Reset form
-        setFormData({
-          caseName: "",
-          caseNumber: "",
-          district: "",
-          courtName: "", 
-          advocateName: "",
-          secondaryAdvocateName: "",
-          assignmentNotes: "",
-          status: "Active",
-          clientName: "",
-          caseIdVal: "",
-        });
-
-        setShowSuccess(true);
+      if (caseId) {
+        await updateCaseAssignment(caseId, payload);
       } else {
-        console.log("Error:", data);
-        alert(`Failed to save assignment: ${data.detail || "Server error"}`);
+        await assignCaseToAdvocate(payload);
       }
+      setShowSuccess(true);
     } catch (error) {
       console.error("Submit error:", error);
       alert(`Error submitting assignment: ${error.message || "Network error"}`);
     }
-
   };
 
   if (!isOpen) return null;

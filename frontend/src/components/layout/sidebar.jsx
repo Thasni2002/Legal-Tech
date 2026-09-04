@@ -23,7 +23,7 @@ import {
   Briefcase,
   Layers,
 } from "lucide-react";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 
 export default function Sidebar({ isCollapsed, setIsCollapsed, onModuleCountChange }) {
   const router = useRouter();
@@ -99,6 +99,9 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, onModuleCountChan
 
   useEffect(() => {
     loadSidebarUser();
+  }, []);
+
+  useEffect(() => {
     setIsOpen(false);
   }, [pathname]);
 
