@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import { getAuthHeaders, getLoggedInUser } from "@/utils/auth";
 
 export function useMessaging() {

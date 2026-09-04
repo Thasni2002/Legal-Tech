@@ -25,7 +25,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { API_BASE_URL } from "@/utils/api";
+import { getLeaveBalances, getLeaves, applyLeave, updateLeaveStatus, cancelLeave } from "@/services/apiServices";
 import { getLoggedInUser } from "@/utils/auth";
 import useModulePermission from "@/utils/useModulePermission";
 import CustomDatePicker from "@/components/ui/CustomDatePicker";
@@ -150,33 +150,27 @@ export default function LeaveManagementView({
 
     try {
       // 1. Fetch Balances
-      const resBal = await fetch(`${API_BASE_URL}/leaves/balances`, { headers });
-      if (resBal.ok) {
-        const balData = await resBal.json();
+      const balData = await getLeaveBalances();
+      if (balData) {
         setBalances(balData);
       }
 
       // 2. Fetch Leaves with view_mode and scope
-      let queryParams = [`view_mode=${viewMode}`];
+      const params = { view_mode: viewMode };
       if (viewMode === "clerk") {
-        queryParams.push(`scope=${clerkTab}`);
+        params.scope = clerkTab;
       }
-      if (statusFilter !== "All") queryParams.push(`status=${statusFilter}`);
-      if (fromDate) queryParams.push(`from_date=${fromDate}`);
-      if (toDate) queryParams.push(`to_date=${toDate}`);
+      if (statusFilter !== "All") params.status = statusFilter;
+      if (fromDate) params.from_date = fromDate;
+      if (toDate) params.to_date = toDate;
 
-      const url = `${API_BASE_URL}/leaves?${queryParams.join("&")}`;
-      const resLeaves = await fetch(url, { headers });
-      if (resLeaves.ok) {
-        const leaveData = await resLeaves.json();
+      const leaveData = await getLeaves(params);
+      if (leaveData) {
         setLeaves(leaveData);
-      } else {
-        const errJson = await resLeaves.json();
-        setError(errJson.detail || "Failed to load leave records.");
       }
     } catch (err) {
       console.error("Error fetching leave data:", err);
-      setError("Network or server connection error.");
+      setError(err.message || "Network or server connection error.");
     } finally {
       setLoading(false);
     }
@@ -267,34 +261,22 @@ export default function LeaveManagementView({
     setSubmitting(true);
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`${API_BASE_URL}/leaves/apply`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          ...applyForm,
-          total_days: computedDays,
-        }),
+      await applyLeave({
+        ...applyForm,
+        total_days: computedDays,
       });
 
-      if (res.ok) {
-        setIsApplying(false);
-        setApplyForm({
-          leave_type: "Casual Leave",
-          subject: "",
-          description: "",
-          from_date: "",
-          to_date: "",
-          is_half_day: "None",
-        });
-        fetchData();
-        showAlert("Your leave request has been submitted successfully!", "Leave Submitted", "success");
-      } else {
-        const errJson = await res.json();
-        showAlert(errJson.detail || "Failed to submit leave request.", "Submission Error", "error");
-      }
+      setIsApplying(false);
+      setApplyForm({
+        leave_type: "Casual Leave",
+        subject: "",
+        description: "",
+        from_date: "",
+        to_date: "",
+        is_half_day: "None",
+      });
+      fetchData();
+      showAlert("Your leave request has been submitted successfully!", "Leave Submitted", "success");
     } catch (err) {
       showAlert("Error submitting request: " + err.message, "Network Error", "error");
     } finally {
@@ -308,38 +290,25 @@ export default function LeaveManagementView({
     setSubmitting(true);
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`${API_BASE_URL}/leaves/${selectedLeave.id}/status`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          status: actionType,
-          rejection_reason: actionType === "Rejected" ? rejectionReason : null,
-        }),
+      const resJson = await updateLeaveStatus(selectedLeave.id, {
+        status: actionType,
+        rejection_reason: actionType === "Rejected" ? rejectionReason : null,
       });
 
-      if (res.ok) {
-        const resJson = await res.json();
-        setShowActionModal(false);
-        setSelectedLeave(null);
-        setRejectionReason("");
-        fetchData();
+      setShowActionModal(false);
+      setSelectedLeave(null);
+      setRejectionReason("");
+      fetchData();
 
-        if (resJson.reassigned_cases_count && resJson.reassigned_cases_count > 0) {
-          showAlert(
-            `Leave Approved!\n\n${resJson.reassigned_cases_count} case hearing(s) falling on the approved leave dates were automatically transferred to Secondary Junior Advocates:\n\n` +
-              (resJson.reassigned_details || []).map((d) => `• ${d}`).join("\n"),
-            "Hearing Auto-Reassigned",
-            "success"
-          );
-        } else {
-          showAlert(`Leave request successfully ${actionType.toLowerCase()}!`, "Status Updated", "success");
-        }
+      if (resJson && resJson.reassigned_cases_count && resJson.reassigned_cases_count > 0) {
+        showAlert(
+          `Leave Approved!\n\n${resJson.reassigned_cases_count} case hearing(s) falling on the approved leave dates were automatically transferred to Secondary Junior Advocates:\n\n` +
+            (resJson.reassigned_details || []).map((d) => `• ${d}`).join("\n"),
+          "Hearing Auto-Reassigned",
+          "success"
+        );
       } else {
-        const errJson = await res.json();
-        showAlert(errJson.detail || "Failed to update leave status.", "Action Failed", "error");
+        showAlert(`Leave request successfully ${actionType.toLowerCase()}!`, "Status Updated", "success");
       }
     } catch (err) {
       showAlert("Error updating status: " + err.message, "Network Error", "error");
@@ -353,23 +322,13 @@ export default function LeaveManagementView({
     setDeleteLoading(true);
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`${API_BASE_URL}/leaves/${deleteLeaveId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        setDeleteLeaveId(null);
-        fetchData();
-        showAlert("Leave application deleted successfully.", "Deleted", "success");
-      } else {
-        const errJson = await res.json().catch(() => ({}));
-        setDeleteLeaveId(null);
-        showAlert(errJson.detail || "Failed to delete leave request.", "Permission Denied", "error");
-      }
-    } catch (err) {
-      console.error("Error deleting leave:", err);
+      await cancelLeave(deleteLeaveId);
       setDeleteLeaveId(null);
-      showAlert("Error deleting leave request.", "Action Failed", "error");
+      fetchData();
+      showAlert("Leave application deleted successfully.", "Deleted", "success");
+    } catch (err) {
+      setDeleteLeaveId(null);
+      showAlert(err.message || "Failed to delete leave request.", "Permission Denied", "error");
     } finally {
       setDeleteLoading(false);
     }

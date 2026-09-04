@@ -1,10 +1,10 @@
 "use client";
 
-import { API_BASE_URL } from "@/utils/api";
+import { getRoles, getPermissions, updateDefaultRolePermissions } from "@/services/apiServices";
 
 import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { Shield, ShieldAlert, Save, HelpCircle, Check, CheckSquare, AlertTriangle, X } from "lucide-react";
+import { Shield, ShieldAlert, Save, HelpCircle, Check, CheckSquare, AlertTriangle, X, Lock } from "lucide-react";
 
 const DEFAULT_ROLES = [
   { id: "senioradvocate", name: "Senior Advocate", description: "Full system access" },
@@ -93,15 +93,6 @@ const ALL_GROUPS = [
     ],
   },
   {
-    category: "System / Administration",
-    modules: [
-      { key: "User Roles", label: "User Roles" },
-      { key: "Roles", label: "Roles" },
-      { key: "Users", label: "Users" },
-      { key: "Permissions", label: "Permissions" },
-    ],
-  },
-  {
     category: "Clerk Features",
     modules: [
       { key: "Clerk Dashboard", label: "Dashboard (Clerk)" },
@@ -111,8 +102,17 @@ const ALL_GROUPS = [
       { key: "Format Physical File", label: "Format Physical File" },
       { key: "Clerk Documents", label: "Documents (Clerk)" },
       { key: "Clerk Leave", label: "Clerk Leave" },
-    ]
-  }
+    ],
+  },
+  {
+    category: "System / Administration",
+    modules: [
+      { key: "User Roles", label: "User Roles" },
+      { key: "Roles", label: "Roles" },
+      { key: "Users", label: "Users" },
+      { key: "Permissions", label: "Permissions" },
+    ],
+  },
 ];
 
 // Client-only group
@@ -287,11 +287,10 @@ export default function PermissionView() {
   useEffect(() => {
     const loadConfig = async () => {
       try {
-        const resRoles = await fetch(`${API_BASE_URL}/permissions/roles`);
-        if (resRoles.ok) {
-          const rolesData = await resRoles.json();
+        const rolesData = await getRoles();
+        if (rolesData && rolesData.length > 0) {
           setRoles(rolesData);
-          if (rolesData.length > 0) setSelectedRole(rolesData[0].name);
+          setSelectedRole(rolesData[0].name);
         } else {
           setRoles(DEFAULT_ROLES);
           setSelectedRole(DEFAULT_ROLES[0].name);
@@ -302,9 +301,9 @@ export default function PermissionView() {
       }
 
       try {
-        const resPerms = await fetch(`${API_BASE_URL}/permissions`);
-        if (resPerms.ok) {
-          setPermissions(await resPerms.json());
+        const permsData = await getPermissions();
+        if (permsData) {
+          setPermissions(permsData);
         } else {
           setPermissions(DEFAULT_PERMISSIONS);
         }
@@ -358,23 +357,47 @@ export default function PermissionView() {
     }));
   };
 
+  // Toggle ALL actions for ALL modules within an entire section/category
+  const handleToggleCategoryAll = (categoryModules) => {
+    if (!selectedRole || !categoryModules || categoryModules.length === 0) return;
+    const activeMatrix = getActivePermissionsMatrix();
+
+    const allCategorySelected = categoryModules.every(({ key }) => {
+      const modPerms = activeMatrix[key] || { view: false, add: false, edit: false, delete: false };
+      return ACTIONS.every((act) => !!modPerms[act]);
+    });
+
+    const targetValue = !allCategorySelected;
+
+    setPermissions((prev) => {
+      const rolePerms = prev[selectedRole] || {};
+      const updatedRolePerms = { ...rolePerms };
+
+      categoryModules.forEach(({ key }) => {
+        updatedRolePerms[key] = {
+          view: targetValue,
+          add: targetValue,
+          edit: targetValue,
+          delete: targetValue,
+        };
+      });
+
+      return {
+        ...prev,
+        [selectedRole]: updatedRolePerms,
+      };
+    });
+  };
+
   // Save role defaults to API
   const handleSavePermissions = async () => {
     if (!selectedRole) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/permissions/role/${selectedRole}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(permissions[selectedRole] || {}),
-      });
-      if (res.ok) {
-        showToast(`Default permissions for "${selectedRole}" saved!`);
-        window.dispatchEvent(new Event("permissions_updated"));
-      } else {
-        showToast("Error saving permissions", "error");
-      }
+      await updateDefaultRolePermissions(selectedRole, permissions[selectedRole] || {});
+      showToast(`Default permissions for "${selectedRole}" saved!`);
+      window.dispatchEvent(new Event("permissions_updated"));
     } catch (err) {
-      showToast("Unable to connect to backend", "error");
+      showToast("Error saving permissions: " + (err.message || "Please try again"), "error");
     }
   };
 
@@ -518,78 +541,118 @@ export default function PermissionView() {
 
           {/* ─── Mobile View: Native Cards (< 640px) ─── */}
           <div className="block sm:hidden space-y-4">
-            {activeGroups.map(({ category, modules }) => (
-              <div key={category} className="space-y-3">
-                <div className="bg-slate-100/90 px-3.5 py-2 rounded-xl border border-slate-200/80">
-                  <span className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">
-                    {category}
-                  </span>
-                </div>
+            {activeGroups.map(({ category, modules }) => {
+              const isSystemAdmin = category === "System / Administration";
+              const allCategorySelected = modules.every(({ key }) => {
+                const modPerms = activeMatrix[key] || { view: false, add: false, edit: false, delete: false };
+                return ACTIONS.every((act) => !!modPerms[act]);
+              });
 
-                <div className="space-y-2.5">
-                  {modules.map(({ key, label }) => {
-                    const modPerms = activeMatrix[key] || { view: false, add: false, edit: false, delete: false };
-                    const allSelected = ACTIONS.every((act) => modPerms[act]);
-                    return (
-                      <div
-                        key={key}
-                        className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-3.5 space-y-3 hover:bg-white transition-all"
+              return (
+                <div key={category} className="space-y-3">
+                  <div className={`px-3.5 py-2.5 rounded-xl border ${
+                    isSystemAdmin
+                      ? "bg-[#0F172A] border-slate-800 text-purple-300 border-l-4 border-l-purple-500 shadow-sm"
+                      : "bg-slate-100/90 border-slate-200/80 text-slate-700"
+                  }`}>
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5 truncate">
+                        {isSystemAdmin && <Lock size={12} className="text-purple-400" />}
+                        {category}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleCategoryAll(modules)}
+                        className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full transition-all cursor-pointer shrink-0 border tracking-normal normal-case ${
+                          allCategorySelected
+                            ? "bg-white text-red-600 border-red-200"
+                            : "bg-[#2563EB] text-white border-blue-600"
+                        }`}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
-                            <span className="font-bold text-slate-900 text-xs sm:text-sm truncate">
-                              {label}
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleToggleModuleAll(key)}
-                            className={`text-[10px] font-bold px-3 py-1 rounded-full transition-all cursor-pointer shrink-0 ${
-                              allSelected
-                                ? "bg-white text-red-600 border border-red-200"
-                                : "bg-white text-blue-600 border border-blue-200"
-                            }`}
-                          >
-                            {allSelected ? "DESELECT" : "SELECT ALL"}
-                          </button>
-                        </div>
+                        {allCategorySelected ? "Turn All OFF" : "Turn All ON"}
+                      </button>
+                    </span>
+                  </div>
 
-                        {/* 4 Action Checkbox Chips */}
-                        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200/60">
-                          {ACTIONS.map((action) => {
-                            const isChecked = !!modPerms[action];
-                            return (
-                              <button
-                                type="button"
-                                key={action}
-                                onClick={() => handlePermissionToggle(key, action)}
-                                className={`flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
-                                  isChecked
-                                    ? "bg-blue-600 text-white border-blue-600 shadow-xs"
-                                    : "bg-white text-slate-700 border-slate-200 hover:border-slate-300"
-                                }`}
-                              >
-                                <span className="capitalize">{action}</span>
-                                <div
-                                  className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${
-                                    isChecked
-                                      ? "border-white bg-white/20"
-                                      : "border-slate-300 bg-slate-50"
+                  <div className="space-y-2.5">
+                    {modules.map(({ key, label }) => {
+                      const modPerms = activeMatrix[key] || { view: false, add: false, edit: false, delete: false };
+                      const allSelected = ACTIONS.every((act) => modPerms[act]);
+                      return (
+                        <div
+                          key={key}
+                          className={`rounded-2xl p-3.5 space-y-3 transition-all border ${
+                            isSystemAdmin
+                              ? "bg-[#1E293B] border-slate-800/90 hover:bg-[#0F172A] text-slate-100 shadow-xs"
+                              : "bg-slate-50/70 border-slate-200/80 hover:bg-white text-slate-900"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className={`w-2 h-2 rounded-full shrink-0 ${isSystemAdmin ? "bg-purple-400" : "bg-blue-600"}`} />
+                              <span className={`font-bold text-xs sm:text-sm truncate ${isSystemAdmin ? "text-slate-100" : "text-slate-900"}`}>
+                                {label}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleModuleAll(key)}
+                              className={`text-[10px] font-bold px-3 py-1 rounded-full transition-all cursor-pointer shrink-0 ${
+                                isSystemAdmin
+                                  ? allSelected
+                                    ? "bg-slate-900 text-rose-400 border border-rose-900/60"
+                                    : "bg-slate-900 text-purple-300 border border-purple-800/60"
+                                  : allSelected
+                                    ? "bg-white text-red-600 border border-red-200"
+                                    : "bg-white text-blue-600 border border-blue-200"
+                              }`}
+                            >
+                              {allSelected ? "DESELECT" : "SELECT ALL"}
+                            </button>
+                          </div>
+
+                          {/* 4 Action Checkbox Chips */}
+                          <div className={`grid grid-cols-2 gap-2 pt-1 border-t ${isSystemAdmin ? "border-slate-800" : "border-slate-200/60"}`}>
+                            {ACTIONS.map((action) => {
+                              const isChecked = !!modPerms[action];
+                              return (
+                                <button
+                                  type="button"
+                                  key={action}
+                                  onClick={() => handlePermissionToggle(key, action)}
+                                  className={`flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
+                                    isSystemAdmin
+                                      ? isChecked
+                                        ? "bg-purple-600 text-white border-purple-500 shadow-xs"
+                                        : "bg-slate-800 text-slate-300 border-slate-700 hover:border-slate-600"
+                                      : isChecked
+                                        ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                                        : "bg-white text-slate-700 border-slate-200 hover:border-slate-300"
                                   }`}
                                 >
-                                  {isChecked && <Check size={12} className="text-white stroke-[3]" />}
-                                </div>
-                              </button>
-                            );
-                          })}
+                                  <span className="capitalize">{action}</span>
+                                  <div
+                                    className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${
+                                      isChecked
+                                        ? "border-white bg-white/20"
+                                        : isSystemAdmin
+                                          ? "border-slate-600 bg-slate-900"
+                                          : "border-slate-300 bg-slate-50"
+                                    }`}
+                                  >
+                                    {isChecked && <Check size={12} className="text-white stroke-[3]" />}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* ─── Desktop & Tablet View: Table Matrix (>= 640px) ─── */}
@@ -607,64 +670,124 @@ export default function PermissionView() {
                 </tr>
               </thead>
               <tbody>
-                {activeGroups.map(({ category, modules }) => (
-                  <React.Fragment key={category}>
-                    {/* Category header row */}
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="sticky top-[41px] z-10 py-3 px-4 lg:px-6 font-bold text-[11px] uppercase tracking-[0.2em] text-[#64748B] bg-[#F8FAFC] border-y border-[#E2E8F0] border-l-4 border-l-[#2563EB] shadow-xs"
-                      >
-                        {category}
-                      </td>
-                    </tr>
-                    {/* Module rows */}
-                    {modules.map(({ key, label }) => {
-                      const modPerms = activeMatrix[key] || { view: false, add: false, edit: false, delete: false };
-                      const allSelected = ACTIONS.every(act => modPerms[act]);
-                      return (
-                        <tr key={key} className="hover:bg-[#F8FAFC] transition-colors duration-200 border-b border-[#F1F5F9] group/row">
-                          <td className="py-3.5 px-4 lg:px-6 font-semibold text-[#1E293B] text-xs sm:text-sm pl-6 lg:pl-8 flex items-center gap-2.5 sm:gap-3">
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#CBD5E1] group-hover/row:bg-[#2563EB] transition-colors" />
-                            {label}
-                          </td>
-                          {ACTIONS.map((action) => (
-                            <td key={action} className="py-3.5 px-4 lg:px-6 text-center">
-                              <label className="relative inline-flex items-center justify-center cursor-pointer group/check">
-                                <input
-                                  type="checkbox"
-                                  checked={modPerms[action] || false}
-                                  onChange={() => handlePermissionToggle(key, action)}
-                                  className="peer sr-only"
-                                />
-                                <div className={`w-5 h-5 rounded-[6px] flex items-center justify-center transition-all duration-200 border 
-                                  ${modPerms[action] 
-                                    ? "bg-[#2563EB] border-[#2563EB] shadow-sm shadow-blue-500/30" 
-                                    : "bg-white border-[#CBD5E1] group-hover/check:border-[#2563EB]"}
-                                `}>
-                                  {modPerms[action] && <Check size={13} className="text-white stroke-[3.5]" />}
-                                </div>
-                              </label>
-                            </td>
-                          ))}
-                          <td className="py-3.5 px-4 lg:px-6 text-center">
-                            <button
-                              type="button"
-                              onClick={() => handleToggleModuleAll(key)}
-                              className={`text-[10px] sm:text-[11px] font-bold px-3 sm:px-4 py-1 sm:py-1.5 rounded-full transition-all duration-200 cursor-pointer shadow-sm
-                                ${allSelected
-                                  ? "bg-white text-[#EF4444] hover:bg-red-50 border border-red-200"
-                                  : "bg-white text-[#2563EB] hover:bg-blue-50 border border-blue-200"
+                {activeGroups.map(({ category, modules }) => {
+                  const isSystemAdmin = category === "System / Administration";
+                  const allCategorySelected = modules.every(({ key }) => {
+                    const modPerms = activeMatrix[key] || { view: false, add: false, edit: false, delete: false };
+                    return ACTIONS.every((act) => !!modPerms[act]);
+                  });
+
+                  return (
+                    <React.Fragment key={category}>
+                      {/* Category header row */}
+                      <tr>
+                        <td
+                          colSpan={6}
+                          className={`sticky top-[41px] z-10 py-3 px-4 lg:px-6 font-bold text-[11px] uppercase tracking-[0.2em] shadow-xs ${
+                            isSystemAdmin
+                              ? "bg-[#0F172A] text-purple-300 border-y border-slate-800 border-l-4 border-l-purple-500"
+                              : "text-[#64748B] bg-[#F8FAFC] border-y border-[#E2E8F0] border-l-4 border-l-[#2563EB]"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="flex items-center gap-2">
+                              {isSystemAdmin && <Lock size={13} className="text-purple-400" />}
+                              {category}
+                            </span>
+                            <div className="flex items-center gap-3">
+                              {isSystemAdmin && (
+                                <span className="text-[9px] font-extrabold bg-purple-950/90 text-purple-300 px-2.5 py-0.5 rounded-full border border-purple-800/80 tracking-widest normal-case">
+                                  🔐 System Permissions & Security
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleCategoryAll(modules)}
+                                className={`text-[10px] font-extrabold px-3 py-1 rounded-full transition-all duration-200 cursor-pointer shadow-xs border tracking-normal normal-case flex items-center gap-1.5 ${
+                                  allCategorySelected
+                                    ? isSystemAdmin
+                                      ? "bg-slate-900 text-rose-300 hover:bg-slate-950 border-rose-900/60"
+                                      : "bg-white text-red-600 hover:bg-red-50 border-red-200"
+                                    : isSystemAdmin
+                                      ? "bg-purple-900/80 text-purple-200 hover:bg-purple-900 border-purple-700/60"
+                                      : "bg-[#2563EB] text-white hover:bg-blue-700 border-blue-600"
                                 }`}
-                            >
-                              {allSelected ? "DESELECT" : "SELECT ALL"}
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </React.Fragment>
-                ))}
+                              >
+                                <span>{allCategorySelected ? "Turn All Features OFF" : "Turn All Features ON"}</span>
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                      {/* Module rows */}
+                      {modules.map(({ key, label }) => {
+                        const modPerms = activeMatrix[key] || { view: false, add: false, edit: false, delete: false };
+                        const allSelected = ACTIONS.every(act => modPerms[act]);
+                        return (
+                          <tr
+                            key={key}
+                            className={`transition-colors duration-200 border-b group/row ${
+                              isSystemAdmin
+                                ? "bg-[#1E293B] hover:bg-[#0F172A] border-slate-800/80 text-slate-100"
+                                : "hover:bg-[#F8FAFC] border-[#F1F5F9] text-[#1E293B]"
+                            }`}
+                          >
+                            <td className={`py-3.5 px-4 lg:px-6 font-semibold text-xs sm:text-sm pl-6 lg:pl-8 flex items-center gap-2.5 sm:gap-3 ${
+                              isSystemAdmin ? "text-slate-100" : "text-[#1E293B]"
+                            }`}>
+                              <div className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                                isSystemAdmin
+                                  ? "bg-purple-400 group-hover/row:bg-purple-300"
+                                  : "bg-[#CBD5E1] group-hover/row:bg-[#2563EB]"
+                              }`} />
+                              {label}
+                            </td>
+                            {ACTIONS.map((action) => (
+                              <td key={action} className="py-3.5 px-4 lg:px-6 text-center">
+                                <label className="relative inline-flex items-center justify-center cursor-pointer group/check">
+                                  <input
+                                    type="checkbox"
+                                    checked={modPerms[action] || false}
+                                    onChange={() => handlePermissionToggle(key, action)}
+                                    className="peer sr-only"
+                                  />
+                                  <div className={`w-5 h-5 rounded-[6px] flex items-center justify-center transition-all duration-200 border 
+                                    ${modPerms[action] 
+                                      ? isSystemAdmin
+                                        ? "bg-purple-600 border-purple-500 shadow-sm shadow-purple-500/40"
+                                        : "bg-[#2563EB] border-[#2563EB] shadow-sm shadow-blue-500/30" 
+                                      : isSystemAdmin
+                                        ? "bg-slate-800/80 border-slate-700 group-hover/check:border-purple-400"
+                                        : "bg-white border-[#CBD5E1] group-hover/check:border-[#2563EB]"}
+                                  `}>
+                                    {modPerms[action] && <Check size={13} className="text-white stroke-[3.5]" />}
+                                  </div>
+                                </label>
+                              </td>
+                            ))}
+                            <td className="py-3.5 px-4 lg:px-6 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleModuleAll(key)}
+                                className={`text-[10px] sm:text-[11px] font-bold px-3 sm:px-4 py-1 sm:py-1.5 rounded-full transition-all duration-200 cursor-pointer shadow-sm
+                                  ${isSystemAdmin
+                                    ? allSelected
+                                      ? "bg-slate-900 text-rose-400 hover:bg-slate-950 border border-rose-900/60"
+                                      : "bg-slate-900 text-purple-300 hover:bg-slate-950 border border-purple-800/60"
+                                    : allSelected
+                                      ? "bg-white text-[#EF4444] hover:bg-red-50 border border-red-200"
+                                      : "bg-white text-[#2563EB] hover:bg-blue-50 border border-blue-200"
+                                  }`}
+                              >
+                                {allSelected ? "DESELECT" : "SELECT ALL"}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>

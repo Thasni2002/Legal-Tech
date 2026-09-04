@@ -12,7 +12,7 @@
  */
 
 import { useState } from "react";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import { setVaultSession } from "@/utils/vaultSession";
 import { Lock, Eye, EyeOff, ShieldAlert, Loader2, KeyRound, RefreshCw } from "lucide-react";
 

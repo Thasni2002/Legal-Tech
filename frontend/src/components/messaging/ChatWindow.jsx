@@ -8,7 +8,7 @@ import {
 import MessageBubble from "./MessageBubble";
 import EmojiPicker from "./EmojiPicker";
 import VoiceRecorder from "./VoiceRecorder";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import { getAuthHeaders } from "@/utils/auth";
 
 export default function ChatWindow({

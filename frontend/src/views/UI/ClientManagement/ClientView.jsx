@@ -25,7 +25,7 @@ import {
   List
 } from "lucide-react";
 import { usePermissions } from "@/utils/usePermissions";
-import { API_BASE_URL } from "@/utils/api";
+import { getClients, getCases, deleteCase, deleteClient } from "@/services/apiServices";
 import ClientEdit from "./ClientEdit";
 
 export default function ClientView() {
@@ -56,20 +56,10 @@ export default function ClientView() {
   const fetchClients = async () => {
     setLoading(true);
     try {
-      const [clientsRes, casesRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/clients/`).catch(() => null),
-        fetch(`${API_BASE_URL}/case-management/`).catch(() => null),
+      const [backendClients, casesData] = await Promise.all([
+        getClients().catch(() => []),
+        getCases().catch(() => []),
       ]);
-
-      let backendClients = [];
-      if (clientsRes && clientsRes.ok) {
-        backendClients = await clientsRes.json();
-      }
-
-      let casesData = [];
-      if (casesRes && casesRes.ok) {
-        casesData = await casesRes.json();
-      }
 
       const clientList = backendClients.map((c) => {
         const matchingCases = casesData.filter(
@@ -873,39 +863,30 @@ export default function ClientView() {
                       setDeleteModal((prev) => ({ ...prev, show: false }));
 
                       try {
-                        const res = await fetch(`${API_BASE_URL}/case-management/`);
-                        if (res.ok) {
-                          const casesData = await res.json();
-                          const targetName = clientName.trim().toLowerCase();
-                          const clientCases = casesData.filter((c) => {
-                            const itemClientName = (c.client_name || "").trim().toLowerCase();
-                            return itemClientName === targetName;
-                          });
+                        const casesData = await getCases().catch(() => []);
+                        const targetName = clientName.trim().toLowerCase();
+                        const clientCases = casesData.filter((c) => {
+                          const itemClientName = (c.client_name || "").trim().toLowerCase();
+                          return itemClientName === targetName;
+                        });
 
-                          for (const item of clientCases) {
-                            await fetch(`${API_BASE_URL}/case-management/${item.id}`, {
-                              method: "DELETE",
-                            });
-                          }
-
-                          try {
-                            await fetch(`${API_BASE_URL}/clients/${clientId}`, {
-                              method: "DELETE",
-                            });
-                          } catch (err) {
-                            console.error("Failed to delete client from /clients endpoint:", err);
-                          }
-
-                          setDeleteModal({
-                            show: true,
-                            type: "success",
-                            title: "Client Deleted Successfully",
-                            message: `Client "${clientName}" and associated case records have been removed.`
-                          });
-                          fetchClients();
-                        } else {
-                          throw new Error("Failed to fetch cases");
+                        for (const item of clientCases) {
+                          await deleteCase(item.id).catch(() => null);
                         }
+
+                        try {
+                          await deleteClient(clientId);
+                        } catch (err) {
+                          console.error("Failed to delete client:", err);
+                        }
+
+                        setDeleteModal({
+                          show: true,
+                          type: "success",
+                          title: "Client Deleted Successfully",
+                          message: `Client "${clientName}" and associated case records have been removed.`
+                        });
+                        fetchClients();
                       } catch (err) {
                         console.error("Error deleting client:", err);
                         setDeleteModal({

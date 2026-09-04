@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X, UserCheck, LoaderCircle } from "lucide-react";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import { getAuthHeaders } from "@/utils/auth";
 
 export default function AssignConversationModal({ conversation, onAssign, onClose }) {

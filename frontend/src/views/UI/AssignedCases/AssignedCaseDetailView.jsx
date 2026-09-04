@@ -1,6 +1,6 @@
 "use client";
 
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
@@ -259,13 +259,12 @@ export default function AssignedCaseDetailView({
 
   // Resolve case title reliably with sensitive case masking for Junior Advocate
   const isConfidential = isJuniorAdvocate && isSensitiveCase(selectedCase);
-  const caseDisplayTitle = isConfidential
-    ? "Confidential Case (Restricted)"
-    : (selectedCase?.title ||
-       selectedCase?.case_name ||
-       selectedCase?.caseTitle ||
-       selectedCase?.case_title ||
-       (selectedCase?.caseNo ? `Case #${selectedCase.caseNo}` : "Assigned Case"));
+  const caseDisplayTitle =
+    selectedCase?.title ||
+    selectedCase?.case_name ||
+    selectedCase?.caseTitle ||
+    selectedCase?.case_title ||
+    (selectedCase?.caseNo ? `Case #${selectedCase.caseNo}` : "Assigned Case");
 
   // ─── eCourts fetch ────────────────────────────────────────────────────────────
   const fetchECourtsData = async () => {

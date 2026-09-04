@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { getLoggedInUser } from "./auth";
-import { API_BASE_URL } from "./api";
+import { API_BASE_URL } from "@/services/api";
 
 // Global in-memory cache & promise deduplication for permissions
 let permissionsCache = {
@@ -42,14 +42,16 @@ const fetchMatrixDeduplicated = async () => {
 };
 
 const fetchUserPermsDeduplicated = async (userId) => {
-  if (permissionsCache.userPermissions[userId] && Date.now() - permissionsCache.lastFetched < 60000) {
+  if (permissionsCache.userPermissions[userId] && Date.now() - (permissionsCache.userTimestamps?.[userId] || 0) < 60000) {
     return permissionsCache.userPermissions[userId];
   }
   if (!permissionsCache.userPromises[userId]) {
+    if (!permissionsCache.userTimestamps) permissionsCache.userTimestamps = {};
     permissionsCache.userPromises[userId] = fetch(`${API_BASE_URL}/permissions/users/${userId}`)
       .then((res) => (res.status === 200 ? res.json() : { customPermissions: {} }))
       .then((data) => {
         permissionsCache.userPermissions[userId] = data;
+        permissionsCache.userTimestamps[userId] = Date.now();
         return data;
       })
       .catch(() => ({ customPermissions: {} }))
@@ -116,19 +118,31 @@ export function usePermissions() {
     };
   }, []);
 
-  const hasPermission = (moduleKey, action) => {
+  const normalizeKey = (key) => (key || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  const hasPermission = (moduleKey, action = "view") => {
     if (!moduleKey) return true;
 
+    const normTarget = normalizeKey(moduleKey);
+
     // 1. Check custom permissions (direct overrides) first
-    if (customPermissions && customPermissions[moduleKey] !== undefined) {
-      if (customPermissions[moduleKey][action] !== undefined) {
-        return !!customPermissions[moduleKey][action];
+    if (customPermissions && typeof customPermissions === "object") {
+      const customKey = Object.keys(customPermissions).find(
+        (k) => normalizeKey(k) === normTarget
+      );
+      if (customKey && customPermissions[customKey] && customPermissions[customKey][action] !== undefined) {
+        return !!customPermissions[customKey][action];
       }
     }
 
     // 2. Check role-wide permissions next
-    if (rolePermissions && rolePermissions[moduleKey] !== undefined) {
-      return !!rolePermissions[moduleKey][action];
+    if (rolePermissions && typeof rolePermissions === "object") {
+      const roleModKey = Object.keys(rolePermissions).find(
+        (k) => normalizeKey(k) === normTarget
+      );
+      if (roleModKey && rolePermissions[roleModKey] && rolePermissions[roleModKey][action] !== undefined) {
+        return !!rolePermissions[roleModKey][action];
+      }
     }
 
     return true; // fallback — allow access by default if no explicit restriction rule is matched

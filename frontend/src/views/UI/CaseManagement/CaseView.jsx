@@ -1,6 +1,6 @@
 "use client";
 
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import { getLoggedInUser } from "@/utils/auth";
 
 import { useRouter } from "next/navigation";
@@ -255,6 +255,7 @@ export default function CaseView() {
     if (isMasked) {
       return (
         item.case_id?.toLowerCase().includes(term) ||
+        item.case_title?.toLowerCase().includes(term) ||
         "confidential".includes(term)
       );
     }
@@ -405,7 +406,7 @@ export default function CaseView() {
                   const isConfidential = Boolean(item.is_confidential);
                   const isMasked = isConfidential;
 
-                  const displayTitle = isMasked ? "••••••••••••••••" : item.case_title;
+                  const displayTitle = item.case_title;
                   const displayCaseNo = isMasked ? "••••/••••" : item.case_no;
                   const displayType = isMasked
                     ? "Confidential Case"
@@ -453,7 +454,7 @@ export default function CaseView() {
                         </div>
 
                         <div>
-                          <h3 className="font-bold text-[#0F172A] text-base leading-snug line-clamp-2" title={isMasked ? "Confidential Case" : item.case_title}>
+                          <h3 className="font-bold text-[#0F172A] text-base leading-snug line-clamp-2" title={item.case_title}>
                             {displayTitle}
                           </h3>
                           <p className="text-xs text-[#94A3B8] mt-1 font-medium">
@@ -576,7 +577,7 @@ export default function CaseView() {
                       const isConfidential = Boolean(item.is_confidential);
                       const isMasked = isConfidential;
 
-                      const displayTitle = isMasked ? "••••••••••••••••" : item.case_title;
+                      const displayTitle = item.case_title;
                       const displayCaseNo = isMasked ? "••••/••••" : item.case_no;
                       const displayType = isMasked
                         ? "Confidential Case"
@@ -593,7 +594,7 @@ export default function CaseView() {
                         >
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <p className="text-sm font-semibold text-[#0F172A] max-w-[220px] truncate" title={isMasked ? "Confidential Case" : item.case_title}>{displayTitle}</p>
+                              <p className="text-sm font-semibold text-[#0F172A] max-w-[220px] truncate" title={item.case_title}>{displayTitle}</p>
                               {/* Confidential badge */}
                               {isConfidential && (
                                 <span
@@ -724,7 +725,7 @@ export default function CaseView() {
                   const isConfidential = Boolean(item.is_confidential);
                   const isMasked = isConfidential;
 
-                  const displayTitle = isMasked ? "••••••••••••••••" : item.case_title;
+                  const displayTitle = item.case_title;
                   const displayCaseNo = isMasked ? "••••/••••" : item.case_no;
                   const displayType = isMasked
                     ? "Confidential Case"

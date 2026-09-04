@@ -1,6 +1,16 @@
 "use client";
 
-import { API_BASE_URL } from "@/utils/api";
+import {
+  getRoles,
+  getUsers,
+  getAdvocates,
+  getCases,
+  getPermissions,
+  updateUser,
+  provisionUser,
+  checkUserDeleteImpact,
+  deleteUser,
+} from "@/services/apiServices";
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
@@ -96,15 +106,6 @@ const SENIOR_JUNIOR_MODULES = [
     ]
   },
   {
-    category: "System / Administration",
-    modules: [
-      { key: "User Roles", label: "User Roles" },
-      { key: "Roles", label: "Roles" },
-      { key: "Users", label: "Users" },
-      { key: "Permissions", label: "Permissions" }
-    ]
-  },
-  {
     category: "Clerk Features",
     modules: [
       { key: "Clerk Dashboard", label: "Dashboard (Clerk)" },
@@ -114,6 +115,15 @@ const SENIOR_JUNIOR_MODULES = [
       { key: "Format Physical File", label: "Format Physical File" },
       { key: "Clerk Documents", label: "Documents (Clerk)" },
       { key: "Clerk Leave", label: "Clerk Leave" },
+    ]
+  },
+  {
+    category: "System / Administration",
+    modules: [
+      { key: "User Roles", label: "User Roles" },
+      { key: "Roles", label: "Roles" },
+      { key: "Users", label: "Users" },
+      { key: "Permissions", label: "Permissions" }
     ]
   }
 ];
@@ -309,13 +319,10 @@ export default function UsersView() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const resRoles = await fetch(`${API_BASE_URL}/permissions/roles`);
-        if (resRoles.ok) {
-          const rolesData = await resRoles.json();
+        const rolesData = await getRoles();
+        if (rolesData && rolesData.length > 0) {
           setRoles(rolesData);
-          if (rolesData.length > 0) {
-            setSelectedRole(rolesData[0].name);
-          }
+          setSelectedRole(rolesData[0].name);
         }
       } catch (e) {
         console.error("Error fetching roles", e);
@@ -324,9 +331,8 @@ export default function UsersView() {
       }
 
       try {
-        const resUsers = await fetch(`${API_BASE_URL}/permissions/users`);
-        if (resUsers.ok) {
-          const usersData = await resUsers.json();
+        const usersData = await getUsers();
+        if (usersData) {
           setUsers(usersData);
         }
       } catch (e) {
@@ -335,18 +341,17 @@ export default function UsersView() {
       }
 
       try {
-        const resAdv = await fetch(`${API_BASE_URL}/lawfirm-management/`);
-        if (resAdv.ok) {
-          setAdvocates(await resAdv.json());
+        const advData = await getAdvocates();
+        if (advData) {
+          setAdvocates(advData);
         }
       } catch (e) {
         console.error("Error fetching advocates", e);
       }
 
       try {
-        const resCases = await fetch(`${API_BASE_URL}/case-management/`);
-        if (resCases.ok) {
-          const casesData = await resCases.json();
+        const casesData = await getCases();
+        if (casesData) {
           const uniqueClientsMap = new Map();
           casesData.forEach(c => {
             const clientName = c.clientName || c.client_name;
@@ -380,17 +385,17 @@ export default function UsersView() {
 
   // Fetch global role permissions (used to pre-populate Direct Permissions)
   useEffect(() => {
-    const loadPermissions = async () => {
+    const loadPermissionsData = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/permissions`);
-        if (res.ok) {
-          setRolePermissions(await res.json());
+        const freshPerms = await getPermissions();
+        if (freshPerms) {
+          setRolePermissions(freshPerms);
         }
       } catch (e) {
         // silently ignore — checkboxes will just start empty
       }
     };
-    loadPermissions();
+    loadPermissionsData();
   }, []);
 
   // Show notification modal helper
@@ -433,22 +438,17 @@ export default function UsersView() {
         const fName = nameParts[0] || firstName.trim();
         const lName = nameParts.slice(1).join(" ") || "";
 
-        const res = await fetch(`${API_BASE_URL}/permissions/users/${editingUser.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            firstName: fName,
-            lastName: lName,
-            phone: phoneNumber.trim(),
-            username: username.trim(),
-            email: emailAddress.trim(),
-            role: selectedRole,
-            password: tempPassword.trim() || null,
-          })
+        const updatedUser = await updateUser(editingUser.id, {
+          firstName: fName,
+          lastName: lName,
+          phone: phoneNumber.trim(),
+          username: username.trim(),
+          email: emailAddress.trim(),
+          role: selectedRole,
+          password: tempPassword.trim() || null,
         });
 
-        if (res.ok) {
-          const updatedUser = await res.json();
+        if (updatedUser) {
           setUsers((prev) => prev.map((u) => u.id === editingUser.id ? updatedUser : u));
           showToast(`User @${updatedUser.username} updated successfully!`);
           window.dispatchEvent(new Event("permissions_updated"));
@@ -478,22 +478,17 @@ export default function UsersView() {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/permissions/users/provision`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName: firstName.trim(),
-          lastName: "",
-          phone: phoneNumber.trim(),
-          username: username.trim(),
-          email: emailAddress.trim(),
-          role: selectedRole,
-          tempPassword: tempPassword
-        })
+      const newUser = await provisionUser({
+        firstName: firstName.trim(),
+        lastName: "",
+        phone: phoneNumber.trim(),
+        username: username.trim(),
+        email: emailAddress.trim(),
+        role: selectedRole,
+        tempPassword: tempPassword
       });
 
-      if (res.ok) {
-        const newUser = await res.json();
+      if (newUser) {
         setUsers((prev) => [...prev, newUser]);
 
         // Show success modal overlaying the page
@@ -584,13 +579,8 @@ export default function UsersView() {
     setDeleteImpact(null);
     setDeleteTarget({ id: userId, username: uName, role: uRole });
     try {
-      const res = await fetch(`${API_BASE_URL}/permissions/users/${userId}/delete-impact`);
-      if (res.ok) {
-        const impact = await res.json();
-        setDeleteImpact(impact);
-      } else {
-        setDeleteImpact({ has_impact: false, assigned_cases: [], cases: [], total: 0 });
-      }
+      const impact = await checkUserDeleteImpact(userId);
+      setDeleteImpact(impact || { has_impact: false, assigned_cases: [], cases: [], total: 0 });
     } catch (_) {
       setDeleteImpact({ has_impact: false, assigned_cases: [], cases: [], total: 0 });
     } finally {
@@ -603,21 +593,13 @@ export default function UsersView() {
     if (!deleteTarget) return;
     const { id, username, role } = deleteTarget;
     try {
-      const res = await fetch(`${API_BASE_URL}/permissions/users/${id}`, {
-        method: "DELETE"
-      });
-      if (res.ok) {
-        setUsers((prev) => prev.filter((u) => u.id !== id));
-        setDeleteTarget(null);
-        setDeletedUsername(username);
-        setDeletedUserRole(role || "");
-      } else {
-        const errData = await res.json();
-        showToast(errData.detail || `Error de-provisioning ${getRoleDisplayName(role).toLowerCase()}`, "error");
-        setDeleteTarget(null);
-      }
+      await deleteUser(id);
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+      setDeleteTarget(null);
+      setDeletedUsername(username);
+      setDeletedUserRole(role || "");
     } catch (err) {
-      showToast("Unable to connect to backend", "error");
+      showToast(err.message || `Error de-provisioning ${getRoleDisplayName(role).toLowerCase()}`, "error");
       setDeleteTarget(null);
     }
   };
@@ -641,10 +623,9 @@ export default function UsersView() {
 
     // Always fetch latest role permissions from API to stay in sync with PermissionView
     try {
-      const res = await fetch(`${API_BASE_URL}/permissions`);
+      const freshPerms = await getPermissions();
       let basePerms = {};
-      if (res.ok) {
-        const freshPerms = await res.json();
+      if (freshPerms) {
         setRolePermissions(freshPerms); // also update cached state
         basePerms = findRolePermissions(freshPerms, user.role);
       } else {
@@ -694,9 +675,8 @@ export default function UsersView() {
       // Fetch fresh role defaults to compute diff
       let currentRolePerms = {};
       try {
-        const resRole = await fetch(`${API_BASE_URL}/permissions`);
-        if (resRole.ok) {
-          const allPerms = await resRole.json();
+        const allPerms = await getPermissions();
+        if (allPerms) {
           currentRolePerms = findRolePermissions(allPerms, activeUser.role);
         }
       } catch (_) {
@@ -730,31 +710,23 @@ export default function UsersView() {
       const fName = nameParts[0] || editFirstName.trim();
       const lName = nameParts.slice(1).join(" ") || editLastName.trim();
 
-      const res = await fetch(`${API_BASE_URL}/permissions/users/${activeUser.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName: fName,
-          lastName: lName,
-          phone: editPhone.trim(),
-          username: editUsername.trim(),
-          email: editEmail.trim(),
-          customPermissions: diffPerms,
-          documentAccess: editDocAccess,
-          password: editPassword || null,
-          confirmPassword: confirmPassword || null,
-        })
+      const updatedUser = await updateUser(activeUser.id, {
+        firstName: fName,
+        lastName: lName,
+        phone: editPhone.trim(),
+        username: editUsername.trim(),
+        email: editEmail.trim(),
+        customPermissions: diffPerms,
+        documentAccess: editDocAccess,
+        password: editPassword || null,
+        confirmPassword: confirmPassword || null,
       });
 
-      if (res.ok) {
-        const updatedUser = await res.json();
+      if (updatedUser) {
         setUsers((prev) => prev.map((u) => u.id === activeUser.id ? updatedUser : u));
         showToast("User details and overrides updated successfully!");
         window.dispatchEvent(new Event("permissions_updated"));
         setIsDetailsOpen(false);
-      } else {
-        const errData = await res.json();
-        showToast(errData.detail || "Error updating user details", "error");
       }
     } catch (err) {
       showToast("Unable to connect to backend", "error");
@@ -1769,41 +1741,80 @@ export default function UsersView() {
                   </div>
 
                   <div className="space-y-6">
-                    {getModuleCategories(activeUser.role).map((cat) => (
-                      <div key={cat.category} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
-                        <div className="bg-slate-100/80 px-4 py-2.5 border-b border-slate-200">
-                          <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">{cat.category}</span>
-                        </div>
+                    {getModuleCategories(activeUser.role).map((cat) => {
+                      const isSystemAdmin = cat.category === "System / Administration";
+                      return (
+                        <div
+                          key={cat.category}
+                          className={`rounded-2xl border overflow-hidden transition-all ${
+                            isSystemAdmin
+                              ? "bg-[#1E293B] border-slate-800 shadow-md"
+                              : "bg-white border-slate-200 shadow-xs"
+                          }`}
+                        >
+                          <div className={`px-4 py-2.5 border-b flex items-center justify-between ${
+                            isSystemAdmin
+                              ? "bg-[#0F172A] border-slate-800 text-purple-300 border-l-4 border-l-purple-500"
+                              : "bg-slate-100/80 border-slate-200 text-slate-700"
+                          }`}>
+                            <span className="text-xs font-extrabold uppercase tracking-wider flex items-center gap-1.5">
+                              {isSystemAdmin && <ShieldAlert size={13} className="text-purple-400" />}
+                              {cat.category}
+                            </span>
+                            {isSystemAdmin && (
+                              <span className="text-[9px] font-bold bg-purple-950 text-purple-300 px-2 py-0.5 rounded-full border border-purple-800">
+                                Security Section
+                              </span>
+                            )}
+                          </div>
 
-                        <div className="divide-y divide-slate-100">
-                          {cat.modules.map((mod) => {
-                            const perms = editCustomPerms[mod.key] || { view: false, add: false, edit: false, delete: false };
-                            return (
-                              <div key={mod.key} className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-slate-50/50">
-                                <div>
-                                  <span className="font-bold text-slate-800 text-xs sm:text-sm">{mod.label}</span>
-                                  <span className="block text-[10px] text-slate-400">Key: {mod.key}</span>
-                                </div>
+                          <div className={`divide-y ${isSystemAdmin ? "divide-slate-800" : "divide-slate-100"}`}>
+                            {cat.modules.map((mod) => {
+                              const perms = editCustomPerms[mod.key] || { view: false, add: false, edit: false, delete: false };
+                              return (
+                                <div
+                                  key={mod.key}
+                                  className={`p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-colors ${
+                                    isSystemAdmin
+                                      ? "hover:bg-[#0F172A]/70 text-slate-100"
+                                      : "hover:bg-slate-50/50 text-slate-800"
+                                  }`}
+                                >
+                                  <div>
+                                    <span className={`font-bold text-xs sm:text-sm ${isSystemAdmin ? "text-slate-100" : "text-slate-800"}`}>
+                                      {mod.label}
+                                    </span>
+                                    <span className={`block text-[10px] ${isSystemAdmin ? "text-purple-300/70" : "text-slate-400"}`}>
+                                      Key: {mod.key}
+                                    </span>
+                                  </div>
 
-                                <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-                                  {ACTIONS.map((act) => (
-                                    <label key={act} className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 cursor-pointer">
-                                      <input
-                                        type="checkbox"
-                                        checked={!!perms[act]}
-                                        onChange={() => handleCustomPermissionToggle(mod.key, act)}
-                                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
-                                      />
-                                      <span className="capitalize text-[11px]">{act}</span>
-                                    </label>
-                                  ))}
+                                  <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+                                    {ACTIONS.map((act) => (
+                                      <label key={act} className={`flex items-center gap-1.5 text-xs font-semibold cursor-pointer ${
+                                        isSystemAdmin ? "text-slate-200 hover:text-white" : "text-slate-600 hover:text-slate-900"
+                                      }`}>
+                                        <input
+                                          type="checkbox"
+                                          checked={!!perms[act]}
+                                          onChange={() => handleCustomPermissionToggle(mod.key, act)}
+                                          className={`rounded w-4 h-4 cursor-pointer transition-colors ${
+                                            isSystemAdmin
+                                              ? "border-slate-700 text-purple-600 focus:ring-purple-500 bg-slate-800"
+                                              : "border-slate-300 text-blue-600 focus:ring-blue-500"
+                                          }`}
+                                        />
+                                        <span className="capitalize text-[11px]">{act}</span>
+                                      </label>
+                                    ))}
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}

@@ -92,12 +92,21 @@ def get_permissions_matrix(db: Session = Depends(get_db)):
 # API changes permissions for a role.
 
 @router.put("/role/{role_name}")
-def save_role_permissions(role_name: str, matrix: Dict[str, PermissionSchema], db: Session = Depends(get_db)):
-    # Convert Pydantic schemas to standard dicts
-    matrix_dict = {
-        mod: {"view": act.view, "add": act.add, "edit": act.edit, "delete": act.delete}
-        for mod, act in matrix.items()
-    }
+def save_role_permissions(role_name: str, payload: Dict[str, Any], db: Session = Depends(get_db)):
+    # Support both raw module matrix or wrapped {"permissions": matrix}
+    matrix = payload.get("permissions", payload) if isinstance(payload, dict) and "permissions" in payload and isinstance(payload["permissions"], dict) else payload
+
+    matrix_dict = {}
+    if isinstance(matrix, dict):
+        for mod, act in matrix.items():
+            if isinstance(act, dict):
+                matrix_dict[mod] = {
+                    "view": bool(act.get("view", False)),
+                    "add": bool(act.get("add", False)),
+                    "edit": bool(act.get("edit", False)),
+                    "delete": bool(act.get("delete", False))
+                }
+
     success = service.update_role_permissions(db, role_name, matrix_dict)
     if not success:
         raise HTTPException(status_code=404, detail=f"Role '{role_name}' not found")

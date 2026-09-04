@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Mic, Square, Trash2, Send, LoaderCircle } from "lucide-react";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import { getAuthHeaders } from "@/utils/auth";
 
 export default function VoiceRecorder({ onSendVoice, onCancel }) {

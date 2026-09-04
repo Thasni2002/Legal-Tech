@@ -25,7 +25,13 @@ import {
   FileDown,
   Info,
 } from "lucide-react";
-import { API_BASE_URL } from "@/utils/api";
+import {
+  getECourtsMetrics,
+  lookupCNR,
+  getCauseList,
+  syncECourtsCase,
+  getCases,
+} from "@/services/apiServices";
 import { getLoggedInUser, getAuthHeaders } from "@/utils/auth";
 import useModulePermission from "@/utils/useModulePermission";
 
@@ -70,18 +76,15 @@ export default function ECourtsView() {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const headers = getAuthHeaders();
-        const [metricsRes, casesRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/ecourts/metrics`, { headers }).catch(() => null),
-          fetch(`${API_BASE_URL}/case-management/`, { headers }).catch(() => null),
+        const [mData, cData] = await Promise.all([
+          getECourtsMetrics().catch(() => null),
+          getCases().catch(() => null),
         ]);
 
-        if (metricsRes && metricsRes.ok) {
-          const mData = await metricsRes.json();
+        if (mData) {
           setMetrics(mData);
         }
-        if (casesRes && casesRes.ok) {
-          const cData = await casesRes.json();
+        if (cData) {
           setRegisteredCases(cData);
         }
       } catch (err) {
@@ -102,17 +105,10 @@ export default function ECourtsView() {
     setLookupError("");
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/ecourts/lookup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cnrNumber: targetCnr }),
-      });
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.detail || "Failed to fetch eCourts data");
+      const data = await lookupCNR(targetCnr);
+      if (data) {
+        setCaseDetails(data);
       }
-      const data = await res.json();
-      setCaseDetails(data);
     } catch (err) {
       setLookupError(err.message || "Could not retrieve eCourts case data.");
       setCaseDetails(null);
@@ -127,13 +123,11 @@ export default function ECourtsView() {
   const handleFetchCauseList = async () => {
     setCauseListLoading(true);
     try {
-      const query = new URLSearchParams({
+      const data = await getCauseList({
         courtName: causeListCourt,
         date: causeListDate,
-      }).toString();
-      const res = await fetch(`${API_BASE_URL}/api/ecourts/cause-list?${query}`);
-      if (res.ok) {
-        const data = await res.json();
+      });
+      if (data) {
         setCauseList(data);
       }
     } catch (err) {
@@ -153,24 +147,20 @@ export default function ECourtsView() {
   const handleSyncCase = async (caseId) => {
     setSyncingId(caseId);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/ecourts/sync/${caseId}`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-      });
-      if (res.ok) {
-        const data = await res.json();
+      const data = await syncECourtsCase(caseId);
+      if (data) {
         showToast(`✅ ${data.message || "Case synchronized successfully!"}`);
         
         // Refresh registered cases list
-        const updatedRes = await fetch(`${API_BASE_URL}/case-management/`);
-        if (updatedRes.ok) {
-          setRegisteredCases(await updatedRes.json());
+        const updatedCases = await getCases().catch(() => null);
+        if (updatedCases) {
+          setRegisteredCases(updatedCases);
         }
       } else {
         showToast("⚠️ Synchronization failed. Please try again.");
       }
     } catch (err) {
-      showToast("❌ Network error during sync.");
+      showToast("❌ Network error during sync: " + (err.message || ""));
     } finally {
       setSyncingId(null);
     }

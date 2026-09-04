@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import ReactDOM from "react-dom";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import {
   FileText,
   Search,

@@ -30,7 +30,7 @@ import {
   X
 } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import useModulePermission from "@/utils/useModulePermission";
 
 export default function ClerkDashboard() {

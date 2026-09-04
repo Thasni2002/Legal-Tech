@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { getLoggedInUser } from "@/utils/auth";
 import { isSensitiveCase } from "@/utils/caseSensitivity";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import {
   Briefcase,
   Calendar,
@@ -153,7 +153,7 @@ export default function JunAdvDashView() {
         const formattedCases = casesToShow.map((item) => {
           const rawTitle = item.case_name || item.case_title || item.title || item.caseTitle || item.name || "Untitled Case";
           const isConfidential = isSensitiveCase(item);
-          const displayTitle = isConfidential ? "Confidential Case (Restricted)" : rawTitle;
+          const displayTitle = rawTitle;
 
           return {
             id: item.id,

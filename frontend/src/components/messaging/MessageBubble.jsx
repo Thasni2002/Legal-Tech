@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Check, CheckCheck, FileText, Download, Play, Pause, Trash2, Edit2, CornerUpLeft } from "lucide-react";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 
 export default function MessageBubble({ message, isOwn, currentUserRole, onEdit, onDelete, onPreviewFile }) {
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);

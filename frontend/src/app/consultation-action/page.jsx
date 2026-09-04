@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import { CheckCircle2, Calendar, Clock, Video, AlertCircle, RefreshCw, ArrowRight, ShieldCheck } from "lucide-react";
 
 function ConsultationActionContent() {

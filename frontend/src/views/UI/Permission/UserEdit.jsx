@@ -1,6 +1,6 @@
 "use client";
 
-import { API_BASE_URL } from "@/utils/api";
+import { apiClient, updateUser } from "@/services/apiServices";
 
 import React, { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -52,11 +52,12 @@ export default function UserEdit() {
 
   useEffect(() => {
     const loadUser = async () => {
-      const res = await fetch(
-        `${API_BASE_URL}/permissions/users/${userId}`
-      );
-      const data = await res.json();
-      setUser(data);
+      try {
+        const data = await apiClient(`/permissions/users/${userId}`);
+        setUser(data);
+      } catch (e) {
+        console.error("Error loading user", e);
+      }
     };
 
     if (userId) loadUser();
@@ -77,13 +78,12 @@ export default function UserEdit() {
   };
 
   const handleSave = async () => {
-    await fetch(`${API_BASE_URL}/permissions/users/${user.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(user),
-    });
-
-    router.push("/UI/Permission/UserView");
+    try {
+      await updateUser(user.id, user);
+      router.push("/UI/Permission/UserView");
+    } catch (e) {
+      console.error("Error updating user permissions", e);
+    }
   };
 
   if (!user) return <div>Loading...</div>;

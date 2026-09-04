@@ -6,7 +6,7 @@ import InputField from "@/components/InputField/InputField";
 import SelectField from "@/components/SelectField/SelectField";
 import { getLoggedInUser } from "@/utils/auth";
 import { getAllStates, getDistrictsByState, getCourtsByDistrict, findStateAndDistrictByCourt, DISTRICT_COURTS } from "@/utils/districtCourts";
-import { API_BASE_URL } from "@/utils/api";
+import { getAdvocates } from "@/services/apiServices";
 import ResetPasswordModal from "./ResetPasswordModal";
 
 
@@ -77,17 +77,17 @@ export default function ProfileManagmentView({ onSubmit, onCancel, initialData }
       setUser(getLoggedInUser());
     }, 0);
 
-    const fetchAdvocates = async () => {
+    const fetchAdvocatesData = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/lawfirm-management/`);
-        if (res.ok) {
-          setExistingAdvocates(await res.json());
+        const data = await getAdvocates();
+        if (data) {
+          setExistingAdvocates(data);
         }
       } catch (err) {
         console.error("Failed to load existing advocates for validation:", err);
       }
     };
-    fetchAdvocates();
+    fetchAdvocatesData();
   }, []);
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import { generateProfessionalInvoicePDF } from "@/utils/generateProfessionalInvoicePDF";
 
 import { useState, useEffect } from "react";
@@ -323,7 +323,8 @@ export default function ClientPayments() {
         </div>
       </div>
     );
-  }  return (
+  }
+  return (
     <div className="w-full max-w-full min-w-0 space-y-4 sm:space-y-6 md:space-y-8 animate-in fade-in duration-200 overflow-hidden">
       
       {/* Page Header */}

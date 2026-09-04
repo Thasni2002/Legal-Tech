@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Printer, Plus, Search, Folder, PrinterCheck, Camera, Edit2, Trash2, Save, X, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import { usePermissions } from "@/utils/usePermissions";
 import { getTodayDateString } from "@/utils/dateUtils";
 import CustomDatePicker from "@/components/ui/CustomDatePicker";
