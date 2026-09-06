@@ -1,6 +1,7 @@
 "use client";
 
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
+import { getNextClientId, lookupCNR } from "@/services/apiServices";
 import {
   DISTRICT_COURTS,
   getAllStates,
@@ -12,7 +13,7 @@ import { getLoggedInUser } from "@/utils/auth";
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
-import { ArrowLeft, X, Eye, CheckCircle, Edit3, Loader2 } from "lucide-react";
+import { ArrowLeft, X, Eye, CheckCircle, Edit3, Loader2, Search, ChevronDown } from "lucide-react";
 import OCRPanel from "./OCRPanel";
 
 const keralaCaseCategories = {
@@ -538,16 +539,7 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
     setEcourtsLoading(true);
     setEcourtsError("");
     try {
-      const res = await fetch(`${API_BASE_URL}/api/ecourts/lookup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cnrNumber: cnr }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || "Failed to fetch from eCourts");
-      }
-      const data = await res.json();
+      const data = await lookupCNR(cnr);
 
       const cleanString = (val) => {
         if (!val || typeof val !== "string") return "";
@@ -585,6 +577,33 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
       const isHighCourt = rawCourt.includes("high court");
 
       if (
+        combinedSearchStr.includes("transfer petition") ||
+        combinedSearchStr.includes("tp(c)") ||
+        combinedSearchStr.includes("tp (c)")
+      ) {
+        category = "Civil Cases";
+        subtype = "Transfer Petition (Civil)";
+      } else if (
+        combinedSearchStr.includes("arb") ||
+        combinedSearchStr.includes("arbitration")
+      ) {
+        category = "Civil Cases";
+        subtype = "Arb. P. – Arbitration Petition";
+      } else if (
+        combinedSearchStr.includes("wp(c)") ||
+        combinedSearchStr.includes("writ petition (civil)") ||
+        combinedSearchStr.includes("writ petition civil")
+      ) {
+        category = "Civil Cases";
+        subtype = "WP(C) – Writ Petition (Civil)";
+      } else if (
+        combinedSearchStr.includes("wp(crl)") ||
+        combinedSearchStr.includes("writ petition (criminal)") ||
+        combinedSearchStr.includes("writ petition criminal")
+      ) {
+        category = "Criminal Cases";
+        subtype = "W.P.(Crl.) – Writ Petition (Criminal)";
+      } else if (
         combinedSearchStr.includes("family") ||
         combinedSearchStr.includes("divorce") ||
         combinedSearchStr.includes("marriage") ||
@@ -624,9 +643,9 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
         category = "Civil Cases";
         subtype = "OS – Original Suit";
       } else {
-        // Generic fallback: use court name to decide; defaults to Civil if unknown
-        category = isHighCourt ? "Criminal Cases" : "Civil Cases";
-        subtype = isHighCourt ? "Bail Appl. – Bail Application" : "OS – Original Suit";
+        // Generic fallback: use raw API caseType or default to Civil Cases
+        category = "Civil Cases";
+        subtype = cleanString(data.caseType) || (isHighCourt ? "WP(C) – Writ Petition (Civil)" : "OS – Original Suit");
       }
 
       setSelectedCategory(category);
@@ -663,12 +682,15 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
       const courtInfo = findStateAndDistrictByCourt(finalCourtName || districtFetched || "");
       const stateFetched = cleanString(data.state || data.courtState) || courtInfo.state || "Kerala";
 
+      const fetchedCourtType = cleanString(data.courtType) || matchedCourtType || "District & Sessions Court";
+      const fetchedCaseTitle = cleanString(data.caseTitle) || (fetchedPetitionerName && cleanString(data.respondent) ? `${fetchedPetitionerName} vs. ${cleanString(data.respondent)}` : `${subtype} - ${fetchedCaseNo || cnr}`);
+
       setFormData((prev) => ({
         ...prev,
         cnrNumber: data.cnrNumber || cnr,
-        caseTitle: cleanString(data.caseTitle) || prev.caseTitle,
+        caseTitle: fetchedCaseTitle || prev.caseTitle,
         courtName: finalCourtName || prev.courtName,
-        courtType: matchedCourtType || prev.courtType || "Criminal",
+        courtType: fetchedCourtType || prev.courtType,
         caseType: `${category}: ${subtype}`,
         caseNo: fetchedCaseNo || prev.caseNo,
         nextHearingDate: data.nextHearingDate || prev.nextHearingDate,
@@ -722,6 +744,31 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
   const [selectedAdvocate, setSelectedAdvocate] = useState("");
   const [clientMode, setClientMode] = useState(""); // "" | "new" | "existing"
   const [existingClients, setExistingClients] = useState([]); // List of clients with clientId
+  const [existingClientSearch, setExistingClientSearch] = useState("");
+  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+  const clientDropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (clientDropdownRef.current && !clientDropdownRef.current.contains(event.target)) {
+        setIsClientDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredExistingClients = existingClients.filter((c) => {
+    const q = existingClientSearch.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      (c.clientId && c.clientId.toLowerCase().includes(q)) ||
+      (c.clientName && c.clientName.toLowerCase().includes(q)) ||
+      (c.contactNumber && c.contactNumber.toLowerCase().includes(q)) ||
+      (c.emailId && c.emailId.toLowerCase().includes(q))
+    );
+  });
+
   const [existingUsers, setExistingUsers] = useState([]);
   const [existingCases, setExistingCases] = useState([]);
   const [originalEmail, setOriginalEmail] = useState("");
@@ -838,9 +885,8 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
       // Fetch next client ID for continuous numbering
       let nextClientId = "";
       try {
-        const nextRes = await fetch(`${API_BASE_URL}/clients/next-id`);
-        if (nextRes.ok) {
-          const nextData = await nextRes.json();
+        const nextData = await getNextClientId();
+        if (nextData && nextData.client_id) {
           nextClientId = nextData.client_id;
         }
       } catch (err) {
@@ -1065,8 +1111,8 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
   }
 
   // Existing client selection — keyed by Client ID (CLT-YYYY-XXX)
-  const handleExistingClientChange = (e) => {
-    const selectedClientId = e.target.value;
+  const handleExistingClientChange = (eOrValue) => {
+    const selectedClientId = typeof eOrValue === "string" ? eOrValue : eOrValue?.target?.value;
     if (!selectedClientId) {
       setFormData((prev) => ({
         ...prev,
@@ -1629,6 +1675,284 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Client Information */}
+          <div ref={clientSectionRef} className="space-y-4">
+            <div className="flex bg-[#F1F5F9] rounded-lg p-1 w-fit">
+              <button
+                type="button"
+                onClick={() => {
+                  setClientMode("new");
+                  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+                  let password = "temp_";
+                  for (let i = 0; i < 8; i++) {
+                    password += chars.charAt(Math.floor(Math.random() * chars.length));
+                  }
+                  setFormData(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "", tempPassword: password }));
+                  setErrors(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "", tempPassword: "" }));
+                  setTouched(prev => ({ ...prev, clientName: false, contactNumber: false, emailId: false, tempPassword: false }));
+                }}
+                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${clientMode === "new" ? "bg-white text-[#2563EB] shadow-sm" : "text-[#64748B] hover:text-[#0F172A]"}`}
+              >
+                New Client
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setClientMode("existing");
+                  setFormData(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "", tempPassword: "" }));
+                  setErrors(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "", tempPassword: "" }));
+                  setTouched(prev => ({ ...prev, clientName: false, contactNumber: false, emailId: false, tempPassword: false }));
+                }}
+                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${clientMode === "existing" ? "bg-white text-[#2563EB] shadow-sm" : "text-[#64748B] hover:text-[#0F172A]"}`}
+              >
+                Existing Client
+              </button>
+            </div>
+            <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">Client Details</h3>
+
+            {clientMode !== "" && (
+              <div className="space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client Name</label>
+                    </div>
+                    {clientMode === "existing" ? (
+                      <div className="relative" ref={clientDropdownRef}>
+                        <button
+                          type="button"
+                          onClick={() => setIsClientDropdownOpen((prev) => !prev)}
+                          className={`${baseInputClass} ${getBorderClass("clientName")} flex items-center justify-between text-left cursor-pointer`}
+                        >
+                          <span className={formData.clientId ? "text-[#0F172A] font-medium truncate" : "text-[#94A3B8]"}>
+                            {formData.clientId
+                              ? `${formData.clientId} — ${formData.clientName}`
+                              : "— Select Existing Client ID —"}
+                          </span>
+                          <ChevronDown size={16} className={`text-slate-400 shrink-0 ml-2 transition-transform duration-200 ${isClientDropdownOpen ? "rotate-180" : ""}`} />
+                        </button>
+
+                        {isClientDropdownOpen && (
+                          <div className="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden p-2">
+                            <div className="relative mb-2">
+                              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                              <input
+                                type="text"
+                                placeholder="Search client ID, name, phone..."
+                                value={existingClientSearch}
+                                onChange={(e) => setExistingClientSearch(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-full pl-9 pr-7 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                autoFocus
+                              />
+                              {existingClientSearch && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExistingClientSearch("");
+                                  }}
+                                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                                >
+                                  <X size={13} />
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="max-h-56 overflow-y-auto space-y-0.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleExistingClientChange("");
+                                  setIsClientDropdownOpen(false);
+                                  setExistingClientSearch("");
+                                }}
+                                className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors cursor-pointer ${
+                                  !formData.clientId ? "bg-blue-50 text-blue-700 font-bold" : "text-slate-500 hover:bg-slate-100"
+                                }`}
+                              >
+                                — Select Existing Client ID —
+                              </button>
+                              {filteredExistingClients.length > 0 ? (
+                                filteredExistingClients.map((c, i) => (
+                                  <button
+                                    key={i}
+                                    type="button"
+                                    onClick={() => {
+                                      handleExistingClientChange(c.clientId);
+                                      setIsClientDropdownOpen(false);
+                                      setExistingClientSearch("");
+                                    }}
+                                    className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors flex items-center justify-between cursor-pointer ${
+                                      formData.clientId === c.clientId
+                                        ? "bg-blue-50 text-blue-700 font-bold"
+                                        : "text-slate-700 hover:bg-slate-100"
+                                    }`}
+                                  >
+                                    <span className="truncate pr-2">
+                                      <strong className="font-semibold">{c.clientId}</strong> — {c.clientName}
+                                    </span>
+                                    {formData.clientId === c.clientId && <CheckCircle size={14} className="text-blue-600 shrink-0" />}
+                                  </button>
+                                ))
+                              ) : (
+                                <div className="px-3 py-3 text-xs text-center text-slate-400">
+                                  No matching clients found
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        name="clientName"
+                        placeholder="Full Name"
+                        value={formData.clientName}
+                        onChange={handleChange}
+                        className={`${baseInputClass} ${getBorderClass("clientName")}`}
+                      />
+                    )}
+                    {touched.clientName && errors.clientName && <ErrorMsg message={errors.clientName} />}
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client ID</label>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">Auto</span>
+                    </div>
+                    <input
+                      type="text"
+                      name="clientId"
+                      value={formData.clientId || ""}
+                      readOnly
+                      placeholder="e.g. CLT-2026-001"
+                      className={`${baseInputClass} bg-slate-50 text-[#475569] cursor-not-allowed border-[#E2E8F0] font-mono font-bold`}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Contact Number</label>
+                    </div>
+                    <input type="tel" name="contactNumber" placeholder="e.g. 9876543210" value={formData.contactNumber} onChange={handleChange}
+                      readOnly={clientMode === "existing"}
+                      className={`${baseInputClass} ${getBorderClass("contactNumber")} ${clientMode === "existing" ? "bg-gray-50" : ""}`} />
+                    {touched.contactNumber && errors.contactNumber && <ErrorMsg message={errors.contactNumber} />}
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Email Address</label>
+                    </div>
+                    <input type="email" name="emailId" placeholder="client@example.com" value={formData.emailId} onChange={handleChange}
+                      readOnly={clientMode === "existing"}
+                      className={`${baseInputClass} ${getBorderClass("emailId")} ${clientMode === "existing" ? "bg-gray-50" : ""}`} />
+                    {touched.emailId && errors.emailId && <ErrorMsg message={errors.emailId} />}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client Address</label>
+                  </div>
+                  <input
+                    type="text"
+                    name="clientAddress"
+                    placeholder="e.g. Door No, Street, City, State - Pincode"
+                    value={formData.clientAddress || ""}
+                    onChange={handleChange}
+                    readOnly={clientMode === "existing"}
+                    className={`${baseInputClass} ${getBorderClass("clientAddress")} ${clientMode === "existing" ? "bg-gray-50" : ""}`}
+                  />
+                  {touched.clientAddress && errors.clientAddress && <ErrorMsg message={errors.clientAddress} />}
+                </div>
+
+                {clientMode === "existing" && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div>
+                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">
+                        Alternative Mobile No.
+                      </label>
+                      <input
+                        type="tel"
+                        name="altContactNumber"
+                        value={formData.altContactNumber || ""}
+                        readOnly
+                        className={`${baseInputClass} ${getBorderClass("altContactNumber")} bg-gray-50`}
+                        placeholder="—"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {clientMode === "new" && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">
+                          Alternative Mobile No. <span className="text-red-500">*</span>
+                        </label>
+                      </div>
+                      <input
+                        type="tel"
+                        name="altContactNumber"
+                        placeholder="e.g. 9123456789"
+                        value={formData.altContactNumber || ""}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                          setFormData(prev => ({ ...prev, altContactNumber: val }));
+                          setTouched(prev => ({ ...prev, altContactNumber: true }));
+                          setErrors(prev => ({ ...prev, altContactNumber: validateField("altContactNumber", val) }));
+                        }}
+                        className={`${baseInputClass} ${getBorderClass("altContactNumber")}`}
+                      />
+                      {touched.altContactNumber && errors.altContactNumber && <ErrorMsg message={errors.altContactNumber} />}
+                    </div>
+
+                    {!isEditMode && (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Temporary Password</label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+                              let password = "temp_";
+                              for (let i = 0; i < 8; i++) {
+                                password += chars.charAt(Math.floor(Math.random() * chars.length));
+                              }
+                              setFormData(prev => ({ ...prev, tempPassword: password }));
+                              setErrors(prev => ({ ...prev, tempPassword: "" }));
+                            }}
+                            className="text-[10px] text-blue-600 hover:text-blue-700 font-bold hover:underline cursor-pointer"
+                          >
+                            Generate Password
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          name="tempPassword"
+                          placeholder="e.g. TempPass123"
+                          value={formData.tempPassword || ""}
+                          onChange={handleChange}
+                          className={`${baseInputClass} ${getBorderClass("tempPassword")}`}
+                        />
+                        {touched.tempPassword && errors.tempPassword && <ErrorMsg message={errors.tempPassword} />}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {clientMode === "" && (
+              <div className="py-8 text-center border-2 border-dashed border-[#E2E8F0] rounded-xl bg-[#F8FAFC]">
+                <p className="text-sm text-[#64748B] font-medium">Please select New Client or Existing Client to proceed.</p>
+              </div>
+            )}
+          </div>
+
           {/* Top Field: CNR Number (Normal Design) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
@@ -1681,268 +2005,6 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
             </div>
           </div>
 
-          {/* Client Information */}
-          <div ref={clientSectionRef} className="space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">Client Details</h3>
-              <div className="flex bg-[#F1F5F9] rounded-lg p-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setClientMode("new");
-                    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-                    let password = "temp_";
-                    for (let i = 0; i < 8; i++) {
-                      password += chars.charAt(Math.floor(Math.random() * chars.length));
-                    }
-                    setFormData(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "", tempPassword: password }));
-                    setErrors(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "", tempPassword: "" }));
-                    setTouched(prev => ({ ...prev, clientName: false, contactNumber: false, emailId: false, tempPassword: false }));
-                  }}
-                  className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${clientMode === "new" ? "bg-white text-[#2563EB] shadow-sm" : "text-[#64748B] hover:text-[#0F172A]"}`}
-                >
-                  New Client
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setClientMode("existing");
-                    setFormData(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "", tempPassword: "" }));
-                    setErrors(prev => ({ ...prev, clientName: "", contactNumber: "", emailId: "", tempPassword: "" }));
-                    setTouched(prev => ({ ...prev, clientName: false, contactNumber: false, emailId: false, tempPassword: false }));
-                  }}
-                  className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${clientMode === "existing" ? "bg-white text-[#2563EB] shadow-sm" : "text-[#64748B] hover:text-[#0F172A]"}`}
-                >
-                  Existing Client
-                </button>
-              </div>
-            </div>
-
-            {clientMode !== "" && (
-              <div className="space-y-5">
-                {/* Main Client Fields Row */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client Name</label>
-                    </div>
-                    {clientMode === "existing" ? (
-                      <select
-                        name="clientId"
-                        value={formData.clientId || ""}
-                        onChange={handleExistingClientChange}
-                        className={`${baseInputClass} ${getBorderClass("clientName")}`}
-                      >
-                        <option value="">— Select Existing Client ID —</option>
-                        {existingClients.map((c, i) => (
-                          <option key={i} value={c.clientId}>
-                            {c.clientId} — {c.clientName}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        type="text"
-                        name="clientName"
-                        placeholder="Full Name"
-                        value={formData.clientName}
-                        onChange={handleChange}
-                        className={`${baseInputClass} ${getBorderClass("clientName")}`}
-                      />
-                    )}
-                    {touched.clientName && errors.clientName && <ErrorMsg message={errors.clientName} />}
-                  </div>
-
-                  {/* Client ID (Auto) field */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client ID</label>
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">Auto</span>
-                    </div>
-                    <input
-                      type="text"
-                      name="clientId"
-                      value={formData.clientId || ""}
-                      readOnly
-                      placeholder="e.g. CLT-2026-001"
-                      className={`${baseInputClass} bg-slate-50 text-[#475569] cursor-not-allowed border-[#E2E8F0] font-mono font-bold`}
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Contact Number</label>
-                    </div>
-                    <input type="tel" name="contactNumber" placeholder="e.g. 9876543210" value={formData.contactNumber} onChange={handleChange}
-                      readOnly={clientMode === "existing"}
-                      className={`${baseInputClass} ${getBorderClass("contactNumber")} ${clientMode === "existing" ? "bg-gray-50" : ""}`} />
-                    {touched.contactNumber && errors.contactNumber && <ErrorMsg message={errors.contactNumber} />}
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Email Address</label>
-                    </div>
-                    <input type="email" name="emailId" placeholder="client@example.com" value={formData.emailId} onChange={handleChange}
-                      readOnly={clientMode === "existing"}
-                      className={`${baseInputClass} ${getBorderClass("emailId")} ${clientMode === "existing" ? "bg-gray-50" : ""}`} />
-                    {touched.emailId && errors.emailId && <ErrorMsg message={errors.emailId} />}
-                  </div>
-                </div>
-
-                {/* Address, State, and District Row */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client Role</label>
-                    </div>
-                    <select
-                      name="clientRole"
-                      value={formData.clientRole}
-                      onChange={handleChange}
-                      disabled={isECourtsFetched}
-                      className={`${baseInputClass} ${getBorderClass("clientRole")} ${isECourtsFetched ? "bg-slate-100 cursor-not-allowed text-slate-600" : ""}`}
-                    >
-                      <option value="">Select Role</option>
-                      <option value="Petitioner">Petitioner</option>
-                      <option value="Respondent">Respondent</option>
-                    </select>
-                    {touched.clientRole && errors.clientRole && <ErrorMsg message={errors.clientRole} />}
-                  </div>
-                  <div className="md:col-span-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client Address</label>
-                    </div>
-                    <input
-                      type="text"
-                      name="clientAddress"
-                      placeholder="House No, Street, City"
-                      value={formData.clientAddress || ""}
-                      onChange={handleChange}
-                      readOnly={clientMode === "existing"}
-                      className={`${baseInputClass} ${getBorderClass("clientAddress")} ${clientMode === "existing" ? "bg-gray-50" : ""}`}
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client State / UT</label>
-                    </div>
-                    <input
-                      type="text"
-                      name="clientState"
-                      placeholder="Auto-fetched from eCourts"
-                      value={formData.clientState || ""}
-                      onChange={handleChange}
-                      readOnly={clientMode === "existing" || isECourtsFetched}
-                      className={`${baseInputClass} ${getBorderClass("clientState")} ${(clientMode === "existing" || isECourtsFetched) ? "bg-slate-100 cursor-not-allowed text-slate-700 font-medium" : ""}`}
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Client District / Location</label>
-                    </div>
-                    <input
-                      type="text"
-                      name="clientDistrict"
-                      placeholder="Auto-fetched from eCourts"
-                      value={formData.clientDistrict || ""}
-                      onChange={handleChange}
-                      readOnly={clientMode === "existing" || isECourtsFetched}
-                      className={`${baseInputClass} ${getBorderClass("clientDistrict")} ${(clientMode === "existing" || isECourtsFetched) ? "bg-slate-100 cursor-not-allowed text-slate-700 font-medium" : ""}`}
-                    />
-                  </div>
-                </div>
-
-                {/* Alternative Mobile Number — shown for NEW client (add & edit) and READ-ONLY for existing client */}
-                {clientMode === "existing" && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                    <div>
-                      <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">
-                        Alternative Mobile No.
-                      </label>
-                      <input
-                        type="tel"
-                        name="altContactNumber"
-                        value={formData.altContactNumber || ""}
-                        readOnly
-                        className={`${baseInputClass} ${getBorderClass("altContactNumber")} bg-gray-50`}
-                        placeholder="—"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Alt Number + Password Row (New client only) */}
-                {clientMode === "new" && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                    {/* Alternative Mobile — visible in both add & edit */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">
-                          Alternative Mobile No. <span className="text-red-500">*</span>
-                        </label>
-                      </div>
-                      <input
-                        type="tel"
-                        name="altContactNumber"
-                        placeholder="e.g. 9123456789"
-                        value={formData.altContactNumber || ""}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                          setFormData(prev => ({ ...prev, altContactNumber: val }));
-                          setTouched(prev => ({ ...prev, altContactNumber: true }));
-                          setErrors(prev => ({ ...prev, altContactNumber: validateField("altContactNumber", val) }));
-                        }}
-                        className={`${baseInputClass} ${getBorderClass("altContactNumber")}`}
-                      />
-                      {touched.altContactNumber && errors.altContactNumber && <ErrorMsg message={errors.altContactNumber} />}
-                    </div>
-
-                    {/* Temporary Password — only for NEW client in ADD mode */}
-                    {!isEditMode && (
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Temporary Password</label>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-                              let password = "temp_";
-                              for (let i = 0; i < 8; i++) {
-                                password += chars.charAt(Math.floor(Math.random() * chars.length));
-                              }
-                              setFormData(prev => ({ ...prev, tempPassword: password }));
-                              setErrors(prev => ({ ...prev, tempPassword: "" }));
-                            }}
-                            className="text-[10px] text-blue-600 hover:text-blue-700 font-bold hover:underline cursor-pointer"
-                          >
-                            Generate Password
-                          </button>
-                        </div>
-                        <input
-                          type="text"
-                          name="tempPassword"
-                          placeholder="e.g. TempPass123"
-                          value={formData.tempPassword || ""}
-                          onChange={handleChange}
-                          className={`${baseInputClass} ${getBorderClass("tempPassword")}`}
-                        />
-                        {touched.tempPassword && errors.tempPassword && <ErrorMsg message={errors.tempPassword} />}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-
-              </div>
-            )}
-            
-            {clientMode === "" && (
-              <div className="py-8 text-center border-2 border-dashed border-[#E2E8F0] rounded-xl bg-[#F8FAFC]">
-                <p className="text-sm text-[#64748B] font-medium">Please select New Client or Existing Client to proceed.</p>
-              </div>
-            )}
-          </div>
-
           {/* Case Details */}
           <div className="space-y-5 pt-4 border-t border-[#F1F5F9]">
             <h3 className="text-sm font-semibold text-[#0F172A] uppercase tracking-wider">
@@ -1955,15 +2017,14 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                 <input
                   type="text"
                   name="caseTitle"
-                  placeholder="Auto-fetched from eCourts"
-                  value={formData.caseTitle}
-                  readOnly={true}
-                  className={`${baseInputClass} ${getBorderClass("caseTitle")} bg-slate-100 cursor-not-allowed text-slate-700 font-medium`}
+                  placeholder={isECourtsFetched ? "Auto-fetched from eCourts" : "Enter case name"}
+                  value={formData.caseTitle || ""}
+                  onChange={handleChange}
+                  readOnly={isECourtsFetched}
+                  className={`${baseInputClass} ${getBorderClass("caseTitle")} ${isECourtsFetched ? "bg-slate-100 cursor-not-allowed text-slate-700 font-medium" : ""}`}
                 />
                 {touched.caseTitle && errors.caseTitle && <ErrorMsg message={errors.caseTitle} />}
               </div>
-
-
 
               {/* Case Category */}
               <div>
@@ -1973,10 +2034,11 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                 <input
                   type="text"
                   name="caseCategory"
-                  placeholder="Auto-fetched from eCourts"
-                  value={selectedCategory}
-                  readOnly={true}
-                  className={`${baseInputClass} ${getBorderClass("caseType")} bg-slate-100 cursor-not-allowed text-slate-700 font-medium`}
+                  placeholder={isECourtsFetched ? "Auto-fetched from eCourts" : "Enter or select case category"}
+                  value={selectedCategory || ""}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  readOnly={isECourtsFetched}
+                  className={`${baseInputClass} ${getBorderClass("caseType")} ${isECourtsFetched ? "bg-slate-100 cursor-not-allowed text-slate-700 font-medium" : ""}`}
                 />
                 {touched.caseType && errors.caseType && !selectedCategory && <ErrorMsg message={errors.caseType} />}
               </div>
@@ -1989,20 +2051,21 @@ export default function AddCaseForm({ editId: propEditId } = {}) {
                 <input
                   type="text"
                   name="caseSubtype"
-                  placeholder="Auto-fetched from eCourts"
-                  value={selectedSubtype}
-                  readOnly={true}
-                  className={`${baseInputClass} ${getBorderClass("caseType")} bg-slate-100 cursor-not-allowed text-slate-700 font-medium`}
+                  placeholder={isECourtsFetched ? "Auto-fetched from eCourts" : "Enter or select case subtype"}
+                  value={selectedSubtype || ""}
+                  onChange={(e) => setSelectedSubtype(e.target.value)}
+                  readOnly={isECourtsFetched}
+                  className={`${baseInputClass} ${getBorderClass("caseType")} ${isECourtsFetched ? "bg-slate-100 cursor-not-allowed text-slate-700 font-medium" : ""}`}
                 />
                 {touched.caseType && errors.caseType && selectedCategory && !selectedSubtype && (
                   <ErrorMsg message={errors.caseType} />
                 )}
               </div>
 
-              {/* Case Number */}
+              {/* Reg no: */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Case Number</label>
+                  <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">Reg no:</label>
                 </div>
                 <input
                   type="text"

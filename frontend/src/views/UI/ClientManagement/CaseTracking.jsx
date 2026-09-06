@@ -15,7 +15,7 @@ import {
   Building,
   Search,
 } from "lucide-react";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import DocumentViewerModal from "@/components/common/DocumentViewerModal";
 
 

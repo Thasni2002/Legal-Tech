@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import { getLoggedInUser } from "@/utils/auth";
 import { usePermissions } from "@/utils/usePermissions";
 import OCRPanel from "@/views/UI/CaseManagement/OCRPanel";

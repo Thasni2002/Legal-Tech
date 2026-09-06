@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { API_BASE_URL } from "@/utils/api";
+import { updateAdvocate } from "@/services/apiServices";
 import { getLoggedInUser } from "@/utils/auth";
 
 const EyeIcon = () => (
@@ -74,17 +74,7 @@ export default function ConfigureRazorpayModal({ profile = {}, onClose, onSucces
 
       let savedData = null;
       if (profile.id) {
-        const res = await fetch(`${API_BASE_URL}/lawfirm-management/${profile.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updatedPayload),
-        });
-        if (res.ok) {
-          savedData = await res.json();
-        } else {
-          const errBody = await res.json().catch(() => ({}));
-          throw new Error(errBody.detail || "Failed to update profile on server.");
-        }
+        savedData = await updateAdvocate(profile.id, updatedPayload);
       }
 
       const finalProfile = savedData || updatedPayload;

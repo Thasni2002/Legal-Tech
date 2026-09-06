@@ -1,6 +1,6 @@
 "use client";
 
-import { API_BASE_URL } from "@/utils/api";
+import { getUsers, getAdvocates, updateAdvocate, addAdvocate } from "@/services/apiServices";
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
@@ -29,18 +29,14 @@ export default function LawfirmAdd({ onCancel, initialData }) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [usersRes, advRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/permissions/users`),
-          fetch(`${API_BASE_URL}/lawfirm-management/`),
+        const [usersData, advData] = await Promise.all([
+          getUsers().catch(() => []),
+          getAdvocates().catch(() => []),
         ]);
-        if (usersRes.ok) {
-          setExistingUsers(await usersRes.json());
-        }
-        if (advRes.ok) {
-          setExistingAdvocates(await advRes.json());
-        }
-      } catch (err) {
-        console.error("Failed to load existing users/advocates for validation:", err);
+        if (usersData) setExistingUsers(usersData);
+        if (advData) setExistingAdvocates(advData);
+      } catch (e) {
+        console.error("Error fetching lawfirm add data", e);
       }
     };
     fetchData();
@@ -319,72 +315,12 @@ export default function LawfirmAdd({ onCancel, initialData }) {
         role: formData.role,
       };
 
-      let response;
-
+      let savedData;
       if (formData.id) {
-        response = await fetch(
-          `${API_BASE_URL}/lawfirm-management/${formData.id}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-          }
-        );
+        savedData = await updateAdvocate(formData.id, payload);
       } else {
-        response = await fetch(`${API_BASE_URL}/lawfirm-management/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
+        savedData = await addAdvocate(payload);
       }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errMsg = errorData.detail || "";
-        
-        if (
-          errMsg.toLowerCase().includes("bar council id") ||
-          errMsg.toLowerCase().includes("already registered")
-        ) {
-          setErrors((prev) => ({
-            ...prev,
-            barCouncilId: "This Bar Council ID is already registered.",
-          }));
-          setTouched((prev) => ({
-            ...prev,
-            barCouncilId: true,
-          }));
-        } else if (errMsg.toLowerCase().includes("email")) {
-          setErrors((prev) => ({
-            ...prev,
-            emailAddress: "This email address is already in use.",
-          }));
-          setTouched((prev) => ({
-            ...prev,
-            emailAddress: true,
-          }));
-        } else if (errMsg.toLowerCase().includes("username") || errMsg.toLowerCase().includes("name")) {
-          setErrors((prev) => ({
-            ...prev,
-            advocateName: "This name/username is already in use.",
-          }));
-          setTouched((prev) => ({
-            ...prev,
-            advocateName: true,
-          }));
-        } else {
-          alert(errMsg || "Failed to save advocate/clerk profile");
-        }
-        setIsSubmitting(false);
-        return;
-      }
-
-      const data = await response.json();
-      console.log("Saved:", data);
 
       setSuccessMessage(
         formData.id
@@ -393,11 +329,42 @@ export default function LawfirmAdd({ onCancel, initialData }) {
       );
 
       setShowSuccessModal(true);
-
-
     } catch (error) {
       console.error("Save failed:", error);
-      alert(error.message || "Failed to save");
+      const errMsg = error.message || "";
+      if (
+        errMsg.toLowerCase().includes("bar council id") ||
+        errMsg.toLowerCase().includes("already registered")
+      ) {
+        setErrors((prev) => ({
+          ...prev,
+          barCouncilId: "This Bar Council ID is already registered.",
+        }));
+        setTouched((prev) => ({
+          ...prev,
+          barCouncilId: true,
+        }));
+      } else if (errMsg.toLowerCase().includes("email")) {
+        setErrors((prev) => ({
+          ...prev,
+          emailAddress: "This email address is already in use.",
+        }));
+        setTouched((prev) => ({
+          ...prev,
+          emailAddress: true,
+        }));
+      } else if (errMsg.toLowerCase().includes("username") || errMsg.toLowerCase().includes("name")) {
+        setErrors((prev) => ({
+          ...prev,
+          advocateName: "This name/username is already in use.",
+        }));
+        setTouched((prev) => ({
+          ...prev,
+          advocateName: true,
+        }));
+      } else {
+        alert(errMsg || "Failed to save advocate/clerk profile");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -468,7 +435,8 @@ export default function LawfirmAdd({ onCancel, initialData }) {
               name="role"
               value={formData.role}
               onChange={handleChange}
-            />            {/* Name */}
+            />
+            {/* Name */}
             <div>
               <InputField
                 label={formData.role === "Clerk" ? "Clerk Name" : "Advocate Name"}

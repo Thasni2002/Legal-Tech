@@ -2,18 +2,18 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { 
-  Calendar as CalendarIcon, 
-  Building2, 
-  FolderCheck, 
-  Globe, 
-  FileText, 
-  Send, 
-  ClipboardList, 
-  User, 
-  CheckSquare, 
-  Plus, 
-  Trash2, 
+import {
+  Calendar as CalendarIcon,
+  Building2,
+  FolderCheck,
+  Globe,
+  FileText,
+  Send,
+  ClipboardList,
+  User,
+  CheckSquare,
+  Plus,
+  Trash2,
   AlertCircle,
   ArrowRight,
   Clock,
@@ -30,7 +30,7 @@ import {
   X
 } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import useModulePermission from "@/utils/useModulePermission";
 
 export default function ClerkDashboard() {
@@ -257,7 +257,7 @@ export default function ClerkDashboard() {
       {/* Stats Summary Grid - Responsive 3-Card Grid across Desktop, Tablet & Mobile */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
         {/* Card 1: To Attend Court Today */}
-        <div 
+        <div
           onClick={() => setActiveTab("to_attend")}
           className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm hover:shadow-md transition cursor-pointer flex flex-col justify-between"
         >
@@ -274,7 +274,7 @@ export default function ClerkDashboard() {
         </div>
 
         {/* Card 2: Courts Visited Today */}
-        <div 
+        <div
           onClick={() => setActiveTab("visited")}
           className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm hover:shadow-md transition cursor-pointer flex flex-col justify-between"
         >
@@ -307,7 +307,7 @@ export default function ClerkDashboard() {
 
       {/* Main Content Sections */}
       <div className="space-y-6 sm:space-y-8">
-        
+
         {/* Clerk Tasks Checklist */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 space-y-4">
           <div className="flex items-center justify-between gap-2">
@@ -366,20 +366,18 @@ export default function ClerkDashboard() {
                 return (
                   <div
                     key={task.id}
-                    className={`flex items-center justify-between p-3.5 rounded-xl border transition ${
-                      task.completed ? "bg-slate-50 border-slate-200 opacity-75" : "bg-white border-slate-200 hover:border-slate-300"
-                    }`}
+                    className={`flex items-center justify-between p-3.5 rounded-xl border transition ${task.completed ? "bg-slate-50 border-slate-200 opacity-75" : "bg-white border-slate-200 hover:border-slate-300"
+                      }`}
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0 pr-2">
                       <button
                         disabled={!clerkDashboardPerms.edit}
                         onClick={() => clerkDashboardPerms.edit && toggleTask(task.id, task.completed)}
                         title={!clerkDashboardPerms.edit ? "🔒 Edit permission locked" : "Toggle task"}
-                        className={`w-5 h-5 rounded-md border flex items-center justify-center transition shrink-0 ${
-                          task.completed
+                        className={`w-5 h-5 rounded-md border flex items-center justify-center transition shrink-0 ${task.completed
                             ? "bg-emerald-600 border-emerald-600 text-white"
                             : "border-slate-300 hover:border-blue-500 bg-white"
-                        } ${!clerkDashboardPerms.edit ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+                          } ${!clerkDashboardPerms.edit ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
                       >
                         {task.completed && <CheckSquare size={14} />}
                       </button>
@@ -414,9 +412,8 @@ export default function ClerkDashboard() {
                         </div>
                       ) : (
                         <span
-                          className={`text-sm truncate font-medium ${
-                            task.completed ? "line-through text-slate-400" : "text-slate-800"
-                          }`}
+                          className={`text-sm truncate font-medium ${task.completed ? "line-through text-slate-400" : "text-slate-800"
+                            }`}
                         >
                           {task.text || task.title}
                         </span>
@@ -525,9 +522,8 @@ export default function ClerkDashboard() {
                         <span className="text-xs font-bold text-slate-500 uppercase tracking-wide truncate">
                           {visit.court_name || visit.courtName || "Court Hall"}
                         </span>
-                        <span className={`shrink-0 px-2 py-0.5 text-[11px] font-bold rounded-md ${
-                          visited ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                        }`}>
+                        <span className={`shrink-0 px-2 py-0.5 text-[11px] font-bold rounded-md ${visited ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                          }`}>
                           {visit.visit_status || visit.status || (visited ? "Visited" : "Pending")}
                         </span>
                       </div>
@@ -558,5 +554,9 @@ export default function ClerkDashboard() {
     </div>
   );
 }
+
+
+
+
 
 

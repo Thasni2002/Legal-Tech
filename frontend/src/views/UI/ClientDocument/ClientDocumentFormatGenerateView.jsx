@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import { getLoggedInUser } from "@/utils/auth";
 import useModulePermission from "@/utils/useModulePermission";
 import DocumentViewerModal from "@/components/common/DocumentViewerModal";

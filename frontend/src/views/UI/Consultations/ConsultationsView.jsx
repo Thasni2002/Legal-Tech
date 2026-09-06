@@ -1,6 +1,6 @@
 "use client";
 
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 
 import { useState, useEffect } from "react";
 import { getLoggedInUser } from "@/utils/auth";

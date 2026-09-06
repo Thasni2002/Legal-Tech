@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { FileText, Download, ExternalLink, X, Lock } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 import ReactMarkdown from "react-markdown";
 
 export default function DocumentViewerModal({ document: docProp, fileUrl, title, badge, onClose }) {

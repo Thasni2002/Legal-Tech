@@ -1,5 +1,5 @@
 "use client";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 
 import { useEffect, useState } from "react";
 import LawfirmAdd from "@/views/UI/LawfirmManagement/LawfirmAdd";

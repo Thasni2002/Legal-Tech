@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Calendar, Briefcase, User, Clock, Building } from "lucide-react";
 import { getLoggedInUser } from "@/utils/auth";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 
 const BASE_URL = API_BASE_URL;
 

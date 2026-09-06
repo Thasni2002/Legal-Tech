@@ -13,10 +13,18 @@ connect_args = {}
 if DATABASE_URL and "sqlite" in DATABASE_URL:
     connect_args = {"check_same_thread": False, "timeout": 30}
 
+engine_kwargs = {"connect_args": connect_args, "pool_pre_ping": True}
+if DATABASE_URL and "sqlite" not in DATABASE_URL:
+    engine_kwargs.update({
+        "pool_size": 20,
+        "max_overflow": 30,
+        "pool_recycle": 3600,
+    })
+
 # Create database engine
 engine = create_engine(
     DATABASE_URL,
-    connect_args=connect_args
+    **engine_kwargs
 )
 
 # Create session

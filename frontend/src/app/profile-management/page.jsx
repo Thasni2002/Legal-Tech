@@ -1,5 +1,5 @@
 "use client";
-import { API_BASE_URL } from "@/utils/api";
+import { API_BASE_URL } from "@/services/api";
 
 import ProfileManagement from '@/views/UI/ProfileManagement/ProfileManagmentView'
 import ProfileView from "@/views/UI/ProfileManagement/profileView";
