@@ -84,6 +84,8 @@ class MeetingNoteCreate(MeetingNoteBase):
     client_id: Optional[int] = None
 
 class MeetingNoteUpdate(BaseModel):
+    consultation_id: Optional[int] = None
+    case_id: Optional[int] = None
     title: Optional[str] = None
     meeting_date: Optional[date_type] = None
     meeting_time: Optional[str] = None
