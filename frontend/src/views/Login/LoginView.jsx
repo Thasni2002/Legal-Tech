@@ -199,7 +199,6 @@ export default function Login() {
   const [loading, setLoading]     = useState(false);
   const [overviewOpen, setOverviewOpen] = useState(false);
   const [modulesOpen, setModulesOpen]   = useState(false);
-  const [activeTab, setActiveTab]       = useState(0);
   const [heroVisible, setHeroVisible]   = useState(false);
 
   // Forgot password state
@@ -734,32 +733,7 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Nav links */}
-          <nav className="hidden md:flex items-center gap-1 px-2 py-1.5 rounded-full"
-            style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-            {[
-              { label: "Overview",       icon: <Cpu className="w-3.5 h-3.5" />,       action: () => setOverviewOpen(true), href: null },
-              { label: "Core Features",  icon: <Briefcase className="w-3.5 h-3.5" />, action: null, href: "#features" },
-              { label: "System Modules", icon: <FolderKanban className="w-3.5 h-3.5" />,  action: null, href: "#modules" },
-            ].map((item) => {
-              const cls = "flex items-center gap-1.5 text-[12px] font-medium px-3.5 py-1.5 rounded-full transition-all duration-200 cursor-pointer";
-              const s   = { color: C.muted, ...fontBody };
-              const hover = (e, on) => {
-                e.currentTarget.style.color           = on ? C.ink : C.muted;
-                e.currentTarget.style.backgroundColor = on ? C.white : "transparent";
-                e.currentTarget.style.boxShadow       = on ? `0 1px 4px rgba(28,20,9,0.08)` : "none";
-              };
-              return item.href
-                ? <a key={item.label} href={item.href} className={cls} style={s}
-                    onMouseOver={(e) => hover(e, true)} onMouseOut={(e) => hover(e, false)}>
-                    {item.icon}{item.label}
-                  </a>
-                : <button key={item.label} onClick={item.action} className={cls} style={s}
-                    onMouseOver={(e) => hover(e, true)} onMouseOut={(e) => hover(e, false)}>
-                    {item.icon}{item.label}
-                  </button>;
-            })}
-          </nav>
+
 
         </div>
       </header>
@@ -772,76 +746,21 @@ export default function Login() {
           <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
 
             {/* ── LEFT: Hero Content ───────────────────── */}
-            <div className="lg:col-span-7 space-y-9"
+            <div className="lg:col-span-7 flex flex-col justify-center space-y-6 my-auto"
               style={{ animation: heroVisible ? "slide-in-left 0.7s cubic-bezier(.25,.8,.25,1) both" : "none" }}>
 
               {/* Headline */}
-              <div className="space-y-3">
-                <h1 className="tracking-tight leading-[1.08]"
-                  style={{ ...fontHeading, fontSize: "clamp(40px, 5vw, 62px)", fontWeight: 600, color: C.ink }}>
+              <div className="space-y-4">
+                <h1 className="tracking-tight leading-[1.1]"
+                  style={{ ...fontHeading, fontSize: "clamp(42px, 5vw, 64px)", fontWeight: 600, color: C.ink }}>
                   Your Legal Practice,
                   <br />
                   <em style={{ color: C.blue, fontStyle: "italic" }}>Streamlined.</em>
                 </h1>
-                <p className="text-sm leading-relaxed max-w-md"
+                <p className="text-base sm:text-lg leading-relaxed max-w-lg"
                   style={{ color: C.muted, fontWeight: 400, ...fontBody }}>
                   Case management, consultations, law firm operations, and client invoicing — unified in one portal.
                 </p>
-              </div>
-
-              {/* Workspace Preview Canvas */}
-              <div className="relative group p-0.5 rounded-2xl transition-all duration-300 hover:shadow-2xl">
-
-                <div className="rounded-2xl overflow-hidden"
-                  style={{ backgroundColor: C.white, border: `1px solid ${C.border}`, boxShadow: "0 12px 40px rgba(28,20,9,0.10)" }}>
-
-
-
-                  {/* Inner cards */}
-                  <div className="grid sm:grid-cols-2 gap-3 p-4">
-                    {/* Case Card */}
-                    <div className="p-4 rounded-xl space-y-2 transition-all duration-300 hover:scale-[1.02] cursor-pointer"
-                      style={{ backgroundColor: C.ivory, border: `1px solid ${C.border}` }}>
-                      <div className="flex justify-between items-center">
-                        <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: C.gold, ...fontBody }}>
-                          <Briefcase className="w-3 h-3" /> Case Management
-                        </span>
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
-                          style={{ backgroundColor: "#f0faf5", color: "#2d7a54", border: "1px solid #bbf0d8", ...fontBody }}>LISTED</span>
-                      </div>
-                      <p className="text-sm font-semibold" style={{ color: C.ink, ...fontBody }}>Apex Tech vs. Horizon Infra</p>
-                      <p className="text-[10px]" style={{ color: C.muted, ...fontBody }}>High Court · Bench 3 · Hearing #14</p>
-                    </div>
-
-                    {/* Finance & Consultation Card */}
-                    <div className="p-4 rounded-xl space-y-2 transition-all duration-300 hover:scale-[1.02] cursor-pointer"
-                      style={{ backgroundColor: C.blueL, border: `1px solid #bfdbfe` }}>
-                      <div className="flex justify-between items-center">
-                        <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: C.blue, ...fontBody }}>
-                          <BookOpen className="w-3 h-3" /> Consultations & Finance
-                        </span>
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
-                          style={{ backgroundColor: "#dbeafe", color: C.blue, ...fontBody }}>ACTIVE</span>
-                      </div>
-                      <p className="text-sm font-semibold leading-tight" style={{ color: C.ink, ...fontBody }}>Client Advisory Session</p>
-                      <p className="text-[10px]" style={{ color: C.muted, ...fontBody }}>Invoice #INV-2026-089 · Paid</p>
-                    </div>
-                  </div>
-
-                  {/* Footer */}
-                  <div className="px-5 py-3 flex items-center justify-between"
-                    style={{ borderTop: `1px solid ${C.border}`, backgroundColor: C.surface }}>
-                    <span className="flex items-center gap-1.5 text-[11px]" style={{ color: C.muted, ...fontBody }}>
-                      <Sparkles className="w-3 h-3" style={{ color: C.gold }} />
-                      Multi-role law firm operations workspace
-                    </span>
-                    <button onClick={() => setModulesOpen(true)}
-                      className="flex items-center gap-0.5 text-[11px] font-semibold cursor-pointer hover:underline"
-                      style={{ color: C.blue, ...fontBody }}>
-                      Explore <ChevronRight className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
               </div>
 
             </div>
@@ -857,10 +776,10 @@ export default function Login() {
                 <div className="h-[3px]"
                   style={{ background: `linear-gradient(90deg, ${C.blue} 0%, #2563eb 50%, ${C.gold} 100%)` }} />
 
-                <div className="p-7 sm:p-8">
+                <div className="p-5 sm:p-6">
 
                   {/* Brand Header */}
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2.5">
                       <div className="w-9 h-9 rounded-xl flex items-center justify-center"
                         style={{ backgroundColor: C.blueL, border: `1.5px solid #bfdbfe` }}>
@@ -874,7 +793,7 @@ export default function Login() {
                   </div>
 
                   {/* ── MODE TAB SWITCHER ─────────────────────────── */}
-                  <div className="grid grid-cols-2 gap-1 p-1 rounded-xl mb-6"
+                  <div className="grid grid-cols-2 gap-1 p-1 rounded-xl mb-4"
                     style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
                     <button
                       type="button"
@@ -929,7 +848,7 @@ export default function Login() {
                   ════════════════════════════════════════════ */}
                   {authMode === "signin" ? (
                     <div>
-                      <div className="mb-6">
+                      <div className="mb-4">
                         <h2 className="tracking-tight leading-tight"
                           style={{ ...fontHeading, fontSize: 28, fontWeight: 600, color: C.ink }}>
                           Welcome back,{" "}
@@ -940,7 +859,7 @@ export default function Login() {
                         </p>
                       </div>
 
-                      <form onSubmit={handleSubmit} noValidate className="space-y-4">
+                      <form onSubmit={handleSubmit} noValidate className="space-y-3">
                         {/* Email */}
                         <div className="space-y-1.5">
                           <label className="block text-[11px] font-semibold uppercase tracking-widest"
@@ -1035,7 +954,7 @@ export default function Login() {
                       </form>
 
                       {/* Mode switcher prompt */}
-                      <p className="text-[11px] text-center mt-5" style={{ color: C.muted, ...fontBody }}>
+                      <p className="text-[11px] text-center mt-3" style={{ color: C.muted, ...fontBody }}>
                         Don&apos;t have an account?{" "}
                         <button type="button" onClick={() => { setAuthMode("signup"); setErrors({}); }} className="font-semibold hover:underline cursor-pointer" style={{ color: C.blue }}>
                           Create Account
@@ -1162,21 +1081,7 @@ export default function Login() {
                     </div>
                   )}
 
-                  {/* Trust badges */}
-                  <div className="mt-6 pt-5 grid grid-cols-3 gap-2 text-center"
-                    style={{ borderTop: `1px solid ${C.border}` }}>
-                    {[
-                      { icon: <ShieldCheck className="w-3.5 h-3.5" />, label: "Role-Based\nSecurity" },
-                      { icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: "Encrypted\nStorage" },
-                      { icon: <Scale className="w-3.5 h-3.5" />, label: "Bar Council\nStandards" },
-                    ].map((t, i) => (
-                      <div key={i} className="flex flex-col items-center gap-1">
-                        <span style={{ color: C.faint }}>{t.icon}</span>
-                        <span className="text-[9.5px] font-medium leading-tight whitespace-pre-line"
-                          style={{ color: C.faint, ...fontBody }}>{t.label}</span>
-                      </div>
-                    ))}
-                  </div>
+
 
                 </div>
               </div>
@@ -1186,162 +1091,9 @@ export default function Login() {
         </div>
       </section>
 
-      {/* ════════════════════════════════════════════════
-          SYSTEM MODULES SHOWCASE SECTION
-      ════════════════════════════════════════════════ */}
-      <section id="modules" className="relative z-10 py-24 scroll-mt-16"
-        style={{ borderTop: `1px solid ${C.border}`, animation: "slide-in-up 0.7s 0.3s cubic-bezier(.25,.8,.25,1) both" }}>
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
 
-          <div className="text-center max-w-xl mx-auto mb-14 space-y-3">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-medium"
-              style={{ backgroundColor: C.blueL, border: `1px solid #bfdbfe`, color: C.blue, ...fontBody }}>
-              <Briefcase className="w-3.5 h-3.5" /> Platform Capabilities
-            </div>
-            <h2 className="tracking-tight" style={{ ...fontHeading, fontSize: 36, fontWeight: 600, color: C.ink }}>
-              Built for Modern Legal Practice
-            </h2>
-            <p className="text-sm leading-relaxed" style={{ color: C.muted, ...fontBody }}>
-              Integrated case binders, client consultations, law firm management, clerk operations, and invoice tracking.
-            </p>
-          </div>
 
-          <div className="grid lg:grid-cols-12 gap-6 items-start">
 
-            {/* Tab list */}
-            <div className="lg:col-span-5 space-y-2">
-              {projectShowcase.map((f, idx) => (
-                <div key={f.id} onClick={() => setActiveTab(idx)}
-                  className="p-4 rounded-xl cursor-pointer transition-all duration-200"
-                  style={{
-                    backgroundColor: activeTab === idx ? C.white : "transparent",
-                    border: activeTab === idx ? `1.5px solid ${C.border}` : `1.5px solid transparent`,
-                    boxShadow: activeTab === idx ? "0 4px 16px rgba(28,20,9,0.08)" : "none",
-                  }}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="flex items-center gap-2 font-semibold text-sm"
-                      style={{ color: activeTab === idx ? C.ink : C.muted, ...fontBody }}>
-                      <span style={{ color: activeTab === idx ? C.blue : C.faint }}>{f.icon}</span>
-                      {f.title}
-                    </span>
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
-                      style={{ backgroundColor: activeTab === idx ? C.blueL : C.surface, color: activeTab === idx ? C.blue : C.faint, ...fontBody }}>
-                      {f.tag}
-                    </span>
-                  </div>
-                  <p className="text-[12px] leading-relaxed line-clamp-2"
-                    style={{ color: activeTab === idx ? C.muted : C.faint, ...fontBody }}>{f.description}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Preview panel */}
-            <div className="lg:col-span-7 rounded-2xl overflow-hidden"
-              style={{ backgroundColor: C.white, border: `1px solid ${C.border}`, boxShadow: "0 12px 40px rgba(28,20,9,0.10)" }}>
-              <div className="p-6 space-y-5">
-                <div>
-                  <h3 className="font-semibold text-xl mb-1.5" style={{ ...fontHeading, color: C.ink }}>
-                    {projectShowcase[activeTab].title}
-                  </h3>
-                  <p className="text-[13px] leading-relaxed" style={{ color: C.muted, ...fontBody }}>
-                    {projectShowcase[activeTab].description}
-                  </p>
-                </div>
-
-                {/* Module Scope */}
-                <div className="p-4 rounded-xl space-y-1.5"
-                  style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: C.gold, ...fontBody }}>Active Scope</span>
-                  <p className="text-[13px] font-medium" style={{ color: C.ink, ...fontBody }}>
-                    {projectShowcase[activeTab].previewTitle}
-                  </p>
-                </div>
-
-                {/* Output bullets */}
-                <div className="p-4 rounded-xl space-y-3"
-                  style={{ backgroundColor: C.blueL, border: `1px solid #bfdbfe` }}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold flex items-center gap-1.5" style={{ color: "#2d7a54", ...fontBody }}>
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Module Summary
-                    </span>
-                    <span className="text-[10px] font-mono" style={{ color: C.faint }}>Active</span>
-                  </div>
-                  <p className="text-[13px] font-semibold" style={{ color: C.ink, ...fontBody }}>
-                    {projectShowcase[activeTab].output.summary}
-                  </p>
-                  <ul className="space-y-1.5">
-                    {projectShowcase[activeTab].output.bullets.map((b, i) => (
-                      <li key={i} className="flex gap-2 text-[12px] leading-relaxed" style={{ color: C.muted, ...fontBody }}>
-                        <span style={{ color: C.blue, flexShrink: 0 }}>·</span>{b}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════════════
-          CORE FEATURES SECTION
-      ════════════════════════════════════════════════ */}
-      <section id="features" className="relative z-10 py-24 scroll-mt-16"
-        style={{ borderTop: `1px solid ${C.border}` }}>
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-
-          <div className="text-center max-w-xl mx-auto mb-14 space-y-3">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-medium"
-              style={{ backgroundColor: C.goldL, border: `1px solid #e8d49a`, color: C.gold, ...fontBody }}>
-              <Briefcase className="w-3.5 h-3.5" /> About Our Features
-            </div>
-            <h2 className="tracking-tight" style={{ ...fontHeading, fontSize: 36, fontWeight: 600, color: C.ink }}>
-              Everything a Law Practice Needs
-            </h2>
-            <p className="text-sm leading-relaxed" style={{ color: C.muted, ...fontBody }}>
-              Unified platform for senior advocates, associate counsels, clerks, and clients.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {coreFeatures.map((f, i) => (
-              <div key={i} className="p-6 rounded-2xl cursor-default transition-all duration-300 group"
-                style={{
-                  backgroundColor: C.white, border: `1px solid ${C.border}`,
-                  animation: `slide-in-up 0.6s ${0.08 * i}s cubic-bezier(.25,.8,.25,1) both`,
-                }}
-                onMouseOver={(e) => { e.currentTarget.style.borderColor = "#bfdbfe"; e.currentTarget.style.boxShadow = "0 8px 32px rgba(29,78,216,0.15)"; e.currentTarget.style.transform = "translateY(-4px)"; }}
-                onMouseOut={(e)  => { e.currentTarget.style.borderColor = C.border;   e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "none"; }}>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
-                  style={{ backgroundColor: C.blueL, border: `1px solid #bfdbfe` }}>
-                  <span style={{ color: C.blue }}>{f.icon}</span>
-                </div>
-                <h3 className="font-semibold text-base mb-1.5" style={{ ...fontHeading, color: C.ink, fontSize: 18 }}>{f.title}</h3>
-                <p className="text-[12px] leading-relaxed" style={{ color: C.muted, ...fontBody }}>{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════════════
-          OVERVIEW CTA
-      ════════════════════════════════════════════════ */}
-      <section className="relative z-10 py-20" style={{ borderTop: `1px solid ${C.border}` }}>
-        <div className="max-w-2xl mx-auto px-6 text-center space-y-6">
-          <h2 className="tracking-tight" style={{ ...fontHeading, fontSize: 34, fontWeight: 600, color: C.ink }}>
-            How It All Works
-          </h2>
-          <p className="text-sm leading-relaxed" style={{ color: C.muted, ...fontBody }}>
-            Client onboarding → Case filing & eCourts tracking → Discussion session notes → Clerk visit logs & Invoice settlement.
-          </p>
-          <button onClick={() => setOverviewOpen(true)}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-medium text-sm cursor-pointer transition-all hover:opacity-90"
-            style={{ backgroundColor: C.blue, color: "white", boxShadow: `0 6px 20px rgba(29,78,216,0.2)`, ...fontBody }}>
-            View Project Overview <ExternalLink className="w-4 h-4" />
-          </button>
-        </div>
-      </section>
 
       {/* ════════════════════════════════════════════════
           FOOTER
@@ -1353,12 +1105,6 @@ export default function Login() {
               <Scale className="w-3.5 h-3.5 text-white" />
             </div>
             <span className="font-semibold text-sm" style={{ color: C.ink, ...fontBody }}>Legal-Tech</span>
-            <span style={{ color: C.faint }}>&nbsp;· Advocate Practice Workspace</span>
-          </div>
-          <div className="flex items-center gap-5" style={{ color: C.muted, ...fontBody }}>
-            <button onClick={() => setOverviewOpen(true)} className="hover:opacity-70 cursor-pointer">Overview</button>
-            <a href="#features" className="hover:opacity-70">Features</a>
-            <a href="#modules" className="hover:opacity-70">Modules</a>
           </div>
           <p style={{ color: C.faint, ...fontBody }}>© {new Date().getFullYear()} Legal-Tech Practice Management.</p>
         </div>
