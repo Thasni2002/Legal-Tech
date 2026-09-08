@@ -16,7 +16,7 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
-  UserPlus, Key, Eye, EyeOff, RefreshCw, AlertTriangle,
+  UserPlus, Key, Eye, EyeOff, RefreshCw, AlertTriangle, ShieldAlert,
   ShieldCheck, Mail, Phone, User, Check, X, FileText, Settings, Shield, Plus, Copy, Pencil, Trash2
 } from "lucide-react";
 
@@ -144,8 +144,8 @@ const CLIENT_MODULES = [
 
 const getModuleCategories = (roleName) => {
   const normalized = (roleName || "").toLowerCase().replace(/\s+/g, "");
-  if (normalized === "client") return CLIENT_MODULES;
-  return SENIOR_JUNIOR_MODULES; // Senior Advocate & Junior Advocate see all sections
+  if (normalized === "client" || normalized.includes("client")) return CLIENT_MODULES;
+  return SENIOR_JUNIOR_MODULES.filter((g) => g.category !== "Client Section Features");
 };
 
 const DEFAULT_DOCUMENTS = [
@@ -1746,61 +1746,51 @@ export default function UsersView() {
                       return (
                         <div
                           key={cat.category}
-                          className={`rounded-2xl border overflow-hidden transition-all ${
-                            isSystemAdmin
-                              ? "bg-[#1E293B] border-slate-800 shadow-md"
-                              : "bg-white border-slate-200 shadow-xs"
-                          }`}
+                          className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs transition-all"
                         >
                           <div className={`px-4 py-2.5 border-b flex items-center justify-between ${
                             isSystemAdmin
-                              ? "bg-[#0F172A] border-slate-800 text-purple-300 border-l-4 border-l-purple-500"
+                              ? "bg-purple-50/80 border-purple-200 text-purple-900 border-l-4 border-l-purple-600"
                               : "bg-slate-100/80 border-slate-200 text-slate-700"
                           }`}>
                             <span className="text-xs font-extrabold uppercase tracking-wider flex items-center gap-1.5">
-                              {isSystemAdmin && <ShieldAlert size={13} className="text-purple-400" />}
+                              {isSystemAdmin && <ShieldAlert size={13} className="text-purple-600" />}
                               {cat.category}
                             </span>
                             {isSystemAdmin && (
-                              <span className="text-[9px] font-bold bg-purple-950 text-purple-300 px-2 py-0.5 rounded-full border border-purple-800">
+                              <span className="text-[9px] font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full border border-purple-200">
                                 Security Section
                               </span>
                             )}
                           </div>
 
-                          <div className={`divide-y ${isSystemAdmin ? "divide-slate-800" : "divide-slate-100"}`}>
+                          <div className="divide-y divide-slate-100">
                             {cat.modules.map((mod) => {
                               const perms = editCustomPerms[mod.key] || { view: false, add: false, edit: false, delete: false };
                               return (
                                 <div
                                   key={mod.key}
-                                  className={`p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-colors ${
-                                    isSystemAdmin
-                                      ? "hover:bg-[#0F172A]/70 text-slate-100"
-                                      : "hover:bg-slate-50/50 text-slate-800"
-                                  }`}
+                                  className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-colors hover:bg-slate-50/50 text-slate-800"
                                 >
                                   <div>
-                                    <span className={`font-bold text-xs sm:text-sm ${isSystemAdmin ? "text-slate-100" : "text-slate-800"}`}>
+                                    <span className="font-bold text-xs sm:text-sm text-slate-800">
                                       {mod.label}
                                     </span>
-                                    <span className={`block text-[10px] ${isSystemAdmin ? "text-purple-300/70" : "text-slate-400"}`}>
+                                    <span className="block text-[10px] text-slate-400">
                                       Key: {mod.key}
                                     </span>
                                   </div>
 
                                   <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
                                     {ACTIONS.map((act) => (
-                                      <label key={act} className={`flex items-center gap-1.5 text-xs font-semibold cursor-pointer ${
-                                        isSystemAdmin ? "text-slate-200 hover:text-white" : "text-slate-600 hover:text-slate-900"
-                                      }`}>
+                                      <label key={act} className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer text-slate-600 hover:text-slate-900">
                                         <input
                                           type="checkbox"
                                           checked={!!perms[act]}
                                           onChange={() => handleCustomPermissionToggle(mod.key, act)}
                                           className={`rounded w-4 h-4 cursor-pointer transition-colors ${
                                             isSystemAdmin
-                                              ? "border-slate-700 text-purple-600 focus:ring-purple-500 bg-slate-800"
+                                              ? "border-slate-300 text-purple-600 focus:ring-purple-500"
                                               : "border-slate-300 text-blue-600 focus:ring-blue-500"
                                           }`}
                                         />

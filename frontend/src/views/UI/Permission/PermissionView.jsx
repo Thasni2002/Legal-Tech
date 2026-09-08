@@ -131,8 +131,8 @@ const CLIENT_GROUPS = [
 
 const getGroupsForRole = (roleName) => {
   const normalized = (roleName || "").toLowerCase().replace(/\s+/g, "");
-  if (normalized === "client") return CLIENT_GROUPS;
-  return ALL_GROUPS; // Senior Advocate & Junior Advocate see all sections
+  if (normalized === "client" || normalized.includes("client")) return CLIENT_GROUPS;
+  return ALL_GROUPS.filter((g) => g.category !== "Client Section Features");
 };
 
 
@@ -552,12 +552,12 @@ export default function PermissionView() {
                 <div key={category} className="space-y-3">
                   <div className={`px-3.5 py-2.5 rounded-xl border ${
                     isSystemAdmin
-                      ? "bg-[#0F172A] border-slate-800 text-purple-300 border-l-4 border-l-purple-500 shadow-sm"
+                      ? "bg-purple-50/80 border-purple-200 text-purple-900 border-l-4 border-l-purple-600 shadow-xs"
                       : "bg-slate-100/90 border-slate-200/80 text-slate-700"
                   }`}>
                     <span className="text-[11px] font-extrabold uppercase tracking-wider flex items-center justify-between gap-2">
                       <span className="flex items-center gap-1.5 truncate">
-                        {isSystemAdmin && <Lock size={12} className="text-purple-400" />}
+                        {isSystemAdmin && <Lock size={12} className="text-purple-600" />}
                         {category}
                       </span>
                       <button
@@ -566,7 +566,9 @@ export default function PermissionView() {
                         className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full transition-all cursor-pointer shrink-0 border tracking-normal normal-case ${
                           allCategorySelected
                             ? "bg-white text-red-600 border-red-200"
-                            : "bg-[#2563EB] text-white border-blue-600"
+                            : isSystemAdmin
+                              ? "bg-purple-600 text-white border-purple-600"
+                              : "bg-[#2563EB] text-white border-blue-600"
                         }`}
                       >
                         {allCategorySelected ? "Turn All OFF" : "Turn All ON"}
@@ -583,14 +585,14 @@ export default function PermissionView() {
                           key={key}
                           className={`rounded-2xl p-3.5 space-y-3 transition-all border ${
                             isSystemAdmin
-                              ? "bg-[#1E293B] border-slate-800/90 hover:bg-[#0F172A] text-slate-100 shadow-xs"
+                              ? "bg-white border-purple-100 hover:border-purple-200 text-slate-900 shadow-xs"
                               : "bg-slate-50/70 border-slate-200/80 hover:bg-white text-slate-900"
                           }`}
                         >
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2 min-w-0">
-                              <div className={`w-2 h-2 rounded-full shrink-0 ${isSystemAdmin ? "bg-purple-400" : "bg-blue-600"}`} />
-                              <span className={`font-bold text-xs sm:text-sm truncate ${isSystemAdmin ? "text-slate-100" : "text-slate-900"}`}>
+                              <div className={`w-2 h-2 rounded-full shrink-0 ${isSystemAdmin ? "bg-purple-500" : "bg-blue-600"}`} />
+                              <span className="font-bold text-xs sm:text-sm truncate text-slate-900">
                                 {label}
                               </span>
                             </div>
@@ -598,12 +600,10 @@ export default function PermissionView() {
                               type="button"
                               onClick={() => handleToggleModuleAll(key)}
                               className={`text-[10px] font-bold px-3 py-1 rounded-full transition-all cursor-pointer shrink-0 ${
-                                isSystemAdmin
-                                  ? allSelected
-                                    ? "bg-slate-900 text-rose-400 border border-rose-900/60"
-                                    : "bg-slate-900 text-purple-300 border border-purple-800/60"
-                                  : allSelected
-                                    ? "bg-white text-red-600 border border-red-200"
+                                allSelected
+                                  ? "bg-white text-red-600 border border-red-200"
+                                  : isSystemAdmin
+                                    ? "bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100"
                                     : "bg-white text-blue-600 border border-blue-200"
                               }`}
                             >
@@ -612,7 +612,7 @@ export default function PermissionView() {
                           </div>
 
                           {/* 4 Action Checkbox Chips */}
-                          <div className={`grid grid-cols-2 gap-2 pt-1 border-t ${isSystemAdmin ? "border-slate-800" : "border-slate-200/60"}`}>
+                          <div className={`grid grid-cols-2 gap-2 pt-1 border-t ${isSystemAdmin ? "border-purple-100" : "border-slate-200/60"}`}>
                             {ACTIONS.map((action) => {
                               const isChecked = !!modPerms[action];
                               return (
@@ -623,8 +623,8 @@ export default function PermissionView() {
                                   className={`flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
                                     isSystemAdmin
                                       ? isChecked
-                                        ? "bg-purple-600 text-white border-purple-500 shadow-xs"
-                                        : "bg-slate-800 text-slate-300 border-slate-700 hover:border-slate-600"
+                                        ? "bg-purple-600 text-white border-purple-600 shadow-xs"
+                                        : "bg-white text-slate-700 border-purple-100 hover:border-purple-300"
                                       : isChecked
                                         ? "bg-blue-600 text-white border-blue-600 shadow-xs"
                                         : "bg-white text-slate-700 border-slate-200 hover:border-slate-300"
@@ -635,9 +635,7 @@ export default function PermissionView() {
                                     className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${
                                       isChecked
                                         ? "border-white bg-white/20"
-                                        : isSystemAdmin
-                                          ? "border-slate-600 bg-slate-900"
-                                          : "border-slate-300 bg-slate-50"
+                                        : "border-slate-300 bg-slate-50"
                                     }`}
                                   >
                                     {isChecked && <Check size={12} className="text-white stroke-[3]" />}
@@ -685,18 +683,18 @@ export default function PermissionView() {
                           colSpan={6}
                           className={`sticky top-[41px] z-10 py-3 px-4 lg:px-6 font-bold text-[11px] uppercase tracking-[0.2em] shadow-xs ${
                             isSystemAdmin
-                              ? "bg-[#0F172A] text-purple-300 border-y border-slate-800 border-l-4 border-l-purple-500"
+                              ? "bg-purple-50/80 text-purple-900 border-y border-purple-200/80 border-l-4 border-l-purple-600"
                               : "text-[#64748B] bg-[#F8FAFC] border-y border-[#E2E8F0] border-l-4 border-l-[#2563EB]"
                           }`}
                         >
                           <div className="flex items-center justify-between">
                             <span className="flex items-center gap-2">
-                              {isSystemAdmin && <Lock size={13} className="text-purple-400" />}
+                              {isSystemAdmin && <Lock size={13} className="text-purple-600" />}
                               {category}
                             </span>
                             <div className="flex items-center gap-3">
                               {isSystemAdmin && (
-                                <span className="text-[9px] font-extrabold bg-purple-950/90 text-purple-300 px-2.5 py-0.5 rounded-full border border-purple-800/80 tracking-widest normal-case">
+                                <span className="text-[9px] font-extrabold bg-purple-100 text-purple-800 px-2.5 py-0.5 rounded-full border border-purple-200/80 tracking-widest normal-case">
                                   🔐 System Permissions & Security
                                 </span>
                               )}
@@ -705,11 +703,9 @@ export default function PermissionView() {
                                 onClick={() => handleToggleCategoryAll(modules)}
                                 className={`text-[10px] font-extrabold px-3 py-1 rounded-full transition-all duration-200 cursor-pointer shadow-xs border tracking-normal normal-case flex items-center gap-1.5 ${
                                   allCategorySelected
-                                    ? isSystemAdmin
-                                      ? "bg-slate-900 text-rose-300 hover:bg-slate-950 border-rose-900/60"
-                                      : "bg-white text-red-600 hover:bg-red-50 border-red-200"
+                                    ? "bg-white text-red-600 hover:bg-red-50 border-red-200"
                                     : isSystemAdmin
-                                      ? "bg-purple-900/80 text-purple-200 hover:bg-purple-900 border-purple-700/60"
+                                      ? "bg-purple-600 text-white hover:bg-purple-700 border-purple-600"
                                       : "bg-[#2563EB] text-white hover:bg-blue-700 border-blue-600"
                                 }`}
                               >
@@ -728,16 +724,14 @@ export default function PermissionView() {
                             key={key}
                             className={`transition-colors duration-200 border-b group/row ${
                               isSystemAdmin
-                                ? "bg-[#1E293B] hover:bg-[#0F172A] border-slate-800/80 text-slate-100"
+                                ? "bg-white hover:bg-purple-50/40 border-slate-100 text-[#1E293B]"
                                 : "hover:bg-[#F8FAFC] border-[#F1F5F9] text-[#1E293B]"
                             }`}
                           >
-                            <td className={`py-3.5 px-4 lg:px-6 font-semibold text-xs sm:text-sm pl-6 lg:pl-8 flex items-center gap-2.5 sm:gap-3 ${
-                              isSystemAdmin ? "text-slate-100" : "text-[#1E293B]"
-                            }`}>
+                            <td className="py-3.5 px-4 lg:px-6 font-semibold text-xs sm:text-sm pl-6 lg:pl-8 flex items-center gap-2.5 sm:gap-3 text-[#1E293B]">
                               <div className={`w-1.5 h-1.5 rounded-full transition-colors ${
                                 isSystemAdmin
-                                  ? "bg-purple-400 group-hover/row:bg-purple-300"
+                                  ? "bg-purple-500 group-hover/row:bg-purple-600"
                                   : "bg-[#CBD5E1] group-hover/row:bg-[#2563EB]"
                               }`} />
                               {label}
@@ -754,11 +748,9 @@ export default function PermissionView() {
                                   <div className={`w-5 h-5 rounded-[6px] flex items-center justify-center transition-all duration-200 border 
                                     ${modPerms[action] 
                                       ? isSystemAdmin
-                                        ? "bg-purple-600 border-purple-500 shadow-sm shadow-purple-500/40"
+                                        ? "bg-purple-600 border-purple-600 shadow-sm shadow-purple-500/20"
                                         : "bg-[#2563EB] border-[#2563EB] shadow-sm shadow-blue-500/30" 
-                                      : isSystemAdmin
-                                        ? "bg-slate-800/80 border-slate-700 group-hover/check:border-purple-400"
-                                        : "bg-white border-[#CBD5E1] group-hover/check:border-[#2563EB]"}
+                                      : "bg-white border-[#CBD5E1] group-hover/check:border-purple-500"}
                                   `}>
                                     {modPerms[action] && <Check size={13} className="text-white stroke-[3.5]" />}
                                   </div>
@@ -770,12 +762,10 @@ export default function PermissionView() {
                                 type="button"
                                 onClick={() => handleToggleModuleAll(key)}
                                 className={`text-[10px] sm:text-[11px] font-bold px-3 sm:px-4 py-1 sm:py-1.5 rounded-full transition-all duration-200 cursor-pointer shadow-sm
-                                  ${isSystemAdmin
-                                    ? allSelected
-                                      ? "bg-slate-900 text-rose-400 hover:bg-slate-950 border border-rose-900/60"
-                                      : "bg-slate-900 text-purple-300 hover:bg-slate-950 border border-purple-800/60"
-                                    : allSelected
-                                      ? "bg-white text-[#EF4444] hover:bg-red-50 border border-red-200"
+                                  ${allSelected
+                                    ? "bg-white text-[#EF4444] hover:bg-red-50 border border-red-200"
+                                    : isSystemAdmin
+                                      ? "bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200"
                                       : "bg-white text-[#2563EB] hover:bg-blue-50 border border-blue-200"
                                   }`}
                               >
