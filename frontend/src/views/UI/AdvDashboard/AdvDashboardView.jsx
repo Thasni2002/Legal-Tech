@@ -2,6 +2,7 @@
 
 import { API_BASE_URL } from "@/services/api";
 
+import { createPortal } from "react-dom";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getLoggedInUser } from "@/utils/auth";
@@ -17,6 +18,10 @@ import {
     ClipboardList,
     UserCheck,
     Phone,
+    Calendar,
+    AlertCircle,
+    X,
+    ArrowRight,
 } from "lucide-react";
 
 
@@ -48,7 +53,9 @@ export default function AdvDashboardView() {
     const [discussionsPage, setDiscussionsPage] = useState(0);
     const [isSyncingAll, setIsSyncingAll] = useState(false);
     const [syncAllResult, setSyncAllResult] = useState(null);
+    const [showHearingModal, setShowHearingModal] = useState(false);
     const hasSyncedOnLoad = useRef(false); // ensure silent sync runs only once per mount
+    const hasTriggeredModal = useRef(false);
 
     const hour = new Date().getHours();
     let greeting = "";
@@ -216,6 +223,26 @@ export default function AdvDashboardView() {
                 }
             };
 
+            const popupHearingsList = [];
+            cases.forEach(c => {
+                if (c.next_hearing_date && !isClosedStatus(c.status)) {
+                    const isoDate = parseToIsoDate(c.next_hearing_date);
+                    if (isoDate && isoDate >= todayStr) {
+                        popupHearingsList.push({
+                            id: c.id || c.case_id,
+                            case_title: c.case_title || "Untitled Case",
+                            case_no: c.case_no || "",
+                            court: c.court_name || "Court",
+                            client_name: c.client_name || "",
+                            rawDate: c.next_hearing_date,
+                            isoDate: isoDate,
+                            formattedDate: formatHearingDate(isoDate)
+                        });
+                    }
+                }
+            });
+            popupHearingsList.sort((a, b) => a.isoDate.localeCompare(b.isoDate));
+
             const hearingsList = [...extractedHearings]
                 .sort((a, b) => {
                     if (a.date !== b.date) return a.date.localeCompare(b.date);
@@ -270,6 +297,7 @@ export default function AdvDashboardView() {
                 documents,
                 advocates: advocatesList,
                 activeCases: activeCasesList,
+                popupHearings: popupHearingsList,
             });
 
             setLastRefreshed(new Date());
@@ -330,12 +358,23 @@ export default function AdvDashboardView() {
             }
         });
 
+        // 3. 3-second delay timer for Next Hearing Date Alert Popup
+        const modalTimer = setTimeout(() => {
+            if (!hasTriggeredModal.current) {
+                hasTriggeredModal.current = true;
+                setShowHearingModal(true);
+            }
+        }, 3000);
+
         // Auto-refresh every 30 seconds
         const interval = setInterval(() => {
             fetchDashboardData(true);
         }, 30000);
 
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            clearTimeout(modalTimer);
+        };
     }, [fetchDashboardData]);
 
     if (loading) {
@@ -1166,6 +1205,130 @@ export default function AdvDashboardView() {
                     })()}
                 </div>
             </div>
+
+            {/* NEXT HEARING DATE ALERT POPUP MODAL (Triggers 3 seconds after website loads) */}
+            {showHearingModal && typeof window !== "undefined" && createPortal(
+                <div className="fixed inset-0 z-[9999] bg-black/65 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+                    <div className="bg-white rounded-3xl max-w-xl w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-300 relative">
+                        {/* Header Banner */}
+                        <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white p-5 sm:p-6 relative overflow-hidden shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => setShowHearingModal(false)}
+                                className="absolute right-4 top-4 text-white/80 hover:text-white bg-black/20 hover:bg-black/40 p-2 rounded-full transition cursor-pointer"
+                                title="Close Alert"
+                            >
+                                <X size={18} />
+                            </button>
+                            <div className="flex items-center gap-3.5">
+                                <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0 shadow-inner">
+                                    <Gavel size={24} className="animate-bounce" />
+                                </div>
+                                <div>
+                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-black uppercase tracking-wider mb-1">
+                                        <span className="w-2 h-2 rounded-full bg-white animate-ping"></span>
+                                        Upcoming Court Schedule Alert
+                                    </div>
+                                    <h3 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">Next Hearing Date Reminder</h3>
+                                    <p className="text-red-100 text-xs mt-0.5 font-medium">Scheduled court hearings for active advocate cases.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-4 sm:p-6 overflow-y-auto space-y-3 flex-1 bg-slate-50/50">
+                            {data && data.popupHearings && data.popupHearings.length > 0 ? (
+                                data.popupHearings.map((h, idx) => {
+                                    const todayDate = new Date();
+                                    todayDate.setHours(0, 0, 0, 0);
+                                    const hDate = new Date(h.isoDate);
+                                    hDate.setHours(0, 0, 0, 0);
+                                    const diffTime = hDate.getTime() - todayDate.getTime();
+                                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                                    let countdownBadge = "";
+                                    let badgeBg = "bg-amber-100 text-amber-800 border-amber-200 font-bold";
+                                    if (diffDays === 0) {
+                                        countdownBadge = "TODAY";
+                                        badgeBg = "bg-red-600 text-white animate-pulse font-black";
+                                    } else if (diffDays === 1) {
+                                        countdownBadge = "TOMORROW";
+                                        badgeBg = "bg-orange-500 text-white font-bold";
+                                    } else if (diffDays > 1) {
+                                        countdownBadge = `IN ${diffDays} DAYS`;
+                                        badgeBg = "bg-indigo-50 text-indigo-700 border border-indigo-200 font-extrabold";
+                                    } else {
+                                        countdownBadge = "PAST DUE";
+                                        badgeBg = "bg-rose-100 text-rose-700 font-bold";
+                                    }
+
+                                    return (
+                                        <div key={h.id || idx} className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 group">
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                    <span className={`px-2.5 py-0.5 rounded-md text-[10px] tracking-wider ${badgeBg}`}>
+                                                        {countdownBadge}
+                                                    </span>
+                                                    {h.case_no && (
+                                                        <span className="text-[11px] font-mono text-slate-500 font-bold">#{h.case_no}</span>
+                                                    )}
+                                                </div>
+                                                <h4 className="font-extrabold text-slate-900 text-sm truncate group-hover:text-indigo-600 transition-colors">
+                                                    {h.case_title}
+                                                </h4>
+                                                <div className="flex items-center gap-3 text-xs text-slate-500 mt-1 font-medium flex-wrap">
+                                                    <span className="flex items-center gap-1 text-slate-800 font-bold">
+                                                        <Calendar size={13} className="text-red-500 shrink-0" />
+                                                        {h.formattedDate || h.rawDate}
+                                                    </span>
+                                                    <span className="flex items-center gap-1">
+                                                        <Gavel size={13} className="text-indigo-500 shrink-0" />
+                                                        {h.court}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setShowHearingModal(false);
+                                                    router.push(`/case-management/view/${h.id}?from=dashboard`);
+                                                }}
+                                                className="flex items-center justify-center gap-1.5 bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 self-start sm:self-auto"
+                                            >
+                                                <span>View Case</span>
+                                                <ArrowRight size={13} />
+                                            </button>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <div className="text-center py-8">
+                                    <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-2">
+                                        <Calendar size={24} />
+                                    </div>
+                                    <h4 className="font-bold text-slate-900 text-sm">No Urgent Hearings Scheduled</h4>
+                                    <p className="text-xs text-slate-500 mt-1">All active cases have updated hearing dates or no upcoming hearings due today.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="p-4 bg-white border-t border-slate-100 flex items-center justify-between gap-3 shrink-0">
+                            <span className="text-xs font-bold text-slate-500">
+                                {data && data.popupHearings ? `${data.popupHearings.length} Hearing Alert(s)` : ""}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setShowHearingModal(false)}
+                                className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-xl font-bold text-xs shadow-md transition cursor-pointer"
+                            >
+                                Got It
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
         </div>
     );
 }
