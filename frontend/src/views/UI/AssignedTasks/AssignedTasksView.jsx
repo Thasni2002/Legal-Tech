@@ -31,7 +31,7 @@ const STATS_CONFIG = [
 
 const PRIORITY_FILTERS = ["All", "Urgent", "High", "Medium", "Low"];
 
-export default function AssignedTasksView({ isJuniorView = false }) {
+export default function AssignedTasksView({ isJuniorView = false, allowAssign = false }) {
   const user = getLoggedInUser();
   const role = (user?.role || "").toLowerCase();
   const isClerk = role.includes("clerk");
@@ -269,7 +269,7 @@ export default function AssignedTasksView({ isJuniorView = false }) {
               <span>Refresh</span>
             </button>
 
-            {!isJuniorView && (
+            {(!isJuniorView || allowAssign) && (
               perms.add ? (
                 <button
                   onClick={() => { setEditingTask(null); setShowForm(true); }}
@@ -385,7 +385,7 @@ export default function AssignedTasksView({ isJuniorView = false }) {
                   ? "Get started by assigning your first task to a junior advocate."
                   : "You have no assigned tasks yet. Check back later."}
               </p>
-              {!isJuniorView && isSenior && perms.add && (
+              {(!isJuniorView || allowAssign) && perms.add && (
                 <button
                   onClick={() => setShowForm(true)}
                   className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold shadow-md transition flex items-center gap-2 cursor-pointer"

@@ -334,17 +334,23 @@ export default function ClerkDashboard() {
 
           {/* Form to add task */}
           {clerkDashboardPerms.add && (
-            <form onSubmit={handleAddTask} className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
+            <form onSubmit={handleAddTask} className="flex flex-col sm:flex-row gap-2 items-start sm:items-stretch">
+              <textarea
+                rows={2}
                 value={newTaskText}
                 onChange={(e) => setNewTaskText(e.target.value)}
-                placeholder="Add a new task (e.g. File bundle in Hall 3, Collect certified copy)..."
-                className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50/50"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleAddTask(e);
+                  }
+                }}
+                placeholder="Add a new task (e.g. File bundle in Hall 3, Collect certified copy)... (Enter to add, Shift+Enter for new line)"
+                className="flex-1 w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50/50 resize-y min-h-[50px]"
               />
               <button
                 type="submit"
-                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-1 transition shadow-sm shrink-0 cursor-pointer"
+                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-1 transition shadow-sm shrink-0 cursor-pointer sm:self-stretch"
               >
                 <Plus size={16} />
                 <span>Add</span>
@@ -366,15 +372,15 @@ export default function ClerkDashboard() {
                 return (
                   <div
                     key={task.id}
-                    className={`flex items-center justify-between p-3.5 rounded-xl border transition ${task.completed ? "bg-slate-50 border-slate-200 opacity-75" : "bg-white border-slate-200 hover:border-slate-300"
+                    className={`flex items-start justify-between p-3.5 rounded-xl border transition ${task.completed ? "bg-slate-50 border-slate-200 opacity-75" : "bg-white border-slate-200 hover:border-slate-300"
                       }`}
                   >
-                    <div className="flex items-center gap-3 flex-1 min-w-0 pr-2">
+                    <div className="flex items-start gap-3 flex-1 min-w-0 pr-2">
                       <button
                         disabled={!clerkDashboardPerms.edit}
                         onClick={() => clerkDashboardPerms.edit && toggleTask(task.id, task.completed)}
                         title={!clerkDashboardPerms.edit ? "🔒 Edit permission locked" : "Toggle task"}
-                        className={`w-5 h-5 rounded-md border flex items-center justify-center transition shrink-0 ${task.completed
+                        className={`w-5 h-5 rounded-md border flex items-center justify-center transition shrink-0 mt-0.5 ${task.completed
                             ? "bg-emerald-600 border-emerald-600 text-white"
                             : "border-slate-300 hover:border-blue-500 bg-white"
                           } ${!clerkDashboardPerms.edit ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
@@ -383,28 +389,31 @@ export default function ClerkDashboard() {
                       </button>
 
                       {isEditingThis ? (
-                        <div className="flex items-center gap-2 flex-1">
-                          <input
-                            type="text"
+                        <div className="flex items-start gap-2 flex-1">
+                          <textarea
+                            rows={2}
                             value={editingTaskText}
                             onChange={(e) => setEditingTaskText(e.target.value)}
-                            className="flex-1 px-3 py-1 border border-blue-400 rounded-lg text-sm bg-white outline-none"
+                            className="flex-1 px-3 py-1.5 border border-blue-400 rounded-lg text-sm bg-white outline-none resize-y min-h-[38px]"
                             autoFocus
                             onKeyDown={(e) => {
-                              if (e.key === "Enter") handleSaveEditedTask(task.id);
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSaveEditedTask(task.id);
+                              }
                               if (e.key === "Escape") setEditingTaskId(null);
                             }}
                           />
                           <button
                             onClick={() => handleSaveEditedTask(task.id)}
-                            className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer"
+                            className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer mt-1"
                             title="Save task"
                           >
                             <Check size={16} />
                           </button>
                           <button
                             onClick={() => setEditingTaskId(null)}
-                            className="p-1 text-slate-400 hover:bg-slate-100 rounded-lg cursor-pointer"
+                            className="p-1 text-slate-400 hover:bg-slate-100 rounded-lg cursor-pointer mt-1"
                             title="Cancel edit"
                           >
                             <X size={16} />
@@ -412,7 +421,7 @@ export default function ClerkDashboard() {
                         </div>
                       ) : (
                         <span
-                          className={`text-sm truncate font-medium ${task.completed ? "line-through text-slate-400" : "text-slate-800"
+                          className={`text-sm font-medium whitespace-pre-wrap break-words ${task.completed ? "line-through text-slate-400" : "text-slate-800"
                             }`}
                         >
                           {task.text || task.title}
