@@ -46,6 +46,7 @@ import {
 import { createPortal } from "react-dom";
 import { API_BASE_URL } from "@/services/api";
 import DocumentViewerModal from "@/components/common/DocumentViewerModal";
+import SearchableDropdown from "@/components/common/SearchableDropdown";
 import ClientEdit from "./ClientEdit";
 import CaseTimelineView from "@/components/case/CaseTimelineView";
 
@@ -755,11 +756,17 @@ export default function ClientHistory() {
           </div>
 
           <div className="flex items-center gap-2 self-start sm:self-auto">
-            <span className="text-xs font-bold text-[#64748B]">Switch Client:</span>
-            <select
+            <SearchableDropdown
+              options={[
+                { id: "all", label: `All Clients (${allClientsList.length})`, sublabel: "View all client profiles" },
+                ...allClientsList.map((c) => ({
+                  id: c.clientName || c.fullName,
+                  label: c.clientName || c.fullName,
+                  sublabel: c.emailId || c.contactNumber || c.clientId || ""
+                }))
+              ]}
               value={client ? (client.clientName || client.fullName) : "all"}
-              onChange={(e) => {
-                const val = e.target.value;
+              onChange={(val) => {
                 if (val === "all") {
                   setClient(null);
                 } else {
@@ -767,15 +774,11 @@ export default function ClientHistory() {
                   setClient(selected);
                 }
               }}
-              className="rounded-xl border border-[#E2E8F0] bg-white px-3 py-1.5 text-xs text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200 cursor-pointer font-bold shadow-2xs"
-            >
-              <option value="all">All Clients</option>
-              {allClientsList.map((c) => (
-                <option key={c.clientId} value={c.clientName || c.fullName}>
-                  {c.clientName || c.fullName}
-                </option>
-              ))}
-            </select>
+              labelPrefix="Switch Client:"
+              placeholder="Search clients..."
+              icon={<User size={14} />}
+              alignRight={true}
+            />
           </div>
         </div>
 
@@ -1120,24 +1123,26 @@ export default function ClientHistory() {
               {/* Case Filter Dropdown (Placed on the right side where Search was) */}
               {clientCases && clientCases.length > 0 && (
                 <div className="flex items-center gap-2 self-start sm:self-auto">
-                  <span className="text-xs font-bold text-[#64748B]">Filter Case:</span>
-                  <select
+                  <SearchableDropdown
+                    options={[
+                      { id: "all", label: `All Cases (${clientCases.length})`, sublabel: "Show activity across all cases" },
+                      ...clientCases.map((c) => ({
+                        id: c.id,
+                        label: c.case_title || c.case_no || `Case #${c.id}`,
+                        sublabel: `${c.court_name || 'Court'} • ${c.status || 'Active'}`
+                      }))
+                    ]}
                     value={selectedActivityCaseId || "all"}
-                    onChange={(e) => {
-                      const val = e.target.value;
+                    onChange={(val) => {
                       setSelectedActivityCaseId(val === "all" ? "all" : Number(val));
                       setActiveTab("all");
                       setMainTab("activities");
                     }}
-                    className="rounded-xl border border-[#E2E8F0] bg-white px-3 py-1.5 text-xs text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all duration-200 cursor-pointer font-bold shadow-2xs max-w-[240px] truncate"
-                  >
-                    <option value="all">All Cases ({clientCases.length})</option>
-                    {clientCases.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.case_title ? `${c.case_title.slice(0, 26)}...` : `Case #${c.case_no || c.id}`}
-                      </option>
-                    ))}
-                  </select>
+                    labelPrefix="Filter Case:"
+                    placeholder="Search case..."
+                    icon={<Briefcase size={14} />}
+                    alignRight={true}
+                  />
                 </div>
               )}
             </div>
@@ -1362,20 +1367,19 @@ export default function ClientHistory() {
                 </div>
 
                 {clientCases.length > 1 && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-[#64748B] whitespace-nowrap">Select Case:</span>
-                    <select
-                      value={selectedTimelineCaseId || ""}
-                      onChange={(e) => setSelectedTimelineCaseId(Number(e.target.value))}
-                      className="rounded-xl border border-[#E2E8F0] bg-white px-3 py-1.5 text-xs text-[#0F172A] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all cursor-pointer font-bold shadow-2xs max-w-[260px] truncate"
-                    >
-                      {clientCases.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.case_title || c.case_no || `Case #${c.id}`} ({c.court_name || 'Court'})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <SearchableDropdown
+                    options={clientCases.map((c) => ({
+                      id: c.id,
+                      label: c.case_title || c.case_no || `Case #${c.id}`,
+                      sublabel: `${c.court_name || 'Court'} • Case No: ${c.case_no || 'N/A'}`
+                    }))}
+                    value={selectedTimelineCaseId || ""}
+                    onChange={(val) => setSelectedTimelineCaseId(Number(val))}
+                    labelPrefix="Select Case:"
+                    placeholder="Search case title, court, or case no..."
+                    icon={<Gavel size={14} />}
+                    alignRight={true}
+                  />
                 )}
               </div>
 
