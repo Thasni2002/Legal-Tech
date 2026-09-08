@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import ReactDOM from "react-dom";
+import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/services/api";
 import SearchableDropdown from "@/components/common/SearchableDropdown";
 import {
@@ -24,12 +25,31 @@ import {
 } from "lucide-react";
 
 export default function MeetingNotesTab({ user, preselectedConsultation, onClosePreselected }) {
+  const router = useRouter();
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDateFilter, setSelectedDateFilter] = useState("");
   const [casesList, setCasesList] = useState([]);
   const [consultationsList, setConsultationsList] = useState([]);
+
+  const handleGoToCase = (note) => {
+    let targetId = note.case_id;
+    if (!targetId && casesList && casesList.length > 0) {
+      const matched = casesList.find((c) =>
+        (note.case_no && String(c.case_no).trim() === String(note.case_no).trim()) ||
+        (note.case_title && c.case_title && c.case_title.toLowerCase() === note.case_title.toLowerCase())
+      );
+      if (matched) {
+        targetId = matched.id;
+      }
+    }
+    if (targetId) {
+      router.push(`/case-management/view/${targetId}?from=consultations`);
+    } else {
+      router.push(`/case-management`);
+    }
+  };
 
   // Modal states
   const [showNoteModal, setShowNoteModal] = useState(false);
@@ -613,14 +633,14 @@ export default function MeetingNotesTab({ user, preselectedConsultation, onClose
       ) : (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="w-full overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
+            <table className="w-full table-fixed divide-y divide-slate-200 min-w-[700px]">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-5 py-3.5 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Title</th>
-                  <th className="px-5 py-3.5 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Client</th>
-                  <th className="px-5 py-3.5 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Case</th>
-                  <th className="px-5 py-3.5 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Date</th>
-                  <th className="px-5 py-3.5 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Actions</th>
+                  <th className="w-[25%] px-4 sm:px-5 py-3.5 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Title</th>
+                  <th className="w-[20%] px-4 sm:px-5 py-3.5 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Client</th>
+                  <th className="w-[30%] px-4 sm:px-5 py-3.5 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Case</th>
+                  <th className="w-[13%] px-4 sm:px-5 py-3.5 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Date</th>
+                  <th className="w-[12%] px-4 sm:px-5 py-3.5 text-right text-[11px] font-bold text-slate-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white text-sm">
@@ -628,77 +648,82 @@ export default function MeetingNotesTab({ user, preselectedConsultation, onClose
                   return (
                     <tr key={note.id} className="hover:bg-slate-50 transition-colors group">
                       {/* Title */}
-                      <td className="px-5 py-4 max-w-[220px]">
-                        <p className="font-bold text-slate-900 text-sm truncate group-hover:text-indigo-600 transition-colors">
+                      <td className="px-4 sm:px-5 py-4 overflow-hidden">
+                        <p className="font-bold text-slate-900 text-sm truncate group-hover:text-indigo-600 transition-colors" title={note.title}>
                           {note.title}
                         </p>
                         {note.summary && (
-                          <p className="text-xs text-slate-500 truncate mt-0.5 max-w-[200px]">{note.summary}</p>
+                          <p className="text-xs text-slate-500 truncate mt-0.5" title={note.summary}>{note.summary}</p>
                         )}
                       </td>
 
                       {/* Client */}
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-1.5">
+                      <td className="px-4 sm:px-5 py-4 overflow-hidden">
+                        <div className="flex items-center gap-1.5 min-w-0">
                           <User size={13} className="text-indigo-500 shrink-0" />
-                          <span className="font-semibold text-slate-800 text-sm capitalize">
+                          <span className="font-semibold text-slate-800 text-sm capitalize truncate" title={note.client_name}>
                             {note.client_name || "—"}
                           </span>
                         </div>
                       </td>
 
                       {/* Case */}
-                      <td className="px-5 py-4 max-w-[180px]">
+                      <td className="px-4 sm:px-5 py-4 overflow-hidden">
                         {note.case_title ? (
-                          <div className="flex items-start gap-1.5">
-                            <Briefcase size={13} className="text-indigo-400 shrink-0 mt-0.5" />
-                            <span className="text-slate-600 text-xs truncate">
+                          <button
+                            type="button"
+                            onClick={() => handleGoToCase(note)}
+                            className="flex items-center gap-1.5 text-left group/case hover:text-indigo-600 transition-colors cursor-pointer w-full min-w-0"
+                            title={`${note.case_title}${note.case_no ? ` (#${note.case_no})` : ""}`}
+                          >
+                            <Briefcase size={14} className="text-indigo-500 group-hover/case:text-indigo-600 shrink-0 group-hover/case:scale-110 transition-transform" />
+                            <span className="text-slate-700 text-xs font-semibold group-hover/case:text-indigo-600 group-hover/case:underline truncate min-w-0 block">
                               {note.case_title}
                               {note.case_no && (
-                                <span className="ml-1 text-indigo-600 font-semibold">(#{note.case_no})</span>
+                                <span className="ml-1 text-indigo-600 font-bold shrink-0">(#{note.case_no})</span>
                               )}
                             </span>
-                          </div>
+                          </button>
                         ) : (
                           <span className="text-slate-400 text-xs italic">General</span>
                         )}
                       </td>
 
                       {/* Date */}
-                      <td className="px-5 py-4 whitespace-nowrap">
+                      <td className="px-4 sm:px-5 py-4 whitespace-nowrap overflow-hidden">
                         <div className="flex items-center gap-1.5 text-slate-600 text-xs font-medium">
-                          <Calendar size={13} className="text-slate-400" />
-                          {note.meeting_date}
+                          <Calendar size={13} className="text-slate-400 shrink-0" />
+                          <span>{note.meeting_date}</span>
                         </div>
                       </td>
 
                       {/* Actions */}
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-1">
+                      <td className="px-4 sm:px-5 py-4 whitespace-nowrap text-right overflow-hidden">
+                        <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => { setSelectedNote(note); setShowViewModal(true); }}
-                            className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-lg transition-colors"
+                            className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-lg transition-colors cursor-pointer"
                             title="View Note"
                           >
                             <Eye size={15} />
                           </button>
                           <button
                             onClick={() => handlePrintNote(note)}
-                            className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-lg transition-colors"
+                            className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-lg transition-colors cursor-pointer"
                             title="Print Note"
                           >
                             <Printer size={15} />
                           </button>
                           <button
                             onClick={() => openEditNoteModal(note)}
-                            className="p-1.5 hover:bg-indigo-100 text-indigo-500 hover:text-indigo-700 rounded-lg transition-colors"
+                            className="p-1.5 hover:bg-indigo-100 text-indigo-500 hover:text-indigo-700 rounded-lg transition-colors cursor-pointer"
                             title="Edit Note"
                           >
                             <Edit size={15} />
                           </button>
                           <button
                             onClick={() => { setDeleteId(note.id); setShowDeleteModal(true); }}
-                            className="p-1.5 hover:bg-rose-100 text-rose-500 hover:text-rose-700 rounded-lg transition-colors"
+                            className="p-1.5 hover:bg-rose-100 text-rose-500 hover:text-rose-700 rounded-lg transition-colors cursor-pointer"
                             title="Delete Note"
                           >
                             <Trash2 size={15} />

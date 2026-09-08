@@ -158,7 +158,26 @@ def get_consultations(
     
     if status is not None:
         query = query.filter(Consultation.status == status)
-    return query.order_by(Consultation.date.desc(), Consultation.time.desc()).all()
+    results = query.order_by(Consultation.date.desc(), Consultation.time.desc()).all()
+
+    # Auto-repair / generate Google Meet links for Video Calls missing a meeting link
+    needs_commit = False
+    for c in results:
+        if ("video" in (c.type or "").lower()) and not c.meeting_link:
+            try:
+                from app.utils.google_calendar import generate_google_meet_link
+                c.meeting_link = generate_google_meet_link(c.client_name, str(c.date), str(c.time))
+                needs_commit = True
+            except Exception as err:
+                print(f"[MEET AUTO-REPAIR ERROR]: {err}")
+
+    if needs_commit:
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+
+    return results
 
 def get_consultation_by_id(db: Session, consultation_id: int):
     return db.query(Consultation).filter(Consultation.id == consultation_id).first()
@@ -186,8 +205,7 @@ def create_consultation(db: Session, data: ConsultationCreate, background_tasks:
             client_id = client.id
 
     meet_link = data.meeting_link
-    target_status = data.status or "Pending Advocate"
-    if not meet_link and (target_status in ["Approved", "Scheduled"]) and ("video" in (data.type or "").lower()):
+    if not meet_link and ("video" in (data.type or "").lower()):
         try:
             from app.utils.google_calendar import generate_google_meet_link
             meet_link = generate_google_meet_link(data.client_name, str(data.date), str(data.time))

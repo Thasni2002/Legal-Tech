@@ -1,9 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
-  reactCompiler: true,
   experimental: {
     globalNotFound: true,
+    optimizePackageImports: ["lucide-react"],
   },
   images: {
     unoptimized: true,

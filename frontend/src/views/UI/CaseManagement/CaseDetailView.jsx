@@ -1,7 +1,7 @@
 "use client";
 
 import { API_BASE_URL } from "@/services/api";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -288,6 +288,17 @@ function InfoRow({ icon, label, value }) {
 
 export default function CaseDetailView({ id }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromParam = searchParams ? searchParams.get("from") : null;
+
+  const handleBack = () => {
+    if (fromParam === "consultations") {
+      router.push("/consultations");
+    } else {
+      router.push("/case-management");
+    }
+  };
+
   const { hasPermission } = usePermissions();
 
   const loggedInUser = getLoggedInUser();
@@ -1691,10 +1702,10 @@ export default function CaseDetailView({ id }) {
         <h2 className="text-xl font-bold text-[#0F172A] mb-2">Case Not Found</h2>
         <p className="text-[#64748B] text-sm mb-6">The requested case could not be loaded or does not exist.</p>
         <button
-          onClick={() => router.push("/case-management")}
+          onClick={handleBack}
           className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition"
         >
-          Back to Case Management
+          {fromParam === "consultations" ? "Back to Case Discussion" : "Back to Case Management"}
         </button>
       </div>
     );
@@ -1746,9 +1757,9 @@ export default function CaseDetailView({ id }) {
       <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/40 border border-[#E2E8F0] p-4 sm:p-5 md:p-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4 sm:gap-5">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1 w-full">
           <button
-            onClick={() => router.push("/case-management")}
+            onClick={handleBack}
             className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 transition cursor-pointer flex items-center justify-center shrink-0"
-            title="Back to Case List"
+            title={fromParam === "consultations" ? "Back to Case Discussion" : "Back to Case List"}
           >
             <ArrowLeft size={18} />
           </button>
