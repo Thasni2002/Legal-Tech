@@ -159,19 +159,19 @@ export const deleteCaseAssignment = (caseId) =>
 // 5. CLIENT MANAGEMENT APIs
 // ==========================================
 export const getClients = () =>
-  apiClient("/client-management/");
+  apiClient("/clients/");
 
 export const addClient = (clientData) =>
-  apiClient("/client-management/", { method: "POST", body: clientData });
+  apiClient("/clients/", { method: "POST", body: clientData });
 
 export const getClientById = (id) =>
-  apiClient(`/client-management/${id}`);
+  apiClient(`/clients/${id}`);
 
 export const updateClient = (id, clientData) =>
-  apiClient(`/client-management/${id}`, { method: "PUT", body: clientData });
+  apiClient(`/clients/${id}`, { method: "PUT", body: clientData });
 
 export const deleteClient = (id) =>
-  apiClient(`/client-management/${id}`, { method: "DELETE" });
+  apiClient(`/clients/${id}`, { method: "DELETE" });
 
 export const getNextClientId = () =>
   apiClient("/clients/next-id");

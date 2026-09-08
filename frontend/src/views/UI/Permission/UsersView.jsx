@@ -1750,16 +1750,17 @@ export default function UsersView() {
                         >
                           <div className={`px-4 py-2.5 border-b flex items-center justify-between ${
                             isSystemAdmin
-                              ? "bg-purple-50/80 border-purple-200 text-purple-900 border-l-4 border-l-purple-600"
+                              ? "bg-[#0F172A] border-slate-800 text-white border-l-4 border-l-amber-500 font-extrabold shadow-md"
                               : "bg-slate-100/80 border-slate-200 text-slate-700"
                           }`}>
-                            <span className="text-xs font-extrabold uppercase tracking-wider flex items-center gap-1.5">
-                              {isSystemAdmin && <ShieldAlert size={13} className="text-purple-600" />}
+                            <span className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5 text-white">
+                              {isSystemAdmin ? <ShieldAlert size={14} className="text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]" /> : null}
                               {cat.category}
                             </span>
                             {isSystemAdmin && (
-                              <span className="text-[9px] font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full border border-purple-200">
-                                Security Section
+                              <span className="text-[9px] font-black bg-amber-500/20 text-amber-300 px-2.5 py-0.5 rounded-full border border-amber-500/40 flex items-center gap-1">
+                                <Lock size={11} className="text-amber-400" />
+                                SENSITIVE SECURITY ZONE (RESTRICTED)
                               </span>
                             )}
                           </div>

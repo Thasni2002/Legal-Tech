@@ -1,3 +1,5 @@
+from app.advocate.case_management.models import CaseNote
+from app.advocate.case_management.models import CaseDocumentWorkflow
 import os
 import json
 from datetime import datetime
@@ -306,7 +308,6 @@ def update_case(db: Session, case_id: int, data: CaseUpdate):
             from fastapi import HTTPException
             raise HTTPException(status_code=400, detail="Cannot update status for a disposed case.")
         if case.status != data.status:
-            from datetime import datetime
             case.status_updated_at = datetime.utcnow()
         case.status = data.status
         try:
