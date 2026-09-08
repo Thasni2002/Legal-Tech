@@ -570,7 +570,7 @@ export default function PermissionView() {
                       : "bg-slate-100/90 border-slate-200/80 text-slate-700"
                   }`}>
                     <span className="text-[11px] font-extrabold uppercase tracking-wider flex items-center justify-between gap-2">
-                      <span className="flex items-center gap-1.5 truncate text-white font-black">
+                      <span className={`flex items-center gap-1.5 truncate font-black ${isSystemAdmin ? "text-white" : "text-[#0F172A]"}`}>
                         {isSystemAdmin ? <ShieldAlert size={14} className="text-amber-400 shrink-0 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]" /> : <Lock size={12} className="text-blue-600 shrink-0" />}
                         {category}
                       </span>
@@ -702,7 +702,7 @@ export default function PermissionView() {
                           }`}
                         >
                           <div className="flex items-center justify-between">
-                            <span className="flex items-center gap-2 font-black text-white">
+                            <span className={`flex items-center gap-2 font-black ${isSystemAdmin ? "text-white" : "text-[#0F172A]"}`}>
                               {isSystemAdmin ? <ShieldAlert size={15} className="text-amber-400 shrink-0 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]" /> : <Lock size={13} className="text-blue-600 shrink-0" />}
                               {category}
                             </span>

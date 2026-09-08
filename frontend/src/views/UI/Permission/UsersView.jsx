@@ -1753,7 +1753,7 @@ export default function UsersView() {
                               ? "bg-[#0F172A] border-slate-800 text-white border-l-4 border-l-amber-500 font-extrabold shadow-md"
                               : "bg-slate-100/80 border-slate-200 text-slate-700"
                           }`}>
-                            <span className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5 text-white">
+                            <span className={`text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${isSystemAdmin ? "text-white" : "text-[#0F172A]"}`}>
                               {isSystemAdmin ? <ShieldAlert size={14} className="text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]" /> : null}
                               {cat.category}
                             </span>

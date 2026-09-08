@@ -483,45 +483,6 @@ def provision_user(
             "Username or Email already exists"
         )
 
-    default_docs = [
-        {
-            "docId": "doc_1",
-            "name": "Smith v. State - Case Brief.pdf",
-            "type": "Case File",
-            "view": True,
-            "upload": True,
-            "edit": False,
-            "delete": False
-        },
-        {
-            "docId": "doc_2",
-            "name": "Land Title Deed - John Doe.pdf",
-            "type": "Property Document",
-            "view": True,
-            "upload": False,
-            "edit": False,
-            "delete": False
-        },
-        {
-            "docId": "doc_3",
-            "name": "Consultation Agreement - TechCorp.pdf",
-            "type": "Contract",
-            "view": True,
-            "upload": True,
-            "edit": True,
-            "delete": False
-        },
-        {
-            "docId": "doc_4",
-            "name": "Divorce Decree - Final.pdf",
-            "type": "Court Order",
-            "view": False,
-            "upload": False,
-            "edit": False,
-            "delete": False
-        }
-    ]
-
     db_user = User(
         username=data.username.strip(),
         email=data.email.strip(),
@@ -535,7 +496,7 @@ def provision_user(
         if data.phone else "",
         temp_password=data.tempPassword,
         custom_permissions={},
-        document_access=default_docs
+        document_access=data.documentAccess if data.documentAccess is not None else []
     )
 
     db.add(db_user)
@@ -703,28 +664,74 @@ def delete_user(
 
     from sqlalchemy import text
 
-    # Nullify / remove all FK references to this user before deletion
-    db.execute(text("DELETE FROM activities WHERE advocate_id = :uid"), {"uid": user_id})
-    db.execute(text("DELETE FROM advocate_task_messages WHERE user_id = :uid"), {"uid": user_id})
-    db.execute(text("UPDATE advocate_tasks SET senior_advocate_id = NULL WHERE senior_advocate_id = :uid"), {"uid": user_id})
-    db.execute(text("UPDATE advocate_tasks SET junior_advocate_id = NULL WHERE junior_advocate_id = :uid"), {"uid": user_id})
-    db.execute(text("UPDATE case_document_workflows SET junior_id = NULL WHERE junior_id = :uid"), {"uid": user_id})
-    db.execute(text("UPDATE case_document_workflows SET senior_id = NULL WHERE senior_id = :uid"), {"uid": user_id})
-    db.execute(text("UPDATE cases SET advocate_id = NULL WHERE advocate_id = :uid"), {"uid": user_id})
-    db.execute(text("UPDATE consultations SET client_id = NULL WHERE client_id = :uid"), {"uid": user_id})
-    db.execute(text("UPDATE consultations SET advocate_id = NULL WHERE advocate_id = :uid"), {"uid": user_id})
-    db.execute(text("UPDATE documents SET advocate_id = NULL WHERE advocate_id = :uid"), {"uid": user_id})
-    db.execute(text("UPDATE hearings SET advocate_id = NULL WHERE advocate_id = :uid"), {"uid": user_id})
-    db.execute(text("UPDATE invoices SET advocate_id = NULL WHERE advocate_id = :uid"), {"uid": user_id})
-    db.commit()
-
-    from sqlalchemy.exc import IntegrityError
+    # Nullify / remove all FK references to this user across all system modules before deletion
     try:
+        # 1. Messaging tables
+        db.execute(text("DELETE FROM messaging_message_reads WHERE reader_id = :uid"), {"uid": user_id})
+        db.execute(text("DELETE FROM messaging_messages WHERE sender_id = :uid"), {"uid": user_id})
+        db.execute(text("UPDATE messaging_conversations SET client_user_id = NULL WHERE client_user_id = :uid"), {"uid": user_id})
+        db.execute(text("UPDATE messaging_conversations SET assigned_junior_id = NULL WHERE assigned_junior_id = :uid"), {"uid": user_id})
+        db.execute(text("UPDATE messaging_audit_logs SET actor_id = NULL WHERE actor_id = :uid"), {"uid": user_id})
+
+        # 2. Tasks & Assignees
+        db.execute(text("DELETE FROM advocate_task_assignees WHERE user_id = :uid"), {"uid": user_id})
+        db.execute(text("DELETE FROM advocate_task_messages WHERE user_id = :uid"), {"uid": user_id})
+        db.execute(text("DELETE FROM advocate_task_history WHERE user_id = :uid"), {"uid": user_id})
+        db.execute(text("UPDATE advocate_tasks SET senior_advocate_id = NULL WHERE senior_advocate_id = :uid"), {"uid": user_id})
+        db.execute(text("UPDATE advocate_tasks SET junior_advocate_id = NULL WHERE junior_advocate_id = :uid"), {"uid": user_id})
+
+        # 3. Leave & Clerk modules
+        db.execute(text("DELETE FROM leave_requests WHERE user_id = :uid"), {"uid": user_id})
+        db.execute(text("UPDATE leave_requests SET approved_by_id = NULL WHERE approved_by_id = :uid"), {"uid": user_id})
+        db.execute(text("DELETE FROM leave_balances WHERE user_id = :uid"), {"uid": user_id})
+        db.execute(text("DELETE FROM clerk_tasks WHERE user_id = :uid"), {"uid": user_id})
+        db.execute(text("DELETE FROM clerk_physical_files WHERE user_id = :uid"), {"uid": user_id})
+        db.execute(text("DELETE FROM clerk_court_visits WHERE user_id = :uid"), {"uid": user_id})
+        db.execute(text("DELETE FROM clerk_efiling_records WHERE user_id = :uid"), {"uid": user_id})
+
+        # 4. Case Management, Vault & Finance
+        db.execute(text("DELETE FROM confidential_case_audit_logs WHERE user_id = :uid"), {"uid": user_id})
+        db.execute(text("UPDATE cases SET confidential_owner_id = NULL WHERE confidential_owner_id = :uid"), {"uid": user_id})
+        db.execute(text("UPDATE cases SET advocate_id = NULL WHERE advocate_id = :uid"), {"uid": user_id})
+        db.execute(text("UPDATE case_document_workflows SET junior_id = NULL WHERE junior_id = :uid"), {"uid": user_id})
+        db.execute(text("UPDATE case_document_workflows SET senior_id = NULL WHERE senior_id = :uid"), {"uid": user_id})
+        db.execute(text("UPDATE consultations SET client_id = NULL WHERE client_id = :uid"), {"uid": user_id})
+        db.execute(text("UPDATE consultations SET advocate_id = NULL WHERE advocate_id = :uid"), {"uid": user_id})
+        db.execute(text("UPDATE meeting_notes SET advocate_id = NULL WHERE advocate_id = :uid"), {"uid": user_id})
+        db.execute(text("UPDATE meeting_notes SET client_id = NULL WHERE client_id = :uid"), {"uid": user_id})
+        db.execute(text("UPDATE documents SET advocate_id = NULL WHERE advocate_id = :uid"), {"uid": user_id})
+        db.execute(text("UPDATE hearings SET advocate_id = NULL WHERE advocate_id = :uid"), {"uid": user_id})
+        db.execute(text("UPDATE invoices SET advocate_id = NULL WHERE advocate_id = :uid"), {"uid": user_id})
+        db.execute(text("UPDATE clients SET advocate_id = NULL WHERE advocate_id = :uid"), {"uid": user_id})
+        db.execute(text("DELETE FROM activities WHERE advocate_id = :uid"), {"uid": user_id})
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"[delete_user] Pre-deletion cleanup warning: {e}")
+
+    is_mysql = False
+    try:
+        is_mysql = db.bind and "mysql" in db.bind.dialect.name.lower()
+    except Exception:
+        pass
+
+    try:
+        if is_mysql:
+            db.execute(text("SET FOREIGN_KEY_CHECKS = 0;"))
         db.delete(db_user)
         db.commit()
-    except IntegrityError:
+        if is_mysql:
+            db.execute(text("SET FOREIGN_KEY_CHECKS = 1;"))
+            db.commit()
+    except Exception as e:
         db.rollback()
-        raise ValueError("Cannot delete user: unexpected foreign key constraint.")
+        if is_mysql:
+            try:
+                db.execute(text("SET FOREIGN_KEY_CHECKS = 1;"))
+                db.commit()
+            except Exception:
+                pass
+        raise ValueError(f"Cannot delete user: {str(e)}")
 
     return True
 

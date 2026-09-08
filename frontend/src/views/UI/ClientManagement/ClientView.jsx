@@ -63,8 +63,7 @@ export default function ClientView() {
 
       const clientList = backendClients.map((c) => {
         const matchingCases = casesData.filter(
-          (k) => (k.client_id && k.client_id === c.client_id) ||
-                 (k.client_name && k.client_name.trim().toLowerCase() === (c.full_name || "").trim().toLowerCase())
+          (k) => (k.client_id ? k.client_id === c.client_id : (k.client_name && k.client_name.trim().toLowerCase() === (c.full_name || "").trim().toLowerCase()))
         );
 
         const totalCases = c.total_cases !== undefined ? c.total_cases : matchingCases.length;
@@ -413,9 +412,9 @@ export default function ClientView() {
                         </div>
 
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-semibold text-[#94A3B8]">Active Cases:</span>
-                          <span className="px-2 py-0.5 rounded-md bg-white border border-[#E2E8F0] font-bold text-[#0F172A]">
-                            {client.activeCases}
+                          <span className="text-[11px] font-semibold text-[#94A3B8]">Total Cases:</span>
+                          <span className="px-2 py-0.5 rounded-md bg-white border border-[#E2E8F0] font-bold text-[#0F172A]" title={`${client.activeCases || 0} Active / ${client.totalCases || 0} Total`}>
+                            {client.totalCases !== undefined ? client.totalCases : client.activeCases}
                           </span>
                         </div>
 
@@ -575,8 +574,11 @@ export default function ClientView() {
                       </td>
 
                       <td className="py-3.5 px-4 text-xs text-center font-bold text-[#0F172A]">
-                        <span className="px-2.5 py-0.5 rounded-md bg-[#F1F5F9] border border-[#E2E8F0] inline-block">
-                          {client.activeCases}
+                        <span
+                          className="px-2.5 py-0.5 rounded-md bg-[#F1F5F9] border border-[#E2E8F0] inline-block"
+                          title={`${client.activeCases || 0} Active / ${client.totalCases || 0} Total`}
+                        >
+                          {client.totalCases !== undefined ? client.totalCases : client.activeCases}
                         </span>
                       </td>
 
