@@ -25,7 +25,8 @@ export default function SearchableDropdown({
   className = "",
   dropdownWidthClass = "w-72 sm:w-80",
   alignRight = false,
-  disabled = false
+  disabled = false,
+  fullWidth = false
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -79,8 +80,8 @@ export default function SearchableDropdown({
   };
 
   return (
-    <div className="relative inline-block text-left" ref={dropdownRef}>
-      <div className="flex items-center gap-2">
+    <div className={fullWidth ? "relative w-full text-left" : "relative inline-block text-left"} ref={dropdownRef}>
+      <div className={fullWidth ? "flex items-center gap-2 w-full" : "flex items-center gap-2"}>
         {labelPrefix && (
           <span className="text-xs font-bold text-[#64748B] whitespace-nowrap">
             {labelPrefix}
@@ -91,7 +92,9 @@ export default function SearchableDropdown({
           type="button"
           disabled={disabled}
           onClick={() => setIsOpen(!isOpen)}
-          className={`flex items-center justify-between gap-2.5 rounded-xl border border-[#E2E8F0] bg-white px-3 py-1.5 text-xs font-bold text-[#0F172A] shadow-2xs hover:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all cursor-pointer max-w-[260px] sm:max-w-[300px] ${
+          className={`flex items-center justify-between gap-2.5 rounded-xl border border-[#E2E8F0] bg-white px-3 py-1.5 text-xs font-bold text-[#0F172A] shadow-2xs hover:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all cursor-pointer ${
+            fullWidth ? "w-full max-w-full" : "max-w-[260px] sm:max-w-[300px]"
+          } ${
             isOpen ? "ring-2 ring-[#2563EB]/20 border-[#2563EB]" : ""
           } ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${className}`}
         >

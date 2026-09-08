@@ -1135,19 +1135,51 @@ def get_full_case_ai_summary(db: Session, case_id: int, current_user=None) -> di
             "assignment_notes": "Primary assigned legal counsel"
         })
 
-    # 3. Fetch Case Notes
+    # 3. Fetch Case Notes & Consultation Meeting Notes
     notes_list = []
     try:
         notes_db = db.query(CaseNote).filter(CaseNote.case_id == case_id).order_by(CaseNote.created_at.desc()).all()
         for n in notes_db:
+            raw_cat = n.category or "Advocate Note"
+            cat_display = "Advocate Note" if raw_cat in ["Action Item", "General Note", "Note", "Reminder"] else f"Advocate Note ({raw_cat})"
             notes_list.append({
                 "author": n.author or "Advocate",
-                "category": n.category or "General Note",
+                "category": cat_display,
                 "text": n.text,
                 "date": str(n.created_at.strftime("%Y-%m-%d %H:%M")) if n.created_at else "N/A"
             })
     except Exception as e:
         print("[CaseSummary] Error fetching notes:", e)
+
+    try:
+        from app.advocate.consultations.models import MeetingNote
+        from sqlalchemy import or_, func
+        m_notes = db.query(MeetingNote).filter(
+            or_(
+                MeetingNote.case_id == case.id,
+                func.lower(MeetingNote.client_name) == func.lower(case.client_name)
+            )
+        ).order_by(MeetingNote.meeting_date.desc(), MeetingNote.id.desc()).all()
+
+        for mn in m_notes:
+            details_parts = []
+            if mn.summary:
+                details_parts.append(f"Summary: {mn.summary}")
+            if mn.key_topics:
+                details_parts.append(f"Topics: {mn.key_topics}")
+            if mn.legal_advice:
+                details_parts.append(f"Advice: {mn.legal_advice}")
+
+            note_text = f"[{mn.title}] " + (" | ".join(details_parts) if details_parts else "Meeting note recorded.")
+
+            notes_list.append({
+                "author": case.selected_advocate or mn.client_name or "Advocate",
+                "category": f"Meeting Note ({mn.meeting_type or 'Consultation'})",
+                "text": note_text,
+                "date": f"{mn.meeting_date} {mn.meeting_time or ''}".strip()
+            })
+    except Exception as e:
+        print("[CaseSummary] Error fetching meeting notes:", e)
 
     # 4. Fetch Document Workflows
     doc_workflows = []

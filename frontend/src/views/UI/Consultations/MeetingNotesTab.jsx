@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import ReactDOM from "react-dom";
 import { API_BASE_URL } from "@/services/api";
+import SearchableDropdown from "@/components/common/SearchableDropdown";
 import {
   FileText,
   Search,
@@ -28,6 +29,7 @@ export default function MeetingNotesTab({ user, preselectedConsultation, onClose
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDateFilter, setSelectedDateFilter] = useState("");
   const [casesList, setCasesList] = useState([]);
+  const [consultationsList, setConsultationsList] = useState([]);
 
   // Modal states
   const [showNoteModal, setShowNoteModal] = useState(false);
@@ -69,24 +71,82 @@ export default function MeetingNotesTab({ user, preselectedConsultation, onClose
     }, 4000);
   };
 
-  // Fetch Cases list for dropdown selection
+  // Fetch Cases and Scheduled Consultations list for dropdown & autofill selection
   useEffect(() => {
-    const fetchCases = async () => {
+    const fetchData = async () => {
       try {
         const token = localStorage.getItem("token");
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        const res = await fetch(`${API_BASE_URL}/case-management/`, { headers });
-        if (res.ok) {
-          const data = await res.json();
+
+        // Fetch Cases
+        const casesRes = await fetch(`${API_BASE_URL}/case-management/`, { headers });
+        if (casesRes.ok) {
+          const data = await casesRes.json();
           const list = Array.isArray(data) ? data : data.cases || data.items || [];
           setCasesList(list);
         }
+
+        // Fetch Scheduled Consultations
+        const consultationsRes = await fetch(`${API_BASE_URL}/consultations`, { headers });
+        if (consultationsRes.ok) {
+          const data = await consultationsRes.json();
+          setConsultationsList(Array.isArray(data) ? data : []);
+        }
       } catch (err) {
-        console.warn("Could not fetch cases list for meeting notes:", err);
+        console.warn("Could not fetch initial data for meeting notes:", err);
       }
     };
-    fetchCases();
+    fetchData();
   }, []);
+
+  // Available scheduled meetings for selected case / client
+  const availableMeetings = useMemo(() => {
+    if (!formData.case_id && !formData.client_name) return [];
+
+    const selectedCaseId = String(formData.case_id || "");
+    const cleanClient = (formData.client_name || "").toLowerCase().trim();
+
+    return consultationsList.filter((m) => {
+      const matchCase = selectedCaseId && String(m.case_id) === selectedCaseId;
+      const matchClient = cleanClient && (m.client_name || "").toLowerCase().includes(cleanClient);
+      const status = (m.status || "").toLowerCase();
+      const isEligibleStatus = ["approved", "completed", "confirmed", "scheduled", "accepted"].includes(status);
+
+      return (matchCase || matchClient) && isEligibleStatus;
+    });
+  }, [consultationsList, formData.case_id, formData.client_name]);
+
+  const handleSelectScheduledMeeting = (meeting) => {
+    setFormData((prev) => ({
+      ...prev,
+      consultation_id: meeting.id,
+      meeting_date: meeting.date ? String(meeting.date) : prev.meeting_date,
+      meeting_time: meeting.time ? String(meeting.time) : prev.meeting_time,
+      meeting_type: meeting.type || prev.meeting_type,
+      client_name: prev.client_name || meeting.client_name || ""
+    }));
+    showToast(`Autofilled Date & Time from scheduled meeting (${meeting.date} @ ${meeting.time})`, "success");
+  };
+
+  // Format cases for SearchableDropdown
+  const caseOptions = useMemo(() => {
+    const clientFilter = (formData.client_name || "").toLowerCase().trim();
+    const filtered = clientFilter
+      ? casesList.filter(c =>
+          (c.client_name || "").toLowerCase().includes(clientFilter) ||
+          clientFilter.includes((c.client_name || "").toLowerCase())
+        )
+      : casesList;
+
+    return [
+      { id: "", label: "— Select Case —" },
+      ...filtered.map((c) => ({
+        id: c.id,
+        label: `${c.case_title || "Untitled Case"} ${c.case_no ? `(#${c.case_no})` : ""}`,
+        sublabel: c.client_name ? `Client: ${c.client_name}` : undefined
+      }))
+    ];
+  }, [casesList, formData.client_name]);
 
   // Fetch Meeting Notes
   const fetchNotes = async () => {
@@ -279,6 +339,10 @@ export default function MeetingNotesTab({ user, preselectedConsultation, onClose
 
   const handleSaveNote = async (e) => {
     e.preventDefault();
+    if (!formData.case_id) {
+      showToast("Please select an existing case", "error");
+      return;
+    }
     if (!formData.meeting_date) {
       showToast("Meeting date is required", "error");
       return;
@@ -711,8 +775,22 @@ export default function MeetingNotesTab({ user, preselectedConsultation, onClose
                 </div>
               </div>
 
-              {/* Row 2 — Client + Case */}
+              {/* Row 2 — Link Existing Case + Client Name (Swapped order, Case is Required) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Case <span className="text-rose-500">*</span>
+                  </label>
+                  <SearchableDropdown
+                    fullWidth
+                    options={caseOptions}
+                    value={formData.case_id}
+                    onChange={(selectedId) => handleCaseSelect(selectedId)}
+                    placeholder="Search by case title, case #, or client..."
+                    dropdownWidthClass="w-full"
+                    className="w-full py-2.5 px-3.5 bg-slate-50 border-slate-200 text-sm font-normal"
+                  />
+                </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
                     Client Name <span className="text-rose-500">*</span>
@@ -732,34 +810,46 @@ export default function MeetingNotesTab({ user, preselectedConsultation, onClose
                     />
                   )}
                 </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                    Link Existing Case
-                    <span className="ml-1 text-[10px] font-medium text-slate-400 normal-case tracking-normal">(Optional)</span>
-                  </label>
-                  <select
-                    value={formData.case_id}
-                    onChange={(e) => handleCaseSelect(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-500 focus:bg-white transition-all outline-none"
-                  >
-                    <option value="">— No Specific Case (General Consultation) —</option>
-                    {(() => {
-                      const clientFilter = (formData.client_name || "").toLowerCase().trim();
-                      const filtered = clientFilter
-                        ? casesList.filter(c =>
-                            (c.client_name || "").toLowerCase().includes(clientFilter) ||
-                            clientFilter.includes((c.client_name || "").toLowerCase())
-                          )
-                        : casesList;
-                      return filtered.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.case_title} ({c.case_no})
-                        </option>
-                      ));
-                    })()}
-                  </select>
-                </div>
               </div>
+
+              {/* Scheduled Meetings Quick Select Banner */}
+              {availableMeetings.length > 0 && (
+                <div className="bg-indigo-50/80 border border-indigo-200/80 rounded-xl p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                      <Calendar size={14} className="text-indigo-600 shrink-0" />
+                      Select Scheduled Meeting Time to Autofill:
+                    </span>
+                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full">
+                      {availableMeetings.length} Meeting{availableMeetings.length > 1 ? "s" : ""} Found
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {availableMeetings.map((m) => {
+                      const isSelected = String(formData.consultation_id) === String(m.id);
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => handleSelectScheduledMeeting(m)}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-all border cursor-pointer ${
+                            isSelected
+                              ? "bg-indigo-600 text-white border-indigo-600 shadow-md scale-105"
+                              : "bg-white text-slate-800 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/50 shadow-2xs"
+                          }`}
+                        >
+                          <span className="font-bold">{m.date} @ {m.time}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold capitalize ${
+                            isSelected ? "bg-indigo-700 text-white" : "bg-slate-100 text-slate-600"
+                          }`}>
+                            {m.type || "Meeting"} • {m.status}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Row 3 — Date + Time */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

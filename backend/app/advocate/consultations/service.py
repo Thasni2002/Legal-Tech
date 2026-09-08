@@ -726,11 +726,14 @@ def create_meeting_note(db: Session, data: MeetingNoteCreate, current_user=None)
         is_confidential=data.is_confidential or False
     )
 
-    # If consultation exists, update summary in consultation table as well
-    if data.consultation_id and data.summary:
+    # If consultation exists, update summary & case_id in consultation table as well
+    if data.consultation_id:
         consult = db.query(Consultation).filter(Consultation.id == data.consultation_id).first()
         if consult:
-            consult.summary = data.summary
+            if data.summary:
+                consult.summary = data.summary
+            if data.case_id:
+                consult.case_id = data.case_id
             consult.status = "Completed"
 
     db.add(note)
@@ -774,6 +777,29 @@ def update_meeting_note(db: Session, note_id: int, data: MeetingNoteUpdate):
     update_dict = data.dict(exclude_unset=True)
     for field, value in update_dict.items():
         setattr(note, field, value)
+
+    # Auto-resolve case_title and case_no if case_id is set
+    if note.case_id:
+        case_obj = db.query(Case).filter(Case.id == note.case_id).first()
+        if case_obj:
+            note.case_title = case_obj.case_title
+            note.case_no = case_obj.case_no
+            if not note.client_name or note.client_name == "Client":
+                note.client_name = case_obj.client_name
+
+    # Sync consultation summary & date/time if linked to a consultation
+    if note.consultation_id:
+        consult = db.query(Consultation).filter(Consultation.id == note.consultation_id).first()
+        if consult:
+            if note.summary:
+                consult.summary = note.summary
+            if note.meeting_date:
+                consult.date = note.meeting_date
+            if note.meeting_time:
+                consult.time = note.meeting_time
+            if note.case_id:
+                consult.case_id = note.case_id
+            consult.status = "Completed"
 
     db.commit()
     db.refresh(note)
