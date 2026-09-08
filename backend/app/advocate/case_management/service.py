@@ -26,12 +26,12 @@ def _sync_client_record(db: Session, client_id: str, full_name: str, email: str,
             return client_id or ""
 
         client = None
-        if client_id and client_id.strip():
-            client = db.query(Client).filter(Client.client_id == client_id.strip()).first()
-        if not client and full_name and full_name.strip():
-            client = db.query(Client).filter(func.lower(Client.full_name) == full_name.strip().lower()).first()
-
         cid = client_id.strip() if client_id and client_id.strip() else None
+
+        if cid:
+            client = db.query(Client).filter(Client.client_id == cid).first()
+        elif full_name and full_name.strip():
+            client = db.query(Client).filter(func.lower(Client.full_name) == full_name.strip().lower()).first()
 
         if not cid and client and client.client_id:
             cid = client.client_id

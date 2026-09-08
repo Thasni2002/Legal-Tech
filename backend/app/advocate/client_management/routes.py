@@ -73,7 +73,7 @@ def get_clients(
         c_name_key = case.client_name.strip().lower()
         c_cid = (case.client_id or "").strip()
         
-        target_client = clients_by_cid.get(c_cid) or clients_by_name.get(c_name_key)
+        target_client = clients_by_cid.get(c_cid) if c_cid else clients_by_name.get(c_name_key)
         
         if not target_client:
             # Generate client_id if missing
@@ -119,7 +119,7 @@ def get_clients(
         cl_cases = [
             c for c in all_mgmt_cases
             if (c.client_id and c.client_id == cl.client_id) or
-               (c.client_name and c.client_name.strip().lower() == (cl.full_name or "").strip().lower())
+               (not c.client_id and c.client_name and c.client_name.strip().lower() == (cl.full_name or "").strip().lower())
         ]
         
         total_c = len(cl_cases)

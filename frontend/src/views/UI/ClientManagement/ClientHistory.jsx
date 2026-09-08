@@ -340,9 +340,11 @@ export default function ClientHistory() {
 
           const matchedCases = client
             ? data.filter(item => {
-                if (targetClientId && item.client_id && item.client_id === targetClientId) return true;
+                if (item.client_id && targetClientId) {
+                  return item.client_id === targetClientId;
+                }
                 const itemClientName = (item.client_name || "").trim().toLowerCase();
-                return itemClientName === targetName || targetName.includes(itemClientName) || itemClientName.includes(targetName);
+                return itemClientName === targetName;
               })
             : data;
 
