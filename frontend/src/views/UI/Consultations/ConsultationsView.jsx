@@ -1090,7 +1090,7 @@ export default function ConsultationsView() {
                                         </span>
 
                                         <div className="flex items-center gap-2">
-                                            {item.meeting_link && (item.status === "Approved" || item.status === "Scheduled" || item.status === "Completed") && (
+                                            {item.meeting_link && (
                                                 <a
                                                     href={item.meeting_link.startsWith("http") ? item.meeting_link : `https://${item.meeting_link}`}
                                                     target="_blank"
@@ -1150,12 +1150,12 @@ export default function ConsultationsView() {
                                                 </span>
                                             </td>
                                             <td className="p-4 whitespace-nowrap text-sm">
-                                                {item.meeting_link && (item.status === "Approved" || item.status === "Scheduled" || item.status === "Completed") ? (
+                                                {item.meeting_link ? (
                                                     <a
                                                         href={item.meeting_link.startsWith("http") ? item.meeting_link : `https://${item.meeting_link}`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="text-[#2563EB] hover:text-[#1D4ED8] font-bold inline-flex items-center gap-1.5 bg-blue-50/70 border border-blue-200 px-3 py-1 rounded-lg transition-colors text-xs shadow-2xs"
+                                                        className="text-[#2563EB] hover:text-[#1D4ED8] font-bold inline-flex items-center gap-1.5 bg-blue-50/70 border border-blue-200 px-3 py-1 rounded-lg transition-colors text-xs shadow-2xs hover:bg-blue-100/80"
                                                     >
                                                         <Video size={14} />
                                                         <span>Open Google Meet</span>

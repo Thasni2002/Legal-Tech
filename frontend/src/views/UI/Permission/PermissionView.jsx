@@ -84,13 +84,13 @@ const ALL_GROUPS = [
     ],
   },
   {
-    category: "Client Section Features",
+    category: "Client Features",
     modules: [
       { key: "Client Dashboard", label: "Dashboard (Client)" },
       { key: "Consultation", label: "Case Discussion (Client)" },
       { key: "Case Tracking", label: "Case Tracking" },
-      { key: "Documents", label: "Documents" },
-      { key: "Payments", label: "Payments" },
+      { key: "Documents", label: "Documents (Client)" },
+      { key: "Payments", label: "Payments (Client)" },
     ],
   },
   {
@@ -119,13 +119,13 @@ const ALL_GROUPS = [
 // Client-only group
 const CLIENT_GROUPS = [
   {
-    category: "Client Section Features",
+    category: "Client Features",
     modules: [
       { key: "Client Dashboard", label: "Dashboard (Client)" },
       { key: "Consultation", label: "Case Discussion (Client)" },
       { key: "Case Tracking", label: "Case Tracking" },
-      { key: "Documents", label: "Documents" },
-      { key: "Payments", label: "Payments" },
+      { key: "Documents", label: "Documents (Client)" },
+      { key: "Payments", label: "Payments (Client)" },
     ],
   },
 ];
@@ -133,7 +133,7 @@ const CLIENT_GROUPS = [
 const getGroupsForRole = (roleName) => {
   const normalized = (roleName || "").toLowerCase().replace(/\s+/g, "");
   if (normalized === "client" || normalized.includes("client")) return CLIENT_GROUPS;
-  return ALL_GROUPS.filter((g) => g.category !== "Client Section Features");
+  return ALL_GROUPS;
 };
 
 
