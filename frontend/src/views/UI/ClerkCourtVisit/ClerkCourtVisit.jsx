@@ -58,9 +58,11 @@ export default function ClerkCourtVisit() {
 
   const fetchAllData = async () => {
     try {
+      const token = localStorage.getItem("token");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const [resVisits, resCases] = await Promise.all([
-        fetch(`${API_BASE_URL}/clerk/court-visit`),
-        fetch(`${API_BASE_URL}/case-management/`)
+        fetch(`${API_BASE_URL}/clerk/court-visit`, { headers }),
+        fetch(`${API_BASE_URL}/case-management/`, { headers })
       ]);
 
       let visitList = [];
@@ -193,10 +195,24 @@ export default function ClerkCourtVisit() {
     const matchesStatus =
       statusFilter === "All" || item.visit_status === statusFilter;
 
-    const matchesDate =
-      dateFilterMode === "all_dates" ||
-      item.visit_date === selectedDate ||
-      item.next_hearing_date === selectedDate;
+    const todayStr = new Date().toISOString().split("T")[0];
+    const matchesDate = (() => {
+      if (dateFilterMode === "all_dates") return true;
+      if (dateFilterMode === "tomorrow") {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomStr = tomorrow.toISOString().split("T")[0];
+        return item.visit_date === tomStr || item.next_hearing_date === tomStr;
+      }
+      if (dateFilterMode === "next_7_days") {
+        const in7Days = new Date();
+        in7Days.setDate(in7Days.getDate() + 7);
+        const in7Str = in7Days.toISOString().split("T")[0];
+        const itemDate = item.visit_date || item.next_hearing_date;
+        return itemDate >= todayStr && itemDate <= in7Str;
+      }
+      return item.visit_date === selectedDate || item.next_hearing_date === selectedDate;
+    })();
 
     return matchesSearch && matchesStatus && matchesDate;
   });
@@ -252,11 +268,16 @@ export default function ClerkCourtVisit() {
 
     try {
       let visitId = checkoutItem.dbVisitId;
+      const token = localStorage.getItem("token");
+      const authHeaders = {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      };
 
       if (visitId) {
         await fetch(`${API_BASE_URL}/clerk/court-visit/${visitId}`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders,
           body: JSON.stringify({
             visit_status: "Completed",
             check_out_time: nowStr,
@@ -266,7 +287,7 @@ export default function ClerkCourtVisit() {
       } else {
         const res = await fetch(`${API_BASE_URL}/clerk/court-visit`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders,
           body: JSON.stringify({
             court_name: checkoutItem.court_name,
             court_hall: checkoutItem.court_hall,
@@ -308,7 +329,7 @@ export default function ClerkCourtVisit() {
 
         await fetch(`${API_BASE_URL}/case-management/${targetCaseId}/notes`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders,
           body: JSON.stringify({
             text: formattedNoteContent,
             category: checkoutCategory || "Hearing Prep",
@@ -347,12 +368,17 @@ export default function ClerkCourtVisit() {
 
     try {
       const caseId = scheduleItem.case_id;
+      const token = localStorage.getItem("token");
+      const authHeaders = {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      };
 
       // 1. Update case next_hearing_date in backend
       if (caseId) {
         await fetch(`${API_BASE_URL}/case-management/${caseId}`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders,
           body: JSON.stringify({
             nextHearingDate: nextHearingDateInput
           })
@@ -362,7 +388,7 @@ export default function ClerkCourtVisit() {
       // 2. Create a new Pending Court Visit log for the next hearing date
       await fetch(`${API_BASE_URL}/clerk/court-visit`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders,
         body: JSON.stringify({
           court_name: scheduleItem.court_name,
           court_hall: nextCourtHallInput,
@@ -386,7 +412,7 @@ export default function ClerkCourtVisit() {
 
         await fetch(`${API_BASE_URL}/case-management/${caseId}/notes`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders,
           body: JSON.stringify({
             text: `📅 [Next Hearing Scheduled]\nDate: ${nextHearingDateInput}\nCourt: ${scheduleItem.court_name} (${nextCourtHallInput})\nPurpose: ${nextPurposeInput}`,
             category: "Hearing Prep",
@@ -452,6 +478,68 @@ export default function ClerkCourtVisit() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+          {/* Quick Date Presets */}
+          <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/80 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                const today = new Date().toISOString().split("T")[0];
+                setSelectedDate(today);
+                setDateFilterMode("active_today");
+              }}
+              className={`px-2.5 py-1 text-xs font-bold rounded-lg transition cursor-pointer ${
+                dateFilterMode === "active_today" && selectedDate === new Date().toISOString().split("T")[0]
+                  ? "bg-white text-emerald-700 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const tom = new Date();
+                tom.setDate(tom.getDate() + 1);
+                const tomStr = tom.toISOString().split("T")[0];
+                setSelectedDate(tomStr);
+                setDateFilterMode("tomorrow");
+              }}
+              className={`px-2.5 py-1 text-xs font-bold rounded-lg transition cursor-pointer ${
+                dateFilterMode === "tomorrow"
+                  ? "bg-white text-emerald-700 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Tomorrow
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setDateFilterMode("next_7_days");
+              }}
+              className={`px-2.5 py-1 text-xs font-bold rounded-lg transition cursor-pointer ${
+                dateFilterMode === "next_7_days"
+                  ? "bg-white text-emerald-700 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Next 7 Days
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setDateFilterMode("all_dates");
+              }}
+              className={`px-2.5 py-1 text-xs font-bold rounded-lg transition cursor-pointer ${
+                dateFilterMode === "all_dates"
+                  ? "bg-white text-emerald-700 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              All Dates
+            </button>
+          </div>
+
           {/* Date Selector */}
           <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
             <Calendar size={14} className="text-slate-400 shrink-0" />
@@ -464,15 +552,6 @@ export default function ClerkCourtVisit() {
               }}
               className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer"
             />
-            {selectedDate !== new Date().toISOString().split("T")[0] && (
-              <button
-                type="button"
-                onClick={() => setSelectedDate(new Date().toISOString().split("T")[0])}
-                className="text-[10px] font-extrabold text-blue-600 hover:text-blue-800 underline"
-              >
-                Today
-              </button>
-            )}
           </div>
 
           {/* Status Filter Dropdown */}
@@ -535,130 +614,164 @@ export default function ClerkCourtVisit() {
           </div>
           <h3 className="text-xl font-bold text-slate-800">No Cases Found</h3>
           <p className="text-slate-500 text-sm max-w-md mx-auto">
-            {searchQuery ? "No cases match your search query." : "All newly added cases will automatically appear here for court visit tracking."}
+            {searchQuery ? "No cases match your search query." : `No scheduled court visits found for ${dateFilterMode === 'all_dates' ? 'any date' : selectedDate}.`}
           </p>
+          {dateFilterMode !== "all_dates" && (
+            <button
+              type="button"
+              onClick={() => setDateFilterMode("all_dates")}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+            >
+              <Calendar size={14} />
+              <span>Show All Upcoming Cases & Dates</span>
+            </button>
+          )}
         </div>
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredItems.map((item) => (
-            <div key={item.id} className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-all space-y-5 flex flex-col justify-between">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className={`px-3 py-1 rounded-full text-xs font-extrabold ${
-                    item.visit_status === 'Completed' ? 'bg-emerald-100 text-emerald-800' :
-                    item.visit_status === 'In Court' ? 'bg-amber-100 text-amber-800 animate-pulse' :
-                    'bg-slate-100 text-slate-700'
-                  }`}>
-                    {item.visit_status}
-                  </span>
-                  {perms.delete ? (
-                    item.dbVisitId ? (
-                      <button 
-                        onClick={() => handleDelete(item.dbVisitId)} 
-                        className="p-1.5 text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200/60 rounded-lg transition-all cursor-pointer shadow-2xs" 
-                        title="Delete Court Visit Log"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    ) : null
-                  ) : (
-                    <span 
-                      className="p-1.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold shrink-0" 
-                      title="🔒 Delete Locked by Permission"
-                    >
-                      🔒
+          {filteredItems.map((item) => {
+            const todayStr = new Date().toISOString().split("T")[0];
+            const itemDate = item.visit_date || item.next_hearing_date;
+            const isFutureDate = itemDate > todayStr;
+            return (
+              <div key={item.id} className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-all space-y-5 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className={`px-3 py-1 rounded-full text-xs font-extrabold ${
+                      isFutureDate ? 'bg-blue-100 text-blue-800' :
+                      item.visit_status === 'Completed' ? 'bg-emerald-100 text-emerald-800' :
+                      item.visit_status === 'In Court' ? 'bg-amber-100 text-amber-800 animate-pulse' :
+                      'bg-slate-100 text-slate-700'
+                    }`}>
+                      {isFutureDate ? `📅 Scheduled (${itemDate})` : item.visit_status}
                     </span>
-                  )}
-                </div>
-
-                <div>
-                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                    {item.case_no}
-                  </span>
-                  <h3 className="text-lg font-bold text-slate-900 mt-1">{item.case_title}</h3>
-                </div>
-                
-                <div className="space-y-2 text-xs font-medium text-slate-600">
-                  <div className="flex items-center gap-2">
-                    <Building2 size={14} className="text-slate-400" />
-                    <span>Court: <strong>{item.court_name}</strong></span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin size={14} className="text-slate-400" />
-                    <span>Hall: <strong>{item.court_hall}</strong></span>
-                  </div>
-                  {item.client_name && (
-                    <div className="flex items-center gap-2">
-                      <User size={14} className="text-slate-400" />
-                      <span>Client: <strong>{item.client_name}</strong></span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <Clock size={14} className="text-slate-400" />
-                    <span>Hearing: <strong>{item.next_hearing_date}</strong></span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Check In / Check Out */}
-              <div className="pt-4 border-t border-slate-100 space-y-3">
-                <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-                  <span>In: {item.check_in_time || '--:--'}</span>
-                  <span>Out: {item.check_out_time || '--:--'}</span>
-                </div>
-
-                <div className="flex gap-2">
-                  {item.visit_status === 'Pending' && (
-                    perms.edit ? (
-                      <button
-                        onClick={() => handleCheckIn(item)}
-                        className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 transition-all hover:scale-[1.02] cursor-pointer"
-                      >
-                        <Play size={14} /> Check In Now
-                      </button>
-                    ) : (
-                      <div className="w-full py-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5">
-                        🔒 Check In Locked
-                      </div>
-                    )
-                  )}
-                  {item.visit_status === 'In Court' && (
-                    perms.edit ? (
-                      <button
-                        onClick={() => handleCheckOut(item)}
-                        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.02] cursor-pointer"
-                      >
-                        <Square size={14} /> Check Out & Complete
-                      </button>
-                    ) : (
-                      <div className="w-full py-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5">
-                        🔒 Check Out Locked
-                      </div>
-                    )
-                  )}
-                  {item.visit_status === 'Completed' && (
-                    <div className="w-full space-y-2">
-                      <div className="w-full text-center py-2 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-xs border border-emerald-200">
-                        ✓ Visit Completed
-                      </div>
-                      {perms.edit ? (
-                        <button
-                          onClick={() => openScheduleModal(item)}
-                          className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-blue-600/20"
+                    {perms.delete ? (
+                      item.dbVisitId ? (
+                        <button 
+                          onClick={() => handleDelete(item.dbVisitId)} 
+                          className="p-1.5 text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200/60 rounded-lg transition-all cursor-pointer shadow-2xs" 
+                          title="Delete Court Visit Log"
                         >
-                          <Calendar size={14} /> Schedule Next Visit
+                          <Trash2 size={15} />
                         </button>
-                      ) : (
-                        <div className="w-full text-center py-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-bold text-xs">
-                          🔒 Schedule Locked
-                        </div>
-                      )}
+                      ) : null
+                    ) : (
+                      <span 
+                        className="p-1.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold shrink-0" 
+                        title="🔒 Delete Locked by Permission"
+                      >
+                        🔒
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                      {item.case_no}
+                    </span>
+                    <h3 className="text-lg font-bold text-slate-900 mt-1">{item.case_title}</h3>
+                  </div>
+                  
+                  <div className="space-y-2 text-xs font-medium text-slate-600">
+                    <div className="flex items-center gap-2">
+                      <Building2 size={14} className="text-slate-400" />
+                      <span>Court: <strong>{item.court_name}</strong></span>
                     </div>
-                  )}
+                    <div className="flex items-center gap-2">
+                      <MapPin size={14} className="text-slate-400" />
+                      <span>Hall: <strong>{item.court_hall}</strong></span>
+                    </div>
+                    {item.client_name && (
+                      <div className="flex items-center gap-2">
+                        <User size={14} className="text-slate-400" />
+                        <span>Client: <strong>{item.client_name}</strong></span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Clock size={14} className="text-slate-400" />
+                      <span>Hearing: <strong>{item.next_hearing_date}</strong></span>
+                    </div>
+                  </div>
                 </div>
+
+                {/* Action Check In / Check Out */}
+                <div className="pt-4 border-t border-slate-100 space-y-3">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+                    <span>In: {item.check_in_time || '--:--'}</span>
+                    <span>Out: {item.check_out_time || '--:--'}</span>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {isFutureDate ? (
+                      <div className="w-full space-y-2">
+                        <div className="w-full text-center py-2 bg-blue-50 text-blue-700 rounded-xl font-bold text-xs border border-blue-200 flex items-center justify-center gap-1.5" title="Check-in opens on hearing day">
+                          <Clock size={14} /> Scheduled for {itemDate}
+                        </div>
+                        {perms.edit && (
+                          <button
+                            onClick={() => openScheduleModal(item)}
+                            className="w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl font-bold text-xs border border-slate-200 flex items-center justify-center gap-1 transition cursor-pointer"
+                          >
+                            <Calendar size={13} /> Edit Hall / Prep Notes
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        {item.visit_status === 'Pending' && (
+                          perms.edit ? (
+                            <button
+                              onClick={() => handleCheckIn(item)}
+                              className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 transition-all hover:scale-[1.02] cursor-pointer"
+                            >
+                              <Play size={14} /> Check In Now
+                            </button>
+                          ) : (
+                            <div className="w-full py-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5">
+                              🔒 Check In Locked
+                            </div>
+                          )
+                        )}
+                        {item.visit_status === 'In Court' && (
+                          perms.edit ? (
+                            <button
+                              onClick={() => handleCheckOut(item)}
+                              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.02] cursor-pointer"
+                            >
+                              <Square size={14} /> Check Out & Complete
+                            </button>
+                          ) : (
+                            <div className="w-full py-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5">
+                              🔒 Check Out Locked
+                            </div>
+                          )
+                        )}
+                        {item.visit_status === 'Completed' && (
+                          <div className="w-full space-y-2">
+                            <div className="w-full text-center py-2 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-xs border border-emerald-200">
+                              ✓ Visit Completed
+                            </div>
+                            {perms.edit ? (
+                              <button
+                                onClick={() => openScheduleModal(item)}
+                                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-blue-600/20"
+                              >
+                                <Calendar size={14} /> Schedule Next Visit
+                              </button>
+                            ) : (
+                              <div className="w-full text-center py-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-bold text-xs">
+                                🔒 Schedule Locked
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
               </div>
             </div>
-          ))}
+          );
+        })}
         </div>
       ) : (
         /* LIST VIEW TABLE */
@@ -677,91 +790,114 @@ export default function ClerkCourtVisit() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm font-medium text-slate-700">
-                {filteredItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 w-fit">
-                          {item.case_no}
+                {filteredItems.map((item) => {
+                  const todayStr = new Date().toISOString().split("T")[0];
+                  const itemDate = item.visit_date || item.next_hearing_date;
+                  const isFutureDate = itemDate > todayStr;
+                  return (
+                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 w-fit">
+                            {item.case_no}
+                          </span>
+                          <span className="font-bold text-slate-900 mt-0.5">{item.case_title}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col text-xs text-slate-600">
+                          <span className="font-semibold text-slate-900">{item.court_name}</span>
+                          <span className="text-slate-400">{item.court_hall}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-slate-800 text-xs font-semibold">
+                        {item.client_name || "N/A"}
+                      </td>
+                      <td className="px-6 py-4 text-xs font-semibold text-slate-600">
+                        {item.next_hearing_date}
+                      </td>
+                      <td className="px-6 py-4 text-xs font-medium text-slate-500 whitespace-nowrap">
+                        <div>In: <span className="font-semibold text-slate-700">{item.check_in_time || '--:--'}</span></div>
+                        <div>Out: <span className="font-semibold text-slate-700">{item.check_out_time || '--:--'}</span></div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-extrabold inline-block ${
+                          isFutureDate ? 'bg-blue-100 text-blue-800' :
+                          item.visit_status === 'Completed' ? 'bg-emerald-100 text-emerald-800' :
+                          item.visit_status === 'In Court' ? 'bg-amber-100 text-amber-800 animate-pulse' :
+                          'bg-slate-100 text-slate-700'
+                        }`}>
+                          {isFutureDate ? `📅 Scheduled (${itemDate})` : item.visit_status}
                         </span>
-                        <span className="font-bold text-slate-900 mt-0.5">{item.case_title}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col text-xs text-slate-600">
-                        <span className="font-semibold text-slate-900">{item.court_name}</span>
-                        <span className="text-slate-400">{item.court_hall}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-slate-800 text-xs font-semibold">
-                      {item.client_name || "N/A"}
-                    </td>
-                    <td className="px-6 py-4 text-xs font-semibold text-slate-600">
-                      {item.next_hearing_date}
-                    </td>
-                    <td className="px-6 py-4 text-xs font-medium text-slate-500 whitespace-nowrap">
-                      <div>In: <span className="font-semibold text-slate-700">{item.check_in_time || '--:--'}</span></div>
-                      <div>Out: <span className="font-semibold text-slate-700">{item.check_out_time || '--:--'}</span></div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-extrabold inline-block ${
-                        item.visit_status === 'Completed' ? 'bg-emerald-100 text-emerald-800' :
-                        item.visit_status === 'In Court' ? 'bg-amber-100 text-amber-800 animate-pulse' :
-                        'bg-slate-100 text-slate-700'
-                      }`}>
-                        {item.visit_status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {item.visit_status === 'Pending' && (
-                          perms.edit ? (
-                            <button
-                              onClick={() => handleCheckIn(item)}
-                              className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                            >
-                              <Play size={13} /> Check In
-                            </button>
-                          ) : (
-                            <span className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-bold text-xs">
-                              🔒 Check In Locked
-                            </span>
-                          )
-                        )}
-                        {item.visit_status === 'In Court' && (
-                          perms.edit ? (
-                            <button
-                              onClick={() => handleCheckOut(item)}
-                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                            >
-                              <Square size={13} /> Check Out
-                            </button>
-                          ) : (
-                            <span className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-bold text-xs">
-                              🔒 Check Out Locked
-                            </span>
-                          )
-                        )}
-                        {item.visit_status === 'Completed' && (
-                          <div className="flex items-center gap-1.5">
-                            <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-xs border border-emerald-200">
-                              ✓ Done
-                            </span>
-                            {perms.edit ? (
-                              <button
-                                onClick={() => openScheduleModal(item)}
-                                className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl font-bold text-xs border border-blue-200 transition cursor-pointer flex items-center gap-1"
-                                title="Schedule Next Hearing Visit"
-                              >
-                                <Calendar size={13} /> Next Visit
-                              </button>
-                            ) : (
-                              <span className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-bold text-xs">
-                                🔒 Schedule Locked
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {isFutureDate ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-xl font-bold text-xs border border-blue-200">
+                                📅 Scheduled
                               </span>
-                            )}
-                          </div>
-                        )}
+                              {perms.edit && (
+                                <button
+                                  onClick={() => openScheduleModal(item)}
+                                  className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl font-bold text-xs border border-slate-200 transition cursor-pointer flex items-center gap-1"
+                                >
+                                  <Calendar size={13} /> Prep Notes
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <>
+                              {item.visit_status === 'Pending' && (
+                                perms.edit ? (
+                                  <button
+                                    onClick={() => handleCheckIn(item)}
+                                    className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                                  >
+                                    <Play size={13} /> Check In
+                                  </button>
+                                ) : (
+                                  <span className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-bold text-xs">
+                                    🔒 Check In Locked
+                                  </span>
+                                )
+                              )}
+                              {item.visit_status === 'In Court' && (
+                                perms.edit ? (
+                                  <button
+                                    onClick={() => handleCheckOut(item)}
+                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                                  >
+                                    <Square size={13} /> Check Out
+                                  </button>
+                                ) : (
+                                  <span className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-bold text-xs">
+                                    🔒 Check Out Locked
+                                  </span>
+                                )
+                              )}
+                              {item.visit_status === 'Completed' && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-xs border border-emerald-200">
+                                    ✓ Done
+                                  </span>
+                                  {perms.edit ? (
+                                    <button
+                                      onClick={() => openScheduleModal(item)}
+                                      className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl font-bold text-xs border border-blue-200 transition cursor-pointer flex items-center gap-1"
+                                      title="Schedule Next Hearing Visit"
+                                    >
+                                      <Calendar size={13} /> Next Visit
+                                    </button>
+                                  ) : (
+                                    <span className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-bold text-xs">
+                                      🔒 Schedule Locked
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </>
+                          )}
                         {perms.delete ? (
                           item.dbVisitId ? (
                             <button
@@ -783,7 +919,8 @@ export default function ClerkCourtVisit() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                );
+              })}
               </tbody>
             </table>
           </div>
@@ -849,7 +986,6 @@ export default function ClerkCourtVisit() {
                       Court Hearing Outcome Notes
                     </label>
                     <textarea
-                      required
                       rows={4}
                       placeholder="Enter hearing outcome remarks, judge instructions, next hearing date directions, or filing tasks to sync with Case Management Advocate Notes..."
                       value={checkoutNotes}
